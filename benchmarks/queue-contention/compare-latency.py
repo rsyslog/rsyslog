@@ -153,7 +153,7 @@ try:
                                    timeout=a.trial_timeout)
                 except subprocess.TimeoutExpired:
                     subprocess.run(['docker', 'rm', '--force', container_name], stdout=stream,
-                                   stderr=subprocess.STDOUT, check=False, timeout=30)
+                                   stderr=subprocess.STDOUT, check=False, timeout=min(30, a.trial_timeout))
                     raise
             row[side] = json.loads(metric.read_text())
         if pair >= 0:

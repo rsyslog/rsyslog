@@ -62,7 +62,10 @@ while :; do
 		*"attempts=12"*"admitted=12"*"terminal=7"*"outstanding=5"*"fe=5"*"be=7"*"be_nofit=2"*"be_oversized=5"*) break ;;
 		*) ;;
 	esac
-	(( SECONDS < deadline )) || error_exit 1 "BE snapshot did not settle: $response"
+	if (( SECONDS >= deadline )); then
+		printf 'FAIL: BE snapshot did not settle: %s\n' "$response"
+		error_exit 1
+	fi
 	$TESTTOOL_DIR/msleep 100
 done
 localq_wait_stats "$STATSFILE" "main Q.local" \
