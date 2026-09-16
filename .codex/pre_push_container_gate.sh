@@ -253,10 +253,9 @@ def classify_git_push(words, inherited_skip, fallback_directory):
                          "shell directory changes make a bare git push target ambiguous"}]
     return decisions
 
-def classify_command_list(commands, fallback_directory):
+def classify_command_list(commands, fallback_directory, inherited_skip=False):
     decisions = []
     directory_change = False
-    inherited_skip = False
     for simple_command in commands:
         if inherited_skip and shell_validation_reset(simple_command):
             inherited_skip = False
@@ -300,7 +299,8 @@ try:
 except ValueError:
     sys.exit(0)
 
-decisions = classify_command_list(commands, fallback_directory)
+decisions = classify_command_list(commands, fallback_directory,
+                                  inherited_skip=os.environ.get("SKIP_CONTAINER_VALIDATION") == "1")
 errors = [decision["reason"] for decision in decisions if decision.get("status") == "error"]
 if errors:
     print(json.dumps({"error": errors[0]}))
@@ -346,12 +346,6 @@ PY
 )
 
 if [[ "${#gate_targets[@]}" -eq 0 ]]; then
-  exit 0
-fi
-
-# Preserve the documented environment override for hook invocations where the
-# environment is inherited rather than supplied inline with the push command.
-if [[ "${SKIP_CONTAINER_VALIDATION:-0}" == "1" ]]; then
   exit 0
 fi
 
@@ -408,7 +402,7 @@ validate_target() {
     return 1
   fi
 
-  changed_since_validation="$(git diff --name-only "${marker_commit}" HEAD | grep -E '\.(c|h|sh|py)$|Makefile\.am|configure\.ac|Dockerfile|MODULE_METADATA\.yaml|^tests/' || true)"
+  changed_since_validation="$(git diff --name-only "${marker_commit}" HEAD | grep -E '\.(c|h|sh|py)$|Makefile\.am|configure\.ac|Dockerfile|MODULE_METADATA\.yaml|^tests/|^grammar/(lexer\.l|grammar\.y)$|^\.github/workflows/run_checks\.yml$' || true)"
   if [[ -n "${changed_since_validation}" ]]; then
     printf 'stale-marker\n'
     return 1

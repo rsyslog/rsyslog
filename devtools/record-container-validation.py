@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Record reviewed local validation evidence; an agent guard, not an attestation.
 
 Evidence is a local operator-supplied JSON manifest. Never execute its contents.
@@ -16,7 +30,10 @@ import sys
 import tempfile
 
 
-RELEVANT = re.compile(r"\.(c|h|sh|py)$|Makefile\.am|configure\.ac|Dockerfile|MODULE_METADATA\.yaml|^tests/")
+RELEVANT = re.compile(
+    r"\.(c|h|sh|py)$|Makefile\.am|configure\.ac|Dockerfile|MODULE_METADATA\.yaml|^tests/"
+    r"|^grammar/(lexer\.l|grammar\.y)$|^\.github/workflows/run_checks\.yml$"
+)
 
 
 def git(tree, *args):
@@ -45,6 +62,12 @@ def inventory(tree, commit):
 
 def check_tree(tree, expected):
     tracked = {os.fsdecode(p) for p in git(tree, 'ls-files', '-z').split(b'\0') if p}
+    extra_paths = git(tree, 'ls-files', '--others', '--exclude-standard', '-z')
+    untracked = {os.fsdecode(p) for p in extra_paths.split(b'\0') if p}
+    # A disposable checkout may contain expected files applied without git add.
+    # They are content/mode checked below; any additional relevant file fails.
+    require(not any(RELEVANT.search(p) for p in untracked - expected.keys()),
+            'extra untracked source in ' + str(tree))
     for path in tracked - expected.keys():
         require(not RELEVANT.search(path) or not (tree / path).exists(), 'extra tracked source: ' + path)
     digest = hashlib.sha256()
@@ -58,7 +81,10 @@ def check_tree(tree, expected):
 
 
 def log_text(base, record, hashes):
-    path = (base / record['log']).resolve()
+    relative = Path(record['log'])
+    require(not relative.is_absolute(), 'log paths must be relative to the evidence manifest')
+    path = (base / relative).resolve()
+    require(base == path.parent or base in path.parents, 'log path escapes the evidence directory')
     data = path.read_bytes()
     hashes[str(path)] = hashlib.sha256(data).hexdigest()
     return data.decode('utf-8', errors='replace')
@@ -78,6 +104,7 @@ def atomic_write(path, text):
 def record(args):
     evidence_path = args.evidence.resolve()
     evidence = json.loads(evidence_path.read_text())
+    require(isinstance(evidence, dict), 'evidence must be a JSON object')
     require(evidence.get('schema_version') == 1, 'unsupported evidence schema')
     target = Path(git(args.target, 'rev-parse', '--show-toplevel').decode().strip())
     validation = Path(evidence['validation_tree']).resolve()
@@ -88,8 +115,6 @@ def record(args):
     require(inventory(target, 'HEAD') == expected, 'target HEAD differs in source/build/test content')
     source_digest = check_tree(target, expected)
     require(check_tree(validation, expected) == source_digest, 'validation tree differs')
-    untracked = git(target, 'ls-files', '--others', '--exclude-standard', '-z').split(b'\0')
-    require(not any(RELEVANT.search(os.fsdecode(p)) for p in untracked if p), 'untracked source in target')
     image = evidence['image']
     require(re.fullmatch(r'.+@sha256:[0-9a-f]{64}', image) is not None, 'image must include pinned sha256 digest')
     hashes = {}

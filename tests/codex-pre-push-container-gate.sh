@@ -198,3 +198,24 @@ printf 'int later_runtime_change;\n' > "$target_valid/runtime/later.c"
 git -C "$target_valid" add runtime/later.c
 git -C "$target_valid" commit -qm 'later runtime change'
 assert_blocked "git -C '$target_valid' push origin topic"
+
+# An inherited override is only the default; explicit per-command resets win.
+SKIP_CONTAINER_VALIDATION=1
+export SKIP_CONTAINER_VALIDATION
+assert_allowed "git -C '$target_stale' push origin topic"
+assert_blocked "SKIP_CONTAINER_VALIDATION=0 git -C '$target_stale' push origin topic"
+assert_blocked "env -u SKIP_CONTAINER_VALIDATION git -C '$target_stale' push origin topic"
+assert_blocked "env --unset=SKIP_CONTAINER_VALIDATION git -C '$target_stale' push origin topic"
+assert_blocked "bash -lc \"unset SKIP_CONTAINER_VALIDATION; git -C '$target_stale' push origin topic\""
+assert_blocked "git -C '$target_valid' push origin topic; SKIP_CONTAINER_VALIDATION=0 git -C '$target_stale' push origin topic"
+unset SKIP_CONTAINER_VALIDATION
+
+# Grammar and the runtime CI workflow invalidate an otherwise current marker.
+for relevant_path in grammar/lexer.l grammar/grammar.y .github/workflows/run_checks.yml; do
+    git -C "$target_valid" rev-parse HEAD > "$target_valid/.codex/container_validated.marker"
+    mkdir -p "$target_valid/$(dirname "$relevant_path")"
+    printf 'relevant change\n' > "$target_valid/$relevant_path"
+    git -C "$target_valid" add "$relevant_path"
+    git -C "$target_valid" commit -qm 'grammar or runtime workflow changed'
+    assert_blocked "git -C '$target_valid' push origin topic"
+done

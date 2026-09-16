@@ -1,4 +1,19 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 # Verify the recorder never advances a marker for stale source, incomplete or
 # mismatched reruns, unaccepted flakes, or invalid broad evidence. Synthetic git
 # trees and exact result logs provide deterministic oracles; no daemon/network.
@@ -62,7 +77,10 @@ with tempfile.TemporaryDirectory(prefix='rsyslog-validation-recorder-') as tempo
         result = subprocess.run(args, text=True, capture_output=True)
         assert (result.returncode == 0) == expected, result.stdout + result.stderr
         if not expected:
+            assert 'Validation not recorded:' in result.stderr and 'Traceback' not in result.stderr
             assert (marker.read_bytes() if marker.exists() else None) == prior
+    for malformed in ([], None, 'not an object', 42):
+        run(malformed, False)
     run(evidence, False, accepted=False)
     run(evidence, True)
     assert marker.read_text().strip() == commit
@@ -83,9 +101,29 @@ with tempfile.TemporaryDirectory(prefix='rsyslog-validation-recorder-') as tempo
         (tree / 'runtime/a.c').write_text('modified\n')
         run(evidence, False)
         (tree / 'runtime/a.c').write_text('original\n')
-    (target / 'new.c').write_text('untracked\n')
-    run(evidence, False)
-    (target / 'new.c').unlink()
+    for tree in (target, validated):
+        for path in ('new.c', 'grammar/lexer.l', 'grammar/grammar.y', '.github/workflows/run_checks.yml'):
+            extra = tree / path
+            extra.parent.mkdir(parents=True, exist_ok=True)
+            extra.write_text('untracked\n')
+            run(evidence, False)
+            extra.unlink()
+    # Expected source applied as an untracked file in a disposable tree is
+    # acceptable only when its content and executable bits exactly match.
+    git(validated, 'rm', '--cached', 'runtime/a.c')
+    run(evidence, True)
+    git(validated, 'reset', '--', 'runtime/a.c')
+    for log_path in (str(root / 'retry.log'), '../outside.log'):
+        bad = copy.deepcopy(evidence); bad['reruns'][0]['log'] = log_path
+        run(bad, False)
+    outside = root.parent / (root.name + '-outside.log')
+    outside.write_text('PASS: flaky\n')
+    try:
+        (root / 'escape.log').symlink_to(outside)
+        bad = copy.deepcopy(evidence); bad['reruns'][0]['log'] = 'escape.log'
+        run(bad, False)
+    finally:
+        outside.unlink()
     summary(fail=0, error=1)
     run(evidence, False)
     summary(fail=0)
@@ -93,6 +131,13 @@ with tempfile.TemporaryDirectory(prefix='rsyslog-validation-recorder-') as tempo
     run(clean, True, accepted=False)
     audit = json.loads((target / '.codex/container_validation.json').read_text())
     assert audit['outcome'] == 'pass' and audit['broad_clean'] is True
+    for path in ('grammar/lexer.l', 'grammar/grammar.y', '.github/workflows/run_checks.yml'):
+        source = target / path
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text('changed\n')
+        git(target, 'add', path); git(target, 'commit', '-qm', 'relevant grammar/workflow change')
+        run(clean, False)
+        git(target, 'reset', '--hard', 'HEAD~1')
     (target / 'runtime/new.c').write_text('added\n')
     git(target, 'add', 'runtime/new.c'); git(target, 'commit', '-qm', 'new source')
     run(clean, False)
