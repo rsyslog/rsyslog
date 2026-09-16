@@ -21,9 +21,9 @@ if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
     exit 77
 fi
 timeout_cmd=${timeout_cmd:-timeout}
-command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
-command -v "$timeout_cmd" >/dev/null 2>&1 || {
-    echo 'Testbench requires unavailable command: timeout or gtimeout'
+"$timeout_cmd" --version >/dev/null 2>&1 || timeout_cmd=gtimeout
+"$timeout_cmd" --version >/dev/null 2>&1 || {
+    echo 'Testbench requires GNU-compatible timeout or gtimeout'
     exit 77
 }
 

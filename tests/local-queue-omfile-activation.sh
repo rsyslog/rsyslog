@@ -7,9 +7,9 @@
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 timeout_cmd=${timeout_cmd:-timeout}
-command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
-command -v "$timeout_cmd" >/dev/null 2>&1 || {
-    echo 'Testbench requires unavailable command: timeout or gtimeout'
+"$timeout_cmd" --version >/dev/null 2>&1 || timeout_cmd=gtimeout
+"$timeout_cmd" --version >/dev/null 2>&1 || {
+    echo 'Testbench requires GNU-compatible timeout or gtimeout'
     exit 77
 }
 

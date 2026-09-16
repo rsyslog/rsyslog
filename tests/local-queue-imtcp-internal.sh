@@ -3,8 +3,9 @@
 # first holds an FE callback at omtesting's two-callback barrier. Only after
 # that FE lease is observed does imdiag submit the second message directly to
 # BE, where the dedicated worker releases the barrier. Each callback emits one
-# controlled internal diagnostic. Exact normal/internal output counts, one FE
-# admission, and a BE internal-route increase of at least two prove the routes.
+# controlled internal diagnostic. Exact normal/internal output counts, normal
+# sequence IDs 0..1, one FE admission, and a BE internal-route increase of at
+# least two prove the routes and preserve the two normal messages.
 # File/counter predicates establish the phases; a connection count is never
 # assumed to imply independent producers, and timeout is only a hang watchdog.
 # This file is part of the rsyslog project, released under ASL 2.0.
