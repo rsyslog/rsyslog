@@ -19,6 +19,7 @@
 
 static int (*real_put)(struct json_object *);
 static pthread_once_t resolve_once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t claim_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int claimed;
 
 static void resolve_put(void) {
@@ -28,6 +29,21 @@ static void resolve_put(void) {
         fputs("queue disposal hook: cannot resolve fjson_object_put\n", stderr);
         _exit(2);
     }
+}
+
+/* This test hook must claim exactly one marked JSON object even when multiple
+ * workers release objects concurrently. Use pthread locking instead of compiler
+ * atomics so the helper also builds with Solaris Studio. */
+static int claim_disposal_gate(void) {
+    int claimed_now = 0;
+
+    if (pthread_mutex_lock(&claim_mutex) != 0) _exit(2);
+    if (claimed == 0) {
+        claimed = 1;
+        claimed_now = 1;
+    }
+    if (pthread_mutex_unlock(&claim_mutex) != 0) _exit(2);
+    return claimed_now;
 }
 
 int json_object_put(struct json_object *object) {
@@ -44,8 +60,7 @@ int json_object_put(struct json_object *object) {
 
     pthread_once(&resolve_once, resolve_put);
     if (object != NULL && json_object_get_type(object) == json_type_object &&
-        json_object_object_get_ex(object, "queue_disposal_gate", &marker) &&
-        __atomic_exchange_n(&claimed, 1, __ATOMIC_RELAXED) == 0) {
+        json_object_object_get_ex(object, "queue_disposal_gate", &marker) && claim_disposal_gate()) {
         ready = getenv("RSYSLOG_QUEUE_DISPOSAL_READY");
         release = getenv("RSYSLOG_QUEUE_DISPOSAL_RELEASE");
         if (ready == NULL || release == NULL) _exit(2);
