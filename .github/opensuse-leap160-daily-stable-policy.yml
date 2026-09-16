@@ -1,6 +1,10 @@
 {
   "supplemental_build_requires": [
     {
+      "package": "autoconf-archive",
+      "reason": "Current upstream configure.ac uses AX macros that the native Leap source package predates."
+    },
+    {
       "package": "libyaml-devel",
       "reason": "Current upstream enables YAML configuration support by default."
     },

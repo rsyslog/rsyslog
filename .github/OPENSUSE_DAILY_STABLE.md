@@ -9,12 +9,13 @@ SHA-256 are recorded with each build.
 
 The explicit current-source deltas are recorded in
 `opensuse-leap160-daily-stable-policy.yml`. Current main additionally needs
-`libyaml-devel`, `protobuf-c-devel`, and `snappy-devel`, and generates the core
-`mmleefparse.so` module which the older native spec does not list. The workflow
-adds only those declared deltas. It also explicitly installs four conditional
-native BuildRequires (`libnet-devel`, `librdkafka-devel`, `net-snmp-devel`, and
-`qpid-proton-devel`) which Leap's `zypper source-install` does not resolve, so
-the native feature set is not silently reduced.
+`autoconf-archive`, `libyaml-devel`, `protobuf-c-devel`, and `snappy-devel`,
+and generates the core `mmleefparse.so` module which the older native spec does
+not list. The workflow adds only those declared deltas. It also explicitly
+installs four conditional native BuildRequires (`libnet-devel`,
+`librdkafka-devel`, `net-snmp-devel`, and `qpid-proton-devel`) which Leap's
+`zypper source-install` does not resolve, so the native feature set is not
+silently reduced.
 
 Leap packages documentation separately. Each run therefore builds the current
 main-branch HTML and source documentation and replaces the native documentation
