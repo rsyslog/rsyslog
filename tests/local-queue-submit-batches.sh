@@ -8,6 +8,8 @@
 # snapshot baselines after the blocked singleton establishes FE startup, then
 # proves all 12 supplied references reached one terminal action exactly once.
 # Explicit helperBatchSize=0 preserves the same-binary S2 control.
+# Disable internal-message ingress: debug builds can emit BE-worker startup
+# diagnostics after the fixture baseline, polluting its exact batch counters.
 # File and counter waits establish ordering; no elapsed delay is a success
 # condition.
 # This file is part of the rsyslog project, released under ASL 2.0.
@@ -26,6 +28,7 @@ mkfifo "$RELEASEFIFO"
 generate_conf
 localq_make_startup_marker_absolute
 add_conf '
+global(processInternalMessages="off")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.syslog="off" interval="1")
 module(load="../plugins/omtesting/.libs/omtesting")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="64"
