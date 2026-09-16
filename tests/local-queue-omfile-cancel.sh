@@ -8,6 +8,13 @@
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
+# The preload clears LD_PRELOAD to protect daemon-spawned symbolizers. A
+# Valgrind launcher would clear it before starting the daemon, preventing the
+# handshake entirely. This fixture is qualified for normal and ASan runs.
+if [[ ${USE_VALGRIND:-} == YES* || -n ${valgrind:-} ]]; then
+    echo 'SKIP cancellation preload does not support a Valgrind launcher'
+    exit 77
+fi
 # TSan's pthread/write interceptors cannot track cancellation unwinding through
 # this uninstrumented preload shim: a standalone two-worker cleanup/unlock
 # reproduction reports a double lock, while the same code without the shim is

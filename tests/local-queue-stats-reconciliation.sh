@@ -55,7 +55,7 @@ fi
 # still proves the FE and whole-batch overflow fields after one resettable scrape.
 # Submission acknowledges BE admission, not completion. Poll its terminal
 # state while FE remains held; the watchdog only bounds a failed drain.
-deadline=$((SECONDS + 60))
+deadline=$((SECONDS + TB_TEST_TIMEOUT))
 while :; do
 	response=$(printf "localqueuesubmittest snapshot\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
 	case "$response" in
