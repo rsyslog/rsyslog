@@ -5,6 +5,7 @@
 # the oracle; timeout is only a hang guard. No listener or output is started.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 timeout_cmd=${timeout_cmd:-timeout}
 command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
 command -v "$timeout_cmd" >/dev/null 2>&1 || {

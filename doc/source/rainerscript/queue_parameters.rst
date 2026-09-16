@@ -62,6 +62,11 @@ Direct actions inside a supported local pipeline still execute on the calling
 queue worker. See :ref:`local-queue-operation` for support restrictions,
 ordering, persistence and troubleshooting.
 
+Local scope requires lock-free 64-bit atomics and POSIX condition variables
+using ``CLOCK_MONOTONIC``. It is unavailable on platforms that lack these
+primitives, including macOS; attempting to start a local queue fails. Global
+scope remains available on those platforms.
+
 queue.local.frontendSize
 ------------------------
 

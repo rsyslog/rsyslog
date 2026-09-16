@@ -2,6 +2,11 @@
 # Shared deterministic helpers for the bounded local-queue scenarios.  All
 # waits poll an observable impstats snapshot or a test-owned file, never a
 # guessed scheduling delay.
+# Positive runtime fixtures require the primitives selected by queue_local.c.
+# Darwin lacks POSIX condition-variable clock selection, so local scope is
+# intentionally unavailable there; configuration-rejection tests do not source
+# this runtime helper and continue to run when their own prerequisites exist.
+skip_platform "Darwin" "local queues require POSIX monotonic condition variables"
 
 localq_wait_stats() {
 	local stats_file="$1"
@@ -155,7 +160,7 @@ localq_make_startup_marker_absolute() {
 	# Construct a replacement file rather than using sed's nonportable insert
 	# command: BSD sed and GNU sed use incompatible -i forms here.
 	{
-		printf '%s\n' 'template(name="localdiag" type="string" string="%msg%\\n")'
+		printf '%s\n' 'template(name="localdiag" type="string" string="%msg%\n")'
 		cat "$config"
 	} > "$temporary" || error_exit $?
 	mv "$temporary" "$config" || error_exit $?

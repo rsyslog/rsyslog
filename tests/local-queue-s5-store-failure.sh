@@ -7,6 +7,7 @@
 # IDs0/1/2 never visited the failed store and must reach their destination.
 # The wait watchdog bounds a broken retry path; time alone proves nothing.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin impstats

@@ -7,6 +7,7 @@
 # deliberately ambiguous: this test makes no exact-delivery claim after cancel.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
+. "$srcdir/local-queue-common.sh"
 # TSan's pthread/write interceptors cannot track cancellation unwinding through
 # this uninstrumented preload shim: a standalone two-worker cleanup/unlock
 # reproduction reports a double lock, while the same code without the shim is
@@ -20,16 +21,19 @@ export RSYSLOG_OMFILE_CANCEL_TARGET="$PWD/$RSYSLOG_DYNNAME.sink"
 export RSYSLOG_OMFILE_CANCEL_EVENTS="$PWD/$RSYSLOG_DYNNAME.events"
 export RSYSLOG_PRELOAD="./.libs/liblocal_queue_omfile_cancel_preload.so"
 
+# When ldd resolves a dynamically linked ASan runtime for this daemon, it must
+# precede the cancellation shim in LD_PRELOAD. Static and non-ASan layouts have
+# no libasan entry and retain the shim-only preload.
+if command -v ldd >/dev/null 2>&1; then
+    asan_runtime=$(ldd ../tools/.libs/rsyslogd 2>/dev/null |
+        awk '$1 ~ /^libasan\.so/ && $2 == "=>" && $3 ~ /^\// { print $3; exit }')
+    if [ -n "$asan_runtime" ] && [ -r "$asan_runtime" ]; then
+        export RSYSLOG_PRELOAD="$asan_runtime:$RSYSLOG_PRELOAD"
+    fi
+fi
+
 generate_conf
-# The local callback contract also applies to the harness diagnostic output.
-localdiag_tmp="${TESTCONF_NM}.conf.localq"
-{
-    printf '%s\n' 'template(name="localdiag" type="string" string="%msg%\\n")'
-    cat "${TESTCONF_NM}.conf"
-} > "$localdiag_tmp" || error_exit $?
-mv "$localdiag_tmp" "${TESTCONF_NM}.conf" || error_exit $?
-sed -i.localq "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" "${TESTCONF_NM}.conf" || error_exit $?
-rm -f "${TESTCONF_NM}.conf.localq"
+localq_make_startup_marker_absolute
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"

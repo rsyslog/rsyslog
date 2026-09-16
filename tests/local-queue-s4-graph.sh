@@ -8,6 +8,7 @@
 # positive FE routing in every local destination proves downstream registration.
 # Waits observe output/stats, not scheduling delays. No throughput claim is made.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin impstats

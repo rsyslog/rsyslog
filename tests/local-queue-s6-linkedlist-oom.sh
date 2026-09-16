@@ -6,6 +6,7 @@
 # ID3 to execute on BE. Exact 0,1,3 and conserved counters prove FE ownership,
 # the failed reference disposition, and subsequent BE progress/capacity reuse.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin impstats

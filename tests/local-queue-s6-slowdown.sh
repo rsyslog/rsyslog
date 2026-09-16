@@ -7,6 +7,7 @@
 # The 100ms allowance avoids an exact sleep-duration claim; no upper latency or
 # performance assertion is made. FE route/inventory proves BE cannot satisfy it.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin impstats

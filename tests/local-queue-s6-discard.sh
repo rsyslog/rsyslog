@@ -6,6 +6,7 @@
 # Exact IDs distinguish policy drops from accepted terminal or admission errors;
 # fixed resource metrics describe B+N*(F+D)=8+1*(4+3)=15, not current occupancy.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin impstats
