@@ -4,12 +4,12 @@
    :keywords: rsyslog, upcoming work, implementation plan, SPSC, threading, performance, MVP
 -->
 
-# Upcoming work: local queue implementation plan
+# Local queue implementation plan and completion record
 
 | Metadata | Value |
 |---|---|
-| Status | **S0–S6 implemented; validation limitations recorded; S7 qualification open** |
-| Created / reviewed | 2026-09-14 |
+| Status | **S0–S6 implemented; S7 bounded closeout complete (2026-09-15)** |
+| Created / reviewed | 2026-09-14 / 2026-09-15 |
 | Design authority | [Local queue front ends with shared overflow](local-queue-frontends.md) |
 | Source baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090`; immutable implementation baseline recorded in the execution ledger |
 | Reviewer | Existing Astra / medium architecture reviewer; findings and revision status in Section 16 |
@@ -512,15 +512,22 @@ metadata, configuration validation, and troubleshooting guidance. Global remains
 default. State ordering changes, consumer multiplication, supported inputs/options,
 memory bounds, fallback behavior and persistence prerequisites explicitly.
 
-Run the complete acceptance matrix and independent performance sessions using final
-code. No speedup claim inherits from an earlier stage missing final accounting,
-retries or shutdown support. Check global-mode regression on final code too.
-Complete repository security review and local validation gates. Record hosted review
-status separately; another document review does not replace code review.
+The maintainer narrowed S7 on 2026-09-15: finish operator documentation and
+record existing correctness/review evidence; include the new sustained contention
+method and its 10K/100K FE comparisons. Reuse the completed runtime validation.
+Run documentation and example-configuration checks for this documentation-only
+closeout. Do not repeat the full acceptance matrix, independent performance
+campaign, or resource-heavy real Elasticsearch testing. Elasticsearch testing is
+omitted from this step, not claimed as passed. A materially broader action or
+uncertain scope requires asking the maintainer and waiting for instruction.
 
-Completion means all S0–S7 deliverables and gates pass for the full declared initial
-scope. Remaining extensions have explicit restrictions and follow-up entries. An
-MVP or targeted-only test run does not satisfy this completion definition.
+Completion under this revised scope means operator guidance and distribution
+coverage are current, the documentation checks pass, and the ledger accurately
+records implementation, prior validation, benchmark results, and coverage gaps.
+It does not mean unconditional full-container, production-performance or
+Elasticsearch qualification. S0–S6 feature restrictions remain explicit. The
+original comprehensive qualification campaign is deferred, not a prerequisite
+silently reintroduced into this bounded S7.
 
 ## 11. Synchronization strategy and threading proof obligations
 

@@ -30,6 +30,10 @@ or favorable isolated timing does not alone establish acceptance.
 | S1 | Implemented; original performance gate unresolved | Reviewed attribution through `c9a51be21`; targeted correctness and sanitizer checks passed with documented debug-only TSan isolation. Maintainer authorized continued S2 work and methodology review. |
 | S2 | Implemented; default container gate passed with documented specialist limits | Final runtime `536f5db06`: 1,595 passes, 69 skips, zero failures. Analyzer has one understood baseline warning; specialist outcomes and review limits below. Performance qualification remains deferred by maintainer direction. |
 | S3 | Implemented; runtime/container gates passed; production qualification open | Bounded BE helping, independent concurrency review, sanitizer evidence and 4M/40M comparisons below. Final broad snapshot `2dac14fa2`: 1,604 passes, 69 skips, zero failures. |
+| S4 | Implemented and committed with S5 | Acyclic graph, downstream producer registration and output integration; `a24c4ceda`. |
+| S5 | Implemented and committed | Classic and segmented disk assistance, shutdown and recovery; evidence below. |
+| S6 | Implemented and committed | `31796c8e1`; final broad run and isolated reruns summarized under S7; residual coverage limits retained. |
+| S7 | Complete under narrowed scope | Maintainer narrowed scope on 2026-09-15; final docs/example checks recorded below. |
 
 ## Assignments
 
@@ -1060,3 +1064,170 @@ S0–S6 implementation is present. The three remaining broad failures and TSan
 coverage limitations prevent a fully container-validated claim. S7 operator
 manuals, complete acceptance/performance qualification, representative production
 and real Elasticsearch-node testing remain open.
+
+
+## S7: bounded operator documentation and evidence closeout (2026-09-15)
+
+### Scope authorized by the maintainer
+
+The maintainer explicitly requested a proportionate final step, including the
+new sustained-contention method, and permitted dropping resource-heavy real
+Elasticsearch tests. This step omits that campaign, repeated performance sessions,
+and another broad runtime testbench. The revised S7 plan supersedes the original
+full-qualification checklist for this closeout. Material scope expansion requires
+asking and waiting. No runtime code, test implementation or build system is changed.
+
+Operator guidance is in `doc/source/concepts/queues.rst` and
+`doc/source/rainerscript/queue_parameters.rst`. It covers all five scope/FE
+parameters, global default, whole-batch fitting, BE fallback/helping, supported
+inputs and module restrictions, multiplication of workers/buffers, bounded
+capacity, ordering, batching, policies, stats and logical shutdown/recovery.
+Both pages were already registered in `doc/Makefile.am`; no RST file was added,
+renamed or removed. The architecture map links to those existing pages.
+
+The target measurement document now contains the actual sustained stimulus,
+configuration, completion oracle, normalization caveats and baseline/S3/S6
+10K/100K results. Raw artifact retention is explicit. This completes the bounded
+benchmark reporting deliverable; it does not create production qualification.
+
+### Updated implementation and runtime evidence
+
+S4/S5 were committed as `a24c4ceda99a0ce1b025fec9ae7c15d6313c7250`, S6 as
+`31796c8e1a4e0933942e7a21fd1618f2cf898098`. The maintainer reported pushing them.
+Earlier statements that S6 was uncommitted or awaiting the final requested run
+are historical, not current status.
+
+The later maintainer-requested Ubuntu26.04 testbench finished with **1,709 total,
+1,637 pass, 69 skip, 3 fail, 0 error**. Each failed test passed its isolated rerun:
+
+- `local-queue-s6-linkedlist-stats.sh`;
+- `omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh`;
+- `segmented-diskqueue-ruleset-fallback.sh`.
+
+No failure repeated, so no issue was created under the user's repeat-failure rule.
+Isolated passes do not convert the original broad run into a clean broad pass.
+The configured Elasticsearch and imdocker families were absent; forcing service
+relevance did not add unconfigured families. The historical TSan forced-read
+cancellation/interceptor and diagnostic-race gaps remain. Normal, ASan, analyzer,
+mock distribution, graph, and classic/segmented recovery evidence remain as
+recorded in S4–S6. No runtime change since S6 invalidates that evidence.
+
+The final requested run used the Ubuntu26.04 development image ID
+`sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`,
+`CI_MAKE_OPT=-j60 CI_MAKE_CHECK_OPT=-j60`, service force/relevance bypass as in
+`/home/rger/rsyslog-local-queue-artifacts/s6/full-testbench-request/provenance.txt`.
+Full commands/logs, source-content/mode comparison and isolated reruns are in
+that directory. Source comparison is needed because the disposable test tree's
+Git HEAD was S3 with the S6 changes applied; HEAD alone is not the tested version.
+Analyzer/sanitizer concurrency was 20; broad checks/builds used 60.
+
+The existing S6 local security receipt reports `passed`, no candidates, digest
+`7e3876f1d844fb0112617ba2e7ca719417875d70a469d6acd5202141a8b918e9`, model revision 1.
+It is historical evidence for that reviewed candidate, not a newly issued receipt
+for S7 documentation. Hosted AI review status is not reverified by this closeout;
+no fresh hosted-review or merge-readiness claim is made. The current example is
+reviewed locally: loopback-only input, intentional null sink, no credentials,
+permission broadening, remote exposure or compatibility fallback changes.
+
+### S7 validation and limits
+
+The local validation planner includes the complete branch runtime diff and thus
+recommends the broad code lane. Per the explicit narrowed S7 instruction, reuse
+that runtime evidence and run the documentation lane for the current docs-only
+delta. This is accepted reduced validation, not an unconditional clean full suite.
+No Elasticsearch campaign or new final-S6 global regression benchmark is required
+for this scoped completion. They remain optional follow-up qualification.
+
+Final validation:
+
+- `./doc/tools/build-doc-linux.sh --clean --format html --jobs 60` completed;
+  two new heading underline warnings were corrected. The subsequent
+  `./doc/tools/build-doc-linux.sh --format html --jobs 60` passed without warnings
+  on the final rendered content. Existing pages remain distributed; no extended
+  distribution check is needed for content-only edits.
+- The loopback/null example extracted from the operator page passed `-N1` on
+  the immutable S6 optimized binary in the pinned Ubuntu26.04 image. Command:
+  `docker run --rm -u 1000:1000 -v /home/rger/rsyslog-contention-s6-31796:/rsyslog
+  -v /home/rger/rsyslog-local-queue-artifacts/s7:/artifacts -w /rsyslog
+  rsyslog/rsyslog_dev_base_ubuntu@sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09
+  ./tools/rsyslogd -N1 -f /artifacts/example.conf
+  -M/rsyslog/plugins/imtcp/.libs:/rsyslog/runtime/.libs:/rsyslog/tools`.
+  Expected plain-loopback-TCP and queue-size warnings remain. The initial draft
+  omitted an explicit ordinary template and was rejected; the corrected example
+  includes that template and explicit synchronous/flush settings.
+- Source/document cross-check, local Markdown link checks, YAML parsing,
+  existing RST distribution registration and `git diff --check` pass.
+- Sample security review found no actionable concern within the stated
+  loopback-only, intentionally discarded-output experiment. No production
+  authentication or persistence claim is implied.
+
+**S7 is complete under the maintainer's narrowed scope.** S0–S7 deliverables are
+closed for this iteration; the implementation remains experimental and **not
+fully container-validated** in the unconditional sense. The maintainer accepted
+reusing the documented runtime evidence and reduced validation. Real Elasticsearch,
+a clean unconditional broad/TSan run, repeated/equal-resource production benchmarks,
+and fresh full-candidate/hosted review are deferred qualification, not hidden
+unfinished S7 tasks. No commit or push is performed by this documentation step.
+
+Artifacts: `/home/rger/rsyslog-local-queue-artifacts/s7/`.
+
+
+## Post-S7 authorized validation campaign (2026-09-15)
+
+After the bounded closeout, the maintainer accepted the proposed focused threading
+campaign followed by one final broad container run. Optional performance repeats
+remain omitted. Failures receive one isolated rerun and bounded investigation;
+there is no automatic broad-suite retry or source-fix campaign.
+
+- Normal build: 12 existing local tests repeated three times, **36/36 passed**,
+  no skips. Covers helping/capacity/wake handoff, registration/producer exit,
+  multi-FE shutdown, graph shutdown, classic/segmented recovery and LinkedList
+  persistence/stats. Setup-only path-mapping corrections are recorded separately;
+  they are not failed runtime tests.
+- TSan: eight cooperative S6 fixtures repeated three times, **24/24 passed**,
+  no skips or sanitizer reports. Reused exact-S6 changed C/H sources, Clang21
+  `-fsanitize=thread -O0`, existing `tests/tsan-rt.supp`,
+  `halt_on_error=1:detect_deadlocks=1`, and seccomp-unconfined container execution.
+- One bounded schedule TSan probe timed out before readiness at 45 seconds without
+  a report. Its isolated retry hit the same cap and captured the existing
+  `runtime/debug.c:150/156 dbgprint.ptLastThrdID` race between configuration and
+  imdiag's timeout thread. No suppression or patch was added. This is a failed
+  schedule qualification, separate from the 24 passing cooperative tests.
+- Historical forced-read cancellation reports were checked against source:
+  `actionRemoveWorker` holds its cleanup mutex, absent from TSan's historical
+  cancellation report. This remains a sanitizer coverage gap, not proof of safe
+  execution of every cancellation path.
+
+Artifacts and exact commands: `/home/rger/rsyslog-local-queue-artifacts/s7-campaign/`.
+Normal and TSan runs use the same pinned Ubuntu26.04 image as S6. Broad build/check
+concurrency remains 60; focused repetitions run sequentially within each lane.
+No production code or test logic is changed by this campaign.
+
+The final broad run completed **1,709 total: 1,639 pass, 69 skip, 1 fail**.
+`omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh` alone failed: its 10-second
+wait for the OpenSSL mTLS helper readiness file expired while the helper process
+existed and its log was empty. One isolated rerun in the same tree/image passed
+in two seconds and captured the expected message. This does not establish that
+the recurring broad-run failure is harmless or fixed. No local-queue test failed
+in this broad run. No source patch, issue creation or additional broad run was
+performed.
+
+The broad tree `/home/rger/rsyslog-local-queue-final-container-s7-normal` is an
+isolated copy of the prior cached validation tree with exact relevant S6
+source/mode comparisons retained. The optimized benchmark tree was preserved.
+The command follows `devtools/run-ci.sh`, `CI_MAKE_OPT=-j60` and
+`CI_MAKE_CHECK_OPT=-j60`, forced service relevance, and the pinned Ubuntu26.04
+image already recorded above. Elasticsearch and imdocker tests remained
+configured out by explicit user direction/established profile. Kafka, MySQL,
+libdbi, SNMP, DTLS and GnuTLS were included. The 69 runtime skips include missing
+softhsm2/gnutls-cli tools and unavailable root/raw-socket/network-namespace
+capabilities; they are not passes. Full commands, setup-only corrections,
+initial failure evidence and the isolated rerun are in
+`s7-campaign/normal/RESULT.md` and its companion logs.
+
+This authorized campaign is complete. It strengthens local-queue concurrency
+and lifecycle evidence without closing the debug-logging TSan or forced-read
+cancellation gaps. The broad run is not a clean pass; the candidate remains
+**not fully container-validated**. Prior analyzer/security evidence is reused,
+not represented as refreshed, and hosted AI review is not reverified. Further
+runtime fixes, suppressions or campaigns require a separate maintainer decision.

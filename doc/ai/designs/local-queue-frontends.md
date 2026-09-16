@@ -4,17 +4,17 @@
    :keywords: rsyslog, queue, local scope, SPSC, MPMC, contention, upcoming work, shutdown, recovery
 -->
 
-# Upcoming work: local queue front ends with shared overflow
+# Local queue front ends with shared overflow
 
 | Metadata | Value |
 |---|---|
-| Status | **S6 option/resource integration implemented; validation limitations recorded** |
+| Status | **S0–S6 implemented; bounded S7 closeout complete; qualification limits recorded** |
 | Created / last reviewed | 2026-09-14 / 2026-09-15 |
 | Audience | Maintainers, implementers, human reviewers, AI agents |
 | Code baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090` |
 | Source inspection | Core paths first inspected at `82af24be1b1fea24feca2831b236ef6346639364`; the core files cited below are unchanged between these revisions |
-| Scope | Architecture and implementation planning; no measured performance claim |
-| Configuration status | The experimental implementation supports `queue.scope="local"` under the strict [S0 contracts](local-queue-s0-contracts.md); later-stage capabilities below remain proposed |
+| Scope | Architecture and implementation history; measured screens in the target measurement method |
+| Configuration status | Current experimental behavior is documented in the [queue reference](../../source/rainerscript/queue_parameters.rst) and [operator guide](../../source/concepts/queues.rst). S0 restrictions below describe the historical MVP; S4–S6 extensions and S7 scope are recorded in the [execution ledger](local-queue-execution-ledger.md) |
 
 <!-- .. summary-start -->
 One logical queue gains private single-producer/single-consumer (SPSC) memory

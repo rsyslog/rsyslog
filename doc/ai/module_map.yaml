@@ -3,6 +3,9 @@
 # directory as `MODULE_METADATA.yaml`; update both the metadata file and this map
 # when concurrency guidance changes.
 runtime_queue:
+  operator_docs:
+    - "doc/source/concepts/queues.rst#local-queue-operation"
+    - "doc/source/rainerscript/queue_parameters.rst#queue-scope-local"
   paths:
     - "runtime/queue.c"
     - "runtime/queue.h"

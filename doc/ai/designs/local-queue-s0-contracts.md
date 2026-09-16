@@ -27,7 +27,10 @@ behavior, executed evidence and remaining qualification gates.
 The coordinator owns acceptance of every row. The implementing agent owns its
 tests; an architecture reviewer challenges the integrated result. These choices
 can be resolved within the authorized S0–S2 scope without a new product decision.
-Names below are proposed, not available configuration parameters.
+This is the historical S0/MVP contract. Current parameter availability and
+later-stage extensions are documented in the [operator reference](../../source/rainerscript/queue_parameters.rst)
+and [execution ledger](local-queue-execution-ledger.md); do not apply this old
+restriction matrix as the final S6 feature matrix.
 
 | Decision | Proposed S2 behavior | Rejected alternative | Required oracle |
 |---|---|---|---|
