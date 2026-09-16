@@ -152,3 +152,6 @@ AGENTS.local.md
 
 # Local Codex security review packages and receipts
 .codex/security-review/
+
+# Reviewed container outcome and source/log identity audit
+.codex/container_validation.json
