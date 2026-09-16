@@ -133,7 +133,7 @@ static struct {
 
 static rsRetVal localTestCommitPrepare(action_t *const action) {
     const char *const name = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ACTION");
-    if (name == NULL || strcmp(name, (const char *)action->pszName)) return RS_RET_OK;
+    if (name == NULL || action->pszName == NULL || strcmp(name, (const char *)action->pszName)) return RS_RET_OK;
     const char *const entry = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ENTRY");
     const char *const release = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_RELEASE");
     struct stat st;

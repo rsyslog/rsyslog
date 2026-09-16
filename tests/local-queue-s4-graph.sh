@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # A reverse-declared local ruleset graph fans out to a local queued action and
 # another local ruleset. Each asynchronous submission captures the pre-mutation
 # message, while a synchronous call retains the upstream worker. Exact IDs and

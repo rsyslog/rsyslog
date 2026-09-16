@@ -4,7 +4,11 @@
 # inputs run. The process exit code and startup diagnostic are the oracles;
 # timeout only protects against accidental blocking FIFO opens and never counts
 # as an expected failure. These pre-input errors cannot use normal omfile logs.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
+timeout_cmd=${timeout_cmd:-timeout}
+command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
+command -v "$timeout_cmd" >/dev/null 2>&1 || error_exit 77 'no timeout command available'
 
 SINK="$PWD/$RSYSLOG_DYNNAME.newdir/sink"
 CONF="$PWD/$RSYSLOG_DYNNAME.activation.conf"
@@ -48,7 +52,7 @@ action(type="omfile" file="$1" template="activationmsg" queue.type="Direct"
 CONFIG
 }
 write_config "$SINK"
-timeout -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1 || error_exit 1
+$timeout_cmd -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1 || error_exit 1
 if [ -e "$PWD/$RSYSLOG_DYNNAME.newdir" ]; then
     error_exit 1 'configuration validation created the omfile parent directory'
 fi
@@ -64,9 +68,11 @@ modules:
     compression.driver: zstd
 YAML
 else
-    sed -i '1i module(load="builtin:omfile" compression.driver="zstd")' "$CONF"
+    sed -i.localq '1i\
+module(load="builtin:omfile" compression.driver="zstd")' "$CONF" || error_exit $?
+    rm -f "$CONF.localq"
 fi
-if timeout -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1; then
+if $timeout_cmd -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1; then
     error_exit 1 'local omfile accepted an unaudited compression driver'
 fi
 content_check 'experimental local queue configuration rejected' "$LOG"
@@ -75,11 +81,14 @@ if [ -e "$PWD/$RSYSLOG_DYNNAME.newdir" ]; then
 fi
 if [ "${LOCAL_OMFILE_ACTIVATION_YAML:-0}" -eq 0 ]; then
     write_config "$SINK"
-    sed -i '/^action(type=/,$d' "$CONF"
+    sed -i.localq '/^action(type=/,$d' "$CONF" || error_exit $?
+    rm -f "$CONF.localq"
     printf '*.* %s;activationmsg\n' "$SINK" >> "$CONF"
-    timeout -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1 || error_exit 1
-    sed -i '1i module(load="builtin:omfile" compression.driver="zstd")' "$CONF"
-    if timeout -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1; then
+    $timeout_cmd -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1 || error_exit 1
+    sed -i.localq '1i\
+module(load="builtin:omfile" compression.driver="zstd")' "$CONF" || error_exit $?
+    rm -f "$CONF.localq"
+    if $timeout_cmd -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1; then
         error_exit 1 'legacy omfile ignored inherited compression driver'
     fi
     content_check 'experimental local queue configuration rejected' "$LOG"
@@ -91,8 +100,8 @@ NOTDIR="$PWD/$RSYSLOG_DYNNAME.notdir"
 printf 'regular file, not a directory\n' > "$NOTDIR"
 for sink in "$FIFO" /dev/zero "$NOTDIR/sink"; do
     write_config "$sink"
-    timeout -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1 || error_exit 1
-    timeout -k 2 15 ../tools/rsyslogd -C -n -i "$RSYSLOG_DYNNAME.fail.pid" \
+    $timeout_cmd -k 2 15 ../tools/rsyslogd -C -N1 -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1 || error_exit 1
+    $timeout_cmd -k 2 15 ../tools/rsyslogd -C -n -i "$RSYSLOG_DYNNAME.fail.pid" \
         -f "$CONF" -M"$RSYSLOG_MODDIR" > "$LOG" 2>&1
     status=$?
     if [ "$status" -eq 0 ] || [ "$status" -ge 128 ] || [ "$status" -eq 124 ]; then

@@ -1868,7 +1868,7 @@ static void initAll(int argc, char **argv) {
          * even on hard config errors. Note that this may lead to segfaults
          * or other malfunction further down the road.
          */
-        if ((loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
+        if (loadConf != NULL && (loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
             fprintf(stderr,
                     "rsyslogd: NOTE: developer-only option set to keep rsyslog "
                     "running where it should abort - this can lead to "

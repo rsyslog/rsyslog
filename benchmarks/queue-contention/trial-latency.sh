@@ -12,6 +12,7 @@ OBSERVER_DIR=${BENCH_CAMPAIGN_DIR:-$(cd "$(dirname "$0")" && pwd)}
 : "${BENCH_DEQUEUE_BATCH_SIZE:=1024}" "${BENCH_WORKER_MINIMUM:=1024}" "${BENCH_SCOPE:=global}"
 : "${BENCH_FRONTEND_CAPACITY:=10000}" "${BENCH_FRONTEND_MAX:=8}"
 : "${BENCH_OMFILE_FLUSH_POLICY:=sync}" "${BENCH_POLL_US:=100}"
+: "${BENCH_RATE_DRIFT_PERCENT:=2}"
 : "${BENCH_MAX_LATENESS_US:=400}" "${BENCH_MAX_POLL_GAP_US:=400}"
 # This is deliberately an rsyslog configuration fragment, not shell code.
 # shellcheck disable=SC2089
@@ -60,7 +61,8 @@ rm -f "$EXPECTED_FILE"
 python3 "$OBSERVER_DIR/latency-observer.py" --host 127.0.0.1 --port "$INPUT_PORT" --output "$RSYSLOG_OUT_LOG" \
     --result "$BENCH_METRIC_FILE" --expected "$EXPECTED_FILE" --messages "$NUMMESSAGES" --connections "$BENCH_CONNECTIONS" --rate "$BENCH_OFFERED_RATE" \
     --payload "$BENCH_PAYLOAD" --poll-us "$BENCH_POLL_US" --max-lateness-us "$BENCH_MAX_LATENESS_US" \
-    --max-poll-gap-us "$BENCH_MAX_POLL_GAP_US" --allow-invalid || exit 1
+    --max-poll-gap-us "$BENCH_MAX_POLL_GAP_US" --max-rate-drift-percent "$BENCH_RATE_DRIFT_PERCENT" \
+    --allow-invalid || error_exit 1
 shutdown_when_empty
 wait_shutdown
 if [[ -n ${BENCH_RAW_OUTPUT_FILE:-} ]]; then

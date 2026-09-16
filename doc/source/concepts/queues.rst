@@ -679,7 +679,8 @@ The current contract is deliberately restricted. ``imtcp`` is the supported
 production input; ``impstats`` must use file output with ``log.syslog="off"``.
 The restriction is checked across the configuration, so another input bound
 to an unrelated ruleset is not automatically exempt. Built-in RFC3164/RFC5424
-parsing is supported; custom or explicitly configured parser instances are not.
+parsing is supported, including explicitly configured built-in RFC parsers;
+custom parser instances are not.
 
 Supported output modules include ``omfile``, ``omfwd`` and ``omelasticsearch``,
 subject to their local-queue configuration checks. For example, local ``omfile``

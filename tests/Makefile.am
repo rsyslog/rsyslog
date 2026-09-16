@@ -14,9 +14,10 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
-TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-activation.sh local-queue-omfile-hup.sh
+TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-hup.sh
+TESTS_LOCAL_OMFILE_ACTIVATION = local-queue-omfile-activation.sh
 TESTS_LOCAL_OMFILE_YAML = yaml-local-queue-omfile-activation.sh
-EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL) $(TESTS_LOCAL_OMFILE_YAML)
+EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL) $(TESTS_LOCAL_OMFILE_ACTIVATION) $(TESTS_LOCAL_OMFILE_YAML)
 
 TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
@@ -204,11 +205,6 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-s5-segmented-spill.sh \
 	local-queue-s5-persistence.sh \
 	local-queue-s5-segmented-persistence.sh \
-	local-queue-s4-output-tcp.sh \
-	local-queue-s4-output-tcp-recovery.sh \
-	local-queue-s4-output-tcp-fallback.sh \
-	local-queue-s4-output-es.sh \
-	local-queue-s4-output-es-partial.sh \
 	local-queue-s4-graph.sh \
 	local-queue-s4-global-boundary.sh \
 	local-queue-s4-direct-main.sh \
@@ -226,24 +222,36 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-partial-batch.sh \
 	local-queue-imtcp-shutdown.sh \
-	local-queue-force-term-actions.sh \
-	local-queue-be-force-term-actions.sh \
+	local-queue-force-term-actions.sh
+TESTS_LOCAL_QUEUE_INET = \
+	local-queue-s4-output-tcp.sh \
+	local-queue-s4-output-tcp-recovery.sh \
+	local-queue-s4-output-tcp-fallback.sh
+TESTS_LOCAL_QUEUE_ELASTICSEARCH = \
+	local-queue-s4-output-es.sh \
+	local-queue-s4-output-es-partial.sh
+TESTS_LOCAL_QUEUE_IMDIAG = \
+	local-queue-redirect-publication.sh \
+	local-queue-stats-lifetime.sh
+TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS = local-queue-be-force-term-actions.sh
+TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS_OMTESTING = \
 	local-queue-stats-reconciliation.sh \
-	local-queue-stats-lifetime.sh \
-	local-queue-submit-batches.sh \
-	local-queue-redirect-publication.sh
+	local-queue-submit-batches.sh
 TESTS_LOCAL_QUEUE_EPOLL = \
 	local-queue-imtcp-registration.sh \
 	local-queue-imtcp-shutdown-multi-fe.sh
-EXTRA_DIST += $(TESTS_LOCAL_QUEUE) $(TESTS_LOCAL_QUEUE_EPOLL) local-queue-common.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE) $(TESTS_LOCAL_QUEUE_INET) $(TESTS_LOCAL_QUEUE_ELASTICSEARCH) \
+	$(TESTS_LOCAL_QUEUE_IMDIAG) $(TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS) \
+	$(TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS_OMTESTING) $(TESTS_LOCAL_QUEUE_EPOLL) local-queue-common.sh
 
 TESTS_LOCAL_QUEUE_FAILURES = \
-	local-queue-startup-failure.sh \
 	local-queue-imtcp-tls-failure.sh \
 	local-queue-imtcp-cache-failure.sh \
 	local-queue-imtcp-worker-failure.sh
+TESTS_LOCAL_QUEUE_STARTUP_FAILURE = local-queue-startup-failure.sh
 TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE = local-queue-imtcp-producer-exit.sh
-EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES) $(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES) $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE) \
+	$(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
 
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
@@ -2933,12 +2941,11 @@ if ENABLE_TESTBENCH
 if ENABLE_IMTCP_TESTS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_OMFILE_CANCEL)
-if HAVE_LIBYAML
-TESTS += $(TESTS_LOCAL_OMFILE_YAML)
-endif
 check_LTLIBRARIES += liblocal_queue_omfile_cancel_preload.la
 liblocal_queue_omfile_cancel_preload_la_SOURCES = local-queue-omfile-cancel-preload.c
-liblocal_queue_omfile_cancel_preload_la_CFLAGS =
+# External sanitizer symbolizers inherit LD_PRELOAD but do not link its runtime.
+# Keep the fixture uninstrumented; daemon synchronization remains intercepted.
+liblocal_queue_omfile_cancel_preload_la_CFLAGS = -fno-sanitize=all
 liblocal_queue_omfile_cancel_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif
@@ -2995,14 +3002,30 @@ check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG)
+TESTS += $(TESTS_LOCAL_OMFILE_ACTIVATION)
 if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
+TESTS += $(TESTS_LOCAL_OMFILE_YAML)
+endif
+if ENABLE_IMDIAG
+TESTS += $(TESTS_LOCAL_QUEUE_IMDIAG)
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS)
+TESTS += $(TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS_OMTESTING)
+endif
 endif
 if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
 if ENABLE_IMPSTATS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE)
 TESTS += $(TESTS_LOCAL_QUEUE_FAILURES)
+if ENABLE_INET
+TESTS += $(TESTS_LOCAL_QUEUE_INET)
+endif
+if ENABLE_ELASTICSEARCH_TESTS
+TESTS += $(TESTS_LOCAL_QUEUE_ELASTICSEARCH)
+endif
 if ENABLE_IMTCP_EPOLL
 TESTS += $(TESTS_LOCAL_QUEUE_EPOLL)
 TESTS += $(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
@@ -3119,10 +3142,13 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
-TESTS += $(TESTS_QUEUE_BENCHMARK_ORACLE) $(TESTS_QUEUE_BENCHMARK_LATENCY_ORACLE) $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP)
+TESTS += $(TESTS_QUEUE_BENCHMARK_ORACLE) $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP)
 TESTS += $(TESTS_QUEUE_LEASE)
 TESTS += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG)
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_QUEUE_BENCHMARK_LATENCY_ORACLE)
 TESTS += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_LOCAL)
+endif
 TESTS += $(TESTS_WTP_TARGETED_WAKEUP)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)

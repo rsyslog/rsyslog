@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # Real omfwd multitarget transactions from actual imtcp FE and imdiag BE work.
 # Receiver 2 listens but gates all reads; receiver 1 must observe data before
 # release. This establishes delayed receiver service, not a TCP delivery ACK or

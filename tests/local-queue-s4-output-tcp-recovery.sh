@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # A real omfwd pool starts with target 2 bound but not listening. Target 1 must
 # receive phase 1 completely. After target 2 reaches listen(), a new FE batch
 # must reach it and the exact receiver union must contain each ID once. The

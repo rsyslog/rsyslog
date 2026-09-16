@@ -6,8 +6,10 @@
 # No input port file may appear: fallback to a usable Direct queue is forbidden.
 # The timeout is only a hang guard; only an ordinary exit status of one passes.
 . ${srcdir:=.}/diag.sh init
+timeout_cmd=${timeout_cmd:-timeout}
+command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
+command -v "$timeout_cmd" >/dev/null 2>&1 || error_exit 77 'no timeout command available'
 require_plugin imtcp
-require_plugin imdiag
 
 for topology in main ruleset; do
     conf="${RSYSLOG_DYNNAME}.${topology}.conf"
@@ -32,7 +34,7 @@ for topology in main ruleset; do
     fi
     for fault in startup-family startup-frontend; do
         log="${RSYSLOG_DYNNAME}.${topology}.${fault}.log"
-        RSYSLOG_LOCAL_QUEUE_TEST_FAULT="$fault" timeout -k 2 "$TB_TEST_TIMEOUT" \
+        RSYSLOG_LOCAL_QUEUE_TEST_FAULT="$fault" $timeout_cmd -k 2 "$TB_TEST_TIMEOUT" \
             ../tools/rsyslogd -n -f "$conf" -i "${RSYSLOG_DYNNAME}.pid" \
             -M../runtime/.libs:../.libs > "$log" 2>&1
         result=$?

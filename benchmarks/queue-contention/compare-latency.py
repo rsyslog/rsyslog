@@ -3,6 +3,7 @@
 """Alternate fixed-offered-rate, exact-ID latency observations in two builds."""
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import statistics
@@ -30,9 +31,18 @@ p.add_argument('--poll-us', type=int, default=100)
 p.add_argument('--image', default='rsyslog/rsyslog_dev_base_ubuntu:26.04')
 p.add_argument('--trial-timeout', type=float, default=180)
 a = p.parse_args()
-if min(a.pairs, a.messages, a.connections, a.input_workers, a.offered_rate, a.frontend_capacity, a.frontend_max,
-       a.dequeue_batch_size, a.worker_minimum, a.poll_us, a.trial_timeout) <= 0:
+if min(a.pairs, a.messages, a.connections, a.input_workers, a.frontend_capacity, a.frontend_max,
+       a.dequeue_batch_size, a.worker_minimum, a.poll_us) <= 0:
     p.error('all workload sizes, offered rate, and timeout must be positive')
+if a.messages < 2:
+    p.error('--messages must be at least two for the achieved-rate check')
+if not math.isfinite(a.offered_rate) or a.offered_rate <= 0:
+    p.error('--offered-rate must be finite and positive')
+if not math.isfinite(a.trial_timeout) or a.trial_timeout <= 0:
+    p.error('--trial-timeout must be finite and positive')
+minimum_payload = len('latency:') + len(str(a.messages - 1)) + 1 + 20 + 1
+if a.payload < minimum_payload:
+    p.error('--payload is too short for an exact latency ID/timestamp record')
 for side in ('before', 'after'):
     if min(getattr(a, side + '_queue_size'), getattr(a, side + '_consumer_workers')) <= 0:
         p.error('side resources must be positive')
@@ -41,8 +51,27 @@ output, harness, rows = a.output.resolve(), Path(__file__).resolve().parent, []
 
 
 def state(path):
-    answer = subprocess.run(['git', '-C', path, 'rev-parse', 'HEAD'], capture_output=True, text=True, check=False)
-    return {'path': str(path), 'revision': answer.stdout.strip() if answer.returncode == 0 else None}
+    try:
+        answer = subprocess.run(['git', '-C', path, 'rev-parse', 'HEAD'], capture_output=True,
+                                text=True, check=False)
+        dirty = subprocess.run(['git', '-C', path, 'status', '--porcelain'], capture_output=True,
+                               text=True, check=False)
+    except OSError:
+        return {'path': str(path), 'revision': None, 'dirty': None}
+    return {'path': str(path), 'revision': answer.stdout.strip() if answer.returncode == 0 else None,
+            'dirty': bool(dirty.stdout.strip()) if dirty.returncode == 0 else None}
+
+
+def resolve_image():
+    command = ['docker', 'image', 'inspect', '--format', '{{.Id}}', a.image]
+    inspected = subprocess.run(command, capture_output=True, text=True, check=False, timeout=a.trial_timeout)
+    if inspected.returncode != 0:
+        subprocess.run(['docker', 'pull', a.image], check=True, timeout=a.trial_timeout)
+        inspected = subprocess.run(command, capture_output=True, text=True, check=True, timeout=a.trial_timeout)
+    image_id = inspected.stdout.strip()
+    if not image_id:
+        raise ValueError('image ID is empty')
+    return image_id
 
 
 def report(status, failure=None):
@@ -58,8 +87,10 @@ def report(status, failure=None):
                          'per_side': {s: {'queue_size': getattr(a, s + '_queue_size'),
                                           'consumer_workers': getattr(a, s + '_consumer_workers'),
                                           'scope': getattr(a, s + '_scope')} for s in ('before', 'after')}},
+            'image': {'reference': a.image, 'id': image},
             'builds': {s: state(getattr(a, s).resolve()) for s in ('before', 'after')},
-            'pairs': rows, 'failure': failure}
+            'harness': state(harness.parents[1]), 'requested_pairs': a.pairs,
+            'completed_pairs': len(rows), 'pairs': rows, 'failure': failure}
     if accepted:
         margins = []
         for row in rows:
@@ -78,17 +109,16 @@ def report(status, failure=None):
     (output / 'result.json').write_text(json.dumps(body, indent=2) + '\n')
 
 
+image = None
 try:
-    image = subprocess.run(['docker', 'image', 'inspect', '--format', '{{.Id}}', a.image], capture_output=True,
-                           text=True, check=True, timeout=a.trial_timeout).stdout.strip()
-    if not image:
-        raise ValueError('image ID is empty')
+    image = resolve_image()
     for pair in range(-1, a.pairs):
         row = {'pair': pair}
         for side in (('before', 'after') if pair % 2 == 0 else ('after', 'before')):
             name, build = '%02d-%s' % (pair + 1, side), getattr(a, side).resolve()
             metric, log = output / (name + '.json'), output / (name + '.log')
-            command = ['docker', 'run', '--rm', '-u', '%d:%d' % (os.getuid(), os.getgid()),
+            container_name = 'rsyslog-queue-latency-%d-%d-%s' % (os.getpid(), pair + 1, side)
+            command = ['docker', 'run', '--rm', '--name', container_name, '-u', '%d:%d' % (os.getuid(), os.getgid()),
                        '-v', '%s:/rsyslog' % build, '-v', '%s:/campaign:ro' % harness, '-v', '%s:/results' % output,
                        '-w', '/rsyslog/tests', '-e', 'BENCH_METRIC_FILE=/results/' + metric.name,
                        '-e', 'BENCH_MESSAGES=%d' % a.messages, '-e', 'BENCH_CONNECTIONS=%d' % a.connections,
@@ -104,7 +134,13 @@ try:
                        '-e', 'BENCH_OMFILE_FLUSH_POLICY=%s' % a.flush_policy,
                        image, 'bash', '/campaign/trial-latency.sh']
             with log.open('w') as stream:
-                subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT, check=True, timeout=a.trial_timeout)
+                try:
+                    subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT, check=True,
+                                   timeout=a.trial_timeout)
+                except subprocess.TimeoutExpired:
+                    subprocess.run(['docker', 'rm', '--force', container_name], stdout=stream,
+                                   stderr=subprocess.STDOUT, check=False, timeout=30)
+                    raise
             row[side] = json.loads(metric.read_text())
         if pair >= 0:
             rows.append(row)

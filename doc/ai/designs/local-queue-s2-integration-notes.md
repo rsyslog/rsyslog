@@ -136,8 +136,13 @@ wtpSetpfChkStopWrkr(fe.pool, ChkStopFE)
 wtpSetpfGetDeqBatchSize(fe.pool, GetFEBatchSize)
 wtpSetpfDoWork(fe.pool, ConsumerFE)
 wtpSetpfObjProcessed(fe.pool, CompleteFELease)
+wtpUseMonotonicTermination(fe.pool)
 wtpConstructFinalize(fe.pool)
 ```
+
+Call `wtpUseMonotonicTermination` before finalization for the BE regular pool
+and any DA pool participating in local graph shutdown as well. Their
+`condThrdTrm` waits use the same monotonic shutdown deadlines.
 
 Leave `pfRateLimiter` and `pfIdleTimeout` unset: S2 rejects FE rate scheduling and
 does not retire idle FE workers. `GetFEBatchSize` returns

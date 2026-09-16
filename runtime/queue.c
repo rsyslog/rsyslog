@@ -4998,8 +4998,10 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
     /* Even a Direct or not-yet-started queue is a graph lifetime anchor.
      * Stop the graph before freeing its first node; later graph traversal must
      * never see a freed node after partial activation or validation cleanup. */
-    if (pThis->localSource == NULL && pThis->pqParent == NULL && pThis->localGraphConf != NULL)
-        rulesetShutdownLocalGraph(pThis->localGraphConf);
+    if (pThis->localSource == NULL && pThis->pqParent == NULL && pThis->localGraphConf != NULL) {
+        const rsRetVal graph_ret = rulesetShutdownLocalGraph(pThis->localGraphConf);
+        if (graph_ret != RS_RET_OK) LogError(0, graph_ret, "local queue graph shutdown failed during queue teardown");
+    }
     if (pThis->localSource != NULL) {
         assert(pThis->pWtpReg == NULL);
         /* FE descriptor owns its mutex; all leases and the pool were disposed

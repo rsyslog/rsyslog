@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # Verify a local family requests cancellation for every blocked FE before it
 # waits for any one cleanup. The ENABLE_TESTBENCH producer-retire fault retires
 # the actual worker after its first FE publication. The second message therefore

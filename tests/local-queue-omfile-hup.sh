@@ -8,6 +8,7 @@
 # Disable BE helping so the final BE probe uses a dedicated worker whose action
 # was not suspended by the failed-open FE probe. This isolates HUP ownership and
 # worker lazy-open behavior from helper scheduling and per-worker retry timers.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin imdiag
@@ -24,8 +25,11 @@ wait_preopened_file() {
 
 generate_conf
 # The local callback contract also applies to the harness diagnostic output.
-sed -i '1i template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf"
-sed -i "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" "${TESTCONF_NM}.conf"
+sed -i.localq '1i\
+template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf" || error_exit $?
+rm -f "${TESTCONF_NM}.conf.localq"
+sed -i.localq "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" "${TESTCONF_NM}.conf" || error_exit $?
+rm -f "${TESTCONF_NM}.conf.localq"
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"

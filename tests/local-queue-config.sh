@@ -14,6 +14,15 @@
 if [ "${LOCAL_QUEUE_CONFIG_YAML:-0}" -eq 1 ]; then
     require_yaml_support
 fi
+# The compact parameter map needs Bash associative arrays. macOS still ships
+# Bash 3, where continuing would turn dotted queue keys into arithmetic syntax.
+if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    echo 'SKIP local queue configuration matrix requires Bash 4 associative arrays'
+    exit 77
+fi
+timeout_cmd=${timeout_cmd:-timeout}
+command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
+command -v "$timeout_cmd" >/dev/null 2>&1 || error_exit 77 'no timeout command available'
 
 write_config() {
     local scenario="$1" key
@@ -235,7 +244,7 @@ done
 
 for scenario in "${positive[@]}"; do
     write_config "$scenario"
-    if ! timeout -k 2 20 ../tools/rsyslogd -N1 -f "$conf" -M../runtime/.libs:../.libs \
+    if ! $timeout_cmd -k 2 20 ../tools/rsyslogd -N1 -f "$conf" -M../runtime/.libs:../.libs \
         > "${RSYSLOG_DYNNAME}.${scenario}.log" 2>&1; then
         cat "${RSYSLOG_DYNNAME}.${scenario}.log"
         error_exit 1
@@ -246,7 +255,7 @@ for scenario in "${negative[@]}"; do
     write_config "$scenario"
     for mode in -N1 -N3 -n; do
         log="${RSYSLOG_DYNNAME}.${scenario}.${mode}.log"
-        timeout -k 2 20 ../tools/rsyslogd "$mode" -i "${RSYSLOG_DYNNAME}.pid" \
+        $timeout_cmd -k 2 20 ../tools/rsyslogd "$mode" -i "${RSYSLOG_DYNNAME}.pid" \
             -f "$conf" -M../runtime/.libs:../.libs > "$log" 2>&1
         result=$?
         if [ "$result" -eq 0 ] || [ "$result" -eq 124 ] || [ "$result" -eq 137 ] ||

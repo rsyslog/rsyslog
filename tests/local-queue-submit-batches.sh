@@ -10,10 +10,12 @@
 # Explicit helperBatchSize=0 preserves the same-binary S2 control.
 # File and counter waits establish ordering; no elapsed delay is a success
 # condition.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin impstats
 require_plugin omtesting
+require_plugin imdiag
 
 export NUMMESSAGES=12
 STATSFILE="$PWD/${RSYSLOG_DYNNAME}.stats"

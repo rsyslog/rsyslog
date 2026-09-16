@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # Hold FE callback0 and queue ID1 behind it. With batch size1, configured 400ms
 # slowdown must separate their callbacks. Start a monotonic clock immediately
 # before releasing callback0; seeing both exact IDs cannot take less than 300ms.

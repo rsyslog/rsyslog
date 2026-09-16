@@ -123,7 +123,6 @@ struct strm_s {
         uchar *pszDir; /* Directory */
         int lenDir;
         int fd; /* the file descriptor, -1 if closed */
-        sbool localOutput; /* preopened local-queue output: workers never reopen/close */
         int fdDir; /* the directory's descriptor, in case bSync is requested (-1 if closed) */
         int readTimeout; /* 0: do not timeout */
         time_t lastRead; /* for timeout processing */
@@ -178,6 +177,7 @@ struct strm_s {
         sbool bNoFollowFinal; /* if set, do not follow final path component on open */
         int ignoringMsg;
         strm_compressionDriver_t compressionDriver;
+        sbool localOutput; /* preopened local-queue output: workers never reopen/close */
 };
 
 

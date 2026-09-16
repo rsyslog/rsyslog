@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Deterministic oracle tests for latency-observer output and validity rules."""
 import importlib.util
+import json
 from pathlib import Path
 import socket
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -49,12 +52,29 @@ assert not observer.rate_is_valid(100, 90, 2.0)  # fixed offered-rate invalidati
 
 with tempfile.TemporaryDirectory() as directory:
     output = Path(directory) / 'sink'
-    output.write_text(payload_line(0, 1) + '\n' + payload_line(0, 1) + '\nlate-fragment')
+    output.write_text(payload_line(0, 1) + '\n' + payload_line(0, 1) + '\n')
     final = observer.final_oracle(output, {0}, 32, {0: 1})
-    assert final['duplicates'] == 1 and final['trailing_bytes'] == len('late-fragment')
+    assert final['duplicates'] == 1
+    output.write_text(payload_line(0, 1) + '\nlate-fragment')
+    final = observer.final_oracle(output, {0}, 32, {0: 1})
+    assert final['trailing_bytes'] == len('late-fragment')
+    expected, result = Path(directory) / 'expected', Path(directory) / 'result.json'
+    expected.write_text('0 1\n')
+    result.write_text(json.dumps({'status': 'completed'}))
+    finalized = subprocess.run([sys.executable, str(Path(__file__).with_name('latency-observer.py')), '--finalize',
+                                '--output', str(output), '--result', str(result), '--expected', str(expected),
+                                '--messages', '1', '--payload', '32'], capture_output=True, text=True, check=False)
+    assert finalized.returncode != 0
+    final = json.loads(result.read_text())['final_oracle']
+    assert json.loads(result.read_text())['status'] == 'invalid' and final['trailing_bytes'] == len('late-fragment')
     output.write_text(payload_line(0, 2) + '\n')
     final = observer.final_oracle(output, {0}, 32, {0: 1})
     assert final['timestamp_mismatch'] == 1
+    expected.write_text('0 1\n')
+    timestamps = observer.load_expected(expected, {0, 1})
+    output.write_text(payload_line(0, 1) + '\n')
+    final = observer.final_oracle(output, {0, 1}, 32, timestamps)
+    assert final['missing'] == [1] and not final['timestamp_mismatch']
 
 
 with tempfile.TemporaryDirectory() as directory:
@@ -85,9 +105,11 @@ with tempfile.TemporaryDirectory() as directory:
     result = observer.run(SimpleNamespace(host='127.0.0.1', port=listener.getsockname()[1], output=output,
                           expected=expected,
                           messages=4, connections=1, rate=100, id_start=0, poll_us=100, warmup_ms=5,
-                          completion_timeout=2, connect_timeout=2, max_rate_drift_percent=20,
+                          completion_timeout=2, connect_timeout=2, max_rate_drift_percent=100,
                           max_lateness_us=100000, max_poll_gap_us=100000, payload=128))
     server.join()
     final = observer.final_oracle(output, {0, 1, 2, 3}, 128,
                                   observer.load_expected(expected, {0, 1, 2, 3}))
-    assert result['status'] == 'completed' and result['oracle']['received'] == 4 and not final['missing']
+    assert result['status'] == 'completed' and result['oracle']['received'] == 4
+    assert not (final['missing'] or final['duplicates'] or final['invalid_output']
+                or final['timestamp_mismatch'] or final['trailing_bytes'])

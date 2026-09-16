@@ -1104,7 +1104,10 @@ The later maintainer-requested Ubuntu26.04 testbench finished with **1,709 total
 - `omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh`;
 - `segmented-diskqueue-ruleset-fallback.sh`.
 
-No failure repeated, so no issue was created under the user's repeat-failure rule.
+None of these failures repeated in its isolated rerun, so no issue was created
+under the requested fail-then-rerun procedure. The later post-S7 campaign
+reproduced the PKCS#11 test failure in a broad run; its isolated rerun passed
+again. Cross-run recurrence remains recorded and is not a claim of resolution.
 Isolated passes do not convert the original broad run into a clean broad pass.
 The configured Elasticsearch and imdocker families were absent; forcing service
 relevance did not add unconfigured families. The historical TSan forced-read

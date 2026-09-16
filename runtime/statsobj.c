@@ -185,8 +185,11 @@ finalize_it:
  */
 static rsRetVal setPreReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void *ctx) {
     DEFiRet;
+    CHKiRet(statsobjLock(&mutStats, "stats object list"));
     pThis->pre_read_notifier = notifier;
     pThis->pre_read_notifier_ctx = ctx;
+    statsobjUnlock(&mutStats, "stats object list");
+finalize_it:
     RETiRet;
 }
 

@@ -485,6 +485,8 @@ static void freeActionNames(rsconf_t *pThis) {
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
+    const rsRetVal graph_ret = rulesetShutdownLocalGraph(pThis);
+    if (graph_ret != RS_RET_OK) LogError(0, graph_ret, "local queue graph shutdown failed during config teardown");
     rulesetFreeLocalGraph(pThis);
     freeCnf(pThis);
     tplDeleteAll(pThis);

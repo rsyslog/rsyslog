@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,15 +20,15 @@
 
 static ssize_t (*real_write)(int, const void *, size_t);
 static int (*real_lock)(pthread_mutex_t *);
-static _Thread_local pthread_mutex_t *last_lock;
-static _Atomic(pthread_mutex_t *) output_lock;
-static atomic_int claimed;
+static __thread pthread_mutex_t *last_lock;
+static pthread_mutex_t *output_lock;
+static int claimed;
 static int waiting;
 static int stopping;
 static pthread_mutex_t monitor_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t monitor_cond = PTHREAD_COND_INITIALIZER;
 static pthread_t monitor;
-static atomic_int cancelled;
+static int cancelled;
 static const char *target;
 static const char *events;
 
@@ -44,7 +43,7 @@ static void mark(const char *const text) {
  * writing the marker from that waiter would introduce precisely such a gap. */
 static void *observe_waiter(void *unused) {
     (void)unused;
-    real_lock(&monitor_mutex);
+    pthread_mutex_lock(&monitor_mutex);
     while (!waiting && !stopping) pthread_cond_wait(&monitor_cond, &monitor_mutex);
     const int observed = waiting;
     pthread_mutex_unlock(&monitor_mutex);
@@ -62,7 +61,7 @@ static void __attribute__((constructor)) initialize(void) {
 }
 
 static void __attribute__((destructor)) finalize(void) {
-    real_lock(&monitor_mutex);
+    pthread_mutex_lock(&monitor_mutex);
     stopping = 1;
     pthread_cond_signal(&monitor_cond);
     pthread_mutex_unlock(&monitor_mutex);
@@ -70,8 +69,8 @@ static void __attribute__((destructor)) finalize(void) {
 }
 
 int pthread_mutex_lock(pthread_mutex_t *const mutex) {
-    if (atomic_load_explicit(&output_lock, memory_order_acquire) == mutex) {
-        real_lock(&monitor_mutex);
+    if (__atomic_load_n(&output_lock, __ATOMIC_ACQUIRE) == mutex) {
+        pthread_mutex_lock(&monitor_mutex);
         waiting = 1;
         pthread_cond_signal(&monitor_cond);
         pthread_mutex_unlock(&monitor_mutex);
@@ -88,7 +87,7 @@ static void cancelled_writer(void *unused) {
      * cleanup subsequently releases the output mutex without I/O. */
     int oldstate;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-    atomic_store_explicit(&cancelled, 1, memory_order_release);
+    __atomic_store_n(&cancelled, 1, __ATOMIC_RELEASE);
     mark("cancelled\n");
 }
 
@@ -97,10 +96,10 @@ ssize_t write(int fd, const void *buf, size_t len) {
     if (fstat(fd, &actual) != 0 || stat(target, &expected) != 0 || actual.st_dev != expected.st_dev ||
         actual.st_ino != expected.st_ino)
         return real_write(fd, buf, len);
-    if (atomic_exchange_explicit(&claimed, 1, memory_order_relaxed) == 0) {
+    if (__atomic_exchange_n(&claimed, 1, __ATOMIC_RELAXED) == 0) {
         pthread_cleanup_push(cancelled_writer, NULL);
         if (last_lock == NULL || len < 3 || real_write(fd, buf, 3) != 3) _exit(2);
-        atomic_store_explicit(&output_lock, last_lock, memory_order_release);
+        __atomic_store_n(&output_lock, last_lock, __ATOMIC_RELEASE);
         mark("entered\n");
         struct timespec remaining = {.tv_sec = 60, .tv_nsec = 0};
         while (nanosleep(&remaining, &remaining) != 0 && errno == EINTR) {
@@ -109,7 +108,7 @@ ssize_t write(int fd, const void *buf, size_t len) {
         _exit(2);
         pthread_cleanup_pop(0);
     }
-    if (!atomic_load_explicit(&cancelled, memory_order_acquire) || len != sizeof(" sibling-after-cancel\n") - 1 ||
+    if (!__atomic_load_n(&cancelled, __ATOMIC_ACQUIRE) || len != sizeof(" sibling-after-cancel\n") - 1 ||
         memcmp(buf, " sibling-after-cancel\n", len) != 0)
         _exit(2);
     /* A pending cancellation may fire at this marker's open/write. The mutex

@@ -50,6 +50,8 @@ parser.add_argument('--trial-timeout', type=float, default=180,
 args = parser.parse_args()
 if args.output_mode == 'omfwd' and args.workload != 'multi':
     parser.error('--output-mode omfwd requires --workload multi')
+if args.impstats and args.workload != 'multi':
+    parser.error('--impstats requires --workload multi')
 if args.pairs <= 0:
     parser.error('--pairs must be positive')
 if args.messages <= 0:
@@ -76,6 +78,8 @@ for label in ('before', 'after'):
         parser.error(f'--{label}-frontend-size must be positive')
     if max_frontends is not None and max_frontends <= 0:
         parser.error(f'--{label}-max-frontends must be positive')
+    if args.workload == 'lifecycle' and scope != 'global':
+        parser.error(f'--{label}-scope local requires --workload multi')
 active_connections = 1 if args.producer_mode == 'skew' else args.connections
 if args.workload == 'multi' and args.messages % active_connections != 0:
     parser.error('--messages must be divisible by active connections')
@@ -89,10 +93,13 @@ results = []
 
 def checkout_state(path):
     """Record checkout state without treating it as binary-build provenance."""
-    revision = subprocess.run(['git', '-C', path, 'rev-parse', 'HEAD'], capture_output=True,
-                              check=False, text=True)
-    dirty = subprocess.run(['git', '-C', path, 'status', '--porcelain'], capture_output=True,
-                           check=False, text=True)
+    try:
+        revision = subprocess.run(['git', '-C', path, 'rev-parse', 'HEAD'], capture_output=True,
+                                  check=False, text=True)
+        dirty = subprocess.run(['git', '-C', path, 'status', '--porcelain'], capture_output=True,
+                               check=False, text=True)
+    except OSError:
+        return {'path': str(path), 'revision': None, 'dirty': None}
     return {'path': str(path), 'revision': revision.stdout.strip() if revision.returncode == 0 else None,
             'dirty': bool(dirty.stdout.strip()) if dirty.returncode == 0 else None}
 
@@ -128,11 +135,6 @@ def read_metrics(path):
     return metrics
 
 
-image_id = None
-builds = {label: checkout_state(getattr(args, label).resolve()) for label in ('before', 'after')}
-workload_checkout = checkout_state(harness.parents[1])
-
-
 def build_configuration(label):
     """Resolve per-build resource bounds while leaving legacy global configs unchanged."""
     queue_size = getattr(args, f'{label}_queue_size')
@@ -161,6 +163,10 @@ if args.print_configuration:
     print(json.dumps({'per_build_configuration': per_build_configuration}, sort_keys=True))
     raise SystemExit(0)
 
+image_id = None
+builds = {label: checkout_state(getattr(args, label).resolve()) for label in ('before', 'after')}
+workload_checkout = checkout_state(harness.parents[1])
+
 
 def write_report(status, failure=None):
     ratios = [row['ratio'] for row in results]
@@ -176,7 +182,6 @@ def write_report(status, failure=None):
             'dirty': workload_checkout['dirty'],
             'messages': args.messages,
             'input_workers': args.input_workers if args.workload == 'multi' else 1,
-            'configured_consumer_workers': args.consumer_workers if args.workload == 'multi' else 4,
             'configured_connections': args.connections if args.workload == 'multi' else 0,
             'active_connections': active_connections if args.workload == 'multi' else 0,
             'producer_mode': args.producer_mode if args.workload == 'multi' else 'single',

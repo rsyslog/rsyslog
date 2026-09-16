@@ -3,8 +3,9 @@
 # boundary. Root ID1 remains owned upstream while leaf FE/BE/DA callbacks hold
 # IDs0/3/4; the disk store must exist before shutdown. Releasing callbacks only
 # after graph shutdown entry checks producer authority and destination lifetime.
-# The root FE holds the entire 64-message burst so its blocked BE cannot
-# intercept downstream spill traffic. Shutdown may execute or persist leaf
+# Establish the leaf BE callback before crossing its DA watermark; otherwise
+# the DA consumer may claim that barrier and block before reaching ID4.
+# The root FE holds the spill burst so its blocked BE cannot intercept it. Shutdown may execute or persist leaf
 # work under the existing DA deadline policy. A no-ingress restart reads the
 # same leaf spool with barriers disabled; exact combined 0..65 detects loss or
 # replay of already downstream-owned IDs.
@@ -69,8 +70,10 @@ tcpflood -m1 -i0
 wait_file_lines "$FE_ENTER" 1
 injectmsg 1 1
 wait_file_lines "$ROOT_ENTER" 1
-tcpflood -m64 -i2
+tcpflood -m2 -i2
 wait_file_lines "$BE_ENTER" 1
+# IDs2/3 are below the high watermark, and BE now demonstrably owns ID3.
+tcpflood -m62 -i4
 wait_file_lines "$DA_ENTER" 1
 if [ "$engine" = disk ]; then
     compgen -G "$SPOOL/s5leaf.[0-9]*" >/dev/null || error_exit 1 'downstream classic DA store missing'

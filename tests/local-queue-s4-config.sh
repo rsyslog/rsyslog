@@ -3,7 +3,11 @@
 # objects. An acyclic graph must pass; a cycle and a dynamic call must fail
 # before activation. -N1 status plus the dedicated local-config diagnostic is
 # the oracle; timeout is only a hang guard. No listener or output is started.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
+timeout_cmd=${timeout_cmd:-timeout}
+command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
+command -v "$timeout_cmd" >/dev/null 2>&1 || error_exit 77 'no timeout command available'
 if [ "${LOCAL_QUEUE_S4_YAML:-0}" -eq 1 ]; then require_yaml_support; fi
 for scenario in valid cycle indirect; do
     CONF="$PWD/$RSYSLOG_DYNNAME.$scenario.conf"
@@ -39,7 +43,7 @@ else:
 Path(filename).write_text(text)
 PY
     LOG="$PWD/$RSYSLOG_DYNNAME.$scenario.log"
-    timeout -k 2 20 ../tools/rsyslogd -N1 -f "$CONF" -M../runtime/.libs:../.libs >"$LOG" 2>&1
+    $timeout_cmd -k 2 20 ../tools/rsyslogd -N1 -f "$CONF" -M../runtime/.libs:../.libs >"$LOG" 2>&1
     result=$?
     if [ "$scenario" = valid ]; then
         if [ "$result" -ne 0 ]; then cat "$LOG"; error_exit 1; fi

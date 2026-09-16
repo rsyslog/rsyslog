@@ -5,6 +5,7 @@
 # markers prove the sibling later reaches the real stream with its own intact
 # payload. Proper daemon termination is the cleanup oracle. External output is
 # deliberately ambiguous: this test makes no exact-delivery claim after cancel.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin imdiag
@@ -15,8 +16,11 @@ export RSYSLOG_PRELOAD="./.libs/liblocal_queue_omfile_cancel_preload.so"
 
 generate_conf
 # The local callback contract also applies to the harness diagnostic output.
-sed -i '1i template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf"
-sed -i "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" "${TESTCONF_NM}.conf"
+sed -i.localq '1i\
+template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf" || error_exit $?
+rm -f "${TESTCONF_NM}.conf.localq"
+sed -i.localq "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" "${TESTCONF_NM}.conf" || error_exit $?
+rm -f "${TESTCONF_NM}.conf.localq"
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"

@@ -92,8 +92,8 @@ def load_expected(path, expected):
         if identifier in values:
             raise ValueError('duplicate ID in expected timestamp manifest')
         values[identifier] = int(timestamp)
-    if set(values) != set(expected):
-        raise ValueError('expected timestamp manifest does not contain exactly the expected IDs')
+    if not set(values) <= set(expected):
+        raise ValueError('expected timestamp manifest contains IDs outside the configured range')
     return values
 
 
@@ -115,7 +115,8 @@ def final_oracle(output, expected, payload, expected_timestamps):
             invalid += 1
         else:
             seen.add(identifier)
-            timestamp_mismatch += timestamp != expected_timestamps[identifier]
+            timestamp_mismatch += (identifier not in expected_timestamps
+                                   or timestamp != expected_timestamps[identifier])
     return {'received': len(seen), 'missing': sorted(expected - seen), 'duplicates': duplicates,
             'invalid_output': invalid, 'timestamp_mismatch': timestamp_mismatch, 'trailing_bytes': len(trailing)}
 
@@ -246,6 +247,8 @@ def main():
     parser.add_argument('--allow-invalid', action='store_true',
                         help='write a provisional invalid result for finalization')
     args = parser.parse_args()
+    if args.id_start < 0:
+        parser.error('--id-start must be nonnegative')
     if args.finalize:
         if args.payload is None:
             parser.error('--payload is required with --finalize')
@@ -254,7 +257,8 @@ def main():
         timestamps = load_expected(args.expected, expected)
         final = final_oracle(args.output, expected, args.payload, timestamps)
         result['final_oracle'] = final
-        if final['missing'] or final['duplicates'] or final['invalid_output'] or final['timestamp_mismatch']:
+        if (final['missing'] or final['duplicates'] or final['invalid_output'] or final['timestamp_mismatch']
+                or final['trailing_bytes']):
             result['status'] = 'invalid'
         args.result.write_text(json.dumps(result, indent=2) + '\n')
         if result['status'] != 'completed':

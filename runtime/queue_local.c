@@ -762,8 +762,7 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     if (wtiIsShutdownImmediate(worker)) qqueueLocalRetainAmbiguous(worker);
     /* Completion is source-bound on the next iteration or exit. Callback
      * errors cannot bypass disabled cancellation before reacquiring mutex. */
-    (void)ret;
-    return RS_RET_OK;
+    return ret;
 }
 
 static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,

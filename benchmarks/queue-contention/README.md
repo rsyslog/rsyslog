@@ -226,3 +226,7 @@ next action callback or idle/minbatch wait. Final validation covered broad
 Ubuntu 26.04 tests, the static analyzer, ASan/UBSan, TSan, both compiler
 portability builds, mock distcheck, and deterministic enqueue/shutdown and
 out-of-order-retirement regressions.
+
+`compare.py --output-mode omfwd` is supported only with `--workload multi`.
+It replaces the timed trial's omfile sink with omfwd and a mock TCP receiver;
+`--output-mode omfile` remains the default.

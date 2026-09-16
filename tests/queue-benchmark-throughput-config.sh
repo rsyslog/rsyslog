@@ -7,7 +7,8 @@
 
 set -euo pipefail
 
-: "${srcdir:=.}"
+: "${srcdir:=$(dirname "$0")}"
+command -v python3 >/dev/null 2>&1 || exit 77
 harness="$srcdir/../benchmarks/queue-contention/trial-multi.sh"
 driver="$srcdir/../benchmarks/queue-contention/compare.py"
 common=(BENCH_CONFIG_ONLY=yes BENCH_MESSAGES=16 BENCH_CONNECTIONS=16 BENCH_PAYLOAD=512 BENCH_INPUT_WORKERS=8
@@ -19,7 +20,7 @@ expected_global='main_queue_conf=main_queue(queue.type="FixedArray" queue.size="
     queue.dequeueBatchSize="1024" queue.mutexContentionStats="off")'
 if ! grep -Fqx 'scope=global' <<<"$global" || ! grep -Fqx 'total_slot_bound=1088192' <<<"$global" \
     || ! grep -Fqx 'backend_queue_size=1088192' <<<"$global" || ! grep -Fqx 'dequeue_batch_size=1024' <<<"$global" \
-    || ! grep -Fq "$expected_global" <<<"$global" || grep -Fq 'queue.scope=' <<<"$global"; then
+    || [[ "$global" != *"$expected_global"* ]] || grep -Fq 'queue.scope=' <<<"$global"; then
     echo "global configuration is not the frozen S0 control" >&2
     exit 1
 fi

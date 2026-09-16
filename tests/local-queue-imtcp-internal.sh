@@ -7,6 +7,7 @@
 # admission, and a BE internal-route increase of at least two prove the routes.
 # File/counter predicates establish the phases; a connection count is never
 # assumed to imply independent producers, and timeout is only a hang watchdog.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -21,6 +22,7 @@ NORMAL_OUT="$PWD/${RSYSLOG_DYNNAME}.normal"
 generate_conf
 localq_make_startup_marker_absolute
 add_conf '
+template(name="localqid" type="string" string="%msg:F,58:2%\n")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.syslog="off" interval="1")
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
@@ -32,7 +34,7 @@ main_queue(queue.scope="local" queue.type="FixedArray" queue.size="64"
 template(name="localqfmt" type="string" string="%msg%\n")
 if ($msg contains "msgnum:") then :omtesting:barrier_error 2 ;localqfmt
 if ($msg contains "msgnum:") then
-	action(type="omfile" file="'$NORMAL_OUT'" template="localqfmt" queue.type="Direct"
+	action(type="omfile" file="'$NORMAL_OUT'" template="localqid" queue.type="Direct"
 		asyncWriting="off" flushOnTXEnd="on")
 if ($msg contains "omtesting synchronized error") then
 	action(type="omfile" file="'$INTERNAL_OUT'" template="localqfmt" queue.type="Direct"
@@ -56,4 +58,7 @@ localq_wait_stats_greater "$STATSFILE" "main Q.local" \
 localq_wait_stats "$STATSFILE" "main Q.local" "route.fe.messages=1"
 shutdown_when_empty
 wait_shutdown
+export NUMMESSAGES=2
+export SEQ_CHECK_FILE="$NORMAL_OUT"
+seq_check
 exit_test

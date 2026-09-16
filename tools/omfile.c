@@ -1640,10 +1640,8 @@ ENDbeginTransaction
  * No close, reopen, flush, allocation, logging or other I/O runs in cleanup. */
 static void localCommitCancel(void *const instance) {
     instanceData *const pData = instance;
-    if (pData->localQualified) {
-        if (pData->pStrm != NULL) strmDiscardLocalOutput(pData->pStrm);
-        pthread_mutex_unlock(&pData->mutWrite);
-    }
+    if (pData->localQualified && pData->pStrm != NULL) strmDiscardLocalOutput(pData->pStrm);
+    pthread_mutex_unlock(&pData->mutWrite);
 }
 
 BEGINcommitTransaction

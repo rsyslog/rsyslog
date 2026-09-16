@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # Hold actual FE IDs0/1 while the first LinkedList BE node allocation fails.
 # ID2 is consumed as a preadmission rejection; the one-shot fault then permits
 # ID3 to execute on BE. Exact 0,1,3 and conserved counters prove FE ownership,
