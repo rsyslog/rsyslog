@@ -294,6 +294,9 @@ TESTS_DEFAULT = \
 	omfwd-lb-1target-retry-1_byte_buf-TargetFail.sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
+	omfwd-lb-2target-hash.sh \
+	omfwd-lb-2target-hash-distinct-keys.sh \
+	omfwd-lb-2target-hash-failover.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
 	omfwd-missing-target.sh \

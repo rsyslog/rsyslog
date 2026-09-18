@@ -450,6 +450,74 @@ Warning: we do NOT recommend to set this interval below 10 seconds, as it can le
 DoS-like reconnection behaviour. Actually, the default of 30 seconds is quite short
 and should be extended if the use case permits.
 
+
+pool.policy
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "roundrobin", "no", "none"
+
+Selects how a target is chosen from a target pool (two or more entries in
+"target"). Only meaningful with TCP, as UDP uses the first target only.
+
+- "roundrobin" (default): each message is sent to the next target in turn.
+  Distributes load but gives no affinity between a key and a target.
+- "hash": the target is chosen deterministically as ``hash(key) mod
+  targetCount``, where "key" is rendered by "pool.hashkey". The same key
+  therefore always reaches the same target. If that target is unavailable, the
+  remaining targets are probed in order so delivery still succeeds (failover).
+
+Hash selection lets stateful downstream processing (deduplication,
+correlation, per-key aggregation, per-source rate limiting) be sharded across a
+pool of receivers: every message for a given key lands on the one receiver that
+owns it.
+
+Note: selection uses plain modulo hashing, so changing the number of targets
+remaps keys across the pool. For pools whose size stays constant this is not an
+issue; elastic pools that need minimal remapping on resize would require a
+consistent-hash ring, which is not currently implemented.
+
+Note: the hash has no per-instance seed, by design -- the same key must map to
+the same target on every node of a mesh and across restarts. It is not a
+keyed or cryptographic hash. Prefer a routing key derived from a stable
+identifier you control (a source IP, a tenant ID, a hostname) over raw,
+unnormalized message content an untrusted peer fully controls; a key an
+attacker can choose freely could still be used to concentrate traffic on one
+pool member instead of spreading it.
+
+Note: every node sharing this configuration (for consistent cross-node
+routing) must declare the same targets, in the same order, the same count --
+selection is by positional index into "target", not by target identity.
+
+
+pool.hashkey
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "with pool.policy=""hash""", "none"
+
+Name of the template that renders the routing key used by
+``pool.policy="hash"``. It is a second template on the action, evaluated per
+message; the forwarded message itself is still rendered by "template". Required
+when "pool.policy" is "hash"; ignored otherwise.
+
+Example: shard by source IP so all events from a host reach the same receiver::
+
+   template(name="shardkey" type="string" string="%fromhost-ip%")
+
+   action(type="omfwd" protocol="tcp"
+          target=["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+          pool.policy="hash" pool.hashkey="shardkey")
+
+
 NetworkNamespace
 ^^^^^^^^^^^^^^^^
 
