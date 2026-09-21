@@ -47,12 +47,16 @@ Collect gcov/lcov-style coverage after seed replay:
 
 ```sh
 make -j2 fuzz FUZZ_COVERAGE=1
-FUZZ_COLLECT_COVERAGE=1 fuzz/run_fuzz_smoke.sh file
+FUZZ_COLLECT_COVERAGE=1 \
+FUZZ_COVERAGE_OBJECT_DIR=/path/to/dedicated/rsyslog-build \
+fuzz/run_fuzz_smoke.sh file
 ```
 
 If the tree was built for coverage with clang, use `GCOV_TOOL='llvm-cov gcov'`
 when replaying seeds so clang-generated profile notes are decoded by the
-matching gcov frontend.
+matching gcov frontend. `FUZZ_COVERAGE_OBJECT_DIR` is mandatory and must point
+to the dedicated coverage build tree; only counters below that directory are
+cleared or collected.
 
 Coverage output is written below `fuzz/coverage/`.
 

@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## minimize_corpus.sh
 ## Minimize a fuzz corpus with AFL++ afl-cmin or libFuzzer merge mode.
 ##
@@ -54,6 +60,12 @@ if [ -n "$dict" ] && [ ! -f "$dict" ]; then
 	printf 'dictionary does not exist: %s\n' "$dict" >&2
 	exit 1
 fi
+case "$timeout_s" in
+	''|*[!0-9]*|0)
+		printf 'timeout must be a positive number of seconds: %s\n' "$timeout_s" >&2
+		exit 2
+		;;
+esac
 
 mkdir -p "$output"
 
@@ -64,20 +76,22 @@ case "$engine" in
 			printf 'missing afl-cmin; install AFL++ or set AFL_CMIN\n' >&2
 			exit 1
 		}
-		dict_args=
+		timeout_ms=$((timeout_s * 1000))
 		if [ -n "$dict" ]; then
-			dict_args="-x $dict"
+			"$afl_cmin" -i "$input" -o "$output" -m none -t "$timeout_ms" \
+				-x "$dict" -- "$target" @@
+		else
+			"$afl_cmin" -i "$input" -o "$output" -m none -t "$timeout_ms" \
+				-- "$target" @@
 		fi
-		# shellcheck disable=SC2086
-		"$afl_cmin" -i "$input" -o "$output" -m none -t "$timeout_s" $dict_args -- "$target" @@
 		;;
 	libfuzzer)
-		dict_arg=
 		if [ -n "$dict" ]; then
-			dict_arg="-dict=$dict"
+			"$target" -merge=1 "$output" "$input" -max_total_time="$timeout_s" \
+				"-dict=$dict"
+		else
+			"$target" -merge=1 "$output" "$input" -max_total_time="$timeout_s"
 		fi
-		# shellcheck disable=SC2086
-		"$target" -merge=1 "$output" "$input" -max_total_time="$timeout_s" $dict_arg
 		;;
 	*) usage ;;
 esac

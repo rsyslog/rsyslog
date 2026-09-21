@@ -3,7 +3,8 @@ stages:
   - "CASR triage"
 
 variables:
-  FUZZ_IMAGE: "nexus.esafeline.com/appsec/fuzz-rsyslog:1.0.2"
+  FUZZ_IMAGE: "alpine:3.23"
+  CASR_VERSION: "2.13.0"
   FUZZ_TARGET_NAME: "rsyslog_parsers"
   FUZZ_MAX_TOTAL_TIME_SECONDS: "60"
   FUZZ_NO_NEW_PATH_SECONDS: "60"
@@ -13,6 +14,18 @@ variables:
 
 default:
   image: "$FUZZ_IMAGE"
+  before_script:
+    - >-
+      apk add --no-cache
+      afl++ autoconf autoconf-archive automake bash bison build-base
+      ca-certificates cargo clang compiler-rt coreutils curl file findutils
+      flex gdb git libestr-dev libfastjson-dev libtool linux-headers make
+      openssl-dev patch perl pkgconf python3 rust tar util-linux-dev xz zlib-dev
+    - update-ca-certificates
+    - cargo install --locked --root /usr/local --version "$CASR_VERSION" casr
+    - command -v afl-clang-fast
+    - command -v afl-fuzz
+    - command -v casr-afl
 
 build_and_fuzz:
   stage: "build/fuzz"

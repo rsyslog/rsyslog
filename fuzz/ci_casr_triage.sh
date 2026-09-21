@@ -1,6 +1,12 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## ci_casr_triage.sh
-## Rebuild the AFL++ target and triage downloaded AFL++ artifacts with CASR.
+## Triage downloaded AFL++ artifacts with the exact build-stage binary.
 
 set -eu
 

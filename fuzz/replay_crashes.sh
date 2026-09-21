@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## replay_crashes.sh
 ## Replay crash files against the rsyslog fuzz targets under the current build.
 ##
@@ -42,7 +48,34 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS:-print_stacktrace=1:halt_on_error=1}
 export MSAN_OPTIONS=${MSAN_OPTIONS:-halt_on_error=1}
 
 tmp_list=$(mktemp "${TMPDIR:-/tmp}/rsyslog-fuzz-replay.XXXXXX")
-trap 'rm -f "$tmp_list"' EXIT HUP INT TERM
+active_pid=
+cleanup() {
+	rm -f "$tmp_list"
+}
+terminate() {
+	signal=$1
+	exit_code=$2
+	if [ -n "$active_pid" ]; then
+		kill -"$signal" "$active_pid" 2>/dev/null || :
+		wait "$active_pid" 2>/dev/null || :
+	fi
+	exit "$exit_code"
+}
+run_replay() {
+	timeout "$timeout_s" "$@" &
+	active_pid=$!
+	if wait "$active_pid"; then
+		result=0
+	else
+		result=$?
+	fi
+	active_pid=
+	return "$result"
+}
+trap cleanup EXIT
+trap 'terminate HUP 129' HUP
+trap 'terminate INT 130' INT
+trap 'terminate TERM 143' TERM
 
 for path in "$@"; do
 	if [ -d "$path" ]; then
@@ -61,12 +94,12 @@ while IFS= read -r testcase; do
 	printf 'REPLAY %s\n' "$testcase"
 	case "$engine" in
 		file)
-			if ! timeout "$timeout_s" "$target" "$testcase"; then
+			if ! run_replay "$target" "$testcase"; then
 				failures=$((failures + 1))
 			fi
 			;;
 		libfuzzer)
-			if ! timeout "$timeout_s" "$target" -runs=1 "$testcase"; then
+			if ! run_replay "$target" -runs=1 "$testcase"; then
 				failures=$((failures + 1))
 			fi
 			;;

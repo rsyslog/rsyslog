@@ -147,6 +147,7 @@ EXTRA_DIST = \
 	fuzzdriver_regression.c \
 	fuzzstate_regression.c \
 	libfuzzer.c \
+	Dockerfile \
 	.gitattributes \
 	.gitignore \
 	README.md \
@@ -205,13 +206,10 @@ EXTRA_DIST = \
 	testcases/test_inputs/simple_test.txt \
 	testcases/test_inputs/special_chars.txt \
 	testcases/test_inputs/structured_data_escape.txt \
-	testcases/test_inputs/temp_test_input.txt \
 	testcases/test_inputs/template_dynamic_mix.txt \
 	testcases/test_inputs/template_like.txt \
 	testcases/test_inputs/test_input \
-	testcases/test_inputs/test_input.txt \
 	testcases/test_inputs/test_input_simple.txt \
-	testcases/test_inputs/test_simple.txt \
 	testcases/test_inputs/test_simple2.txt \
 	testcases/test_inputs/test_syslog.txt \
 	testcases/test_inputs/timestamp_broken.txt \

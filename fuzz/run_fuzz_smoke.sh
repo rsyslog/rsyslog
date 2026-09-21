@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## run_fuzz_smoke.sh
 ## Replay in-tree fuzz seeds against the AFL++ file-mode and libFuzzer targets.
 ##
@@ -26,6 +32,7 @@ file_target=${FUZZ_FILE_TARGET:-"$repo_dir/fuzz/fuzz_rsyslog_parsers"}
 libfuzzer_target=${FUZZ_LIBFUZZER_TARGET:-"$repo_dir/fuzz/fuzz_rsyslog_parsers_libfuzzer"}
 timeout_s=${FUZZ_TIMEOUT:-10}
 coverage_dir=${FUZZ_COVERAGE_DIR:-"$repo_dir/fuzz/coverage"}
+coverage_object_dir=${FUZZ_COVERAGE_OBJECT_DIR:-}
 
 run_seed_file_mode() {
 	seed=$1
@@ -66,45 +73,65 @@ validate_dicts() {
 
 collect_coverage() {
 	[ "${FUZZ_COLLECT_COVERAGE:-0}" = "1" ] || return 0
-	mkdir -p "$coverage_dir"
-	if command -v lcov >/dev/null 2>&1; then
-		lcov --capture --directory "$repo_dir" --output-file "$coverage_dir/fuzz-coverage.info" \
-			--ignore-errors mismatch --ignore-errors negative --filter range
-		return 0
+	if [ -z "$coverage_object_dir" ] || [ ! -d "$coverage_object_dir" ]; then
+		printf '%s\n' \
+			'FUZZ_COVERAGE_OBJECT_DIR must name the dedicated coverage build tree' >&2
+		return 1
 	fi
-
+	mkdir -p "$coverage_dir"
 	gcov_tool=${GCOV_TOOL:-}
 	if [ -z "$gcov_tool" ]; then
 		case "${CC:-}" in
-			*clang*)
-				if command -v llvm-cov >/dev/null 2>&1; then
-					gcov_tool="llvm-cov gcov"
-				else
-					printf 'clang coverage requested but llvm-cov is unavailable; skipping gcov summary\n' \
-						> "$coverage_dir/gcov-summary.txt"
-					return 0
-				fi
-				;;
+			*clang*) gcov_tool="llvm-cov gcov" ;;
 			*) gcov_tool=gcov ;;
 		esac
-	elif command -v llvm-cov >/dev/null 2>&1 && ! command -v "$gcov_tool" >/dev/null 2>&1; then
-		gcov_tool="llvm-cov gcov"
+	fi
+	if command -v lcov >/dev/null 2>&1; then
+		case "$gcov_tool" in
+			"llvm-cov gcov")
+				lcov --capture --directory "$coverage_object_dir" \
+					--gcov-tool llvm-cov --gcov-tool gcov \
+					--output-file "$coverage_dir/fuzz-coverage.info" \
+					--ignore-errors mismatch --ignore-errors negative --filter range
+				;;
+			*)
+				lcov --capture --directory "$coverage_object_dir" \
+					--gcov-tool "$gcov_tool" \
+					--output-file "$coverage_dir/fuzz-coverage.info" \
+					--ignore-errors mismatch --ignore-errors negative --filter range
+				;;
+		esac
+		return 0
+	fi
+
+	if [ "$gcov_tool" = "llvm-cov gcov" ] && ! command -v llvm-cov >/dev/null 2>&1; then
+		printf 'clang coverage requested but llvm-cov is unavailable; skipping gcov summary\n' \
+			> "$coverage_dir/gcov-summary.txt"
+		return 0
 	fi
 	: > "$coverage_dir/gcov-summary.txt"
-	find "$repo_dir" -name '*.gcno' -print | sort | while IFS= read -r gcno; do
+	find "$coverage_object_dir" -name '*.gcno' -print | sort | while IFS= read -r gcno; do
 		gcno_dir=$(dirname -- "$gcno")
 		gcno_base=$(basename -- "$gcno")
 		(
 			cd "$gcno_dir"
-			# shellcheck disable=SC2086
-			$gcov_tool -b -c "$gcno_base"
+			if [ "$gcov_tool" = "llvm-cov gcov" ]; then
+				llvm-cov gcov -b -c "$gcno_base"
+			else
+				"$gcov_tool" -b -c "$gcno_base"
+			fi
 		) >> "$coverage_dir/gcov-summary.txt" 2>&1
 	done
 }
 
 clean_coverage_counters() {
 	[ "${FUZZ_COLLECT_COVERAGE:-0}" = "1" ] || return 0
-	find "$repo_dir" -name '*.gcda' -exec rm -f {} +
+	if [ -z "$coverage_object_dir" ] || [ ! -d "$coverage_object_dir" ]; then
+		printf '%s\n' \
+			'FUZZ_COVERAGE_OBJECT_DIR must name the dedicated coverage build tree' >&2
+		return 1
+	fi
+	find "$coverage_object_dir" -name '*.gcda' -exec rm -f {} +
 }
 
 if [ ! -d "$seed_dir" ]; then

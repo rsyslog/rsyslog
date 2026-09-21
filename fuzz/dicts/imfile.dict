@@ -1,6 +1,6 @@
 # imfile-style line ingestion dictionary.
-"\n"
-"\r\n"
+"\x0a"
+"\x0d\x0a"
 "tag:"
 "startmsg.regex=\""
 "endmsg.regex=\""

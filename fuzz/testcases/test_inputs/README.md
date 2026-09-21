@@ -7,7 +7,7 @@ This directory contains various input files designed to test different aspects o
 - `rfc3164_standard.txt`: Standard RFC 3164 formatted syslog message with valid structure
 - `rfc5424_structured.txt`: RFC 5424 formatted message with structured data (SD)
 - `rfc3164_minimal.txt`: Minimal RFC 3164 message with just required fields
-- `rfc3164_large_pri.txt`: RFC 3164 message with an abnormally large priority value
+- `rfc3164_large_pri.txt`: RFC 3164 message with a three-digit priority above `LOG_MAXPRI`
 - `malformed_priority.txt`: Syslog message with malformed priority field (missing closing bracket)
 - `no_priority.txt`: Syslog message with no priority field at all
 - `very_long_message.txt`: Very long message to test length limits and processing
@@ -15,7 +15,7 @@ This directory contains various input files designed to test different aspects o
 - `rfc5424_no_structured.txt`: RFC 5424 message with no structured data (uses '-' as placeholder)
 - `empty_message.txt`: Message with an empty payload after the syslog header
 - `empty_test.txt`: Zero-byte testcase for dispatcher and parser lifecycle coverage
-- `binary_data.txt`: File containing all possible ASCII values (0-127) as text
+- `binary_data.txt`: File containing every raw ASCII byte value (0x00-0x7F)
 - `binary_data_bytes.txt`: File containing all possible byte values (0-255) as binary data
 - `malformed_timestamp.txt`: Message with completely invalid timestamp format
 - `multiple_messages.txt`: File containing multiple syslog messages in one file
@@ -28,6 +28,11 @@ This directory contains various input files designed to test different aspects o
 - `octet_counted_rfc5424.txt`: RFC 5424 message framed with RFC6587 octet-counting prefix for TCP inputs
 - `cee_json_event.txt`: CEE-prefixed JSON payload to drive JSON accessors and structured data markers
 - `structured_data_escape.txt`: Structured data block exercising escaped quotes/brackets and empty parameters
+- `simple_test.txt`: Minimal non-priority message exercising the generic message path
+- `json_array_mixed.json`: Mixed JSON array containing scalar, object, nested-array, and null values
+- `json_big_props.json`: JSON object exercising many properties and deeply nested objects
+- `json_invalid_frag.json`: Truncated and syntactically invalid JSON fragment
+- `json_valid_nested.json`: Valid JSON with top-level message, hostname, structured data, and nested objects
 
 The `short_timestamp_*.txt` inputs keep timestamp formatting exercised with
 buffers shorter than its full field set. `legacy_queue_filename.txt` selects

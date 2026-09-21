@@ -1,3 +1,25 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* fuzzapi.c
+ * Runtime fixtures and target entry points for rsyslog fuzzing.
+ *
+ * Copyright 2026 Rainer Gerhards and Others
+ *
+ * This file is part of rsyslog.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "config.h"
 
 #include <stdint.h>
@@ -232,6 +254,7 @@ rsRetVal rsyslogd_InitGlobalClasses(void) {
     if (iRet != RS_RET_OK) {
         FPRINTF_DEBUG(stderr, "Init FAIL: module.SetModDir(%s) → %d (%s)\n", _PATH_MODDIR, iRet,
                       rs_strerror_r(iRet, errStr, sizeof(errStr)));
+        return iRet;
     }
 
     pErrObj = "datetime";
@@ -678,6 +701,8 @@ static rsRetVal ensure_conf_initialized(void) {
         if (pRet5424 != RS_RET_OK || pRet3164 != RS_RET_OK) {
             fprintf(stderr, "Warning: default parser registration failed (rfc5424=%d, rfc3164=%d)\n", pRet5424,
                     pRet3164);
+            iRet = pRet5424 != RS_RET_OK ? pRet5424 : pRet3164;
+            goto finalize_it;
         } else {
             FPRINTF_DEBUG(stderr, "Init OK: default parsers (rfc5424, rfc3164) registered\n");
             g_parser_ready = 1;
@@ -1807,7 +1832,7 @@ void rs_fuzz_timestamp_format_entry(const uint8_t *Data, size_t Size) {
     datetime.formatTimestampUnix(&ts, buf);
 }
 
-typedef enum legacy_arg_type_e { LEGACY_ARG_INT, LEGACY_ARG_STRING } legacy_arg_type_t;
+typedef enum legacy_arg_type_e { LEGACY_ARG_INT, LEGACY_ARG_STRING, LEGACY_ARG_BINARY } legacy_arg_type_t;
 
 typedef struct legacy_conf_snapshot_s {
     int main_queue_size;
@@ -1877,7 +1902,7 @@ static const struct {
     legacy_arg_type_t type;
 } kLegacyCmds[] = {{"mainmsgqueuesize", LEGACY_ARG_INT},
                    {"mainmsgqueuefilename", LEGACY_ARG_STRING},
-                   {"debugprinttemplatelist", LEGACY_ARG_INT},
+                   {"debugprinttemplatelist", LEGACY_ARG_BINARY},
                    {"privdroptouserid", LEGACY_ARG_INT},
                    {"privdroptogroupid", LEGACY_ARG_INT}};
 
@@ -1906,7 +1931,7 @@ void rs_fuzz_cfsysline_entry(const uint8_t *Data, size_t Size) {
         uchar *linePtr = line;
         processCfSysLineCommand((uchar *)cmdName, &linePtr);
         free(line);
-    } else {
+    } else if (argType == LEGACY_ARG_STRING) {
         const size_t avail = Size - 1;
         if (avail == 0) {
             goto finalize_it;
@@ -1926,6 +1951,13 @@ void rs_fuzz_cfsysline_entry(const uint8_t *Data, size_t Size) {
         uchar *linePtr = (uchar *)tmp;
         processCfSysLineCommand((uchar *)cmdName, &linePtr);
         free(tmp);
+    } else {
+        uchar line[] = "off";
+        if ((Data[1] & 1U) != 0) {
+            memcpy(line, "on", sizeof("on"));
+        }
+        uchar *linePtr = line;
+        processCfSysLineCommand((uchar *)cmdName, &linePtr);
     }
 
 finalize_it:

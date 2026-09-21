@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## Verify driver initialization/empty-input behavior and legacy-config reset.
 ## The state oracle compares the complete tracked legacy state from fresh
 ## A->A and A->B->A processes; matching exit codes alone are insufficient.

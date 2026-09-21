@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## ci_build_and_fuzz.sh
 ## Build the AFL++ parser target and run the GitLab fuzzing campaign.
 

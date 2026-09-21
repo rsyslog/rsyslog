@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
+
 ## build_libfastjson_sanitized.sh
 ## Build an external libfastjson checkout with the same sanitizer/fuzz flags.
 ##
