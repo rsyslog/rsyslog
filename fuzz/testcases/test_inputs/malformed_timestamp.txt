@@ -1,0 +1,2 @@
+# Malformed timestamp
+<164>InvalidTimestamp localhost test: message with invalid timestamp

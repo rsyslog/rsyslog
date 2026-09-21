@@ -1,0 +1,1 @@
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat %hostname% %msg% [json %json%]

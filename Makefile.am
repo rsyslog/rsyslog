@@ -4,6 +4,7 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
+	.gitlab-ci.yml \
 	README.md \
 	platform/README \
 	platform/freebsd/rsyslogd \
@@ -26,6 +27,7 @@ SUBDIRS += plugins/mmexternal
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools
+SUBDIRS += fuzz
 endif
 
 if ENABLE_IMKLOG
@@ -691,6 +693,28 @@ DISTCHECK_CONFIGURE_FLAGS+= --disable-testbench
 else
 DISTCHECK_CONFIGURE_FLAGS+= --enable-testbench
 endif
+
+FUZZ_CFLAGS =
+FUZZ_LDFLAGS =
+FUZZ_SANITIZERS =
+FUZZ_NO_SANITIZE_FLAGS =
+FUZZ_COVERAGE = 1
+FUZZ_COVERAGE_FLAGS = $(if $(filter 1 yes true,$(FUZZ_COVERAGE)),--coverage,)
+FUZZ_SANITIZER_FLAGS = $(if $(FUZZ_SANITIZERS),-fsanitize=$(FUZZ_SANITIZERS) -fno-omit-frame-pointer,)
+FUZZ_BUILD_CFLAGS = $(CFLAGS) $(FUZZ_CFLAGS) $(FUZZ_SANITIZER_FLAGS) $(FUZZ_NO_SANITIZE_FLAGS) $(FUZZ_COVERAGE_FLAGS)
+FUZZ_BUILD_LDFLAGS = $(LDFLAGS) $(FUZZ_LDFLAGS) $(FUZZ_SANITIZER_FLAGS) $(FUZZ_NO_SANITIZE_FLAGS) $(FUZZ_COVERAGE_FLAGS)
+
+.PHONY: fuzz fuzz-clean
+fuzz: fuzz-clean
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(FUZZ_BUILD_CFLAGS)" LDFLAGS="$(FUZZ_BUILD_LDFLAGS)" all
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(FUZZ_BUILD_CFLAGS)" LDFLAGS="$(FUZZ_BUILD_LDFLAGS)" \
+		FUZZ_CFLAGS="$(FUZZ_CFLAGS)" FUZZ_LDFLAGS="$(FUZZ_LDFLAGS)" \
+		FUZZ_SANITIZERS="$(FUZZ_SANITIZERS)" FUZZ_NO_SANITIZE_FLAGS="$(FUZZ_NO_SANITIZE_FLAGS)" \
+		FUZZ_COVERAGE="$(FUZZ_COVERAGE)" \
+		-C fuzz fuzz_rsyslog_parsers
+
+fuzz-clean:
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) clean
 
 if ENABLE_IMHIREDIS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imhiredis

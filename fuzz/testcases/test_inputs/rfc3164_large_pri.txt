@@ -1,0 +1,2 @@
+# RFC 3164 message with large priority value
+<2000>Jan  1 00:00:00 localhost test: large priority value

@@ -1,0 +1,46 @@
+stages:
+  - "build/fuzz"
+  - "CASR triage"
+
+variables:
+  FUZZ_IMAGE: "nexus.esafeline.com/appsec/fuzz-rsyslog:1.0.2"
+  FUZZ_TARGET_NAME: "rsyslog_parsers"
+  FUZZ_MAX_TOTAL_TIME_SECONDS: "60"
+  FUZZ_NO_NEW_PATH_SECONDS: "60"
+  FUZZ_TIMEOUT_MS: "1000+"
+  FUZZ_SMOKE_TIMEOUT: "15"
+  CASR_TIMEOUT: "10"
+
+default:
+  image: "$FUZZ_IMAGE"
+
+build_and_fuzz:
+  stage: "build/fuzz"
+  timeout: 30m
+  script:
+    - /bin/sh fuzz/ci_build_and_fuzz.sh
+  artifacts:
+    when: always
+    expire_in: 1 day
+    paths:
+      - artifacts/out/
+      - artifacts/evidence/
+      - artifacts/metadata/
+      - fuzz/fuzz_rsyslog_parsers
+      - runtime/.libs/
+      - grammar/.libs/
+      - compat/.libs/
+
+casr_triage:
+  stage: "CASR triage"
+  timeout: 15m
+  needs:
+    - job: build_and_fuzz
+      artifacts: true
+  script:
+    - /bin/sh fuzz/ci_casr_triage.sh
+  artifacts:
+    when: always
+    expire_in: 1 day
+    paths:
+      - artifacts/casr/
