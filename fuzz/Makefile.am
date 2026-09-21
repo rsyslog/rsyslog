@@ -97,6 +97,15 @@ fuzz_state_regression_LDFLAGS = $(fuzz_rsyslog_parsers_LDFLAGS)
 fuzz_state_regression_LDADD = $(fuzz_rsyslog_parsers_LDADD)
 fuzz_state_regression_DEPENDENCIES = $(fuzz_rsyslog_parsers_DEPENDENCIES)
 
+# Automake places dependency files for sources outside this directory next to
+# their objects.  config.status does not seed fuzz-specific .Po files in those
+# sibling build directories, so an out-of-tree distclean cannot parse this
+# Makefile if an EXTRA_PROGRAMS target was not built.  Keep missing dependency
+# includes remakeable; the normal compile rules replace these dummy files.
+../tools/$(DEPDIR)/%.Po ../plugins/omrelp/$(DEPDIR)/%.Po:
+	$(AM_V_at)$(MKDIR_P) $(@D)
+	$(AM_V_at)printf '%s\n' '# dummy' > $@
+
 $(top_builddir)/grammar/libgrammar.la:
 	$(AM_V_at)$(MAKE) -C $(top_builddir)/grammar libgrammar.la
 
