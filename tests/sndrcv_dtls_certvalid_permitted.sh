@@ -29,7 +29,7 @@ input(	type="imdtls"
 	tls.mycert="'$srcdir'/tls-certs/cert.pem"
 	tls.myprivkey="'$srcdir'/tls-certs/key.pem"
 	tls.authmode="name"
-	tls.permittedpeer="rsyslog"
+	tls.permittedpeer="testbench.rsyslog.com"
 )
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

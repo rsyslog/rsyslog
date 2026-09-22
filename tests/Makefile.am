@@ -2125,6 +2125,7 @@ TESTS_IMDTLS = \
 	imdtls-basic-tlscommands.sh \
 	imdtls-basic-timeout.sh \
 	imdtls-error-cert.sh \
+	imdtls-permittedpeer-reject.sh \
 	imdtls-sessionbreak.sh
 
 TESTS_IMDTLS_VALGRIND = \
