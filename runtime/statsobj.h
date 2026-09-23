@@ -139,6 +139,15 @@ struct statsobj_s {
         uchar *name;
         uchar *origin;
         uchar *reporting_ns;
+        /* Invoked under the global stats-object-list lock immediately before
+         * this object is rendered or exposed through native counter iteration.
+         * The callback must only refresh caller-owned, already-registered
+         * counter storage; it must not modify statsobj lists or take locks that
+         * can participate in stats-object registration. */
+        statsobj_read_notifier_t pre_read_notifier;
+        void *pre_read_notifier_ctx;
+        /* Existing post-read notification. Keep its timing unchanged for
+         * percentile and dynamic-statistics users. */
         statsobj_read_notifier_t read_notifier;
         void *read_notifier_ctx;
         pthread_mutex_t mutCtr; /* to guard counter linked-list ops */
@@ -165,6 +174,15 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*Destruct)(statsobj_t **ppThis);
     rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
     rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
+    /**
+     * Register a callback invoked before this object's counters are read.
+     *
+     * The callback runs with the global stats object list lock held, which
+     * keeps @p pThis alive through the call. Its counter-list mutex is not
+     * held. It must not register/destruct stats objects or counters, call a
+     * statsobj iterator, or acquire a lock that can block registration.
+     */
+    rsRetVal (*SetPreReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void *ctx);
     rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void *ctx);
     rsRetVal (*SetReportingNamespace)(statsobj_t *pThis, uchar *ns);
     void (*SetStatsObjFlags)(statsobj_t *pThis, int flags);
@@ -227,7 +245,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     ctr_t *(*UnlinkAllCounters)(statsobj_t *pThis);
     rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 17 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
@@ -237,6 +255,7 @@ ENDinterface(statsobj)
  * v14, 2026-02-01: Add GetAllCounters() native counter iteration API
  * v15, 2026-06-23: AddPreCreatedCtr returns rsRetVal for lock failure propagation
  * v16, 2026-07-15: add EncodePrometheusMetricName() for shared exporter name escaping
+ * v17, 2026-09-14: add SetPreReadNotifier() for fresh snapshot publication
  */
 
 

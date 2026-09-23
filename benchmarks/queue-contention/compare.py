@@ -23,19 +23,66 @@ parser.add_argument('--input-workers', type=int, default=8)
 parser.add_argument('--consumer-workers', type=int, default=4)
 parser.add_argument('--connections', type=int, default=16)
 parser.add_argument('--payload', type=int, default=512)
+parser.add_argument('--output-mode', choices=['omfile', 'omfwd'], default='omfile')
+parser.add_argument('--queue-size', type=int, default=32768)
+parser.add_argument('--before-queue-size', type=int)
+parser.add_argument('--after-queue-size', type=int)
+parser.add_argument('--dequeue-batch-size', type=int, default=1024)
+parser.add_argument('--worker-minimum', type=int, default=1024)
+parser.add_argument('--producer-mode', choices=['balanced', 'skew'], default='balanced')
+parser.add_argument('--frontend-capacity', type=int,
+                    help='deprecated alias for reporting a local frontend count; use per-side max-frontends')
+parser.add_argument('--before-scope', choices=['global', 'local'], default='global')
+parser.add_argument('--after-scope', choices=['global', 'local'], default='global')
+parser.add_argument('--before-frontend-size', type=int)
+parser.add_argument('--after-frontend-size', type=int)
+parser.add_argument('--before-max-frontends', type=int)
+parser.add_argument('--after-max-frontends', type=int)
+parser.add_argument('--print-configuration', action='store_true',
+                    help='validate and print resolved per-side configuration without starting Docker')
+parser.add_argument('--before-consumer-workers', type=int)
+parser.add_argument('--after-consumer-workers', type=int)
+parser.add_argument('--impstats', action='store_true',
+                    help='capture raw queue impstats diagnostics outside timed interpretation')
 parser.add_argument('--image', default='rsyslog/rsyslog_dev_base_ubuntu:26.04')
 parser.add_argument('--trial-timeout', type=float, default=180,
                     help='maximum seconds allowed for each container trial')
 args = parser.parse_args()
+if args.output_mode == 'omfwd' and args.workload != 'multi':
+    parser.error('--output-mode omfwd requires --workload multi')
+if args.impstats and args.workload != 'multi':
+    parser.error('--impstats requires --workload multi')
 if args.pairs <= 0:
     parser.error('--pairs must be positive')
 if args.messages <= 0:
     parser.error('--messages must be positive')
 if args.workload == 'multi' and min(args.input_workers, args.consumer_workers,
-                                    args.connections, args.payload) <= 0:
-    parser.error('--input-workers, --consumer-workers, --connections, and --payload must be positive for multi')
-if args.workload == 'multi' and args.messages % args.connections != 0:
-    parser.error('--messages must be divisible by --connections for multi')
+                                    args.connections, args.payload, args.queue_size,
+                                    args.dequeue_batch_size, args.worker_minimum) <= 0:
+    parser.error('multi workload sizes, workers, connections, and payload must be positive')
+if args.frontend_capacity is not None and args.frontend_capacity <= 0:
+    parser.error('--frontend-capacity must be positive')
+for label in ('before', 'after'):
+    for field in ('queue_size', 'consumer_workers'):
+        value = getattr(args, f'{label}_{field}')
+        if value is not None and value <= 0:
+            parser.error(f'--{label}-{field.replace("_", "-")} must be positive')
+    scope = getattr(args, f'{label}_scope')
+    frontend_size = getattr(args, f'{label}_frontend_size')
+    max_frontends = getattr(args, f'{label}_max_frontends')
+    if scope == 'local' and (frontend_size is None or max_frontends is None):
+        parser.error(f'--{label}-scope local requires --{label}-frontend-size and --{label}-max-frontends')
+    if scope == 'global' and (frontend_size is not None or max_frontends is not None):
+        parser.error(f'--{label}-frontend-size and --{label}-max-frontends require --{label}-scope local')
+    if frontend_size is not None and frontend_size <= 0:
+        parser.error(f'--{label}-frontend-size must be positive')
+    if max_frontends is not None and max_frontends <= 0:
+        parser.error(f'--{label}-max-frontends must be positive')
+    if args.workload == 'lifecycle' and scope != 'global':
+        parser.error(f'--{label}-scope local requires --workload multi')
+active_connections = 1 if args.producer_mode == 'skew' else args.connections
+if args.workload == 'multi' and args.messages % active_connections != 0:
+    parser.error('--messages must be divisible by active connections')
 if not math.isfinite(args.trial_timeout) or args.trial_timeout <= 0:
     parser.error('--trial-timeout must be finite and positive')
 args.output.mkdir(parents=True, exist_ok=True)
@@ -46,10 +93,13 @@ results = []
 
 def checkout_state(path):
     """Record checkout state without treating it as binary-build provenance."""
-    revision = subprocess.run(['git', '-C', path, 'rev-parse', 'HEAD'], capture_output=True,
-                              check=False, text=True)
-    dirty = subprocess.run(['git', '-C', path, 'status', '--porcelain'], capture_output=True,
-                           check=False, text=True)
+    try:
+        revision = subprocess.run(['git', '-C', path, 'rev-parse', 'HEAD'], capture_output=True,
+                                  check=False, text=True)
+        dirty = subprocess.run(['git', '-C', path, 'status', '--porcelain'], capture_output=True,
+                               check=False, text=True)
+    except OSError:
+        return {'path': str(path), 'revision': None, 'dirty': None}
     return {'path': str(path), 'revision': revision.stdout.strip() if revision.returncode == 0 else None,
             'dirty': bool(dirty.stdout.strip()) if dirty.returncode == 0 else None}
 
@@ -76,13 +126,42 @@ def read_metrics(path):
         metrics = json.loads(raw)
         if not isinstance(metrics, dict):
             raise ValueError(f'{path} must contain a JSON object')
-        required = ('lifecycle_ns', 'work_ns', 'generator_ns', 'drain_ns')
+        required = ('lifecycle_ns', 'work_ns', 'generator_ns', 'drain_ns',
+                    'receiver_line_barrier_ns', 'post_shutdown_exact_verification_ns')
         if any(name not in metrics for name in required):
             raise ValueError(f'{path} is missing required metrics')
     if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in metrics.values()):
         raise ValueError(f'{path} contains invalid metric values')
     return metrics
 
+
+def build_configuration(label):
+    """Resolve per-build resource bounds while leaving legacy global configs unchanged."""
+    queue_size = getattr(args, f'{label}_queue_size')
+    consumer_workers = getattr(args, f'{label}_consumer_workers')
+    scope = getattr(args, f'{label}_scope')
+    frontend_size = getattr(args, f'{label}_frontend_size')
+    max_frontends = getattr(args, f'{label}_max_frontends')
+    backend_queue_size = args.queue_size if queue_size is None else queue_size
+    total_slot_bound = backend_queue_size
+    if scope == 'local':
+        total_slot_bound += max_frontends * (frontend_size + args.dequeue_batch_size)
+    return {
+        'scope': scope,
+        'queue_size': backend_queue_size,
+        'consumer_workers': args.consumer_workers if consumer_workers is None else consumer_workers,
+        'dequeue_batch_size': args.dequeue_batch_size,
+        'worker_minimum_messages': args.worker_minimum,
+        'frontend_size': frontend_size,
+        'max_frontends': max_frontends,
+        'total_slot_bound': total_slot_bound,
+    }
+
+
+per_build_configuration = {label: build_configuration(label) for label in ('before', 'after')}
+if args.print_configuration:
+    print(json.dumps({'per_build_configuration': per_build_configuration}, sort_keys=True))
+    raise SystemExit(0)
 
 image_id = None
 builds = {label: checkout_state(getattr(args, label).resolve()) for label in ('before', 'after')}
@@ -97,29 +176,35 @@ def write_report(status, failure=None):
         'requested_pairs': args.pairs,
         'workload': {
             'name': args.workload,
+            'output_mode': args.output_mode,
             'script': f'trial{"-multi" if args.workload == "multi" else ""}.sh',
             'revision': workload_checkout['revision'],
             'dirty': workload_checkout['dirty'],
             'messages': args.messages,
             'input_workers': args.input_workers if args.workload == 'multi' else 1,
-            'consumer_workers': args.consumer_workers if args.workload == 'multi' else 4,
-            'connections': args.connections if args.workload == 'multi' else 0,
+            'configured_connections': args.connections if args.workload == 'multi' else 0,
+            'active_connections': active_connections if args.workload == 'multi' else 0,
+            'producer_mode': args.producer_mode if args.workload == 'multi' else 'single',
+            'frontend_capacity': args.frontend_capacity,
+            'impstats_enabled': args.impstats,
+            'actual_batch_distributions': 'not_observed',
             'payload': args.payload if args.workload == 'multi' else 0,
-            'queue': {
-                'type': 'FixedArray',
-                'size': 32768,
-                'dequeue_batch_size': 1024,
-                'worker_thread_minimum_messages': 1024,
-            },
+            'queue_type': 'FixedArray',
+            'per_build_configuration': per_build_configuration,
         },
         'image': {'reference': args.image, 'id': image_id},
         'builds': builds,
         'trial_timeout_seconds': args.trial_timeout,
         'pairs': results,
         'completed_pairs': len(results),
-        'metric': 'generation plus drain seconds' if args.workload == 'multi' else 'full lifecycle seconds',
+        'metric': ('sender generation through receiver line barrier seconds; '
+                   'post-shutdown exact-ID verification is required and reported separately')
+        if args.workload == 'multi' else 'full lifecycle seconds',
         'limitations': ['Non-exclusive host', 'Uncontrolled caches',
-                        'Bounded JSON workload; exact delivery required; batch1024'],
+                        'Bounded JSON workload; exact delivery required',
+                        'Configured batches are not actual-batch distributions'],
+        'timing_accepted': status == 'completed' and not args.impstats,
+        'summary_accepted': status == 'completed' and not args.impstats,
     }
     if status == 'completed':
         median = statistics.median(ratios)
@@ -140,18 +225,33 @@ try:
         order = ['before', 'after'] if pair % 2 == 0 else ['after', 'before']
         for label in order:
             build = getattr(args, label).resolve()
+            configuration = per_build_configuration[label]
             name = f'{pair + 1:02d}-{label}'
             container_name = f'rsyslog-queue-contention-{os.getpid()}-{pair + 1}-{label}'
             metric = f'/results/{name}.ns'
+            impstats_metric = f'/results/{name}.impstats.json'
             command = [
                 'docker', 'run', '--rm', '-u', f'{os.getuid()}:{os.getgid()}', '--name', container_name,
                 '-v', f'{build}:/rsyslog', '-v', f'{harness}:/campaign:ro', '-v', f'{output}:/results',
                 '-e', f'BENCH_METRIC_FILE={metric}', '-e', f'BENCH_MESSAGES={args.messages}',
                 '-w', '/rsyslog/tests', '-e', f'BENCH_INPUT_WORKERS={args.input_workers}',
-                '-e', f'BENCH_CONSUMER_WORKERS={args.consumer_workers}',
+                '-e', f'BENCH_CONSUMER_WORKERS={configuration["consumer_workers"]}',
                 '-e', f'BENCH_CONNECTIONS={args.connections}', '-e', f'BENCH_PAYLOAD={args.payload}',
+                '-e', f'BENCH_QUEUE_SIZE={configuration["queue_size"]}',
+                '-e', f'BENCH_DEQUEUE_BATCH_SIZE={configuration["dequeue_batch_size"]}',
+                '-e', f'BENCH_WORKER_MINIMUM={configuration["worker_minimum_messages"]}',
+                '-e', f'BENCH_PRODUCER_MODE={args.producer_mode}',
+                '-e', f'BENCH_OUTPUT={args.output_mode}',
+                '-e', f'BENCH_IMPSTATS={"yes" if args.impstats else "no"}',
+                '-e', f'BENCH_IMPSTATS_FILE={impstats_metric}',
                 image_id, 'bash', f'/campaign/trial{"-multi" if args.workload == "multi" else ""}.sh',
             ]
+            if configuration['scope'] == 'local':
+                command[command.index(image_id):command.index(image_id)] = [
+                    '-e', 'BENCH_SCOPE=local',
+                    '-e', f'BENCH_FRONTEND_SIZE={configuration["frontend_size"]}',
+                    '-e', f'BENCH_MAX_FRONTENDS={configuration["max_frontends"]}',
+                ]
             with (output / f'{name}.log').open('w') as log:
                 try:
                     subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True,
@@ -168,6 +268,9 @@ try:
             sample[label + '_metrics'] = {
                 key.replace('_ns', '_seconds'): value / 1e9 for key, value in metrics.items()
             }
+            sample[label + '_configuration'] = configuration
+            if args.impstats:
+                sample[label + '_impstats_file'] = f'{name}.impstats.json'
         sample['ratio'] = sample['after'] / sample['before']
         if pair >= 0:
             results.append(sample)

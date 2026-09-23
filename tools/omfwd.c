@@ -1690,7 +1690,7 @@ finalize_it:
 
 /* count the actual number of active targets.
  */
-static void countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
+static int workerActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
     int activeTargets = 0;
     for (int j = 0; j < pWrkrData->pData->nTargets; ++j) {
         if (pWrkrData->target[j].bIsConnected) {
@@ -1698,7 +1698,13 @@ static void countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
         }
     }
 
-    /* nActiveTargets is a scheduling snapshot; ordering comes from the CAS update, not from readers. */
+    return activeTargets;
+}
+
+static int countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
+    const int activeTargets = workerActiveTargets(pWrkrData);
+    /* This shared value is telemetry, never authority over another WID's
+     * retry timing or transaction outcome. */
     int oldVal, newVal;
     do {
         oldVal = ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
@@ -1712,6 +1718,7 @@ static void countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
         LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u] number of active targets changed from %d to %d",
                pWrkrData->wrkrID, oldVal, activeTargets);
     }
+    return activeTargets;
 }
 
 
@@ -1759,8 +1766,7 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
     const char *address;
     DEFiRet;
 
-    const int nActiveTargets =
-        ATOMIC_LOAD_32BIT_RELAXED(&pTarget->pData->nActiveTargets, &pTarget->pData->mut_nActiveTargets);
+    const int nActiveTargets = workerActiveTargets(pTarget->pWrkrData);
 
     DBGPRINTF("doTryResume: isConnected: %d, ttResume %lld, LastActiveTargets: %d\n", pTarget->bIsConnected,
               (long long)pTarget->ttResume, nActiveTargets);
@@ -1853,9 +1859,9 @@ finalize_it:
 BEGINtryResume
     CODESTARTtryResume;
     iRet = poolTryResume(pWrkrData);
-    countActiveTargets(pWrkrData);
-    const int nActiveTargets =
-        ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
+    /* Another worker can replace the shared telemetry immediately. Only this
+     * worker's connections determine whether its transaction must retry. */
+    const int nActiveTargets = countActiveTargets(pWrkrData);
 
     LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
            "omfwd: [wrkr %u/%" PRIuPTR
@@ -1962,6 +1968,7 @@ finalize_it:
 
 BEGINcommitTransaction
     unsigned i;
+    int nActiveTargets;
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
     sbool bFlushRetry = 0;
     CODESTARTcommitTransaction;
@@ -2071,9 +2078,8 @@ finalize_it:
     /*
      * Return semantics for commitTransaction:
      * - Only return RS_RET_SUSPENDED when no pool member is left active.
-     *   We determine this by calling countActiveTargets() and inspecting
-     *   the atomic nActiveTargets value. When it is zero, the whole pool
-     *   is unavailable and the action engine must enter retry logic.
+     *   We use countActiveTargets()'s worker-local return value. When it is
+     *   zero, this worker's pool is unavailable and must enter retry logic.
      * - Also return RS_RET_SUSPENDED when a connected target reports
      *   RS_RET_RETRY while flushing its pending TCP buffer. The target remains
      *   connected, but the action engine still needs to schedule another commit
@@ -2085,10 +2091,7 @@ finalize_it:
      *   connection on a subsequent transaction.
      */
     /* do pool stats */
-
-    countActiveTargets(pWrkrData);
-    const int nActiveTargets =
-        ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
+    nActiveTargets = countActiveTargets(pWrkrData);
 
     if (bFlushRetry || nActiveTargets == 0) {
         /*
@@ -2921,8 +2924,18 @@ BEGINmodExit
 ENDmodExit
 
 
+/* Connections, target rotation, framing/compression and retained send buffers
+ * belong to the immutable output WID, including when an FE borrows BE work.
+ * Namespace setup is the exception: originalNamespace is a mutable instance
+ * field shared by connection attempts, so it needs a separate ownership fix. */
+static rsRetVal localQueueCheckAction(void *const instance) {
+    const instanceData *const pData = instance;
+    return pData->networkNamespace != NULL ? RS_RET_LOCAL_QUEUE_CONFIG : RS_RET_OK;
+}
+
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
     CODEqueryEtryPt_STD_OMODTX_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_SetActionInfo_IF_OMOD_QUERIES;

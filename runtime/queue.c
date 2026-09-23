@@ -205,6 +205,9 @@
 
 #include "rsyslog.h"
 #include "queue.h"
+#include "queue_local.h"
+#include "queue_local_stats.h"
+#include "queue_lease.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "obj.h"
@@ -219,6 +222,7 @@
 #include "statsobj.h"
 #include "parserif.h"
 #include "rsconf.h"
+#include "ruleset.h"
 
 #ifdef OS_SOLARIS
     #include <sched.h>
@@ -243,6 +247,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 
 /* forward-definitions */
 static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
+static rsRetVal doEnqSingleObjContext(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg, int sourceRetry);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
 static rsRetVal RateLimiter(qqueue_t *pThis);
 static rsRetVal qqueueChkStopWrkrDA(qqueue_t *pThis);
@@ -310,7 +315,12 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.samplinginterval", eCmdHdlrInt, 0},
                                            {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0},
                                            {"queue.mutexcontentionstats", eCmdHdlrBinary, 0},
-                                           {"queue.oncorruption", eCmdHdlrGetWord, 0}};
+                                           {"queue.oncorruption", eCmdHdlrGetWord, 0},
+                                           {"queue.scope", eCmdHdlrGetWord, 0},
+                                           {"queue.local.frontendsize", eCmdHdlrInt, 0},
+                                           {"queue.local.maxfrontends", eCmdHdlrInt, 0},
+                                           {"queue.local.frontendstats", eCmdHdlrBinary, 0},
+                                           {"queue.local.helperbatchsize", eCmdHdlrInt, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
 /* support to detect duplicate queue file names */
@@ -332,6 +342,7 @@ static inline void displayBatchState(batch_t *pBatch)
 }
 #endif
 static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint);
+static rsRetVal DoSaveOnShutdown(qqueue_t *pThis);
 
 /* do cleanup when config is loaded */
 void qqueueDoneLoadCnf(void) {
@@ -538,7 +549,7 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
  * path is selected explicitly per queue because trylock affects throughput.
  * Observed wait time includes scheduler delay and is not mutex hold time.
  */
-static inline void qqueueLock(qqueue_t *const pThis) {
+static void qqueueLock(qqueue_t *const pThis) {
     if (!pThis->bMutexContentionStats || !STATSCOUNTER_ENABLED()) {
         d_pthread_mutex_lock(pThis->mut);
         return;
@@ -582,27 +593,30 @@ static void qqueueUpdateSegDiskStats(qqueue_t *pThis) {
     if (pThis->qType != QUEUETYPE_SEGMENTED_DISK || pThis->tVars.segdisk == NULL) return;
     segdisk_store_stats_t stats;
     segdiskStoreGetStats(pThis->tVars.segdisk, &stats);
-    pThis->segdiskBytes = stats.bytes > INT_MAX ? INT_MAX : (stats.bytes < 0 ? 0 : (int)stats.bytes);
-    pThis->segdiskSegments = stats.segments;
-    pThis->segdiskCheckpoints = segdiskStatsInt(stats.checkpoints);
-    pThis->segdiskReplayed = segdiskStatsInt(stats.replayed);
-    pThis->segdiskCorruptionEvents = segdiskStatsInt(stats.corruption_events);
-    pThis->segdiskCorruptionBytes = segdiskStatsInt(stats.corruption_bytes);
-    pThis->segdiskCorruptionRecords = segdiskStatsInt(stats.corruption_records);
-    pThis->segdiskRetryOverageBytes = stats.retry_overage_bytes > INT_MAX ? INT_MAX : (int)stats.retry_overage_bytes;
-    pThis->segdiskRetryOverageMaxBytes =
-        stats.retry_overage_max_bytes > INT_MAX ? INT_MAX : (int)stats.retry_overage_max_bytes;
-    pThis->segdiskStateWrites = segdiskStatsInt(stats.state_writes);
-    pThis->segdiskForcedStateWrites = segdiskStatsInt(stats.forced_state_writes);
-    pThis->segdiskRecoveryBytes = segdiskStatsInt(stats.recovery_bytes);
-    pThis->segdiskRecoveryRecords = segdiskStatsInt(stats.recovery_records);
-    pThis->segdiskStartupPayloadBytes = segdiskStatsInt(stats.startup_payload_bytes_read);
-    pThis->segdiskStartupSegmentFilesProbed = segdiskStatsInt(stats.startup_segment_files_probed);
-    pThis->segdiskRecoveryPending = segdiskStatsInt(stats.recovery_pending);
-    pThis->segdiskCorruptionSegments = segdiskStatsInt(stats.corruption_segments);
-    pThis->segdiskMaterializations = segdiskStatsInt(stats.materializations);
-    pThis->segdiskDematerializations = segdiskStatsInt(stats.dematerializations);
-    pThis->segdiskIdleCleanupFailures = segdiskStatsInt(stats.idle_cleanup_failures);
+    /* Writers remain serialized by the queue mutex; impstats reads these
+     * published integer mirrors without that mutex via PREFER_LOAD_INT. */
+    PREFER_STORE_INT(&pThis->segdiskBytes, stats.bytes > INT_MAX ? INT_MAX : (stats.bytes < 0 ? 0 : (int)stats.bytes));
+    PREFER_STORE_INT(&pThis->segdiskSegments, stats.segments);
+    PREFER_STORE_INT(&pThis->segdiskCheckpoints, segdiskStatsInt(stats.checkpoints));
+    PREFER_STORE_INT(&pThis->segdiskReplayed, segdiskStatsInt(stats.replayed));
+    PREFER_STORE_INT(&pThis->segdiskCorruptionEvents, segdiskStatsInt(stats.corruption_events));
+    PREFER_STORE_INT(&pThis->segdiskCorruptionBytes, segdiskStatsInt(stats.corruption_bytes));
+    PREFER_STORE_INT(&pThis->segdiskCorruptionRecords, segdiskStatsInt(stats.corruption_records));
+    PREFER_STORE_INT(&pThis->segdiskRetryOverageBytes,
+                     stats.retry_overage_bytes > INT_MAX ? INT_MAX : (int)stats.retry_overage_bytes);
+    PREFER_STORE_INT(&pThis->segdiskRetryOverageMaxBytes,
+                     stats.retry_overage_max_bytes > INT_MAX ? INT_MAX : (int)stats.retry_overage_max_bytes);
+    PREFER_STORE_INT(&pThis->segdiskStateWrites, segdiskStatsInt(stats.state_writes));
+    PREFER_STORE_INT(&pThis->segdiskForcedStateWrites, segdiskStatsInt(stats.forced_state_writes));
+    PREFER_STORE_INT(&pThis->segdiskRecoveryBytes, segdiskStatsInt(stats.recovery_bytes));
+    PREFER_STORE_INT(&pThis->segdiskRecoveryRecords, segdiskStatsInt(stats.recovery_records));
+    PREFER_STORE_INT(&pThis->segdiskStartupPayloadBytes, segdiskStatsInt(stats.startup_payload_bytes_read));
+    PREFER_STORE_INT(&pThis->segdiskStartupSegmentFilesProbed, segdiskStatsInt(stats.startup_segment_files_probed));
+    PREFER_STORE_INT(&pThis->segdiskRecoveryPending, segdiskStatsInt(stats.recovery_pending));
+    PREFER_STORE_INT(&pThis->segdiskCorruptionSegments, segdiskStatsInt(stats.corruption_segments));
+    PREFER_STORE_INT(&pThis->segdiskMaterializations, segdiskStatsInt(stats.materializations));
+    PREFER_STORE_INT(&pThis->segdiskDematerializations, segdiskStatsInt(stats.dematerializations));
+    PREFER_STORE_INT(&pThis->segdiskIdleCleanupFailures, segdiskStatsInt(stats.idle_cleanup_failures));
 }
 
 static rsRetVal qqueueSegDiskIdleTimeout(qqueue_t *pThis) {
@@ -676,6 +690,19 @@ static void qqueueSetWtiShutdownImmediate(qqueue_t *const pThis, wti_t *const pW
 #endif
 }
 
+/* The worker framework holds pWtp->pmutUsr while it invokes queue callbacks.
+ * A shared mutex alone is not permission to service another queue: S1 only
+ * records batches acquired from the pool's own user queue. */
+static rsRetVal qqueueBindWtiSource(qqueue_t *const pThis, wti_t *const pWti) {
+    return qqueueLeaseBind(
+        &pWti->source_queue, &pWti->logical_owner, pThis, pThis->pqParent == NULL ? pThis : pThis->pqParent,
+        pWti->pWtp == NULL ? NULL : pWti->pWtp->pUsr, pWti->pWtp == NULL ? NULL : pWti->pWtp->pmutUsr, pThis->mut);
+}
+
+static rsRetVal qqueueClearWtiSource(qqueue_t *const pThis, wti_t *const pWti) {
+    return qqueueLeaseClear(&pWti->source_queue, &pWti->logical_owner, pThis);
+}
+
 
 /* This function drains the queue in cases where this needs to be done. The most probable
  * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
@@ -716,9 +743,11 @@ static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
+    if (pThis->localGraphConf != NULL && !pThis->localGraphReady) return RS_RET_OK;
     if (!pThis->bEnqOnly) {
         if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
+            pThis->localDAActive = 1;
             wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
             /* The DA transfer pool intentionally has one worker. */
         }
@@ -832,6 +861,8 @@ static rsRetVal StartDA(qqueue_t *pThis) {
      * liberty to access its properties directly.
      */
     pThis->pqDA->pqParent = pThis;
+    pThis->pqDA->localGraphConf = pThis->localGraphConf;
+    pThis->pqDA->localGraphReady = pThis->localGraphReady;
     pThis->pqDA->segdiskDAChild = child_type == QUEUETYPE_SEGMENTED_DISK;
     pThis->pqDA->segdiskLazyCreate = pThis->pqDA->segdiskDAChild && !engine_result.segmented_data;
     pThis->pqDA->daEngineMarkerPending =
@@ -934,6 +965,7 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     CHKiRet(wtpSetiNumWorkerThreads(pThis->pWtpDA, 1));
     CHKiRet(wtpSettoWrkShutdown(pThis->pWtpDA, pThis->toWrkShutdown));
     CHKiRet(wtpSetpUsr(pThis->pWtpDA, pThis));
+    if (pThis->localGraphConf != NULL) CHKiRet(wtpUseMonotonicTermination(pThis->pWtpDA));
     CHKiRet(wtpConstructFinalize(pThis->pWtpDA));
     /* if we reach this point, we have a "good" DA worker pool */
 
@@ -988,7 +1020,12 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis) {
 
     assert(pThis != NULL);
 
-    queueDrain(pThis); /* discard any remaining queue entries */
+    if (pThis->bLocalScope) {
+        /* Local family shutdown already reconciled every retained reference. */
+        assert(pThis->iQueueSize == 0);
+    } else {
+        queueDrain(pThis); /* discard any remaining queue entries */
+    }
     free(pThis->tVars.farray.pBuf);
 
     RETiRet;
@@ -1066,6 +1103,9 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t *pMsg) {
     qLinkedList_t *pEntry;
     DEFiRet;
 
+#ifdef ENABLE_TESTBENCH
+    if (qqueueLocalTestFailNode(pThis, 0)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+#endif
     CHKmalloc((pEntry = (qLinkedList_t *)malloc(sizeof(qLinkedList_t))));
 
     pEntry->pNext = NULL;
@@ -1290,6 +1330,7 @@ static rsRetVal qDeqBatchSegDisk(qqueue_t *pThis, batch_t *batch, int max, int *
     if (discovered > 0) {
         qqueueAddPhysicalQueueSize(pThis, discovered);
         qqueueAddOverallQueueSize(discovered);
+        if (pThis->pqParent != NULL) qqueueLocalDiskRestored(pThis->pqParent, (uint64_t)discovered);
     }
     qqueueUpdateSegDiskStats(pThis);
     return store_ret == RS_RET_RETRY ? RS_RET_NO_DATA : store_ret;
@@ -1882,8 +1923,10 @@ finalize_it:
  * rgerhards, 2011-05-03
  */
 static rsRetVal queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingError) {
-    pThis->iQueueSize = 0;
-    pThis->nLogDeq = 0;
+    const int graphMember = pThis->localGraphConf != NULL;
+    if (graphMember) qqueueLock(pThis);
+    ATOMIC_STORE_32BIT(&pThis->iQueueSize, &pThis->mutQueueSize, 0);
+    ATOMIC_STORE_32BIT(&pThis->nLogDeq, &pThis->mutLogDeq, 0);
 
     pThis->qType = QUEUETYPE_DIRECT;
     pThis->qConstruct = qConstructDirect;
@@ -1898,13 +1941,15 @@ static rsRetVal queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingE
     if (pThis->pqParent != NULL) {
         DBGOPRINT((obj_t *)pThis, "DA queue is in emergency mode, disabling DA in parent\n");
         pThis->pqParent->bIsDA = 0;
-        pThis->pqParent->pqDA = NULL;
+        if (pThis->localGraphConf != NULL) pThis->pqParent->localRetiredDA = pThis;
+        __atomic_store_n(&pThis->pqParent->pqDA, NULL, __ATOMIC_RELEASE);
         /* This may have undesired side effects, not sure if I really evaluated
          * all. So you know where to look at if you come to this point during
          * troubleshooting ;) -- rgerhards, 2011-05-03
          */
     }
 
+    if (graphMember) d_pthread_mutex_unlock(pThis->mut);
     LogError(0, initiatingError,
              "fatal error on disk queue '%s', "
              "emergency switch to direct mode",
@@ -2338,7 +2383,7 @@ static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
 
     static int msgCnt = 0;
 
-    if (pThis->iSmpInterval > 0) {
+    if (pThis->iSmpInterval > 0 && !pThis->bLocalScope && !(pThis->pqParent != NULL && pThis->pqParent->bLocalScope)) {
         msgCnt = (msgCnt + 1) % (pThis->iSmpInterval);
         if (msgCnt != 0) {
             msgDestruct(&pMsg);
@@ -2389,6 +2434,8 @@ static rsRetVal ATTR_NONNULL(1) tryShutdownWorkersWithinQueueTimeout(qqueue_t *c
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
+    if (pThis->local != NULL) return qqueueLocalShutdown(pThis);
+
     assert(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
     if (pThis->bIsDA) {
@@ -2618,9 +2665,112 @@ static rsRetVal cancelWorkers(qqueue_t *pThis) {
  * longer, because we no longer can persist the queue in parallel to waiting
  * on worker timeouts.
  */
+/* S4 stops every upstream execution pool before closing any downstream
+ * admission. All nodes share the graph's absolute monotonic deadlines. Global
+ * memory boundaries retain their ordinary shared store and worker identities. */
+void qqueueActivateGraphNode(qqueue_t *const queue) {
+    if (!queue->bQueueStarted || queue->qType == QUEUETYPE_DIRECT) return;
+    pthread_mutex_lock(queue->mut);
+    queue->localGraphReady = 1;
+    if (queue->pqDA != NULL) {
+        queue->pqDA->localGraphReady = 1;
+        qqueueAdviseMaxWorkers(queue->pqDA);
+    }
+    qqueueAdviseMaxWorkers(queue);
+    pthread_mutex_unlock(queue->mut);
+}
+
+rsRetVal qqueueShutdownBackendUntil(qqueue_t *const owner,
+                                    const struct timespec *const graceful,
+                                    const struct timespec *const action) {
+    pthread_mutex_lock(owner->mut);
+    qqueue_t *const disk = owner->pqDA != NULL ? owner->pqDA : owner->localRetiredDA;
+    pthread_mutex_unlock(owner->mut);
+    wtp_t *const transfer = owner->pWtpDA;
+    /* This is the legacy DA shutdown entry, delayed until FE publishers and
+     * workers have handed off their endpoints. No new arrivals from upstream
+     * graph nodes can occur after the node's admission closes. */
+    if (disk != NULL) {
+        pthread_mutex_lock(owner->mut);
+        disk->bEnqOnly = 1;
+        pthread_mutex_unlock(owner->mut);
+    }
+    if (transfer != NULL) wtpRequestShutdown(transfer, wtpState_SHUTDOWN_IMMEDIATE);
+    wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN);
+    if (disk != NULL && disk->pWtpReg != NULL) wtpRequestShutdown(disk->pWtpReg, wtpState_SHUTDOWN);
+    int pending = wtpWaitShutdownUntil(owner->pWtpReg, graceful) != RS_RET_OK;
+    if (disk != NULL && disk->pWtpReg != NULL && wtpWaitShutdownUntil(disk->pWtpReg, graceful) != RS_RET_OK)
+        pending = 1;
+    if (pending) {
+        qqueueSetShutdownImmediate(owner, 1);
+        wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
+        if (disk != NULL) {
+            qqueueSetShutdownImmediate(disk, 1);
+            if (disk->pWtpReg != NULL) wtpRequestShutdown(disk->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
+        }
+        qqueueLocalNoteActionPhase(owner);
+        (void)wtpWaitShutdownUntil(owner->pWtpReg, action);
+        if (disk != NULL && disk->pWtpReg != NULL) (void)wtpWaitShutdownUntil(disk->pWtpReg, action);
+    }
+    if (transfer != NULL) (void)wtpWaitShutdownUntil(transfer, action);
+    wtpRequestCancelAll(owner->pWtpReg);
+    if (disk != NULL && disk->pWtpReg != NULL) wtpRequestCancelAll(disk->pWtpReg);
+    if (transfer != NULL) wtpRequestCancelAll(transfer);
+    (void)wtpWaitShutdownUntil(owner->pWtpReg, NULL);
+    if (disk != NULL && disk->pWtpReg != NULL) (void)wtpWaitShutdownUntil(disk->pWtpReg, NULL);
+    if (transfer != NULL) (void)wtpWaitShutdownUntil(transfer, NULL);
+    owner->localDAActive = 0;
+    return RS_RET_OK;
+}
+
+rsRetVal qqueueShutdownGraphNode(qqueue_t *const queue,
+                                 const struct timespec *const graceful,
+                                 const struct timespec *const action) {
+    if (queue->localGraphStopped) return RS_RET_OK;
+    if (!queue->bQueueStarted || queue->pWtpReg == NULL) {
+        queue->localGraphStopped = 1;
+        return RS_RET_OK;
+    }
+    rsRetVal ret = RS_RET_OK;
+    if (queue->local != NULL) {
+        ret = qqueueLocalShutdownUntil(queue, graceful, action);
+    } else {
+        int oldCancel;
+        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancel);
+        pthread_mutex_lock(queue->mut);
+        queue->localGraphClosed = 1;
+        pthread_cond_broadcast(&queue->notFull);
+        pthread_cond_broadcast(&queue->belowFullDlyWtrMrk);
+        pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
+        pthread_mutex_unlock(queue->mut);
+        ret = qqueueShutdownBackendUntil(queue, graceful, action);
+        pthread_setcancelstate(oldCancel, NULL);
+    }
+    return ret;
+}
+
+rsRetVal qqueueFinalizeGraphNode(qqueue_t *const queue) {
+    if (queue->localGraphStopped) return RS_RET_OK;
+    rsRetVal ret;
+    if (queue->local != NULL) {
+        ret = qqueueLocalFinishShutdown(queue);
+    } else {
+        ret = qqueueSaveLocalBackend(queue);
+        const rsRetVal diskRet = qqueueFinishLocalDisk(queue);
+        if (ret == RS_RET_OK) ret = diskRet;
+        /* Pure disk boundaries keep their store. Existing memory queues
+         * discard only what their configured save phase did not preserve. */
+        if (queue->qType == QUEUETYPE_FIXED_ARRAY || queue->qType == QUEUETYPE_LINKEDLIST) queueDrain(queue);
+    }
+    queue->localGraphStopped = 1;
+    return ret;
+}
+
 rsRetVal ATTR_NONNULL(1) qqueueShutdownWorkers(qqueue_t *const pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, qqueue);
+    if (pThis->localGraphStopped) return RS_RET_OK;
+    if (pThis->localGraphConf != NULL) return rulesetShutdownLocalGraph(pThis->localGraphConf);
 
     if (pThis->qType == QUEUETYPE_DIRECT) {
         FINALIZE;
@@ -2809,7 +2959,8 @@ static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, smsg_t *pMsg) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
-    if (pThis->iDiscardMrk > 0 && iQueueSize >= pThis->iDiscardMrk) {
+    if (!pThis->bLocalScope && !(pThis->pqParent != NULL && pThis->pqParent->bLocalScope) && pThis->iDiscardMrk > 0 &&
+        iQueueSize >= pThis->iDiscardMrk) {
         iRetLocal = MsgGetSeverity(pMsg, &iSeverity);
         if (iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
             DBGOPRINT((obj_t *)pThis, "queue nearly full (%d entries), discarded severity %d message\n", iQueueSize,
@@ -3091,6 +3242,93 @@ static void qqueueDeferBatch(wti_t *const pWti) {
     pBatch->nElem = pBatch->nElemDeq = 0;
 }
 
+/* Local memory completion returns retry references to capacity released
+ * by this same batch, under the BE mutex. This is an internal ownership move:
+ * it neither enters external admission nor waits/discards on a full queue. */
+static rsRetVal qqueueCompleteLocalBackend(qqueue_t *const queue, wti_t *const worker) {
+    batch_t *const batch = &worker->batch;
+    if (batch->nElemDeq == 0) return RS_RET_OK;
+    if ((queue->qType != QUEUETYPE_FIXED_ARRAY && queue->qType != QUEUETYPE_LINKEDLIST) || queue->toDeleteLst != NULL ||
+        batch->nElem != batch->nElemDeq || worker->source_queue != queue)
+        return RS_RET_INTERNAL_ERROR;
+    const rsRetVal ret = DoDeleteBatchFromQStore(queue, batch->nElemDeq);
+    if (ret != RS_RET_OK) return ret;
+    uint64_t terminal = 0, discarded = 0;
+    const int diskTransfer = worker->pWtp == queue->pWtpDA;
+    assert(worker->n_deferred_msgs == 0);
+    for (int i = 0; i < batch->nElem; ++i) {
+        smsg_t *const message = batch->pElem[i].pMsg;
+        if (batch->eltState[i] == BATCH_STATE_RDY || batch->eltState[i] == BATCH_STATE_SUB) {
+            assert(queue->iQueueSize < queue->iMaxQueueSize);
+            /* Internal moves bypass logical admission policy. LinkedList may
+             * fail to allocate its replacement cell; follow the existing
+             * retry-insertion failure policy, with an explicit disposition. */
+            rsRetVal retryRet;
+#ifdef ENABLE_TESTBENCH
+            if (qqueueLocalTestFailNode(queue, 1))
+                retryRet = RS_RET_OUT_OF_MEMORY;
+            else
+#endif
+                retryRet = qqueueAdd(queue, message);
+            if (retryRet != RS_RET_OK) {
+                worker->p_deferred_msgs[worker->n_deferred_msgs++] = message;
+                ++terminal;
+                ++discarded;
+                qqueueLocalRetryFailed(queue);
+                batch->eltState[i] = BATCH_STATE_DISC;
+            }
+        } else {
+            worker->p_deferred_msgs[worker->n_deferred_msgs++] = message;
+            if (!diskTransfer || batch->eltState[i] != BATCH_STATE_COMM) {
+                ++terminal;
+                if (batch->eltState[i] == BATCH_STATE_DISC) ++discarded;
+            }
+        }
+        batch->pElem[i].pMsg = NULL;
+    }
+    batch->nElem = batch->nElemDeq = 0;
+    qqueueLocalBackendTerminal(queue, terminal, discarded);
+    pthread_cond_broadcast(&queue->notFull);
+    pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
+    qqueueLocalBackendWakeSpace(queue);
+    qqueueLocalWakeBackendHelpers(queue);
+    if (getLogicalQueueSize(queue) != 0 && !qqueueLocalIsClosed(queue)) qqueueAdviseMaxWorkers(queue);
+    return qqueueClearWtiSource(queue, worker);
+}
+
+/* Explicit local-family authority, independent of the helper's immutable FE
+ * pool identity. Both operations require the BE mutex and exclusive WTI
+ * ownership with cancellation disabled; no maintenance accesses it before join. */
+rsRetVal qqueueLocalTryBorrowBackend(qqueue_t *const owner, wti_t *const worker, const unsigned limit) {
+    batch_t *const batch = &worker->batch;
+    if (!qqueueLocalBorrowWorker(owner, worker) ||
+        (owner->qType != QUEUETYPE_FIXED_ARRAY && owner->qType != QUEUETYPE_LINKEDLIST) ||
+        worker->source_queue != NULL || batch->nElem != 0 || batch->nElemDeq != 0 || batch->storeData != NULL ||
+        worker->n_deferred_msgs != 0 || limit > (unsigned)batch->maxElem)
+        return RS_RET_INTERNAL_ERROR;
+    if (owner->localDAActive) return RS_RET_IDLE;
+    unsigned count = (unsigned)getLogicalQueueSize(owner);
+    if (count > limit) count = limit;
+    if (count == 0) return RS_RET_IDLE;
+    worker->source_queue = owner;
+    worker->logical_owner = owner;
+    for (unsigned i = 0; i < count; ++i) {
+        owner->qDeq(owner, &batch->pElem[i].pMsg);
+        batch->eltState[i] = BATCH_STATE_RDY;
+    }
+    qqueueAddLogDeq(owner, (int)count);
+    batch->nElem = batch->nElemDeq = (int)count;
+    batch->deqID = getNextDeqID(owner);
+    qqueueLocalBackendAcquired(owner, count);
+    return RS_RET_OK;
+}
+
+rsRetVal qqueueLocalCompleteBorrowedBackend(qqueue_t *const owner, wti_t *const worker) {
+    if (!qqueueLocalBorrowWorker(owner, worker) || worker->source_queue != owner || worker->logical_owner != owner)
+        return RS_RET_INTERNAL_ERROR;
+    return qqueueCompleteLocalBackend(owner, worker);
+}
+
 /* Delete a batch of processed user objects from the queue, which includes
  * destructing the objects themself. Any entries not marked as finally
  * processed are enqueued again. The new enqueue is necessary because we have a
@@ -3098,6 +3336,7 @@ static void qqueueDeferBatch(wti_t *const pWti) {
  */
 static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     batch_t *const pBatch = &pWti->batch;
+    const int hadResponsibility = qqueueLeaseHasResponsibility(pBatch->nElem, pBatch->nElemDeq, pBatch->storeData);
     int i;
     smsg_t *pMsg;
     int nEnqueued = 0;
@@ -3106,7 +3345,19 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
     assert(pBatch != NULL);
+    if (pThis->local != NULL) return qqueueCompleteLocalBackend(pThis, pWti);
 
+    qqueue_t *const diskOwner = pThis->pqParent != NULL && pThis->pqParent->local != NULL ? pThis->pqParent : NULL;
+    /* Store-only corrupt records have no decoded batch element. They still
+     * belong to the recovered inventory and retire with this physical lease. */
+    uint64_t diskTerminal = pBatch->nElemDeq > pBatch->nElem ? (uint64_t)(pBatch->nElemDeq - pBatch->nElem) : 0;
+    uint64_t diskDiscarded = diskTerminal;
+    if (diskOwner != NULL) {
+        for (i = 0; i < pBatch->nElem; ++i) {
+            if (pBatch->eltState[i] == BATCH_STATE_COMM || pBatch->eltState[i] == BATCH_STATE_DISC) ++diskTerminal;
+            if (pBatch->eltState[i] == BATCH_STATE_DISC) ++diskDiscarded;
+        }
+    }
     if (pThis->qCompleteBatch != NULL && pBatch->storeData != NULL) {
         int committed = 0;
         int retried = 0;
@@ -3128,8 +3379,13 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
             qqueueAddOverallQueueSize(added);
         }
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
+        if (diskOwner != NULL) qqueueLocalDiskTerminal(diskOwner, diskTerminal, diskDiscarded);
         qqueueDeferBatch(pWti);
         pBatch->storeData = NULL;
+        if (hadResponsibility) {
+            iRet = qqueueClearWtiSource(pThis, pWti);
+            if (iRet != RS_RET_OK) RETiRet;
+        }
         RETiRet;
     }
 
@@ -3137,9 +3393,11 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("DeleteProcessedBatch: etry %d state %d\n", i, pBatch->eltState[i]);
         if (pBatch->eltState[i] == BATCH_STATE_RDY || pBatch->eltState[i] == BATCH_STATE_SUB) {
-            localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
+            localRet = doEnqSingleObjContext(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg), pThis->localGraphConf != NULL);
             ++nEnqueued;
             if (localRet != RS_RET_OK) {
+                ++diskTerminal;
+                ++diskDiscarded;
                 DBGPRINTF(
                     "DeleteProcessedBatch: error %d re-enqueuing unprocessed "
                     "data element - discarded\n",
@@ -3153,8 +3411,10 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     if (nEnqueued > 0) qqueueChkPersist(pThis, nEnqueued);
 
     iRet = DeleteBatchFromQStore(pThis, pBatch);
+    if (iRet == RS_RET_OK && diskOwner != NULL) qqueueLocalDiskTerminal(diskOwner, diskTerminal, diskDiscarded);
 
     qqueueDeferBatch(pWti);
+    if (iRet == RS_RET_OK && hadResponsibility) iRet = qqueueClearWtiSource(pThis, pWti);
 
     RETiRet;
 }
@@ -3184,10 +3444,16 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     smsg_t *pMsg;
     rsRetVal localRet;
     DEFiRet;
+    int diskPhysicalBefore = -1;
 
     nDeleted = pWti->batch.nElemDeq;
     localRet = DeleteProcessedBatch(pThis, pWti);
-    if (pThis->qCompleteBatch != NULL) CHKiRet(localRet);
+    if (pThis->qCompleteBatch != NULL || pThis->local != NULL) CHKiRet(localRet);
+    if (pThis->qType == QUEUETYPE_DISK && pThis->pqParent != NULL && pThis->pqParent->local != NULL)
+        diskPhysicalBefore = getPhysicalQueueSize(pThis);
+    /* The previous lease was cleared only after retirement. Bind before every
+     * outcome of the next acquisition, including idle and store errors. */
+    CHKiRet(qqueueBindWtiSource(pThis, pWti));
 
     nDequeued = nDiscarded = 0;
     if (pThis->qDeqBatch != NULL) {
@@ -3199,6 +3465,8 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
             if (*pSkippedMsgs > 0) {
                 ATOMIC_SUB(&pThis->iQueueSize, *pSkippedMsgs, &pThis->mutQueueSize);
                 qqueueSubtractOverallQueueSize(*pSkippedMsgs);
+                if (pThis->pqParent != NULL)
+                    qqueueLocalDiskTerminal(pThis->pqParent, (uint64_t)*pSkippedMsgs, (uint64_t)*pSkippedMsgs);
             }
             pWti->batch.nElem = pWti->batch.nElemDeq = 0;
             *piRemainingQueueSize = getLogicalQueueSize(pThis);
@@ -3459,11 +3727,19 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
               nDiscarded, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 #endif
 
+    if (pThis->local != NULL) qqueueLocalBackendAcquired(pThis, (uint64_t)nDequeued);
     pWti->batch.nElem = nDequeued;
     pWti->batch.nElemDeq = nDequeued + nDiscarded;
     pWti->batch.deqID = getNextDeqID(pThis);
     *piRemainingQueueSize = iQueueSize;
 finalize_it:
+    /* Classic corruption recovery can remove an unread tail immediately,
+     * outside the returned batch lease. Observe that definite disposition
+     * once; framed skipped records still in nElemDeq retire at completion. */
+    if (diskPhysicalBefore >= 0 && getPhysicalQueueSize(pThis) < diskPhysicalBefore) {
+        const uint64_t lost = (uint64_t)(diskPhysicalBefore - getPhysicalQueueSize(pThis));
+        qqueueLocalDiskTerminal(pThis->pqParent, lost, lost);
+    }
     RETiRet;
 }
 
@@ -3563,6 +3839,10 @@ static rsRetVal DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkip
  * logic accordingly. Of course, sleep calculations need to be done up to the minute,
  * but you get the idea from the code above.
  */
+rsRetVal qqueueLocalRateLimiter(void *source) {
+    return RateLimiter((qqueue_t *)source);
+}
+
 static rsRetVal RateLimiter(qqueue_t *pThis) {
     DEFiRet;
     int iDelay;
@@ -3572,6 +3852,10 @@ static rsRetVal RateLimiter(qqueue_t *pThis) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
+recheck_schedule:
+    if (pThis->iDeqtWinToHr != 25 && pThis->localGraphConf != NULL && pThis->pWtpReg != NULL &&
+        ATOMIC_LOAD_32BIT((int *)&pThis->pWtpReg->wtpState, &pThis->pWtpReg->mutWtpState) != wtpState_RUNNING)
+        FINALIZE;
     iDelay = 0;
     if (pThis->iDeqtWinToHr != 25) { /* 25 means disabled */
         /* time calls are expensive, so only do them when needed */
@@ -3611,6 +3895,26 @@ static rsRetVal RateLimiter(qqueue_t *pThis) {
         }
     }
 
+    if (iDelay > 0 && pThis->localGraphConf != NULL) {
+        /* FE has one worker and shares its wake predicate. BE workers share
+         * the existing notFull condition. A bounded fallback also observes
+         * pool transitions whose legacy notification targets pcondBusy.
+         * Cancellation stays disabled and timedwait restores this mutex. */
+        struct timespec wake;
+        timeoutComp(&wake, 1000);
+        DBGOPRINT((obj_t *)pThis, "outside dequeue time window, waiting for schedule or shutdown\n");
+        pthread_cond_t *condition = &pThis->notFull;
+        if (pThis->localSource != NULL) {
+            /* Constructed FEs publish this pool before worker startup and
+             * clear it only after join. Check the invariant before use. */
+            wtp_t *const pool = pThis->pWtpReg;
+            assert(pool != NULL && pool->pWrkr != NULL && pool->pWrkr[0] != NULL);
+            if (pool == NULL || pool->pWrkr == NULL || pool->pWrkr[0] == NULL) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+            condition = &pool->pWrkr[0]->pcondBusy;
+        }
+        pthread_cond_timedwait(condition, pThis->mut, &wake);
+        goto recheck_schedule;
+    }
     if (iDelay > 0) {
         pthread_mutex_unlock(pThis->mut);
         DBGOPRINT((obj_t *)pThis, "outside dequeue time window, delaying %d seconds\n", iDelay);
@@ -3618,6 +3922,7 @@ static rsRetVal RateLimiter(qqueue_t *pThis) {
         qqueueLock(pThis);
     }
 
+finalize_it:
     RETiRet;
 }
 
@@ -3632,12 +3937,24 @@ static rsRetVal DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSki
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pWti, wti);
 
+    /* Do not overwrite a prior source before its completion at the front of
+     * DequeueConsumableElements(). */
+    CHKiRet(qqueueBindWtiSource(pThis, pWti));
+
 retry_dequeue:
     CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
     if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
 
 finalize_it:
+    /* An idle acquisition has no batch to retire. All other non-OK paths keep
+     * their attribution so a store context or partial dequeue cannot be
+     * completed through a callback owner's queue by mistake. */
+    if (iRet == RS_RET_IDLE &&
+        !qqueueLeaseHasResponsibility(pWti->batch.nElem, pWti->batch.nElemDeq, pWti->batch.storeData)) {
+        const rsRetVal clearRet = qqueueClearWtiSource(pThis, pWti);
+        if (clearRet != RS_RET_OK) iRet = clearRet;
+    }
     if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
         qqueueDrainDeferredLocked(pThis, pWti);
         /* An enqueue during disposal could not signal us as a waiter yet.
@@ -3665,18 +3982,233 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pWti, wti);
 
     int iCancelStateSave;
+    qqueue_t *const pSource = pWti->source_queue;
     /* DeleteProcessedBatch() defers final message destruction by resetting
      * the batch counters, so retain the dequeue count for checkpointing. */
     const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DeleteProcessedBatch(pThis, pWti);
-    qqueueChkPersist(pThis, nElemDeq);
-    qqueueDrainDeferredLocked(pThis, pWti);
+    if (pSource != NULL) {
+        /* The callback owner can differ from the physical source. The source
+         * is authoritative after the pool-user and mutex validation above. */
+        CHKiRet(qqueueBindWtiSource(pSource, pWti));
+    }
+    iRet = DeleteProcessedBatch(pSource == NULL ? pThis : pSource, pWti);
+    if (iRet == RS_RET_OK) qqueueChkPersist(pSource == NULL ? pThis : pSource, nElemDeq);
+    qqueueDrainDeferredLocked(pSource == NULL ? pThis : pSource, pWti);
+
+finalize_it:
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
 }
+
+#ifdef ENABLE_TESTBENCH
+static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti);
+
+/* This fixture reaches the production terminal-completion functions with a
+ * source queue and a separate callback owner. It uses a completion callback
+ * as a queue-layer fault seam: no store writes occur, but the source lease,
+ * opaque storeData retention, counter, and deferred-cleanup branches execute.
+ * It intentionally does not construct segmented-store on-disk state. */
+static rsRetVal qqueueLeaseTestCompleteOK(qqueue_t *pThis,
+                                          batch_t __attribute__((unused)) * pBatch,
+                                          int *const committed,
+                                          int *const retried) {
+    ++pThis->segdiskCorruptionEvents;
+    *committed = 1;
+    *retried = 0;
+    return RS_RET_OK;
+}
+
+static rsRetVal qqueueLeaseTestCompleteFail(qqueue_t *pThis,
+                                            batch_t __attribute__((unused)) * pBatch,
+                                            int *const committed,
+                                            int *const retried) {
+    ++pThis->segdiskCorruptionEvents;
+    *committed = 0;
+    *retried = 0;
+    return RS_RET_IO_ERROR;
+}
+
+static void qqueueLeaseTestInitQueue(qqueue_t *const pThis, pthread_mutex_t *const mut, objInfo_t *const info) {
+    memset(pThis, 0, sizeof(*pThis));
+    pThis->objData.pObjInfo = info;
+    #ifndef NDEBUG
+    pThis->objData.iObjCooCKiE = 0xBADEFEE;
+    #endif
+    pThis->qType = QUEUETYPE_SEGMENTED_DISK;
+    pThis->mut = mut;
+    pthread_cond_init(&pThis->notFull, NULL);
+    pThis->iQueueSize = 1;
+    pThis->nLogDeq = 1;
+    INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
+    INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+}
+
+/* Exercise the real regular consumer against an empty, initialized local BE
+ * with a newly constructed worker. ConsumerReg() is normally entered from a
+ * worker thread with cancellation disabled, so preserve that caller contract
+ * while the imdiag command invokes it synchronously. The worker's shutdown
+ * pointer must remain NULL: an empty acquisition has no batch and must not
+ * need action-facing shutdown state. Both queue-flag values cover the idle
+ * finalizer without letting another BE worker observe the temporary flag,
+ * because this function holds the BE mutex until it restores zero. */
+static rsRetVal qqueueLeaseTestEmptyLocalBackend(qqueue_t *const owner) {
+    wti_t *worker = NULL;
+    int cancelState;
+    int locked = 0;
+    DEFiRet;
+
+    if (owner == NULL || owner->local == NULL || owner->pWtpReg == NULL || owner->pWtpReg->pUsr != owner ||
+        owner->pWtpReg->pmutUsr != owner->mut)
+        return RS_RET_PARAM_ERROR;
+
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+    CHKiRet(wtiConstruct(&worker));
+    CHKiRet(wtiSetpWtp(worker, owner->pWtpReg));
+    CHKiRet(wtiConstructFinalize(worker));
+    if (worker->pbShutdownImmediate != NULL || worker->source_queue != NULL || worker->logical_owner != NULL ||
+        qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) ||
+        worker->n_deferred_msgs != 0) {
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+
+    d_pthread_mutex_lock(owner->mut);
+    locked = 1;
+    if (getLogicalQueueSize(owner) != 0 || owner->nLogDeq != 0 || qqueueIsShutdownImmediate(owner)) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    for (int immediate = 0; immediate <= 1; ++immediate) {
+        qqueueSetShutdownImmediate(owner, immediate);
+        iRet = ConsumerReg(owner, worker);
+        qqueueSetShutdownImmediate(owner, 0);
+        if (iRet != RS_RET_IDLE || worker->pbShutdownImmediate != NULL || worker->source_queue != NULL ||
+            worker->logical_owner != NULL ||
+            qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) ||
+            worker->n_deferred_msgs != 0 || getLogicalQueueSize(owner) != 0 || owner->nLogDeq != 0) {
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        }
+    }
+    iRet = RS_RET_OK;
+
+finalize_it:
+    if (locked) d_pthread_mutex_unlock(owner->mut);
+    if (worker != NULL) wtiDestruct(&worker);
+    pthread_setcancelstate(cancelState, NULL);
+    RETiRet;
+}
+
+/* Exercise the real terminal completion path with a source queue distinct
+ * from the callback owner, then calls the empty local-BE ConsumerReg fixture
+ * against the initialized daemon queue. */
+rsRetVal qqueueTestLeaseCompletionPaths(qqueue_t *const owner) {
+    qqueue_t source;
+    qqueue_t callback_owner;
+    wtp_t pool;
+    wti_t worker;
+    pthread_mutex_t source_mut = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t callback_mut = PTHREAD_MUTEX_INITIALIZER;
+    objInfo_t queue_info = {.pszID = UCHAR_CONSTANT("qqueue")};
+    objInfo_t wti_info = {.pszID = UCHAR_CONSTANT("wti")};
+    int store_context;
+    smsg_t retained_message;
+    batch_obj_t retained_element = {.pMsg = &retained_message};
+    batch_state_t retained_state = BATCH_STATE_COMM;
+    DEFiRet;
+
+    qqueueLeaseTestInitQueue(&source, &source_mut, &queue_info);
+    qqueueLeaseTestInitQueue(&callback_owner, &callback_mut, &queue_info);
+    /* Model a DA child whose logical root receives the completion callback. */
+    source.pqParent = &callback_owner;
+    callback_owner.iQueueSize = 17;
+    callback_owner.nLogDeq = 17;
+    memset(&pool, 0, sizeof(pool));
+    pool.pUsr = &source;
+    pool.pmutUsr = &source_mut;
+    memset(&worker, 0, sizeof(worker));
+    worker.objData.pObjInfo = &wti_info;
+    #ifndef NDEBUG
+    worker.objData.iObjCooCKiE = 0xBADEFEE;
+    #endif
+    worker.pWtp = &pool;
+    worker.source_queue = &source;
+    worker.logical_owner = &callback_owner;
+    worker.batch.maxElem = 1;
+    worker.batch.nElemDeq = 1;
+    worker.batch.storeData = &store_context;
+    CHKmalloc(worker.p_deferred_msgs = calloc(1, sizeof(smsg_t *)));
+
+    source.qCompleteBatch = qqueueLeaseTestCompleteOK;
+    d_pthread_mutex_lock(&source_mut);
+    iRet = batchProcessed(&callback_owner, &worker);
+    d_pthread_mutex_unlock(&source_mut);
+    /* The synthetic source is not registered with the daemon. Compensate the
+     * diagnostic aggregate that normal physical completion updates so this
+     * isolated fixture cannot perturb the initialized main queue's oracle. */
+    if (iRet == RS_RET_OK) qqueueAddOverallQueueSize(1);
+    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 1 || source.iQueueSize != 0 || source.nLogDeq != 0 ||
+        callback_owner.segdiskCorruptionEvents != 0 || callback_owner.iQueueSize != 17 ||
+        callback_owner.nLogDeq != 17 || worker.source_queue != NULL || worker.logical_owner != NULL ||
+        worker.batch.storeData != NULL || worker.batch.nElemDeq != 0 || worker.n_deferred_msgs != 0) {
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+
+    source.iQueueSize = 1;
+    source.nLogDeq = 1;
+    source.segdiskCorruptionEvents = 0;
+    worker.source_queue = &source;
+    worker.logical_owner = &callback_owner;
+    worker.batch.nElem = 1;
+    worker.batch.nElemDeq = 1;
+    worker.batch.pElem = &retained_element;
+    worker.batch.eltState = &retained_state;
+    worker.batch.storeData = &store_context;
+    source.qCompleteBatch = qqueueLeaseTestCompleteFail;
+    d_pthread_mutex_lock(&source_mut);
+    iRet = batchProcessed(&callback_owner, &worker);
+    d_pthread_mutex_unlock(&source_mut);
+    if (iRet != RS_RET_IO_ERROR || source.segdiskCorruptionEvents != 1 || source.iQueueSize != 1 ||
+        source.nLogDeq != 1 || callback_owner.segdiskCorruptionEvents != 0 || worker.source_queue != &source ||
+        worker.logical_owner != &callback_owner || worker.batch.storeData != &store_context ||
+        worker.batch.nElem != 1 || worker.batch.nElemDeq != 1 || worker.batch.pElem != &retained_element ||
+        worker.batch.eltState != &retained_state || retained_element.pMsg != &retained_message ||
+        retained_state != BATCH_STATE_COMM || worker.n_deferred_msgs != 0) {
+        iRet = RS_RET_INTERNAL_ERROR;
+        goto finalize_it;
+    }
+
+    /* Restore a consuming completion callback and retire the retained opaque
+     * context through the same terminal path before dismantling the fixture. */
+    source.qCompleteBatch = qqueueLeaseTestCompleteOK;
+    worker.batch.nElem = 0;
+    worker.batch.pElem = NULL;
+    worker.batch.eltState = NULL;
+    d_pthread_mutex_lock(&source_mut);
+    iRet = batchProcessed(&callback_owner, &worker);
+    d_pthread_mutex_unlock(&source_mut);
+    if (iRet == RS_RET_OK) qqueueAddOverallQueueSize(1);
+    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 2 || source.iQueueSize != 0 || source.nLogDeq != 0 ||
+        worker.source_queue != NULL || worker.logical_owner != NULL || worker.batch.storeData != NULL ||
+        worker.batch.nElemDeq != 0 || worker.n_deferred_msgs != 0) {
+        iRet = RS_RET_INTERNAL_ERROR;
+    }
+
+    if (iRet == RS_RET_OK) iRet = qqueueLeaseTestEmptyLocalBackend(owner);
+
+finalize_it:
+    free(worker.p_deferred_msgs);
+    DESTROY_ATOMIC_HELPER_MUT(source.mutQueueSize);
+    DESTROY_ATOMIC_HELPER_MUT(source.mutLogDeq);
+    DESTROY_ATOMIC_HELPER_MUT(callback_owner.mutQueueSize);
+    DESTROY_ATOMIC_HELPER_MUT(callback_owner.mutLogDeq);
+    pthread_cond_destroy(&source.notFull);
+    pthread_cond_destroy(&callback_owner.notFull);
+    pthread_mutex_destroy(&source_mut);
+    pthread_mutex_destroy(&callback_mut);
+    RETiRet;
+}
+#endif
 
 
 /* This is the queue consumer in the regular (non-DA) case. It is
@@ -3725,7 +4257,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-    qqueueSetWtiShutdownImmediate(pThis, pWti);
+    qqueueSetWtiShutdownImmediate(pWti->source_queue == NULL ? pThis : pWti->source_queue, pWti);
     CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti));
 
     /* we now need to check if we should deliberately delay processing a bit
@@ -3745,6 +4277,12 @@ finalize_it:
 
     /* now we are done, but potentially need to re-acquire the mutex */
     if (bNeedReLock) qqueueLock(pThis);
+    /* The local BE is this pool's physical source (enforced by
+     * qqueueBindWtiSource). A first empty dequeue has not initialized the
+     * action-facing worker shutdown pointer, so read the queue flag directly.
+     * Keep this check on error exits too: failed callbacks can leave COMM
+     * entries whose delivery is ambiguous during immediate shutdown. */
+    if (qqueueLocalWorker(pWti) && qqueueIsShutdownImmediate(pThis)) qqueueLocalRetainAmbiguous(pWti);
 
     RETiRet;
 }
@@ -3769,7 +4307,27 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pWti, wti);
 
+    /* Graph DA keeps its one activated transfer thread parked between spills.
+     * Retiring the only slot at low water leaves a refill window where advice
+     * sees an exiting, not-yet-joinable WTI and cannot restart it. No producer
+     * need arrive after that slot finally becomes free. Retaining the idle
+     * thread closes that window without changing high/low-water hysteresis.
+     *
+     * Complete the prior lease before parking. Completion may drop the queue
+     * mutex for deferred destruction, so recheck the activation predicate on
+     * return. WTI registers its idle wait under this same mutex; high-water
+     * advice therefore either wins this recheck or signals the registered wait.
+     * Save/shutdown use the pool state to bypass runtime parking entirely. */
+    if (pThis->localGraphConf != NULL &&
+        ATOMIC_LOAD_32BIT((int *)&pThis->pWtpDA->wtpState, &pThis->pWtpDA->mutWtpState) == wtpState_RUNNING &&
+        !pThis->localDAActive) {
+        CHKiRet(batchProcessed(pThis, pWti));
+        if (!pThis->localDAActive) ABORT_FINALIZE(RS_RET_IDLE);
+    }
+
     CHKiRet(DequeueForConsumer(pThis, pWti, &skippedMsgs));
+    qqueue_t *const diskDestination = pThis->pqDA;
+    if (diskDestination == NULL) ABORT_FINALIZE(RS_RET_IDLE);
 
     /* we now have a non-idle batch of work, so we can release the queue mutex and process it */
     d_pthread_mutex_unlock(pThis->mut);
@@ -3779,9 +4337,13 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     /* at this spot, we may be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
+    /* qqueueEnqMsg disables cancellation internally. For graph DA workers,
+     * extend that existing protected region through the acceptance-state store
+     * so cancellation cannot replay a successfully persisted source reference. */
+    if (pThis->localGraphConf != NULL) pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     /* iterate over returned results and enqueue them in DA queue */
     for (i = 0; i < pWti->batch.nElem && !qqueueIsShutdownImmediate(pThis); i++) {
-        iRet = qqueueEnqMsg(pThis->pqDA, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
+        iRet = qqueueEnqMsg(diskDestination, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
         if (iRet != RS_RET_OK) {
             if (iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
                 /* Queue emergency error occurred */
@@ -3794,7 +4356,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
                           "ConsumerDA:qqueueEnqMsg item (%d) returned "
                           "with error state: '%d'\n",
                           i, iRet);
-                if (pThis->pqDA->qType == QUEUETYPE_SEGMENTED_DISK) {
+                if (diskDestination->qType == QUEUETYPE_SEGMENTED_DISK) {
                     /* The segmented child may fail before the event becomes
                      * durable (for example while publishing its engine marker
                      * or materializing the store). Leave this and the
@@ -3805,7 +4367,12 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
                 }
             }
         }
-        pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
+        pWti->batch.eltState[i] = iRet != RS_RET_OK && pThis->local != NULL ? BATCH_STATE_DISC : BATCH_STATE_COMM;
+        if (iRet == RS_RET_OK && pThis->local != NULL) {
+            qqueueLock(pThis);
+            qqueueLocalDiskTransferred(pThis, 1);
+            d_pthread_mutex_unlock(pThis->mut);
+        }
     }
 
 finalize_it:
@@ -3856,7 +4423,9 @@ static rsRetVal qqueueChkStopWrkrDA(qqueue_t *pThis) {
         iRet = RS_RET_TERMINATE_WHEN_IDLE;
     }
     if (getPhysicalQueueSize(pThis) <= pThis->iLowWtrMrk) {
-        iRet = RS_RET_TERMINATE_NOW;
+        pThis->localDAActive = 0;
+        qqueueLocalWakeBackendHelpers(pThis);
+        if (pThis->localGraphConf == NULL) iRet = RS_RET_TERMINATE_NOW;
     }
 
     RETiRet;
@@ -3892,6 +4461,12 @@ static rsRetVal GetDeqBatchSize(qqueue_t *pThis, int *pVal) {
 }
 
 
+static void qqueueLocalLegacyRead(statsobj_t *const stats, void *const owner) {
+    (void)stats;
+    qqueueLocalRefreshLegacy(owner);
+}
+
+
 /* start up the queue - it must have been constructed and parameters defined
  * before.
  */
@@ -3905,6 +4480,13 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     size_t lenBuf;
 
     assert(pThis != NULL);
+
+    if (pThis->bLocalScope) {
+        if (!pThis->bLocalConfigValidated || pThis->bLocalConfigError) ABORT_FINALIZE(RS_RET_LOCAL_QUEUE_CONFIG);
+        /* The regular FixedArray pool remains the physical BE. After its
+         * construction, local startup preallocates the FE family and enables
+         * the local-only admission wrapper. Any failure is fatal to startup. */
+    }
 
     /* do not modify the queue if it's already running(happens when dynamic config reload is invoked
      * and the queue is used in the new config as well)
@@ -4072,6 +4654,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
         CHKiRet(wtpSetbAllowFirstWorkerToTimeout(pThis->pWtpReg, 0));
     }
     CHKiRet(wtpSetpUsr(pThis->pWtpReg, pThis));
+    if (pThis->bLocalScope || pThis->localGraphConf != NULL) CHKiRet(wtpUseMonotonicTermination(pThis->pWtpReg));
     CHKiRet(wtpConstructFinalize(pThis->pWtpReg));
 
     /* Validate queue configuration before starting */
@@ -4085,6 +4668,14 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
             pThis->sizeOnDiskMax = pThis->iMaxFileSize;
         }
     }
+    /* Recovery can start disk workers inside InitDA. Publish the local family
+     * first so recovered obligations and downstream producers have an owner. */
+    if (pThis->bLocalScope) CHKiRet(qqueueLocalStart(pThis));
+    if (pThis->pqParent != NULL && pThis->pqParent->local != NULL)
+        /* getPhysicalQueueSize may return a lazy-recovery wake sentinel of one.
+         * Only discovered records are obligations in this run. */
+        qqueueLocalDiskRestored(pThis->pqParent, (uint64_t)PREFER_FETCH_32BIT(pThis->iQueueSize));
+
     /* set up DA system if we have a disk-assisted queue */
     if (pThis->bIsDA) CHKiRet(InitDA(pThis, LOCK_MUTEX)); /* initiate DA mode */
 
@@ -4189,11 +4780,17 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     }
 
     CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
+    if (pThis->bLocalScope) {
+        CHKiRet(statsobj.SetPreReadNotifier(pThis->statsobj, qqueueLocalLegacyRead, pThis));
+        CHKiRet(qqueueLocalStatsConstruct(pThis, qName, (uint32_t)pThis->localMaxFrontends, pThis->localFrontendStats,
+                                          &pThis->localStats));
+    }
 
 finalize_it:
     if (iRet != RS_RET_OK) {
         /* note: a child uses it's parent mutex, so do not delete it! */
-        if (pThis->pqParent == NULL && pThis->mut != NULL) free(pThis->mut);
+        if (pThis->pqParent == NULL && pThis->mut != NULL && !(pThis->bLocalScope && pThis->bQueueStarted))
+            free(pThis->mut);
     } else {
         pThis->isRunning = 1;
     }
@@ -4368,12 +4965,58 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     RETiRet;
 }
 
+/* Reuse the existing persistence worker, including its intentionally separate
+ * (potentially long) save phase. Callback deadlines are never renewed here. */
+rsRetVal qqueueSaveLocalBackend(qqueue_t *const owner) {
+    if (!owner->bIsDA || !owner->bSaveOnShutdown || owner->pqDA == NULL) return RS_RET_OK;
+    if (getPhysicalQueueSize(owner) == 0) return RS_RET_OK;
+    const rsRetVal ret = DoSaveOnShutdown(owner);
+    if (ret != RS_RET_OK) return ret;
+    return getPhysicalQueueSize(owner) == 0 ? RS_RET_OK : RS_RET_QUEUE_FULL;
+}
+
+rsRetVal qqueueFinishLocalDisk(qqueue_t *const owner) {
+    qqueue_t *const disk =
+        owner->pqDA != NULL
+            ? owner->pqDA
+            : ((owner->qType == QUEUETYPE_DISK || owner->qType == QUEUETYPE_SEGMENTED_DISK) ? owner : NULL);
+    if (disk == NULL) return RS_RET_OK;
+    /* Workers are joined, so checkpoint and final inventory share exclusive
+     * source ownership. The ordinary destructor still closes the same store. */
+    const rsRetVal ret = qqueuePersist(disk, QUEUE_NO_CHECKPOINT);
+    if (ret == RS_RET_OK)
+        qqueueLocalDiskPersisted(owner, (uint64_t)PREFER_FETCH_32BIT(disk->iQueueSize));
+    else
+        LogError(0, ret, "%s: failed to finalize disk queue persistence", objGetName((obj_t *)owner));
+    return ret;
+}
+
 
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(qqueue);
+    /* Even a Direct or not-yet-started queue is a graph lifetime anchor.
+     * Stop the graph before freeing its first node; later graph traversal must
+     * never see a freed node after partial activation or validation cleanup. */
+    if (pThis->localSource == NULL && pThis->pqParent == NULL && pThis->localGraphConf != NULL) {
+        const rsRetVal graph_ret = rulesetShutdownLocalGraph(pThis->localGraphConf);
+        if (graph_ret != RS_RET_OK) LogError(0, graph_ret, "local queue graph shutdown failed during queue teardown");
+    }
+    if (pThis->localSource != NULL) {
+        assert(pThis->pWtpReg == NULL);
+        /* FE descriptor owns its mutex; all leases and the pool were disposed
+         * before the queue-shaped source's final object destruction. */
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexContention);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexWaitNs);
+        free(pThis->pszSpoolDir);
+        FINALIZE;
+    }
     DBGOPRINT((obj_t *)pThis, "shutdown: begin to destruct queue\n");
-    if (ourConf->globals.shutdownQueueDoubleSize) {
+    /* The local FixedArray allocation and accepted-work bound are immutable. */
+    if (!pThis->bLocalScope && ourConf->globals.shutdownQueueDoubleSize) {
         pThis->iHighWtrMrk *= 2;
         pThis->iMaxQueueSize *= 2;
     }
@@ -4386,14 +5029,18 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         if (pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL && pThis->pWtpReg != NULL)
             qqueueShutdownWorkers(pThis);
 
+        /* Snapshot objects hold pointers into both BE and FE pools. Unlink
+         * them under the stats-list lock before either pool can be destroyed. */
+        qqueueLocalStatsDestruct(&pThis->localStats);
+
         /* Destroy the now-joined regular pool before inspecting the remaining
          * size or starting save-on-shutdown. It is no longer needed, and this
          * keeps the persistence phase's worker ownership explicit. */
-        if (pThis->qType != QUEUETYPE_DIRECT && pThis->pWtpReg != NULL) {
+        if (pThis->pWtpReg != NULL && (pThis->qType != QUEUETYPE_DIRECT || pThis->localGraphConf != NULL)) {
             wtpDestruct(&pThis->pWtpReg);
         }
 
-        if (pThis->bIsDA && getPhysicalQueueSize(pThis) > 0) {
+        if (!pThis->localGraphStopped && pThis->bIsDA && getPhysicalQueueSize(pThis) > 0) {
             if (pThis->bSaveOnShutdown) {
                 LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
                        "%s: queue holds %d messages after shutdown of workers. "
@@ -4428,6 +5075,7 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         if (pThis->pqDA != NULL) {
             qqueueDestruct(&pThis->pqDA);
         }
+        if (pThis->localRetiredDA != NULL) qqueueDestruct(&pThis->localRetiredDA);
 
         /* persist the queue (we always do that - queuePersits() does cleanup if the queue is empty)
          * This handler is most important for disk queues, it will finally persist the necessary
@@ -4472,6 +5120,7 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
 
     /* some queues do not provide stats and thus have no statsobj! */
     if (pThis->statsobj != NULL) statsobj.Destruct(&pThis->statsobj);
+    qqueueLocalDestruct(pThis);
 ENDobjDestruct(qqueue)
 
 
@@ -4536,7 +5185,27 @@ finalize_it:
  * Note that the queue mutex MUST already be locked when this function is called.
  * rgerhards, 2009-06-16
  */
+/* Caller holds the queue mutex. A graph shutdown wakes pre-existing waiters
+ * after publishing one immutable monotonic action deadline to every node. */
+static int graphEnqueueTimeout(const qqueue_t *const queue, const int configured) {
+    if (!queue->localGraphDraining) return configured;
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    const int64_t remaining = ((int64_t)queue->localGraphActionDeadline.tv_sec - now.tv_sec) * 1000 +
+                              (queue->localGraphActionDeadline.tv_nsec - now.tv_nsec) / 1000000;
+    if (remaining <= 0) return 0;
+    const int bounded = remaining > INT_MAX ? INT_MAX : (int)remaining;
+    return configured < 0 || bounded < configured ? bounded : configured;
+}
+
 static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) {
+    return doEnqSingleObjContext(pThis, flowCtlType, pMsg, 0);
+}
+
+/* A returned source reference is already accepted. Keep that per-call context
+ * across waits; a queue-global bypass flag would also admit external producers
+ * while pthread_cond_wait releases the mutex. Other queue policies are unchanged. */
+static rsRetVal doEnqSingleObjContext(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg, int sourceRetry) {
     DEFiRet;
     int err;
     struct timespec t;
@@ -4545,6 +5214,8 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
     /* size.enqueued mirrors enqueued: counted on arrival, before discard checks,
      * so it represents inbound byte volume (rejected slice tracked by ctrFDscrd). */
     STATSCOUNTER_ADD(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued, (uint64_t)pMsg->iLenRawMsg);
+    if (pThis->localGraphClosed && !sourceRetry) goto graph_closed;
+    if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
     /* first check if we need to discard this message (which will cause CHKiRet() to exit)
      */
     CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg));
@@ -4573,7 +5244,8 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
         flowCtlType = pMsg->flowCtlType;
     }
     if (flowCtlType == eFLOWCTL_FULL_DELAY) {
-        while (pThis->iQueueSize >= pThis->iFullDlyMrk && !glbl.GetGlobalInputTermState()) {
+        while (pThis->iQueueSize >= pThis->iFullDlyMrk && !glbl.GetGlobalInputTermState() &&
+               !qqueueLocalIsClosed(pThis)) {
             /* We have a problem during shutdown if we block eternally. In that
              * case, the the input thread cannot be terminated. So we wake up
              * from time to time to check for termination.
@@ -4630,6 +5302,8 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
             pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax) ||
            (pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->sizeOnDiskMax != 0 &&
             getQueueDiskBytes(pThis) >= pThis->sizeOnDiskMax)) {
+        if (pThis->localGraphClosed && !sourceRetry) goto graph_closed;
+        if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
         STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
         if (pThis->toEnq == 0 || pThis->bEnqOnly) {
             DBGOPRINT((obj_t *)pThis,
@@ -4646,13 +5320,13 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
              * only after doEnqSingleObj() returns. If this call blocks first,
              * an already-idle worker would never be awakened to make room. */
             qqueueAdviseMaxWorkers(pThis);
-            if (glbl.GetGlobalInputTermState()) {
+            if (pThis->localGraphConf == NULL && glbl.GetGlobalInputTermState()) {
                 DBGOPRINT((obj_t *)pThis,
                           "doEnqSingleObject: queue FULL, discard due to "
                           "FORCE_TERM.\n");
                 ABORT_FINALIZE(RS_RET_FORCE_TERM);
             }
-            timeoutComp(&t, pThis->toEnq);
+            timeoutComp(&t, sourceRetry ? pThis->toEnq : graphEnqueueTimeout(pThis, pThis->toEnq));
             const int r = pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t);
             if (dbgTimeoutToStderr && r != 0) {
                 fprintf(stderr,
@@ -4675,9 +5349,21 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
         }
     }
 
+    /* Closure leaves this reference with the local wrapper, which also
+     * consumes any unprocessed suffix. Global ownership remains unchanged. */
+    if (pThis->localGraphClosed && !sourceRetry) goto graph_closed;
+    if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
     /* and finally enqueue the message */
     CHKiRet(qqueueAdd(pThis, pMsg));
-    STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
+    /* Queue writers are serialized by pThis->mut, but impstats reads this
+     * legacy max-size counter independently. Keep the reader and this write
+     * atomic without changing the generic set-max helper's contract. */
+    if (STATSCOUNTER_ENABLED()) {
+        const int queue_size = PREFER_LOAD_INT(&pThis->iQueueSize);
+        if (queue_size > PREFER_LOAD_INT(&pThis->ctrMaxqsize)) {
+            PREFER_STORE_INT(&pThis->ctrMaxqsize, queue_size);
+        }
+    }
 
     /* check if we had a file rollover and need to persist
      * the .qi file for robustness reasons.
@@ -4692,8 +5378,132 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
         qqueuePersist(pThis, QUEUE_CHECKPOINT);
     }
 
+    FINALIZE;
+graph_closed:
+    /* Global graph boundaries consume rejected refs like their ordinary full
+     * queue path. Internal diagnostics may arrive after upstream workers stop. */
+    STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+    msgDestruct(&pMsg);
+    iRet = RS_RET_QUEUE_FULL;
 finalize_it:
     RETiRet;
+}
+
+/* The local wrapper has a total reference-consumption contract. Queue full
+ * already consumed the current reference; FORCE_TERM and LinkedList allocation
+ * failure did not. Logical policy has already run before this tier admission. */
+rsRetVal qqueueLocalSubmitBackend(qqueue_t *const owner,
+                                  smsg_t *const *const messages,
+                                  const size_t count,
+                                  const int singleFlowControl,
+                                  const enum qqueueLocalRouteReason reason) {
+    rsRetVal result = RS_RET_OK;
+    pthread_mutex_lock(owner->mut);
+    qqueueLocalBackendBegin(owner);
+    qqueueLocalBackendAttempt(owner, count);
+    qqueueLocalBackendRoute(owner, count, reason);
+    for (size_t i = 0; i < count; ++i) {
+        const flowControl_t flow = singleFlowControl < 0 ? messages[i]->flowCtlType : (flowControl_t)singleFlowControl;
+        const rsRetVal ret = doEnqSingleObj(owner, flow, messages[i]);
+        if (ret == RS_RET_OK) {
+            qqueueLocalBackendAdmitted(owner, 1);
+            /* A later element may block on capacity: publish each accepted prefix. */
+            qqueueLocalWakeBackendHelpers(owner);
+        } else if (ret == RS_RET_QUEUE_FULL) {
+            qqueueLocalBackendRejected(owner, 1);
+        } else {
+            /* Logical sampling/severity already ran. Other insertion errors,
+             * including LinkedList allocation, retain this wrapper's reference. */
+            qqueueLocalBackendRejected(owner, count - i);
+            uint64_t tailBytes = 0;
+            for (size_t tail = i + 1; tail < count; ++tail) tailBytes += (uint64_t)messages[tail]->iLenRawMsg;
+            STATSCOUNTER_ADD(owner->ctrEnqueued, owner->mutCtrEnqueued, count - i - 1);
+            STATSCOUNTER_ADD(owner->ctrSizeEnqueued, owner->mutCtrSizeEnqueued, tailBytes);
+            pthread_mutex_unlock(owner->mut);
+            for (size_t tail = i; tail < count; ++tail) {
+                smsg_t *message = messages[tail];
+                msgDestruct(&message);
+            }
+            pthread_mutex_lock(owner->mut);
+            result = ret;
+            break;
+        }
+    }
+    if (!qqueueLocalIsClosed(owner)) qqueueAdviseMaxWorkers(owner);
+    qqueueLocalBackendEnd(owner);
+    pthread_mutex_unlock(owner->mut);
+    return result;
+}
+
+/* Already-accepted transfer: failure retains the exact supplied reference.
+ * Callers hold no FE mutex, and may transfer only after taking its consumer
+ * endpoint through producer quiescence and worker join. */
+rsRetVal qqueueLocalTransferBackend(qqueue_t *const owner,
+                                    smsg_t *const message,
+                                    const struct timespec *const deadline) {
+    rsRetVal ret = RS_RET_OK;
+    pthread_mutex_lock(owner->mut);
+    if ((owner->qType != QUEUETYPE_FIXED_ARRAY && owner->qType != QUEUETYPE_LINKEDLIST) || owner->local == NULL ||
+        (qqueueLocalIsClosed(owner) && !owner->localDASaving)) {
+        ret = RS_RET_FORCE_TERM;
+        goto done;
+    }
+    if (owner->localDASaving) {
+        while (getPhysicalQueueSize(owner) >= owner->iMaxQueueSize) {
+            pthread_mutex_unlock(owner->mut);
+            ret = qqueueSaveLocalBackend(owner);
+            pthread_mutex_lock(owner->mut);
+            if (ret != RS_RET_OK || getPhysicalQueueSize(owner) >= owner->iMaxQueueSize) {
+                ret = ret == RS_RET_OK ? RS_RET_QUEUE_FULL : ret;
+                goto done;
+            }
+        }
+        ret = qqueueAdd(owner, message);
+        goto done;
+    }
+    struct timespec now;
+    if (deadline == NULL || clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec > deadline->tv_sec ||
+        (now.tv_sec == deadline->tv_sec && now.tv_nsec >= deadline->tv_nsec)) {
+        ret = RS_RET_TIMED_OUT;
+        goto done;
+    }
+    while (owner->iQueueSize >= owner->iMaxQueueSize) {
+        qqueueAdviseMaxWorkers(owner);
+        if (deadline == NULL || qqueueLocalBackendWaitSpace(owner, deadline) != 0 || qqueueLocalIsClosed(owner)) {
+            ret = RS_RET_TIMED_OUT;
+            goto done;
+        }
+    }
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec > deadline->tv_sec ||
+        (now.tv_sec == deadline->tv_sec && now.tv_nsec >= deadline->tv_nsec)) {
+        ret = RS_RET_TIMED_OUT;
+        goto done;
+    }
+    ret = qqueueAdd(owner, message);
+    if (ret == RS_RET_OK) qqueueAdviseMaxWorkers(owner);
+done:
+    pthread_mutex_unlock(owner->mut);
+    return ret;
+}
+
+void qqueueLocalDiscardBackend(qqueue_t *const owner) {
+    pthread_mutex_lock(owner->mut);
+    assert(owner->nLogDeq == 0);
+    while (owner->iQueueSize > 0) {
+        smsg_t *message = NULL;
+        owner->qDeq(owner, &message);
+        owner->qDel(owner);
+        ATOMIC_DEC(&owner->iQueueSize, &owner->mutQueueSize);
+        qqueueSubtractOverallQueueSize(1);
+        qqueueLocalBackendTerminal(owner, 1, 1);
+        qqueueLocalBackendShutdownDiscarded(owner);
+        /* No workers or external admissions remain; final destruction need
+         * not hold the BE mutex and can emit an internal diagnostic safely. */
+        pthread_mutex_unlock(owner->mut);
+        msgDestruct(&message);
+        pthread_mutex_lock(owner->mut);
+    }
+    pthread_mutex_unlock(owner->mut);
 }
 
 /* ------------------------------ multi-enqueue functions ------------------------------ */
@@ -4716,6 +5526,7 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
 
     ISOBJ_TYPE_assert(pThis, qqueue);
     assert(pMultiSub != NULL);
+    if (pThis->local != NULL) return qqueueLocalSubmit(pThis, pMultiSub->ppMsgs, (size_t)pMultiSub->nElem, -1);
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
     qqueueLock(pThis);
@@ -4763,6 +5574,8 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
     int iCancelStateSave;
     ISOBJ_TYPE_assert(pThis, qqueue);
 
+    if (pThis->local != NULL) return qqueueLocalSubmit(pThis, &pMsg, 1, (int)flowCtlType);
+
     const int isNonDirectQ = pThis->qType != QUEUETYPE_DIRECT;
 
     if (isNonDirectQ) {
@@ -4788,6 +5601,25 @@ finalize_it:
 }
 
 
+/* Called even when conversion reports that no usable queue parameter exists. */
+void qqueueNoteLocalConfigIntent(struct nvlst *const lst) {
+    if (loadConf == NULL) return;
+    for (struct nvlst *nv = lst; nv != NULL; nv = nv->next) {
+        if (nv->name == NULL) continue;
+        if (!es_strcasebufcmp(nv->name, (uchar *)"queue.scope", 11)) {
+            if (nv->val.datatype != 'S') {
+                loadConf->bLocalConfigRequested = loadConf->bLocalConfigError = 1;
+            } else if (es_strcasebufcmp(nv->val.d.estr, (uchar *)"global", 6)) {
+                loadConf->bLocalConfigRequested = 1;
+                if (es_strcasebufcmp(nv->val.d.estr, (uchar *)"local", 5)) loadConf->bLocalConfigError = 1;
+            }
+        } else if (es_strlen(nv->name) >= 12 &&
+                   !strncasecmp((const char *)es_getBufAddr(nv->name), "queue.local.", 12)) {
+            loadConf->bLocalConfigRequested = 1;
+        }
+    }
+}
+
 /* are any queue params set at all? 1 - yes, 0 - no
  * We need to evaluate the param block for this function, which is somewhat
  * inefficient. HOWEVER, this is only done during config load, so we really
@@ -4797,6 +5629,7 @@ int queueCnfParamsSet(struct nvlst *lst) {
     int r;
     struct cnfparamvals *pvals;
 
+    qqueueNoteLocalConfigIntent(lst);
     pvals = nvlstGetParams(lst, &pblk, NULL);
     r = cnfparamvalsIsSet(&pblk, pvals);
     cnfparamvalsDestruct(pvals, &pblk);
@@ -4923,7 +5756,7 @@ void qqueueCorrectParams(qqueue_t *pThis) {
         }
     }
 
-    if (pThis->iDiscardMrk > pThis->iMaxQueueSize) {
+    if (!pThis->bLocalScope && pThis->iDiscardMrk > pThis->iMaxQueueSize) {
         LogError(0, RS_RET_PARAM_ERROR,
                  "error: queue \"%s\": "
                  "queue.discardMark %d is set larger than queue.size",
@@ -5014,7 +5847,7 @@ void qqueueCorrectParams(qqueue_t *pThis) {
         }
     }
 
-    if (pThis->iDiscardMrk < 1 || pThis->iDiscardMrk > pThis->iMaxQueueSize) {
+    if (!pThis->bLocalScope && (pThis->iDiscardMrk < 1 || pThis->iDiscardMrk > pThis->iMaxQueueSize)) {
         pThis->iDiscardMrk = (pThis->iMaxQueueSize / 100) * 98;
         if (pThis->iDiscardMrk == 0) {
             /* for very small queues, we disable this by default */
@@ -5027,6 +5860,85 @@ void qqueueCorrectParams(qqueue_t *pThis) {
     }
 }
 
+/* Preserve raw intent even if parameter conversion rejects or drops a value.
+ * The ordinal mask refers to this immutable config descriptor table, not storage
+ * layout. This cold path has no effect on ordinary global queue admission. */
+static void qqueueNoteLocalParams(qqueue_t *const pThis, struct nvlst *const lst) {
+    assert(pblk.nParams <= 64);
+    for (struct nvlst *nv = lst; nv != NULL; nv = nv->next) {
+        if (nv->name == NULL) continue;
+        for (int i = 0; i < pblk.nParams; ++i) {
+            if (!es_strcasebufcmp(nv->name, (uchar *)pblk.descr[i].name, strlen(pblk.descr[i].name))) {
+                pThis->localExplicitParams |= UINT64_C(1) << i;
+                if (!strcmp(pblk.descr[i].name, "queue.scope")) {
+                    if (nv->val.datatype != 'S' || es_strcasebufcmp(nv->val.d.estr, (uchar *)"global", 6)) {
+                        loadConf->bLocalConfigRequested = 1;
+                        if (nv->val.datatype == 'S' && !es_strcasebufcmp(nv->val.d.estr, (uchar *)"local", 5))
+                            pThis->bLocalScope = 1;
+                    }
+                } else if (!strncmp(pblk.descr[i].name, "queue.local.", 12)) {
+                    loadConf->bLocalConfigRequested = 1;
+                }
+                break;
+            }
+        }
+    }
+}
+
+static int qqueueLocalParamExplicit(const qqueue_t *const pThis, const char *const name) {
+    const int idx = cnfparamGetIdx(&pblk, name);
+    return idx >= 0 && (pThis->localExplicitParams & (UINT64_C(1) << idx)) != 0;
+}
+
+/* Validate before corrections can hide invalid values, and again at the shared
+ * graph gate. Only that gate may mark bLocalConfigValidated. */
+rsRetVal qqueueValidateLocalConfig(qqueue_t *const pThis) {
+    if (!pThis->bLocalScope) {
+        if (pThis->bLocalConfigError || qqueueLocalParamExplicit(pThis, "queue.local.frontendsize") ||
+            qqueueLocalParamExplicit(pThis, "queue.local.maxfrontends") ||
+            qqueueLocalParamExplicit(pThis, "queue.local.frontendstats") ||
+            qqueueLocalParamExplicit(pThis, "queue.local.helperbatchsize"))
+            goto invalid;
+        return RS_RET_OK;
+    }
+    if (pThis->bLocalConfigError || (pThis->qType != QUEUETYPE_FIXED_ARRAY && pThis->qType != QUEUETYPE_LINKEDLIST) ||
+        pThis->iMaxQueueSize <= 0 || pThis->iDeqBatchSize <= 0 || pThis->iNumWorkerThreads <= 0 ||
+        pThis->localFrontendSize <= 0 || pThis->localMaxFrontends <= 0 ||
+        !qqueueLocalParamExplicit(pThis, "queue.local.frontendsize") ||
+        !qqueueLocalParamExplicit(pThis, "queue.local.maxfrontends") || pThis->iMinDeqBatchSize < 0 ||
+        pThis->iMinDeqBatchSize > pThis->iDeqBatchSize || pThis->toMinDeqBatchSize < 0 || pThis->iDiscardSeverity < 0 ||
+        pThis->iDiscardSeverity > 8 || pThis->iDiscardMrk < -1 || pThis->iSmpInterval < 0 || pThis->iDeqSlowdown < 0 ||
+        pThis->iDeqtWinFromHr < 0 || pThis->iDeqtWinFromHr > 23 || pThis->iDeqtWinToHr < 0 ||
+        (pThis->iDeqtWinToHr > 23 && pThis->iDeqtWinToHr != 25) || pThis->toQShutdown < 0 || pThis->toActShutdown < 0 ||
+        pThis->toEnq < 0 || pThis->toWrkShutdown < 0 || pThis->iFullDlyMrk < -1 || pThis->iFullDlyMrk == 0 ||
+        pThis->iFullDlyMrk > pThis->iMaxQueueSize || pThis->iLightDlyMrk < -1 ||
+        pThis->iLightDlyMrk > pThis->iMaxQueueSize)
+        goto invalid;
+    /* B + N*(F+D): BE physical size includes active entries; FE active holdings
+     * are separately bounded by D. Ensure both accounting and pointer buffers fit. */
+    const uint64_t f = (uint64_t)pThis->localFrontendSize;
+    const uint64_t d =
+        (uint64_t)((pThis->iDeqBatchSize < pThis->localFrontendSize) ? pThis->iDeqBatchSize : pThis->localFrontendSize);
+    if (pThis->localHelperBatchSizeSet &&
+        (pThis->localHelperBatchSize < 0 || (uint64_t)pThis->localHelperBatchSize > d))
+        goto invalid;
+    const uint64_t n = (uint64_t)pThis->localMaxFrontends;
+    const uint64_t perFrontend = (2 * f + d) * sizeof(void *) +
+                                 d * (sizeof(batch_obj_t) + sizeof(batch_state_t) + sizeof(smsg_t *)) +
+                                 sizeof(qqueue_t) + sizeof(wtp_t) + sizeof(wti_t) + sizeof(wti_t *);
+    if (n > SIZE_MAX / perFrontend || n > (UINT64_MAX - (uint64_t)pThis->iMaxQueueSize) / (f + d) ||
+        f > SIZE_MAX / sizeof(smsg_t *) || n > SIZE_MAX / (f * sizeof(smsg_t *)) ||
+        (pThis->iDiscardMrk > 0 && (uint64_t)pThis->iDiscardMrk > (uint64_t)pThis->iMaxQueueSize + n * (f + d)))
+        goto invalid;
+    return RS_RET_OK;
+invalid:
+    pThis->bLocalConfigError = 1;
+    if (loadConf != NULL) loadConf->bLocalConfigError = 1;
+    parser_errmsg("local queue '%s': configuration is outside the experimental local queue contract",
+                  objGetName((obj_t *)pThis));
+    return RS_RET_LOCAL_QUEUE_CONFIG;
+}
+
 /* apply all params from param block to queue. Must be called before
  * finalizing. This supports the v6 config system. Defaults were already
  * set during queue creation. The pvals object is destructed by this
@@ -5036,8 +5948,39 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
     int i;
     struct cnfparamvals *pvals;
     int n_params_set = 0;
+    int localSeverity = -1;
     DEFiRet;
 
+    qqueueNoteLocalConfigIntent(lst);
+    qqueueNoteLocalParams(pThis, lst);
+    /* Reject overflowing numeric severity before the legacy name decoder's
+     * int conversion. Named syslog priorities are accepted in the same range. */
+    if (pThis->bLocalScope) {
+        for (const struct nvlst *nv = lst; nv != NULL; nv = nv->next) {
+            if (nv->name == NULL || es_strcasebufcmp(nv->name, (uchar *)"queue.discardseverity", 21)) continue;
+            int valid = 0;
+            if (nv->val.datatype == 'S') {
+                const es_size_t len = es_strlen(nv->val.d.estr);
+                const unsigned char *raw = es_getBufAddr(nv->val.d.estr);
+                if (len == 1 && raw[0] >= '0' && raw[0] <= '8') {
+                    valid = 1;
+                    localSeverity = raw[0] - '0';
+                }
+                static const char *const names[] = {"emerg",   "panic", "alert",  "crit", "error", "err",
+                                                    "warning", "warn",  "notice", "info", "debug"};
+                static const int priorities[] = {0, 0, 1, 2, 3, 3, 4, 4, 5, 6, 7};
+                for (size_t j = 0; j < sizeof(names) / sizeof(names[0]); ++j)
+                    if (!es_strcasebufcmp(nv->val.d.estr, (uchar *)names[j], strlen(names[j]))) {
+                        valid = 1;
+                        localSeverity = priorities[j];
+                    }
+            }
+            if (!valid) {
+                pThis->bLocalConfigError = 1;
+                loadConf->bLocalConfigError = 1;
+            }
+        }
+    }
     pvals = nvlstGetParams(lst, &pblk, NULL);
     if (pvals == NULL) {
         parser_errmsg("error processing queue config parameters");
@@ -5048,9 +5991,51 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         cnfparamsPrint(&pblk, pvals);
     }
     for (i = 0; i < pblk.nParams; ++i) {
-        if (!pvals[i].bUsed) continue;
+        if (!pvals[i].bUsed) {
+            if ((pThis->localExplicitParams & (UINT64_C(1) << i)) && loadConf->bLocalConfigRequested)
+                pThis->bLocalConfigError = 1;
+            continue;
+        }
         n_params_set++;
-        if (!strcmp(pblk.descr[i].name, "queue.filename")) {
+        /* Inspect the wide source value before any legacy int assignment can
+         * wrap into an allowed S2 zero/disabled/default value. Keep processing
+         * scope itself so invalid local configuration remains identifiable. */
+        if (pThis->bLocalScope && pvals[i].val.datatype == 'N' && strcmp(pblk.descr[i].name, "queue.maxdiskspace") &&
+            strcmp(pblk.descr[i].name, "queue.maxfilesize") &&
+            (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX)) {
+            pThis->bLocalConfigError = 1;
+            loadConf->bLocalConfigError = 1;
+            continue;
+        }
+        if (!strcmp(pblk.descr[i].name, "queue.scope")) {
+            if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"local", 5)) {
+                pThis->bLocalScope = 1;
+            } else if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"global", 6)) {
+                pThis->bLocalScope = 0;
+            } else {
+                pThis->bLocalConfigError = 1;
+                loadConf->bLocalConfigError = 1;
+                parser_errmsg("queue.scope must be 'global' or experimental 'local'");
+            }
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.frontendsize")) {
+            if (pvals[i].val.d.n <= 0 || pvals[i].val.d.n > INT_MAX)
+                pThis->bLocalConfigError = 1;
+            else
+                pThis->localFrontendSize = (int)pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.helperbatchsize")) {
+            pThis->localHelperBatchSizeSet = 1;
+            if (pvals[i].val.d.n < 0 || pvals[i].val.d.n > INT_MAX)
+                pThis->bLocalConfigError = 1;
+            else
+                pThis->localHelperBatchSize = (int)pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.frontendstats")) {
+            pThis->localFrontendStats = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.maxfrontends")) {
+            if (pvals[i].val.d.n <= 0 || pvals[i].val.d.n > INT_MAX)
+                pThis->bLocalConfigError = 1;
+            else
+                pThis->localMaxFrontends = (int)pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.filename")) {
             CHKmalloc(pThis->pszFilePrefix = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(pblk.descr[i].name, "queue.cry.provider")) {
@@ -5101,7 +6086,9 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         } else if (!strcmp(pblk.descr[i].name, "queue.discardmark")) {
             pThis->iDiscardMrk = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.discardseverity")) {
-            pThis->iDiscardSeverity = pvals[i].val.d.n;
+            /* This historical descriptor decodes facility names globally.
+             * Local scope uses the strictly checked priority above. */
+            pThis->iDiscardSeverity = pThis->bLocalScope && localSeverity >= 0 ? localSeverity : pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.checkpointinterval")) {
             pThis->iPersistUpdCnt = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.syncqueuefiles")) {
@@ -5191,6 +6178,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         }
     }
 
+    CHKiRet(qqueueValidateLocalConfig(pThis));
+
     const sbool is_da_memory_queue =
         (pThis->qType == QUEUETYPE_FIXED_ARRAY || pThis->qType == QUEUETYPE_LINKEDLIST) && pThis->pszFilePrefix != NULL;
     /* These are deliberately parser_errmsg(), not advisory warnings:
@@ -5269,8 +6258,13 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         CHKiRet(initCryprov(pThis, lst));
     }
 
-    cnfparamvalsDestruct(pvals, &pblk);
 finalize_it:
+    cnfparamvalsDestruct(pvals, &pblk);
+    if (iRet != RS_RET_OK && loadConf->bLocalConfigRequested) {
+        pThis->bLocalConfigError = 1;
+        loadConf->bLocalConfigError = 1;
+        iRet = RS_RET_LOCAL_QUEUE_CONFIG;
+    }
     RETiRet;
 }
 
@@ -5381,6 +6375,7 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
     CHKiRet(objUse(strm, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(qqueueLocalStatsClassInit());
 
     /* now set our own handlers */
     OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);

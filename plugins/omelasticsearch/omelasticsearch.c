@@ -2920,13 +2920,32 @@ ENDmodExit
 
 NO_LEGACY_CONF_parseSelectorAct
 
-    BEGINqueryEtryPt CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMOD_QUERIES;
-CODEqueryEtryPt_STD_OMOD8_QUERIES;
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
-CODEqueryEtryPt_doHUP CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
-    CODEqueryEtryPt_STD_CONF2_QUERIES;
+    /* Local sources retain the same output WID throughout doAction/endTransaction:
+     * curl handles, partial bulk buffers and replies remain worker-private. The
+     * error file is already instance-mutex protected. Retry reinjection is an
+     * explicit graph edge, exposed separately for dependency/cycle validation. */
+    static rsRetVal
+    localQueueCheckAction(void *const instance) {
+    (void)instance;
+    return RS_RET_OK;
+}
+
+static rsRetVal localQueueGetRetryRuleset(void *const instance, ruleset_t **const target) {
+    const instanceData *const pData = instance;
+    *target = pData->retryRuleset;
+    return pData->retryFailures ? RS_RET_OK : RS_RET_NOT_FOUND;
+}
+
+BEGINqueryEtryPt
+    CODESTARTqueryEtryPt;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
+    if (!strcmp((char *)name, "localQueueGetRetryRuleset")) *pEtryPoint = (rsRetVal(*)())localQueueGetRetryRuleset;
+    CODEqueryEtryPt_STD_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_OMOD8_QUERIES;
+    CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+    CODEqueryEtryPt_doHUP CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
+        CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 

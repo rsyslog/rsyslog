@@ -25,7 +25,7 @@ Rsyslog uses queues whenever two activities need to be loosely coupled.
 With a queue, one part of the system "produces" something while another
 part "consumes" this something. The "something" is most often syslog
 messages, but queues may also be used for other purposes. The engine
-relies on three queue scopes:
+uses queues at three attachment points:
 
 - A **main message queue** sits after inputs and feeds the primary ruleset.
 - **Ruleset queues** optionally buffer messages bound to a specific ruleset
@@ -640,3 +640,133 @@ Related references
 - :doc:`Log pipeline overview <log_pipeline/index>` for how queues interact with inputs, rulesets, and actions.
 - :doc:`Queue parameters reference <../rainerscript/queue_parameters>` for full RainerScript options.
 - :doc:`Queue analogy whitepaper <../whitepapers/queues_analogy>` for a narrative introduction.
+
+
+.. _local-queue-operation:
+
+Experimental local queue scope
+==============================
+
+With :ref:`queue.scope="local" <queue-scope-local>`, each registered producer
+gets a bounded front queue (FE) and a consumer worker. An arriving batch takes
+the FE path if the entire batch fits. Otherwise it uses the shared backend
+(BE), which retains existing memory/disk-assisted queue machinery::
+
+   imtcp worker A -> FE A -> consumer A -> ruleset / direct actions
+                    |          ^
+                    | overflow | help when FE empty
+                    v          |
+   imtcp worker B -> shared memory BE -> BE workers -> same processing
+          |                 |
+          +-> FE B          +-> disk assistance (when configured)
+
+The arrows show possible work paths, not message copies. Direct actions run
+on the current FE, helper or BE worker; a queued action or queued ruleset adds
+another boundary. An acyclic graph may mix local and global queue boundaries.
+Global boundaries merge producer traffic. Actual downstream execution workers
+can register their own frontends at the next local boundary.
+
+A blocked output callback can stall its consumer until it returns. New batches
+can still use remaining FE space; once a batch no longer fits, it goes to the
+BE. There is no stall-detection requirement in the normal fit predicate. If
+all consumers are slower than input, the BE eventually fills or spills to disk;
+local scope does not remove destination backpressure.
+
+Supported configuration
+-----------------------
+
+The current contract is deliberately restricted. ``imtcp`` is the supported
+production input; ``impstats`` must use file output with ``log.syslog="off"``.
+The restriction is checked across the configuration, so another input bound
+to an unrelated ruleset is not automatically exempt. Built-in RFC3164/RFC5424
+parsing is supported, including explicitly configured built-in RFC parsers;
+custom parser instances are not.
+
+Supported output modules include ``omfile``, ``omfwd`` and ``omelasticsearch``,
+subject to their local-queue configuration checks. For example, local ``omfile``
+requires a static absolute path, synchronous writing, transaction flushing,
+compression disabled and an ordinary explicit template. Dynamic files, signing,
+encryption and rotation commands are outside that module contract. This does not qualify every
+module option or real Elasticsearch cluster behavior. Global script variables,
+dynamic calls, cycles, subtree/generated templates and several action modifiers
+are outside the current contract. Ordinary message-local mutations and supported
+static calls retain their existing semantics; this is not interchangeable
+processing of immutable messages. The complete configuration validator is the
+source of truth for combinations.
+
+For a minimal loopback-only experiment::
+
+   module(load="imtcp")
+   main_queue(queue.type="FixedArray" queue.scope="local"
+              queue.size="1000000" queue.workerThreads="2"
+              queue.local.frontendSize="10000"
+              queue.local.maxFrontends="8")
+   input(type="imtcp" address="127.0.0.1" port="13514"
+         workerThreads="8")
+   template(name="localExample" type="string" string="%msg%\n")
+   action(type="omfile" file="/dev/null" template="localExample"
+          asyncWriting="off" flushOnTXEnd="on")
+
+This example intentionally discards output. It validates topology without
+exposing a remote listener or choosing production storage permissions. Use a
+properly configured destination for deployment. Do not add an action queue
+solely for inexpensive file output without a measured need.
+
+Ordering, batching and resources
+--------------------------------
+
+FE and BE workers may finish out of order, including overtaking between newly
+admitted FE messages and older overflow messages. A helper also uses its own
+action worker state. Local scope does not promise FIFO completion or exactly-once
+external effects; retries/recovery retain existing duplication possibilities.
+
+``queue.dequeueBatchSize`` is an upper bound. FE minimum-batch waiting is
+clamped to FE capacity and uses its configured timeout. Helping can produce
+smaller batches. Tune batching with the destination's request overhead in mind.
+
+Allow for one worker per registered FE in addition to BE workers, and for
+frontends at every downstream local queue. Consult the parameter reference for
+the memory bound and registration cap. Sampling applies once before routing;
+severity discard observes aggregate FE/BE memory inventory. Transfers and retries
+do not repeat admission sampling. Time windows and dequeue slowdown also apply
+to FE processing.
+
+Shutdown and recovery
+---------------------
+
+Shutdown redirects new FE admission to the BE, quiesces active execution, and
+drains or transfers retained FE work through the logical queue's shutdown path.
+Persistence requires disk assistance and the existing save-on-shutdown settings;
+a memory-only local queue is not durable merely because its scope is local.
+Expired shutdown deadlines and disk failures retain explicit discard/failure
+outcomes. An active callback cannot be assumed completed just because an FE
+ring or BE reports empty.
+
+Both classic and segmented disk-assisted backends retain their existing spool
+identity and recovery rules. Recovery belongs to the logical queue, not to old
+FE worker IDs, so a changed worker count does not require reconstructing the old
+forest. Preserve the configured logical queue/spool association; arbitrary
+configuration changes still require a deliberate recovery plan. Pure disk queues
+remain a different queue type. Local scope introduces no new power-loss guarantee.
+
+Troubleshooting
+---------------
+
+Use the aggregate ``<queue-name>.local`` impstats object alongside the normal
+BE object. ``size=0`` on the BE alone does not mean the logical queue is empty.
+At quiescence, reconcile accepted, terminal and outstanding messages; policy
+filtering and preadmission failures are separate outcomes. Concurrent snapshots
+may briefly disagree, so compare settled samples rather than enforcing an
+instantaneous equality.
+
+If little work uses the FE route, inspect overflow reason counters, submitted
+batch sizes, FE occupancy and registration failures. Enable
+``queue.local.frontendStats="on"`` to identify uneven producers and helper work.
+An exhausted lifetime frontend cap routes later producers to the BE. If memory
+rises, account for message payloads and mutations as well as ring slots and
+worker state. A larger FE is not automatically faster.
+
+For contention investigations, enable ``queue.mutexContentionStats`` temporarily.
+Its wait time sums acquisition delay across threads, including scheduling;
+it is not lock hold time or elapsed wall time. Compare contention per processed
+message and throughput including drain, not raw totals across different loads.

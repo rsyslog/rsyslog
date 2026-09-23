@@ -77,6 +77,13 @@ librsyslog_la_SOURCES = \
 	wti.h \
 	queue.c \
 	queue.h \
+	queue_local.c \
+	queue_local.h \
+	queue_local_stats.c \
+	queue_local_stats.h \
+	queue_spsc.c \
+	queue_spsc.h \
+	queue_lease.h \
 	queue_da.c \
 	queue_da.h \
 	segdisk_codec.c \
@@ -145,6 +152,10 @@ librsyslog_la_LIBADD += $(LIBLOGGING_STDLOG_LIBS)
 endif
 
 librsyslog_la_CPPFLAGS += -I\$(top_srcdir)/tools
+
+if ENABLE_TESTBENCH
+librsyslog_la_CPPFLAGS += -DENABLE_TESTBENCH
+endif
 
 #
 # regular expression support
@@ -329,6 +340,9 @@ lmtcpsrv_la_SOURCES = \
 	tcpsrv.c \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+if ENABLE_TESTBENCH
+lmtcpsrv_la_CPPFLAGS += -DENABLE_TESTBENCH
+endif
 lmtcpsrv_la_LDFLAGS = -module -avoid-version $(ZLIB_LIBS)
 lmtcpsrv_la_LIBADD =
 

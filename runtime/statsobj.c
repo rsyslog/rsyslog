@@ -160,6 +160,8 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
     CHKiConcCtrl(pthread_mutex_init(&pThis->mutCtr, NULL));
     pThis->ctrLast = NULL;
     pThis->ctrRoot = NULL;
+    pThis->pre_read_notifier = NULL;
+    pThis->pre_read_notifier_ctx = NULL;
     pThis->read_notifier = NULL;
     pThis->flags = 0;
 finalize_it:
@@ -176,7 +178,23 @@ finalize_it:
     RETiRet;
 }
 
-/* set read_notifier (a function which is invoked after stats are read).
+/* Set pre_read_notifier. It is invoked with the stats object list lock held
+ * immediately before every stats rendering or native-counter iteration for
+ * this object. Its purpose is to refresh pre-registered counter storage from a
+ * lock-free subsystem snapshot; it must not alter statsobj lists.
+ */
+static rsRetVal setPreReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void *ctx) {
+    DEFiRet;
+    CHKiRet(statsobjLock(&mutStats, "stats object list"));
+    pThis->pre_read_notifier = notifier;
+    pThis->pre_read_notifier_ctx = ctx;
+    statsobjUnlock(&mutStats, "stats object list");
+finalize_it:
+    RETiRet;
+}
+
+
+/* Set read_notifier (a function which is invoked after stats are read).
  */
 static rsRetVal setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void *ctx) {
     DEFiRet;
@@ -818,6 +836,9 @@ static rsRetVal generatePrometheusStats(rsRetVal (*cb)(void *, const char *), vo
     pthread_mutex_lock(&mutStats);
     listLocked = 1;
     for (o = objRoot; o != NULL; o = o->next) {
+        if (o->pre_read_notifier != NULL) {
+            o->pre_read_notifier(o, o->pre_read_notifier_ctx);
+        }
         CHKiRet(emitPrometheusForObject(o, cb, usrptr, bResetCtrs));
         /* If the object has a read_notifier, call it now */
         if (o->read_notifier != NULL) {
@@ -860,6 +881,9 @@ static rsRetVal getAllStatsLines(rsRetVal (*cb)(void *, const char *),
     pthread_mutex_lock(&mutStats);
     listLocked = 1;
     for (o = objRoot; o != NULL; o = o->next) {
+        if (o->pre_read_notifier != NULL) {
+            o->pre_read_notifier(o, o->pre_read_notifier_ctx);
+        }
         switch (fmt) {
             case statsFmt_Legacy:
                 CHKiRet(getStatsLine(o, &cstr, bResetCtrs));
@@ -921,6 +945,9 @@ static rsRetVal getAllCounters(statsobj_counter_cb_t cb, void *ctx) {
     pthread_mutex_lock(&mutStats);
     listLocked = 1;
     for (o = objRoot; o != NULL; o = o->next) {
+        if (o->pre_read_notifier != NULL) {
+            o->pre_read_notifier(o, o->pre_read_notifier_ctx);
+        }
         /* Iterate through all counters in this object */
         pthread_mutex_lock(&o->mutCtr);
         for (ctr = o->ctrRoot; ctr != NULL; ctr = ctr->next) {
@@ -1121,6 +1148,7 @@ BEGINobjQueryInterface(statsobj)
     pIf->DebugPrint = statsobjDebugPrint;
     pIf->SetName = setName;
     pIf->SetOrigin = setOrigin;
+    pIf->SetPreReadNotifier = setPreReadNotifier;
     pIf->SetReadNotifier = setReadNotifier;
     pIf->SetReportingNamespace = setReportingNamespace;
     pIf->SetStatsObjFlags = setStatsObjFlags;

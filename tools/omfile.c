@@ -42,6 +42,7 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <limits.h>
 #include <errno.h>
 #include <ctype.h>
 #include <libgen.h>
@@ -81,6 +82,7 @@ MODULE_CNFNAME("omfile")
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 static rsRetVal normalizeDynaFileCacheSize(int *const pNewVal);
+static rsRetVal localQueuePrepareAction(void *instance);
 
 typedef struct pathComponent_s {
     const char *ptr;
@@ -160,6 +162,9 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
  * file output action.
  */
 typedef struct _instanceData {
+    sbool localNumericError; /* retain original numeric domain for local qualification */
+    sbool localQualified; /* preopened synchronous stream; cancellation cleanup owns mutWrite */
+    modConfData_t *localModConf; /* borrowed resolved module configuration, including legacy instances */
     pthread_mutex_t mutWrite; /**< guard against multiple instances writing to single file */
     uchar *fname; /**< file or template name (display only) */
     uchar *tplName; /**< name of assigned template */
@@ -552,6 +557,7 @@ uchar *pszFileDfltTplName; /**< name of the default template to use */
  */
 struct modConfData_s {
     rsconf_t *pConf; /**< our overall config object */
+    sbool localNumericError;
     uchar *tplName; /**< default template */
     int fCreateMode; /**< default mode to use when creating files */
     int fDirCreateMode; /**< default mode to use when creating files */
@@ -1000,6 +1006,7 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData,
          * the file. -- rgerhards, 2008-12-18 (based on patch from William Tisater)
          */
         int openFlags = O_WRONLY | O_APPEND | O_CREAT | O_NOCTTY | O_CLOEXEC;
+        if (pData->localQualified) openFlags |= O_NONBLOCK;
 #ifdef O_NOFOLLOW
         if (!pData->bFollowSymlinks) {
             openFlags |= O_NOFOLLOW;
@@ -1349,6 +1356,8 @@ static rsRetVal writeFile(instanceData *__restrict__ const pData,
         CHKiRet(iRet);
     } else { /* "regular", non-dynafile */
         if (pData->pStrm == NULL) {
+            /* Qualified local workers never perform descriptor lifecycle operations. */
+            if (pData->localQualified) ABORT_FINALIZE(RS_RET_SUSPENDED);
             CHKiRet(prepareFile(pData, pData->fname, 0));
             if (pData->pStrm == NULL) {
                 parser_errmsg("Could not open output file '%s'", pData->fname);
@@ -1405,6 +1414,9 @@ BEGINsetModCnf
         if (!pvals[i].bUsed) {
             continue;
         }
+
+        if (pvals[i].val.datatype == 'N' && (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX))
+            loadModConf->localNumericError = 1;
 
         if (!strcmp(modpblk.descr[i].name, "template")) {
             CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -1555,6 +1567,7 @@ ENDfreeCnf
 BEGINcreateInstance
     CODESTARTcreateInstance;
     pData->pStrm = NULL;
+    pData->localModConf = loadModConf;
     pData->bAddLF = 1;
     pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
@@ -1620,8 +1633,21 @@ BEGINbeginTransaction
 ENDbeginTransaction
 
 
+/* Concurrency & Locking: qualified local instances have one preopened plain
+ * synchronous stream shared by FE and BE workers. Deferred cancellation may
+ * interrupt a write with an unknown external prefix. Drop only pending stream
+ * bytes and release mutWrite; source-lease cleanup retains delivery responsibility.
+ * No close, reopen, flush, allocation, logging or other I/O runs in cleanup. */
+static void localCommitCancel(void *const instance) {
+    instanceData *const pData = instance;
+    if (pData->localQualified && pData->pStrm != NULL) strmDiscardLocalOutput(pData->pStrm);
+    pthread_mutex_unlock(&pData->mutWrite);
+}
+
 BEGINcommitTransaction
     instanceData *__restrict__ const pData = pWrkrData->pData;
+    /* pthread cleanup may use setjmp; keep the result stable across its scope. */
+    volatile rsRetVal commitRet = RS_RET_OK;
     rsRetVal localRet;
     unsigned i;
     CODESTARTcommitTransaction;
@@ -1631,11 +1657,12 @@ BEGINcommitTransaction
     }
 
     pthread_mutex_lock(&pData->mutWrite);
+    pthread_cleanup_push(localCommitCancel, pData);
 
     for (i = 0; i < nParams; ++i) {
         localRet = writeFile(pData, pParams, i);
-        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
-            iRet = localRet;
+        if (localRet != RS_RET_OK && commitRet == RS_RET_OK) {
+            commitRet = localRet;
         }
     }
     /* Note: pStrm may be NULL if there was an error opening the stream */
@@ -1649,13 +1676,14 @@ BEGINcommitTransaction
      */
     if (pData->bFlushOnTXEnd && pData->pStrm != NULL) {
         localRet = strm.Flush(pData->pStrm);
-        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
-            CHKiRet(localRet);
+        if (localRet != RS_RET_OK && commitRet == RS_RET_OK) {
+            commitRet = localRet;
         }
     }
 
-finalize_it:
+    pthread_cleanup_pop(0);
     pthread_mutex_unlock(&pData->mutWrite);
+    iRet = commitRet;
     if (iRet == RS_RET_FILE_OPEN_ERROR || iRet == RS_RET_FILE_NOT_FOUND) {
         iRet = (pData->bDynamicName && runModConf->bDynafileDoNotSuspend) ? RS_RET_OK : RS_RET_SUSPENDED;
     }
@@ -1673,6 +1701,7 @@ ENDcommitTransaction
  * @param pData Pointer to the `instanceData` structure to be initialized.
  */
 static void setInstParamDefaults(instanceData *__restrict__ const pData) {
+    pData->localNumericError = loadModConf->localNumericError;
     pData->fname = NULL;
     pData->tplName = NULL;
     pData->dynaFileBasePath = NULL;
@@ -1888,6 +1917,10 @@ BEGINnewActInst
 
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
+        if (pvals[i].val.datatype == 'N' && ((pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX) ||
+                                             (!strcmp(actpblk.descr[i].name, "closetimeout") &&
+                                              (pvals[i].val.d.n < SHRT_MIN || pvals[i].val.d.n > SHRT_MAX))))
+            pData->localNumericError = 1;
         if (!strcmp(actpblk.descr[i].name, "dynafilecachesize")) {
             pData->iDynaFileCacheSize = (int)pvals[i].val.d.n;
             const rsRetVal localRet = normalizeDynaFileCacheSize(&pData->iDynaFileCacheSize);
@@ -2181,6 +2214,7 @@ BEGINdoHUP
         if (pData->pStrm != NULL) {
             closeFile(pData);
         }
+        if (pData->localQualified) iRet = localQueuePrepareAction(pData);
     }
     pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
@@ -2194,8 +2228,40 @@ BEGINmodExit
 ENDmodExit
 
 
+/* Optional private S2 capability: inspect resolved settings, including legacy
+ * and module defaults. File I/O may block; this is a narrow transactional
+ * qualification, never a generic nonblocking-output claim. */
+static rsRetVal localQueueCheckAction(void *const instance) {
+    instanceData *const pData = instance;
+    if (pData == NULL || pData->localNumericError || pData->localModConf == NULL ||
+        pData->localModConf->localNumericError || pData->localModConf->compressionDriver != STRM_COMPRESS_ZIP ||
+        pData->fname == NULL || pData->fname[0] != '/' || pData->bDynamicName || pData->bUseAsyncWriter ||
+        pData->iZipLevel != 0 || pData->bVeryRobustZip || pData->bSyncFile || pData->iSizeLimit != 0 ||
+        pData->pszSizeLimitCmd != NULL || pData->useSigprov || pData->sigprovName != NULL || pData->useCryprov ||
+        pData->cryprovName != NULL || !pData->bFlushOnTXEnd || pData->iCloseTimeout != 0)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    pData->localQualified = 1;
+    return RS_RET_OK;
+}
+
+/* Called at action activation after privilege drop, never by -N1. HUP calls it
+ * again under mutWrite. An unavailable/replaced/nonregular sink fails closed;
+ * workers cannot lazily open a potentially blocking or unaudited descriptor. */
+static rsRetVal localQueuePrepareAction(void *const instance) {
+    instanceData *const pData = instance;
+    DEFiRet;
+    if (!pData->localQualified || pData->isDevNull) RETiRet;
+    CHKiRet(prepareFile(pData, pData->fname, 1));
+    CHKiRet(strmPrepareLocalOutput(pData->pStrm));
+finalize_it:
+    if (iRet != RS_RET_OK && pData->pStrm != NULL) closeFile(pData);
+    RETiRet;
+}
+
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
+    if (!strcmp((char *)name, "localQueuePrepareAction")) *pEtryPoint = (rsRetVal(*)())localQueuePrepareAction;
     CODEqueryEtryPt_STD_OMODTX_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_QUERIES;
