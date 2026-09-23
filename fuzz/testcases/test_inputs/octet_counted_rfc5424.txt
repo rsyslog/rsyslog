@@ -1,0 +1,2 @@
+# RFC6587 octet-counted framing for RFC5424 over TCP
+119 <165>1 2024-06-02T10:20:30.456789Z tcp-host app 4242 ID47 [meta@9999 step="1" foo="bar"] Octet-counted payload over TCP
