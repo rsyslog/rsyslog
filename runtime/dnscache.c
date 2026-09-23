@@ -68,7 +68,7 @@ typedef struct dnscache_s dnscache_t;
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl) DEFobjCurrIf(prop) static dnscache_t dnsCache;
+DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(net) static dnscache_t dnsCache;
 static prop_t *staticErrValue;
 
 
@@ -159,6 +159,7 @@ rsRetVal dnscacheInit(void) {
     pthread_rwlock_init(&dnsCache.rwlock, NULL);
     CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
     CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(prop, CORE_COMPONENT));
 
     prop.Construct(&staticErrValue);
@@ -175,25 +176,9 @@ rsRetVal dnscacheDeinit(void) {
     hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
     pthread_rwlock_destroy(&dnsCache.rwlock);
     objRelease(glbl, CORE_COMPONENT);
+    objRelease(net, LM_NET_FILENAME);
     objRelease(prop, CORE_COMPONENT);
     RETiRet;
-}
-
-
-/* This is a cancel-safe getnameinfo() version, because we learned
- * (via drd/valgrind) that getnameinfo() seems to have some issues
- * when being cancelled, at least if the module was dlloaded.
- * rgerhards, 2008-09-30
- */
-static int mygetnameinfo(
-    const struct sockaddr *sa, socklen_t salen, char *host, size_t hostlen, char *serv, size_t servlen, int flags) {
-    int iCancelStateSave;
-    int i;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
-    pthread_setcancelstate(iCancelStateSave, NULL);
-    return i;
 }
 
 
@@ -252,10 +237,10 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
     rs_size_t fqdnLen;
     rs_size_t i;
 
-    error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr), (char *)szIP, sizeof(szIP), NULL, 0,
-                          NI_NUMERICHOST);
+    error = net.netns_getnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr), (char *)szIP, sizeof(szIP),
+                                  NULL, 0, NI_NUMERICHOST, NULL);
     if (error) {
-        dbgprintf("Malformed from address %s\n", gai_strerror(error));
+        dbgprintf("Malformed from address %s\n", net.netns_gai_strerror(error));
         ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
     }
 
@@ -264,8 +249,8 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
         sigaddset(&nmask, SIGHUP);
         pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
-        error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr), fqdnBuf, NI_MAXHOST, NULL, 0,
-                              NI_NAMEREQD);
+        error = net.netns_getnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr), fqdnBuf, NI_MAXHOST,
+                                      NULL, 0, NI_NAMEREQD, NULL);
 
         if (error == 0) {
             memset(&hints, 0, sizeof(struct addrinfo));
@@ -275,8 +260,8 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
              * because we should not have obtained a non-numeric address. If
              * we got a numeric one, someone messed with DNS!
              */
-            if (getaddrinfo(fqdnBuf, NULL, &hints, &res) == 0) {
-                freeaddrinfo(res);
+            if (net.netns_getaddrinfo(fqdnBuf, NULL, &hints, &res, NULL) == 0) {
+                net.netns_freeaddrinfo(res);
                 /* OK, we know we have evil. The question now is what to do about
                  * it. One the one hand, the message might probably be intended
                  * to harm us. On the other hand, losing the message may also harm us.

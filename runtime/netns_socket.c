@@ -31,9 +31,13 @@
 #include "netns_socket.h"
 
 
-/* Change to the given network namespace.
- * This function based on previous implementation
- * of tools/omfwd.c function changeToNs.
+/**
+ * @brief Switch the calling thread to an optional network namespace.
+ * @param ns Namespace name under /var/run/netns, or NULL/empty for no change.
+ * @return RS_RET_OK on success, or an rsRetVal error code on failure.
+ * @details The caller must save and restore the original namespace when a
+ *        temporary switch is required. This is based on the former omfwd
+ *        changeToNs() implementation.
  */
 rsRetVal netns_switch(const char *ns) {
     DEFiRet;
@@ -79,8 +83,12 @@ finalize_it:
 }
 
 
-/* Return to the startup network namespace.
- * This function based on code in tools/omfwd.c
+/**
+ * @brief Restore a network namespace previously saved by netns_save().
+ * @param fd Descriptor location returned by netns_save(), or -1 for no change.
+ * @return RS_RET_OK on success, or an rsRetVal error code on failure.
+ * @details Any nonnegative descriptor is closed and @p fd is reset to -1,
+ *        including when restoration fails. This is based on former omfwd code.
  */
 rsRetVal ATTR_NONNULL() netns_restore(int *fd) {
     DEFiRet;
@@ -103,7 +111,12 @@ finalize_it:
     RETiRet;
 }
 
-/* Save the current network namespace fd
+/**
+ * @brief Open a descriptor for the calling thread's current network namespace.
+ * @param fd Output descriptor location, which must contain -1 on entry.
+ * @return RS_RET_OK on success, or an rsRetVal error code on failure.
+ * @details On platforms without setns support this is a successful no-op and
+ *        leaves @p fd equal to -1. The caller owns any descriptor returned.
  */
 rsRetVal ATTR_NONNULL() netns_save(int *fd) {
     DEFiRet;
@@ -131,9 +144,25 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Create a socket in an optional network namespace.
+ * @param fdp Output location for the socket descriptor; set to -1 on failure.
+ * @param domain Socket domain passed to socket().
+ * @param type Socket type passed to socket().
+ * @param protocol Socket protocol passed to socket().
+ * @param ns Namespace name under /var/run/netns, or NULL/empty for the
+ *        calling thread's current namespace.
+ * @return RS_RET_OK on success, or an rsRetVal error code on failure.
+ * @details The calling thread is restored to its original namespace before
+ *        return. The socket remains associated with the namespace in which it
+ *        was created. The original socket errno is preserved across cleanup.
+ */
 rsRetVal netns_socket(int *fdp, int domain, int type, int protocol, const char *ns) {
     DEFiRet;
     int fd = -1;
+    int saved_errno = 0;
+
+    *fdp = -1;
 
 #ifndef HAVE_SETNS
     if (ns && *ns) {
@@ -142,6 +171,7 @@ rsRetVal netns_socket(int *fdp, int domain, int type, int protocol, const char *
     }
 #else /* def HAVE_SETNS */
     rsRetVal iRet_restore;
+    rsRetVal operation_ret;
     int ns_fd = -1;
 
     if (ns && *ns) {
@@ -151,17 +181,36 @@ rsRetVal netns_socket(int *fdp, int domain, int type, int protocol, const char *
 #endif /* def HAVE_SETNS */
     *fdp = fd = socket(domain, type, protocol);
     if (fd == -1) {
-        LogError(errno, RS_RET_NO_SOCKET, "%s: socket(%d, %d, %d) failed", __func__, domain, type, protocol);
+        saved_errno = errno;
+        /* IPv6 may be enabled in configuration while unsupported by the
+         * running kernel. UDP socket creation probes all resolved families,
+         * so retain the historical behavior of silently skipping this one
+         * expected failure while still reporting every other socket error.
+         * It is debateable if PF_INET with EAFNOSUPPORT should also be ignored.
+         */
+        if (!(type == SOCK_DGRAM && domain == PF_INET6 && saved_errno == EAFNOSUPPORT)) {
+            LogError(saved_errno, RS_RET_NO_SOCKET, "%s: socket(%d, %d, %d) failed", __func__, domain, type, protocol);
+        }
         ABORT_FINALIZE(RS_RET_NO_SOCKET);
     }
 finalize_it:
 #ifdef HAVE_SETNS
+    operation_ret = iRet;
+    if (operation_ret != RS_RET_OK && saved_errno == 0) {
+        saved_errno = errno;
+    }
     iRet_restore = netns_restore(&ns_fd);
-    if (iRet == RS_RET_OK) iRet = iRet_restore;
+    if (operation_ret == RS_RET_OK && iRet_restore != RS_RET_OK) {
+        iRet = iRet_restore;
+        saved_errno = errno;
+    }
 #endif /* def HAVE_SETNS */
     if (iRet != RS_RET_OK && fd != -1) {
         (void)close(fd);
         *fdp = -1;
+    }
+    if (iRet != RS_RET_OK && saved_errno != 0) {
+        errno = saved_errno;
     }
     RETiRet;
 }

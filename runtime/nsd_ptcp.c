@@ -629,11 +629,12 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
     hints.ai_family = glbl.GetDefPFFamily(runConf);
     hints.ai_socktype = SOCK_STREAM;
 
-    error = getaddrinfo((const char *)cnf_params->pszAddr, (const char *)cnf_params->pszPort, &hints, &res);
+    error = net.netns_getaddrinfo((const char *)cnf_params->pszAddr, (const char *)cnf_params->pszPort, &hints, &res,
+                                  cnf_params->pszNetworkNamespace);
     if (error) {
         LogError(0, RS_RET_INVALID_PORT, "error querying port '%s': %s",
                  (cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)cnf_params->pszAddr,
-                 gai_strerror(error));
+                 net.netns_gai_strerror(error));
         ABORT_FINALIZE(RS_RET_INVALID_PORT);
     }
 
@@ -651,14 +652,8 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
                 savecast.ipv4->sin_port = port_override;
             }
         }
-        sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        if (sock < 0) {
-            if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
-                dbgprintf("error %d creating tcp listen socket", errno);
-                /* it is debatable if PF_INET with EAFNOSUPPORT should
-                 * also be ignored...
-                 */
-            }
+        if (net.netns_socket(&sock, r->ai_family, r->ai_socktype, r->ai_protocol, cnf_params->pszNetworkNamespace) !=
+            RS_RET_OK) {
             continue;
         }
 
@@ -825,7 +820,7 @@ finalize_it:
     if (sock != -1) {
         close(sock);
     }
-    if (res != NULL) freeaddrinfo(res);
+    if (res != NULL) net.netns_freeaddrinfo(res);
 
     if (iRet != RS_RET_OK) {
         if (pNewStrm != NULL)
@@ -1017,10 +1012,19 @@ finalize_it:
 }
 
 
-/* open a connection to a remote host (server).
- * rgerhards, 2008-03-19
+/**
+ * @brief Open a plain TCP connection using versioned connection parameters.
+ * @param pNsd Plain-TCP driver instance that will own the connected socket.
+ * @param params Borrowed destination, namespace, device, and source-policy
+ *        settings valid for this call.
+ * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for invalid parameters, or
+ *         an rsRetVal resolver, socket, bind, or connection error.
+ * @details Destination addresses are tried in resolver order. For each
+ *        destination, compatible source entries are tried in policy rank order.
+ *        Every attempt creates a new socket in the requested namespace, applies
+ *        device and source binding, and then calls connect().
  */
-static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+static rsRetVal Connect2(nsd_t *pNsd, const nsd_connect_params_t *params) {
     nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
     struct addrinfo *res = NULL;
     struct addrinfo *currAddr;
@@ -1032,56 +1036,95 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
 
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_ptcp);
-    assert(port != NULL);
-    assert(host != NULL);
+    if (params == NULL || params->version != NSD_CONNECT_PARAMS_VERSION || params->port == NULL ||
+        params->host == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    assert(params != NULL);
+    assert(params->version == NSD_CONNECT_PARAMS_VERSION);
+    assert(params->port != NULL);
+    assert(params->host != NULL);
     assert(pThis->sock == -1);
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family;
+    hints.ai_family = params->family;
     hints.ai_socktype = SOCK_STREAM;
-    gai_rc = getaddrinfo((char *)host, (char *)port, &hints, &res);
+    gai_rc = net.netns_getaddrinfo((char *)params->host, (char *)params->port, &hints, &res, params->network_namespace);
     if (gai_rc != 0) {
-        LogError(0, RS_RET_IO_ERROR, "cannot resolve hostname '%s': %s", host, gai_strerror(gai_rc));
+        LogError(0, RS_RET_IO_ERROR, "cannot resolve hostname '%s': %s", params->host, net.netns_gai_strerror(gai_rc));
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
 
     /* We need to copy Remote Hostname here for error logging purposes */
-    if ((pThis->pRemHostName = malloc(strlen((char *)host) + 1)) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    memcpy(pThis->pRemHostName, host, strlen((char *)host) + 1);
+    if ((pThis->pRemHostName = malloc(strlen((char *)params->host) + 1)) == NULL) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    memcpy(pThis->pRemHostName, params->host, strlen((char *)params->host) + 1);
 
-    if (device != NULL) {
+    if (params->device != NULL) {
 #if !defined(SO_BINDTODEVICE)
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
-                 "cannot use device '%s': SO_BINDTODEVICE is not supported on this platform", device);
+                 "cannot use device '%s': SO_BINDTODEVICE is not supported on this platform", params->device);
         ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 #endif
     }
 
     gettimeofday(&start, NULL);
     for (currAddr = res; currAddr != NULL; currAddr = currAddr->ai_next) {
-        pThis->sock = socket(currAddr->ai_family, currAddr->ai_socktype, currAddr->ai_protocol);
-        if (pThis->sock == -1) {
-            saved_errno = errno;
-            continue;
-        }
+        const net_source_entry_t *source = NULL;
+        /* Loop bound: with a source policy, the while-condition is invariant, so only
+         * a break exits; source_policy_select() always advances past the last
+         * source it returned and eventually yields NULL, bounding iterations by
+         * the policy's entry count. Without a source policy the condition is false,
+         * so the body runs exactly once regardless of any continue.
+         */
+        do {
+            if (params->source_policy != NULL) {
+                source = net.source_policy_select(params->source_policy, currAddr->ai_addr, source);
+                if (source == NULL) {
+                    if (saved_errno == 0) {
+                        saved_errno = EAFNOSUPPORT;
+                    }
+                    break;
+                }
+            }
 
-        if (device) {
+            iRet = net.netns_socket(&pThis->sock, currAddr->ai_family, currAddr->ai_socktype, currAddr->ai_protocol,
+                                    params->network_namespace);
+            if (iRet != RS_RET_OK) {
+                saved_errno = errno == 0 ? EIO : errno;
+                iRet = RS_RET_OK;
+                continue;
+            }
+
+            if (params->device) {
 #if defined(SO_BINDTODEVICE)
-            if (setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0) {
+                if (setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, params->device, strlen(params->device) + 1) <
+                    0) {
+                    saved_errno = errno;
+                    dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
+                    sockClose(&pThis->sock);
+                    continue;
+                }
+#endif
+            }
+
+            if (source != NULL && net.source_policy_bind(pThis->sock, source, params->ipfreebind) != RS_RET_OK) {
                 saved_errno = errno;
-                dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
                 sockClose(&pThis->sock);
                 continue;
             }
-#endif
-        }
 
-        CHKiRet(ApplyTcpUserTimeout(pThis));
-        if (connect(pThis->sock, currAddr->ai_addr, currAddr->ai_addrlen) == 0) {
+            CHKiRet(ApplyTcpUserTimeout(pThis));
+            if (connect(pThis->sock, currAddr->ai_addr, currAddr->ai_addrlen) == 0) {
+                break;
+            }
+            saved_errno = errno;
+            sockClose(&pThis->sock);
+        } while (params->source_policy != NULL);
+        if (pThis->sock != -1) {
             break;
         }
-        saved_errno = errno;
-        sockClose(&pThis->sock);
     }
 
     if (currAddr == NULL) {
@@ -1096,19 +1139,36 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
             seconds = 0;
             useconds = 0;
         }
-        LogError(saved_errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%02ld seconds)", host, port, seconds,
-                 useconds / 10000);
+        LogError(saved_errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%02ld seconds)", params->host,
+                 params->port, seconds, useconds / 10000);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
 
 finalize_it:
-    if (res != NULL) freeaddrinfo(res);
+    if (res != NULL) {
+        net.netns_freeaddrinfo(res);
+    }
 
     if (iRet != RS_RET_OK) {
         sockClose(&pThis->sock);
     }
 
     RETiRet;
+}
+
+/**
+ * @brief Adapt the legacy plain-TCP Connect interface to Connect2().
+ * @param pNsd Plain-TCP driver instance.
+ * @param family Resolver address family.
+ * @param port Borrowed destination service or numeric port.
+ * @param host Borrowed destination host name or address.
+ * @param device Borrowed optional SO_BINDTODEVICE name.
+ * @return Result from Connect2().
+ * @details Uses the current namespace, OS source selection, and disabled free-bind.
+ */
+static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+    const nsd_connect_params_t params = {NSD_CONNECT_PARAMS_VERSION, family, port, host, device, NULL, NULL, 0};
+    return Connect2(pNsd, &params);
 }
 
 
@@ -1290,6 +1350,7 @@ BEGINobjQueryInterface(nsd_ptcp)
     pIf->SetTlsCertFile = SetTlsCertFile;
     pIf->SetRemoteSNI = SetRemoteSNI;
     pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
+    pIf->Connect2 = Connect2;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

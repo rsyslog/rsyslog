@@ -67,7 +67,7 @@ static rsRetVal setGSSTokenIOTimeout(void *pVal, int timeout_secs);
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
-DEFobjCurrIf(glbl) DEFobjCurrIf(gssutil) DEFobjCurrIf(tcpclt)
+DEFobjCurrIf(glbl) DEFobjCurrIf(gssutil) DEFobjCurrIf(tcpclt) DEFobjCurrIf(net)
 
     typedef struct _instanceData {
     char *f_hname;
@@ -138,7 +138,7 @@ BEGINfreeInstance
     switch (pData->eDestState) {
         case eDestFORW:
         case eDestFORW_SUSP:
-            freeaddrinfo(pData->f_addr);
+            net.netns_freeaddrinfo(pData->f_addr);
             /* fall through */
         case eDestFORW_UNKN:
             if (pData->port != NULL) free(pData->port);
@@ -353,7 +353,7 @@ static rsRetVal doTryResume(instanceData *pData) {
             hints.ai_flags = AI_NUMERICSERV;
             hints.ai_family = glbl.GetDefPFFamily(runConf);
             hints.ai_socktype = SOCK_STREAM;
-            if (getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res) == 0) {
+            if (net.netns_getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res, NULL) == 0) {
                 dbgprintf("%s found, resuming.\n", pData->f_hname);
                 pData->f_addr = res;
                 pData->eDestState = eDestFORW;
@@ -613,7 +613,7 @@ BEGINparseSelectorAct
     hints.ai_flags = AI_NUMERICSERV;
     hints.ai_family = glbl.GetDefPFFamily(loadConf);
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res) != 0) {
+    if (net.netns_getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res, NULL) != 0) {
         pData->eDestState = eDestFORW_UNKN;
     } else {
         pData->eDestState = eDestFORW;
@@ -639,6 +639,7 @@ BEGINmodExit
     CODESTARTmodExit;
     objRelease(glbl, CORE_COMPONENT);
     objRelease(gssutil, LM_GSSUTIL_FILENAME);
+    objRelease(net, LM_NET_FILENAME);
     objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
     if (cs.pszTplName != NULL) {
@@ -702,6 +703,7 @@ BEGINmodInit()
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &cs.gss_base_service_name,

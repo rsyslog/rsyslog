@@ -40,7 +40,6 @@
 #include <string.h>
 #include <signal.h>
 #include <ctype.h>
-#include <netdb.h>
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -60,6 +59,9 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "net.h"
+#include "net_parse.h"
+#include "net_source.h"
+#include "netns_gai.h"
 #include "dnscache.h"
 #include "prop.h"
 #include "rsconf.h"
@@ -91,7 +93,6 @@ static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the 
 struct AllowedSenders *pAllowedSenders_GSS = NULL;
 static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
 #endif
-
 /* ------------------------------ begin permitted peers code ------------------------------ */
 
 
@@ -488,23 +489,6 @@ static void MaskIP4(struct in_addr *addr, uint8_t bits) {
 #define SIN6(sa) ((struct sockaddr_in6 *)(void *)(sa))
 
 
-/* This is a cancel-safe getnameinfo() version, because we learned
- * (via drd/valgrind) that getnameinfo() seems to have some issues
- * when being cancelled, at least if the module was dlloaded.
- * rgerhards, 2008-09-30
- */
-static int mygetnameinfo(
-    const struct sockaddr *sa, socklen_t salen, char *host, size_t hostlen, char *serv, size_t servlen, int flags) {
-    int iCancelStateSave;
-    int i;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
-    pthread_setcancelstate(iCancelStateSave, NULL);
-    return i;
-}
-
-
 /* This function adds an allowed sender entry to the ACL linked list.
  * In any case, a single entry is added. If an error occurs, the
  * function does its error reporting itself. All validity checks
@@ -677,7 +661,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
             hints.ai_flags = AI_ADDRCONFIG;
 #endif
 
-            if (getaddrinfo(iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
+            if (netns_getaddrinfo(iAllow->addr.HostWildcard, NULL, &hints, &res, NULL) != 0) {
                 LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 
                 if (loadConf->globals.ACLAddHostnameOnFail) {
@@ -764,7 +748,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
 
 finalize_it:
     if (restmp != NULL) {
-        freeaddrinfo(restmp);
+        netns_freeaddrinfo(restmp);
     }
     RETiRet;
 }
@@ -800,8 +784,8 @@ static void PrintAllowedSenders(int iListToPrint) {
             if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
                 dbgprintf("\t%s\n", pSender->allowedSender.addr.HostWildcard);
             else {
-                if (mygetnameinfo(pSender->allowedSender.addr.NetAddr, SALEN(pSender->allowedSender.addr.NetAddr),
-                                  (char *)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
+                if (netns_getnameinfo(pSender->allowedSender.addr.NetAddr, SALEN(pSender->allowedSender.addr.NetAddr),
+                                      (char *)szIP, 64, NULL, 0, NI_NUMERICHOST, NULL) == 0) {
                     dbgprintf("\t%s/%u\n", szIP, pSender->SignificantBits);
                 } else {
                     /* getnameinfo() failed - but as this is only a
@@ -1210,7 +1194,7 @@ static rsRetVal getLocalHostname(rsconf_t *const pConf, uchar **ppName) {
         struct addrinfo flags;
         memset(&flags, 0, sizeof(flags));
         flags.ai_flags = AI_CANONNAME;
-        int error = getaddrinfo((char *)hnbuf, NULL, &flags, &res);
+        int error = netns_getaddrinfo((char *)hnbuf, NULL, &flags, &res, NULL);
         if (error != 0 && error != EAI_NONAME && error != EAI_AGAIN && error != EAI_FAIL) {
             /* If we get one of errors above, network is probably
              * not working yet, so we fall back to local hostname below
@@ -1218,7 +1202,7 @@ static rsRetVal getLocalHostname(rsconf_t *const pConf, uchar **ppName) {
             LogError(0, RS_RET_ERR,
                      "getaddrinfo failed obtaining local "
                      "hostname - using '%s' instead; error: %s",
-                     hnbuf, gai_strerror(error));
+                     hnbuf, netns_gai_strerror(error));
         }
         if (res != NULL) {
             /* When AI_CANONNAME is set first member of res linked-list */
@@ -1241,7 +1225,7 @@ static rsRetVal getLocalHostname(rsconf_t *const pConf, uchar **ppName) {
     *ppName = fqdn;
 finalize_it:
     if (res != NULL) {
-        freeaddrinfo(res);
+        netns_freeaddrinfo(res);
     }
     RETiRet;
 }
@@ -1261,19 +1245,32 @@ static void closeUDPListenSockets(int *pSockArr) {
 }
 
 
-/* create a single UDP socket and bail out if an error occurs.
- * This is called from a loop inside create_udp_socket which
- * iterates through potentially multiple sockets. NOT to be
- * used elsewhere.
+/**
+ * @brief Create and configure one UDP socket for an addrinfo entry.
+ * @param s Output descriptor location; set to -1 on failure.
+ * @param r Address-family, socket-type, protocol, and optional bind address.
+ * @param hostname Printable address used by free-bind diagnostics.
+ * @param bIsServer Nonzero to configure the socket as nonblocking.
+ * @param bBind Nonzero to bind @p r as the local address.
+ * @param rcvbuf Requested receive-buffer size, or zero for the OS default.
+ * @param sndbuf Requested send-buffer size, or zero for the OS default.
+ * @param ipfreebind IPFREEBIND_* mode used when bind reports EADDRNOTAVAIL.
+ * @param device Optional SO_BINDTODEVICE name.
+ * @param network_namespace Optional namespace name, or NULL/empty for the
+ *        calling thread's current namespace.
+ * @return RS_RET_OK on success or an rsRetVal socket, option, or bind error.
+ * @details This low-level helper closes the descriptor on every failure path.
  */
 static rsRetVal ATTR_NONNULL(1, 2) create_single_udp_socket(int *const s, /* socket */
                                                             struct addrinfo *const r,
                                                             const uchar *const hostname,
                                                             const int bIsServer,
+                                                            const int bBind,
                                                             const int rcvbuf,
                                                             const int sndbuf,
                                                             const int ipfreebind,
-                                                            const char *const device) {
+                                                            const char *const device,
+                                                            const char *const network_namespace) {
     const int on = 1;
     int sockflags;
     int actrcvbuf;
@@ -1287,18 +1284,12 @@ static rsRetVal ATTR_NONNULL(1, 2) create_single_udp_socket(int *const s, /* soc
 
 #if defined(_AIX)
     /* AIXPORT : socktype will be SOCK_DGRAM, as set in hints before */
-    *s = socket(r->ai_family, SOCK_DGRAM, r->ai_protocol);
+    iRet = netns_socket(s, r->ai_family, SOCK_DGRAM, r->ai_protocol, network_namespace);
 #else
-    *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+    iRet = netns_socket(s, r->ai_family, r->ai_socktype, r->ai_protocol, network_namespace);
 #endif
-    if (*s < 0) {
-        if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
-            LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
-            /* it is debateble if PF_INET with EAFNOSUPPORT should
-             * also be ignored...
-             */
-        }
-        ABORT_FINALIZE(RS_RET_ERR);
+    if (iRet != RS_RET_OK) {
+        ABORT_FINALIZE(iRet);
     }
 
 #ifdef IPV6_V6ONLY
@@ -1421,7 +1412,7 @@ static rsRetVal ATTR_NONNULL(1, 2) create_single_udp_socket(int *const s, /* soc
         }
     }
 
-    if (bIsServer) {
+    if (bBind) {
         /* rgerhards, 2007-06-22: if we run on a kernel that does not support
          * the IPV6_V6ONLY socket option, we need to use a work-around. On such
          * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
@@ -1459,22 +1450,31 @@ finalize_it:
     RETiRet;
 }
 
-/* creates the UDP listen sockets
- * hostname and/or pszPort may be NULL, but not both!
- * bIsServer indicates if a server socket should be created
- * 1 - server, 0 - client
- * Note: server sockets are created in non-blocking mode, client ones
- * are blocking.
- * param rcvbuf indicates desired rcvbuf size; 0 means OS default,
- * similar for sndbuf.
+/**
+ * @brief Create UDP sockets in an optional network namespace.
+ * @param hostname Local server address or client socket address; may be NULL
+ *        when @p pszPort is provided.
+ * @param pszPort Local service/port; may be NULL when @p hostname is provided.
+ * @param bIsServer Nonzero to bind and configure nonblocking server sockets.
+ * @param rcvbuf Requested receive-buffer size, or zero for the OS default.
+ * @param sndbuf Requested send-buffer size, or zero for the OS default.
+ * @param ipfreebind IPFREEBIND_* mode for a nonlocal server address.
+ * @param device Optional SO_BINDTODEVICE name.
+ * @param network_namespace Optional namespace name, or NULL/empty for the
+ *        calling thread's current namespace.
+ * @return Owned integer array whose first element is the socket count, or NULL
+ *        when resolution fails or no socket can be created.
+ * @details The caller must release the array and close its descriptors with
+ *        closeUDPListenSockets().
  */
-static int *create_udp_socket(uchar *hostname,
-                              uchar *pszPort,
-                              const int bIsServer,
-                              const int rcvbuf,
-                              const int sndbuf,
-                              const int ipfreebind,
-                              char *device) {
+static int *netns_create_udp_socket(uchar *hostname,
+                                    uchar *pszPort,
+                                    const int bIsServer,
+                                    const int rcvbuf,
+                                    const int sndbuf,
+                                    const int ipfreebind,
+                                    char *device,
+                                    const char *network_namespace) {
     struct addrinfo hints, *res, *r;
     int error, maxs, *s, *socks;
     rsRetVal localRet;
@@ -1493,9 +1493,9 @@ static int *create_udp_socket(uchar *hostname,
      */
     hints.ai_protocol = IPPROTO_UDP;
 #endif
-    error = getaddrinfo((char *)hostname, (char *)pszPort, &hints, &res);
+    error = netns_getaddrinfo((char *)hostname, (char *)pszPort, &hints, &res, network_namespace);
     if (error) {
-        LogError(0, NO_ERRCODE, "%s", gai_strerror(error));
+        LogError(0, NO_ERRCODE, "%s", netns_gai_strerror(error));
         LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
         return NULL;
     }
@@ -1508,21 +1508,22 @@ static int *create_udp_socket(uchar *hostname,
         LogError(0, RS_RET_OUT_OF_MEMORY,
                  "couldn't allocate memory for UDP "
                  "sockets, suspending UDP message reception");
-        freeaddrinfo(res);
+        netns_freeaddrinfo(res);
         return NULL;
     }
 
     *socks = 0; /* num of sockets counter at start of array */
     s = socks + 1;
     for (r = res; r != NULL; r = r->ai_next) {
-        localRet = create_single_udp_socket(s, r, hostname, bIsServer, rcvbuf, sndbuf, ipfreebind, device);
+        localRet = create_single_udp_socket(s, r, hostname, bIsServer, bIsServer, rcvbuf, sndbuf, ipfreebind, device,
+                                            network_namespace);
         if (localRet == RS_RET_OK) {
             (*socks)++;
             s++;
         }
     }
 
-    if (res != NULL) freeaddrinfo(res);
+    if (res != NULL) netns_freeaddrinfo(res);
 
     if (Debug && *socks != maxs)
         dbgprintf(
@@ -1542,6 +1543,96 @@ static int *create_udp_socket(uchar *hostname,
     return (socks);
 }
 
+/**
+ * @brief Bind a socket to one selected source-policy entry.
+ * @param fd Open socket whose family matches @p entry.
+ * @param entry Borrowed source-policy entry containing the exact bind address.
+ * @param ipfreebind IPFREEBIND_* mode for an address not currently local.
+ * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for a NULL entry, or
+ *         RS_RET_IO_ERROR when bind or the family-specific free-bind option fails.
+ * @details The function first attempts a normal bind. After EADDRNOTAVAIL it
+ *        may enable IP_FREEBIND or IPV6_FREEBIND and retry once.
+ */
+static rsRetVal source_policy_bind(int fd, const net_source_entry_t *entry, int ipfreebind) {
+    socklen_t length;
+    const struct sockaddr *address = net_source_entry_address(entry, &length);
+    if (address == NULL) {
+        return RS_RET_PARAM_ERROR;
+    }
+    if (bind(fd, address, length) == 0) {
+        return RS_RET_OK;
+    }
+
+    const int bind_errno = errno;
+    if (bind_errno != EADDRNOTAVAIL || ipfreebind == IPFREEBIND_DISABLED) {
+        return RS_RET_IO_ERROR;
+    }
+
+    const int on = 1;
+    int option_result = -1;
+    if (address->sa_family == AF_INET) {
+#ifdef IP_FREEBIND
+        option_result = setsockopt(fd, IPPROTO_IP, IP_FREEBIND, &on, sizeof(on));
+#endif
+    } else if (address->sa_family == AF_INET6) {
+#ifdef IPV6_FREEBIND
+        option_result = setsockopt(fd, IPPROTO_IPV6, IPV6_FREEBIND, &on, sizeof(on));
+#endif
+    }
+    if (option_result != 0 || bind(fd, address, length) != 0) {
+        return RS_RET_IO_ERROR;
+    }
+
+    if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG) {
+        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "bound source address with free-bind enabled");
+    }
+    return RS_RET_OK;
+}
+
+/**
+ * @brief Create and bind one UDP client socket for a selected source entry.
+ * @param fd Output descriptor location; set to -1 on failure.
+ * @param source Borrowed source-policy entry to bind.
+ * @param sndbuf Requested send-buffer size, or zero for the OS default.
+ * @param ipfreebind IPFREEBIND_* mode for a nonlocal source address.
+ * @param device Optional SO_BINDTODEVICE name.
+ * @param network_namespace Optional namespace name, or NULL/empty for the
+ *        calling thread's current namespace.
+ * @return RS_RET_OK on success or an rsRetVal socket, option, or bind error.
+ * @details The descriptor is created in the requested namespace and closed on
+ *        every failure path. The caller owns the descriptor on success.
+ */
+static rsRetVal create_udp_source_socket(int *fd,
+                                         const net_source_entry_t *source,
+                                         int sndbuf,
+                                         int ipfreebind,
+                                         char *device,
+                                         const char *network_namespace) {
+    socklen_t address_length;
+    const struct sockaddr *address = net_source_entry_address(source, &address_length);
+    if (fd == NULL || address == NULL) {
+        return RS_RET_PARAM_ERROR;
+    }
+
+    struct addrinfo source_info;
+    memset(&source_info, 0, sizeof(source_info));
+    source_info.ai_family = address->sa_family;
+    source_info.ai_socktype = SOCK_DGRAM;
+    source_info.ai_protocol = IPPROTO_UDP;
+    source_info.ai_addr = (struct sockaddr *)address;
+    source_info.ai_addrlen = address_length;
+    *fd = -1;
+    rsRetVal result = create_single_udp_socket(fd, &source_info, (const uchar *)"source address", 0, 0, 0, sndbuf,
+                                               ipfreebind, device, network_namespace);
+    if (result == RS_RET_OK) {
+        result = source_policy_bind(*fd, source, ipfreebind);
+    }
+    if (result != RS_RET_OK && *fd != -1) {
+        close(*fd);
+        *fd = -1;
+    }
+    return result;
+}
 
 /* check if two provided socket addresses point to the same host. Note that the
  * length of the sockets must be provided as third parameter. This is necessary to
@@ -1683,7 +1774,6 @@ BEGINobjQueryInterface(net)
     pIf->PrintAllowedSenders = PrintAllowedSenders;
     pIf->clearAllowedSenders = clearAllowedSenders;
     pIf->debugListenInfo = debugListenInfo;
-    pIf->create_udp_socket = create_udp_socket;
     pIf->closeUDPListenSockets = closeUDPListenSockets;
     pIf->isAllowedSender = isAllowedSender;
     pIf->isAllowedSender2 = isAllowedSender2;
@@ -1701,6 +1791,23 @@ BEGINobjQueryInterface(net)
     pIf->netns_restore = netns_restore;
     pIf->netns_switch = netns_switch;
     pIf->netns_socket = netns_socket;
+    pIf->netns_getaddrinfo = netns_getaddrinfo;
+    pIf->netns_freeaddrinfo = netns_freeaddrinfo;
+    pIf->netns_gai_strerror = netns_gai_strerror;
+    pIf->netns_getnameinfo = netns_getnameinfo;
+#ifdef HAVE_GNU_GETADDRINFO_A
+    pIf->netns_getaddrinfo_a = netns_getaddrinfo_a;
+    pIf->netns_gai_suspend = netns_gai_suspend;
+    pIf->netns_gai_error = netns_gai_error;
+    pIf->netns_gai_cancel = netns_gai_cancel;
+#endif /* HAVE_GNU_GETADDRINFO_A */
+    pIf->netns_create_udp_socket = netns_create_udp_socket;
+    pIf->source_policy_construct = net_source_policy_construct;
+    pIf->source_policy_destruct = net_source_policy_destruct;
+    pIf->source_policy_select = net_source_policy_select;
+    pIf->source_policy_bind = source_policy_bind;
+    pIf->source_policy_count = net_source_policy_count;
+    pIf->create_udp_source_socket = create_udp_source_socket;
 finalize_it:
 ENDobjQueryInterface(net)
 

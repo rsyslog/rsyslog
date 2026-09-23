@@ -35,11 +35,13 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#if defined(__GLIBC__)
-    #include <time.h>
+#ifdef HAVE_PPOLL
+    #include <poll.h>
+#else
+    #include <sys/select.h>
 #endif
+#include <sys/time.h>
+#include <time.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -111,7 +113,7 @@ finalize_it:
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 #ifndef ENABLE_WOLFSSL
-    #if defined(__GLIBC__)
+    #ifdef HAVE_GNU_GETADDRINFO_A
 typedef struct ocsp_gai_req_s {
     struct gaicb request;
     struct addrinfo hints;
@@ -119,25 +121,43 @@ typedef struct ocsp_gai_req_s {
     char *port;
 } ocsp_gai_req_t;
 
+/**
+ * @brief Release one owned asynchronous OCSP resolver request.
+ * @param req Request to release; NULL is permitted.
+ * @details Frees any resolver result, copied host and port strings, and the
+ *        request allocation itself.
+ */
 static void ocsp_gai_req_free(ocsp_gai_req_t *req) {
     if (req == NULL) return;
-    if (req->request.ar_result != NULL) freeaddrinfo(req->request.ar_result);
+    if (req->request.ar_result != NULL) net.netns_freeaddrinfo(req->request.ar_result);
     free(req->host);
     free(req->port);
     free(req);
 }
 
+/**
+ * @brief Wait for and release an OCSP resolver request after cancellation fails.
+ * @param arg Owned ocsp_gai_req_t pointer transferred to this thread.
+ * @return Always NULL.
+ */
 static void *ocsp_gai_cleanup_thread(void *arg) {
     ocsp_gai_req_t *req = (ocsp_gai_req_t *)arg;
     const struct gaicb *requests[1];
 
     requests[0] = &req->request;
-    (void)gai_suspend(requests, 1, NULL);
-    (void)gai_error(&req->request);
+    (void)net.netns_gai_suspend(requests, 1, NULL);
+    (void)net.netns_gai_error(&req->request);
     ocsp_gai_req_free(req);
     return NULL;
 }
 
+/**
+ * @brief Arrange eventual cleanup of a still-running OCSP resolver request.
+ * @param req Owned request transferred to this function.
+ * @return EAI_AGAIN after the request is assigned to a detached cleanup thread
+ *         or synchronously completed and freed if thread creation fails.
+ * @details The caller must not access or free @p req after this call.
+ */
 static int ocsp_gai_cleanup_async(ocsp_gai_req_t *req) {
     pthread_t tid;
 
@@ -145,18 +165,33 @@ static int ocsp_gai_cleanup_async(ocsp_gai_req_t *req) {
         const struct gaicb *requests[1];
 
         requests[0] = &req->request;
-        (void)gai_suspend(requests, 1, NULL);
-        (void)gai_error(&req->request);
+        (void)net.netns_gai_suspend(requests, 1, NULL);
+        (void)net.netns_gai_error(&req->request);
         ocsp_gai_req_free(req);
     } else {
         pthread_detach(tid);
     }
     return EAI_AGAIN;
 }
-    #endif
+    #endif /* HAVE_GNU_GETADDRINFO_A */
 
-static int ocsp_getaddrinfo(const char *host, const char *port, const struct addrinfo *hints, struct addrinfo **res) {
-    #if defined(__GLIBC__)
+/**
+ * @brief Resolve an OCSP responder with a bounded asynchronous wait.
+ * @param host OCSP responder host name.
+ * @param port OCSP responder service or numeric port.
+ * @param hints Resolver hints passed to the namespace-aware resolver.
+ * @param res Output resolver list owned by the caller on success.
+ * @param network_namespace Optional namespace for resolver backends that support it.
+ * @return Zero on success or an EAI_* resolver error.
+ * @details GNU asynchronous resolution is bounded by OCSP_TIMEOUT. Other
+ *        platforms use the synchronous namespace-aware resolver wrapper.
+ */
+static int ocsp_getaddrinfo(const char *host,
+                            const char *port,
+                            const struct addrinfo *hints,
+                            struct addrinfo **res,
+                            const char *network_namespace) {
+    #ifdef HAVE_GNU_GETADDRINFO_A
     ocsp_gai_req_t *req;
     struct gaicb *requests[1];
     struct timespec timeout;
@@ -176,7 +211,7 @@ static int ocsp_getaddrinfo(const char *host, const char *port, const struct add
     req->request.ar_request = &req->hints;
     requests[0] = &req->request;
 
-    ret = getaddrinfo_a(GAI_NOWAIT, requests, 1, NULL);
+    ret = net.netns_getaddrinfo_a(GAI_NOWAIT, requests, 1, NULL, network_namespace);
     if (ret != 0) {
         ocsp_gai_req_free(req);
         return ret;
@@ -184,9 +219,9 @@ static int ocsp_getaddrinfo(const char *host, const char *port, const struct add
 
     timeout.tv_sec = OCSP_TIMEOUT;
     timeout.tv_nsec = 0;
-    ret = gai_suspend((const struct gaicb *const *)requests, 1, &timeout);
+    ret = net.netns_gai_suspend((const struct gaicb *const *)requests, 1, &timeout);
     if (ret == EAI_AGAIN) {
-        ret = gai_cancel(&req->request);
+        ret = net.netns_gai_cancel(&req->request);
         if (ret == EAI_CANCELED) {
             ocsp_gai_req_free(req);
             return EAI_AGAIN;
@@ -203,18 +238,18 @@ static int ocsp_getaddrinfo(const char *host, const char *port, const struct add
         return ret;
     }
 
-    ret = gai_error(&req->request);
+    ret = net.netns_gai_error(&req->request);
     if (ret == 0) {
         *res = req->request.ar_result;
         req->request.ar_result = NULL;
     } else {
-        (void)gai_cancel(&req->request);
+        (void)net.netns_gai_cancel(&req->request);
     }
     ocsp_gai_req_free(req);
     return ret;
-    #else
-    return getaddrinfo(host, port, hints, res);
-    #endif
+    #else /* ndef HAVE_GNU_GETADDRINFO_A */
+    return net.netns_getaddrinfo(host, port, hints, res, network_namespace);
+    #endif /* ndef HAVE_GNU_GETADDRINFO_A */
 }
 
 static MUTEX_TYPE *mutex_buf = NULL;
@@ -334,12 +369,45 @@ int opensslh_THREAD_cleanup(void) {
 
 /* globally initialize OpenSSL
  */
-void osslGlblInit(void) {
+/**
+ * @brief Private global state shared by all rsyslog TLS consumers.
+ */
+typedef struct net_ossl_global_s {
+    int exdata[NET_OSSL_EXDATA_COUNT]; /**< OpenSSL ex-data indices allocated at initialization. */
+} net_ossl_global_t;
+
+static net_ossl_global_t g_net_ossl;
+
+static int net_ossl_get_exdata_index(net_ossl_exdata_key_t key) {
+    if (key < 0 || key >= NET_OSSL_EXDATA_COUNT) {
+        return -1;
+    }
+    return g_net_ossl.exdata[key];
+}
+
+static void *net_ossl_get_exdata(SSL *ssl, net_ossl_exdata_key_t key) {
+    const int index = net_ossl_get_exdata_index(key);
+    return index < 0 ? NULL : SSL_get_ex_data(ssl, index);
+}
+
+static int net_ossl_set_exdata(SSL *ssl, net_ossl_exdata_key_t key, void *value) {
+    const int index = net_ossl_get_exdata_index(key);
+    return index < 0 ? 0 : SSL_set_ex_data(ssl, index, value);
+}
+
+rsRetVal osslGlblInit(void) {
+    DEFiRet;
+
     DBGPRINTF("osslGlblInit: ENTER\n");
+
+    for (int key = 0; key < NET_OSSL_EXDATA_COUNT; ++key) {
+        g_net_ossl.exdata[key] = -1;
+    }
 
 #ifdef ENABLE_WOLFSSL
     if (!SSL_library_init()) {
         LogError(0, RS_RET_NO_ERRCODE, "Error: OpenSSL initialization failed!");
+        ABORT_FINALIZE(RS_RET_SYS_ERR);
     }
 #else
     if ((opensslh_THREAD_setup() == 0) ||
@@ -352,6 +420,7 @@ void osslGlblInit(void) {
     #endif
     ) {
         LogError(0, RS_RET_NO_ERRCODE, "Error: OpenSSL initialization failed!");
+        ABORT_FINALIZE(RS_RET_SYS_ERR);
     }
 #endif
 
@@ -361,6 +430,14 @@ void osslGlblInit(void) {
 
     /* Load readable error strings */
     SSL_load_error_strings();
+
+    for (int key = 0; key < NET_OSSL_EXDATA_COUNT; ++key) {
+        g_net_ossl.exdata[key] = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+        if (g_net_ossl.exdata[key] < 0) {
+            LogError(0, RS_RET_ERR, "could not allocate OpenSSL ex-data index %d", key);
+            ABORT_FINALIZE(RS_RET_SYS_ERR);
+        }
+    }
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
     /*
      * ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
@@ -404,6 +481,13 @@ void osslGlblInit(void) {
 #endif /* OPENSSL_NO_ENGINE */
 
     PRAGMA_DIAGNOSTIC_POP
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        opensslh_THREAD_cleanup();
+        osslGlblExit();
+    }
+    RETiRet;
 }
 
 /* globally de-initialize OpenSSL */
@@ -418,6 +502,9 @@ void osslGlblExit(void) {
     ERR_free_strings();
     EVP_cleanup();
     CRYPTO_cleanup_all_ex_data();
+    for (int key = 0; key < NET_OSSL_EXDATA_COUNT; ++key) {
+        g_net_ossl.exdata[key] = -1;
+    }
 }
 
 
@@ -1316,7 +1403,8 @@ rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t __attribute__((unused)) * pThis
     int iVerErr = X509_V_OK;
 
     ISOBJ_TYPE_assert(pThis, net_ossl);
-    PermitExpiredCerts *pPermitExpiredCerts = (PermitExpiredCerts *)SSL_get_ex_data(ssl, 1);
+    PermitExpiredCerts *pPermitExpiredCerts =
+        (PermitExpiredCerts *)net_ossl_get_exdata(ssl, NET_OSSL_EXDATA_PERMITEXPIREDCERTS);
 
 #ifdef ENABLE_WOLFSSL
     iVerErr = wolfSSL_get_verify_result(ssl);
@@ -1837,7 +1925,24 @@ err:
     return ret;
 }
 
-static BIO *ocsp_connect(const char *host, const char *port, const char *device) {
+/**
+ * @brief Connect a BIO to an OCSP responder using connection routing policy.
+ * @param host OCSP responder host name.
+ * @param port OCSP responder service or numeric port.
+ * @param device Optional SO_BINDTODEVICE name.
+ * @param network_namespace Optional namespace used for resolution and sockets.
+ * @param source_policy Borrowed source policy, or NULL for OS source selection.
+ * @param ipfreebind IPFREEBIND_* mode used for source binding.
+ * @return Owned BIO on success or NULL when no responder address connects.
+ * @details Destination addresses and compatible source entries are tried in
+ *        their configured order. The returned BIO owns its socket.
+ */
+static BIO *ocsp_connect(const char *host,
+                         const char *port,
+                         const char *device,
+                         const char *network_namespace,
+                         const net_source_policy_t *source_policy,
+                         int ipfreebind) {
     BIO *bio = NULL;
     int sock = -1;
     struct addrinfo hints, *res = NULL, *rp;
@@ -1848,60 +1953,100 @@ static BIO *ocsp_connect(const char *host, const char *port, const char *device)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    s = ocsp_getaddrinfo(host, port, &hints, &res);
+    s = ocsp_getaddrinfo(host, port, &hints, &res, network_namespace);
     if (s != 0) {
-        LogError(0, RS_RET_NO_ERRCODE, "OCSP: getaddrinfo failed for %s:%s: %s\n", host, port, gai_strerror(s));
+        LogError(0, RS_RET_NO_ERRCODE, "OCSP: getaddrinfo failed for %s:%s: %s\n", host, port,
+                 net.netns_gai_strerror(s));
         goto err;
     }
 
     for (rp = res; rp != NULL; rp = rp->ai_next) {
-        sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (sock == -1) continue;
+        const net_source_entry_t *source = NULL;
+        sbool attempted_default_source = RSFALSE;
+        while (1) {
+            if (source_policy != NULL) {
+                source = net.source_policy_select(source_policy, rp->ai_addr, source);
+                if (source == NULL) {
+                    break;
+                }
+            } else if (attempted_default_source) {
+                break;
+            }
+            attempted_default_source = RSTRUE;
 
-        if (device && *device) {
+            if (net.netns_socket(&sock, rp->ai_family, rp->ai_socktype, rp->ai_protocol, network_namespace) !=
+                RS_RET_OK) {
+                continue;
+            }
+
+            if (device && *device) {
     #ifdef SO_BINDTODEVICE
-            if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device)) < 0) {
-                LogError(errno, RS_RET_NO_ERRCODE, "OCSP: Failed to bind socket to device %s\n", device);
+                if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device)) < 0) {
+                    LogError(errno, RS_RET_NO_ERRCODE, "OCSP: Failed to bind socket to device %s\n", device);
+                    close(sock);
+                    sock = -1;
+                    continue;
+                }
+    #else
+                LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+                       "OCSP: SO_BINDTODEVICE not supported, ignoring device parameter\n");
+    #endif
+            }
+
+            if (source != NULL && net.source_policy_bind(sock, source, ipfreebind) != RS_RET_OK) {
                 close(sock);
                 sock = -1;
                 continue;
             }
+
+            /* Set socket to non-blocking for timeout support */
+            flags = fcntl(sock, F_GETFL, 0);
+            if (flags != -1) {
+                fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+            }
+
+            if (connect(sock, rp->ai_addr, rp->ai_addrlen) == 0) {
+                break;
+            }
+
+            if (errno == EINPROGRESS) {
+    #ifdef HAVE_PPOLL
+                struct pollfd pollfd = {.fd = sock, .events = POLLOUT};
+                const struct timespec timeout = {.tv_sec = OCSP_TIMEOUT, .tv_nsec = 0};
+
+                s = ppoll(&pollfd, 1, &timeout, NULL);
     #else
-            LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-                   "OCSP: SO_BINDTODEVICE not supported, ignoring device parameter\n");
+                fd_set wfds;
+                struct timeval tv;
+
+                if (sock >= FD_SETSIZE) {
+                    LogError(0, RS_RET_NO_ERRCODE, "OCSP: socket descriptor %d meets or exceeds select() limit %d\n",
+                             sock, FD_SETSIZE);
+                    s = -1;
+                } else {
+                    FD_ZERO(&wfds);
+                    FD_SET(sock, &wfds);
+                    tv.tv_sec = OCSP_TIMEOUT;
+                    tv.tv_usec = 0;
+
+                    s = select(sock + 1, NULL, &wfds, NULL, &tv);
+                }
     #endif
-        }
-
-        /* Set socket to non-blocking for timeout support */
-        flags = fcntl(sock, F_GETFL, 0);
-        if (flags != -1) {
-            fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-        }
-
-        if (connect(sock, rp->ai_addr, rp->ai_addrlen) == 0) {
-            break; /* Success */
-        }
-
-        if (errno == EINPROGRESS) {
-            fd_set wfds;
-            struct timeval tv;
-            FD_ZERO(&wfds);
-            FD_SET(sock, &wfds);
-            tv.tv_sec = OCSP_TIMEOUT;
-            tv.tv_usec = 0;
-
-            s = select(sock + 1, NULL, &wfds, NULL, &tv);
-            if (s > 0) {
-                int error = 0;
-                socklen_t len = sizeof(error);
-                if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error == 0) {
-                    break; /* Success */
+                if (s > 0) {
+                    int error = 0;
+                    socklen_t len = sizeof(error);
+                    if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error == 0) {
+                        break;
+                    }
                 }
             }
-        }
 
-        close(sock);
-        sock = -1;
+            close(sock);
+            sock = -1;
+        }
+        if (sock != -1) {
+            break;
+        }
     }
 
     if (sock == -1 || rp == NULL) {
@@ -1938,7 +2083,7 @@ static BIO *ocsp_connect(const char *host, const char *port, const char *device)
     }
 
 err:
-    if (res) freeaddrinfo(res);
+    if (res) net.netns_freeaddrinfo(res);
 
     return bio;
 }
@@ -2081,12 +2226,29 @@ static int ocsp_is_supported_protocol(const char *url) {
     return (strncmp(url, "http://", 7) == 0);
 }
 
+/**
+ * @brief Send and validate one OCSP request against one responder URL.
+ * @param url HTTP OCSP responder URL.
+ * @param cert Certificate whose status is requested.
+ * @param issuer Issuer certificate used to construct and verify the request.
+ * @param untrusted_peer_certs Borrowed peer certificate chain.
+ * @param ctx Borrowed TLS context and trust store.
+ * @param device Optional SO_BINDTODEVICE name.
+ * @param network_namespace Optional resolver and socket namespace.
+ * @param source_policy Borrowed source-address policy.
+ * @param ipfreebind IPFREEBIND_* mode for source binding.
+ * @param is_revoked Output set when the responder confirms revocation.
+ * @return Nonzero only when a valid GOOD response is received.
+ */
 static int ocsp_request_per_responder(const char *url,
                                       X509 *cert,
                                       X509 *issuer,
                                       STACK_OF(X509) * untrusted_peer_certs,
                                       SSL_CTX *ctx,
                                       const char *device,
+                                      const char *network_namespace,
+                                      const net_source_policy_t *source_policy,
+                                      int ipfreebind,
                                       int *is_revoked) {
     int ret = 0;
     char *host = NULL, *port = NULL, *path = NULL;
@@ -2114,7 +2276,7 @@ static int ocsp_request_per_responder(const char *url,
     dbgprintf("OCSP: Connecting to %s:%s%s\n", host, port, path);
 
     /* Connect to OCSP responder */
-    bio = ocsp_connect(host, port, device);
+    bio = ocsp_connect(host, port, device, network_namespace, source_policy, ipfreebind);
     if (!bio) {
         goto err;
     }
@@ -2169,8 +2331,27 @@ err:
     return ret;
 }
 
-static int ocsp_check(
-    X509 *current_cert, STACK_OF(X509) * untrusted_peer_certs, SSL_CTX *ctx, const char *device, int *is_revoked) {
+/**
+ * @brief Check one certificate against its supported OCSP responders.
+ * @param current_cert Certificate whose status is checked.
+ * @param untrusted_peer_certs Borrowed peer certificate chain.
+ * @param ctx Borrowed TLS context and trust store.
+ * @param device Optional SO_BINDTODEVICE name.
+ * @param network_namespace Optional resolver and socket namespace.
+ * @param source_policy Borrowed source-address policy.
+ * @param ipfreebind IPFREEBIND_* mode for source binding.
+ * @param is_revoked Output set when revocation is confirmed.
+ * @return 1 for a valid GOOD response, 2 when no OCSP URL is present, or zero
+ *         for revocation, unsupported responders, or request/validation failure.
+ */
+static int ocsp_check(X509 *current_cert,
+                      STACK_OF(X509) * untrusted_peer_certs,
+                      SSL_CTX *ctx,
+                      const char *device,
+                      const char *network_namespace,
+                      const net_source_policy_t *source_policy,
+                      int ipfreebind,
+                      int *is_revoked) {
     int ret = 0;
     char cert_name[256];
     X509 *issuer = NULL;
@@ -2248,7 +2429,8 @@ static int ocsp_check(
      */
     for (int i = 0; i < sk_OPENSSL_STRING_num(ocsp_responders); i++) {
         url = sk_OPENSSL_STRING_value(ocsp_responders, i);
-        if (ocsp_request_per_responder(url, current_cert, issuer, untrusted_peer_certs, ctx, device, is_revoked)) {
+        if (ocsp_request_per_responder(url, current_cert, issuer, untrusted_peer_certs, ctx, device, network_namespace,
+                                       source_policy, ipfreebind, is_revoked)) {
             ret = 1;
             goto err;
         }
@@ -2286,8 +2468,9 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
         SSL *ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
         int err = X509_STORE_CTX_get_error(store);
         int iVerifyMode = SSL_get_verify_mode(ssl);
-        nsd_t *pNsdTcp = (nsd_t *)SSL_get_ex_data(ssl, 0);
-        PermitExpiredCerts *pPermitExpiredCerts = (PermitExpiredCerts *)SSL_get_ex_data(ssl, 1);
+        nsd_t *pNsdTcp = (nsd_t *)net_ossl_get_exdata(ssl, NET_OSSL_EXDATA_PTCP);
+        PermitExpiredCerts *pPermitExpiredCerts =
+            (PermitExpiredCerts *)net_ossl_get_exdata(ssl, NET_OSSL_EXDATA_PERMITEXPIREDCERTS);
 
         dbgprintf("verify_callback: Certificate validation failed, Mode (%d)!\n", iVerifyMode);
 
@@ -2376,11 +2559,8 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
     X509 *cert = X509_STORE_CTX_get_current_cert(store);
     SSL *ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
 
-    /* Check if revocation checking is enabled
-     * Note: Using index 3 to avoid collision with imdtls which uses index 2
-     * Index allocation: 0=pTcp, 1=permitExpiredCerts, 2=imdtls instance, 3=revocationCheck
-     */
-    int *pTlsRevocationCheck = (int *)SSL_get_ex_data(ssl, 3);
+    /* Check revocation state through the shared allocated ex-data index. */
+    int *pTlsRevocationCheck = (int *)net_ossl_get_exdata(ssl, NET_OSSL_EXDATA_TLSREVOCATIONCHECK);
     int tlsRevocationCheck = (pTlsRevocationCheck != NULL) ? *pTlsRevocationCheck : 0;
 
     if (tlsRevocationCheck == 0) {
@@ -2388,21 +2568,21 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
         return status;
     }
 
+    net_ossl_t *const pNetOssl = (net_ossl_t *)net_ossl_get_exdata(ssl, NET_OSSL_EXDATA_NET_OSSL);
     STACK_OF(X509) *untrusted_peer_certs = X509_STORE_CTX_get1_chain(store);
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
     int ret, is_revoked = 0;
-    const char *device = NULL;
-
-    /* Try to get device name from nsd object if available */
-    /* Note: device binding is not currently supported in the refactored code */
-    /* This is left here for future enhancement */
-
     /* 1. OCSP with caching and non-blocking I/O */
     /* Note: OCSP checks use non-blocking sockets with OCSP_TIMEOUT (5 sec) per responder.
      * Results are cached to minimize network I/O on subsequent TLS handshakes.
      * See: https://github.com/rsyslog/rsyslog/issues/6469
      */
-    ret = ocsp_check(cert, untrusted_peer_certs, ctx, device, &is_revoked);
+    if (pNetOssl == NULL) {
+        ret = ocsp_check(cert, untrusted_peer_certs, ctx, NULL, NULL, NULL, 0, &is_revoked);
+    } else {
+        ret = ocsp_check(cert, untrusted_peer_certs, ctx, pNetOssl->device, pNetOssl->network_namespace,
+                         pNetOssl->source_policy, pNetOssl->ipfreebind, &is_revoked);
+    }
     if (ret == 1) {
         /* Status is OK */
         status = 1;
@@ -2709,6 +2889,8 @@ BEGINobjQueryInterface(net_ossl)
     }
     pIf->Construct = (rsRetVal(*)(net_ossl_t **))net_osslConstruct;
     pIf->Destruct = (rsRetVal(*)(net_ossl_t **))net_osslDestruct;
+    pIf->get_exdata = net_ossl_get_exdata;
+    pIf->set_exdata = net_ossl_set_exdata;
     pIf->osslCtxInit = net_ossl_osslCtxInit;
     pIf->osslChkpeername = net_ossl_chkpeername;
     pIf->osslPeerfingerprint = net_ossl_peerfingerprint;
@@ -2753,7 +2935,7 @@ BEGINObjClassInit(net_ossl, 1, OBJ_IS_CORE_MODULE) /* class, version */
     CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
     // Do global TLS init stuff
-    osslGlblInit();
+    CHKiRet(osslGlblInit());
 ENDObjClassInit(net_ossl)
 
 /* --------------- here now comes the plumbing that makes as a library module --------------- */

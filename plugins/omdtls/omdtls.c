@@ -69,6 +69,7 @@
 #include "statsobj.h"
 #include "unicode-helper.h"
 #include "datetime.h"
+#include "net.h"
 #include "net_ossl.h"
 
 MODULE_TYPE_OUTPUT;
@@ -78,7 +79,7 @@ MODULE_CNFNAME("omdtls")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
-DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(statsobj) DEFobjCurrIf(net_ossl)
+DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(statsobj) DEFobjCurrIf(net) DEFobjCurrIf(net_ossl)
 
     statsobj_t *dtlsStats;
 STATSCOUNTER_DEF(ctrDtlsSubmit, mutCtrDtlsSubmit);
@@ -507,6 +508,7 @@ BEGINmodExit
     DBGPRINTF("modExit: ENTER\n");
     statsobj.Destruct(&dtlsStats);
     objRelease(net_ossl, LM_NET_OSSL_FILENAME);
+    objRelease(net, LM_NET_FILENAME);
     objRelease(statsobj, CORE_COMPONENT);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
@@ -530,6 +532,7 @@ BEGINmodInit()
     CODEmodInit_QueryRegCFSLineHdlr
         /* request objects we use */
         CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(net_ossl, LM_NET_OSSL_FILENAME));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
@@ -683,8 +686,8 @@ static rsRetVal dtls_connect(wrkrInstanceData_t *pWrkrData) {
     }
 
     /* Set reference in SSL obj */
-    SSL_set_ex_data(pWrkrData->sslClient, 0, NULL);
-    SSL_set_ex_data(pWrkrData->sslClient, 1, NULL);
+    net_ossl.set_exdata(pWrkrData->sslClient, NET_OSSL_EXDATA_PTCP, NULL);
+    net_ossl.set_exdata(pWrkrData->sslClient, NET_OSSL_EXDATA_PERMITEXPIREDCERTS, NULL);
 
     /* Set and activate timeouts */
     struct timeval timeout;
@@ -733,9 +736,10 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
     /* port must be numeric, because config file syntax requires this */
     hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
     hints.ai_socktype = SOCK_DGRAM;
-    if ((iErr = (getaddrinfo((char *)pData->target, (char *)pData->port, &hints, &addrResolved))) != 0) {
+    if ((iErr = (net.netns_getaddrinfo((char *)pData->target, (char *)pData->port, &hints, &addrResolved, NULL))) !=
+        0) {
         LogError(0, RS_RET_SUSPENDED, "omdtls[%p]: could not get addrinfo for hostname '%s':'%s': %s", pWrkrData,
-                 pData->target, pData->port, gai_strerror(iErr));
+                 pData->target, pData->port, net.netns_gai_strerror(iErr));
         ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);
     }
     pWrkrData->dtls_rcvr_addrinfo = addrResolved;
@@ -765,11 +769,11 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
 finalize_it:
     DBGPRINTF("dtls_init[%p]: doTryResume %s iRet %d\n", pWrkrData, pData->target, iRet);
     if (addrResolved != NULL) {
-        freeaddrinfo(addrResolved);
+        net.netns_freeaddrinfo(addrResolved);
     }
     if (iRet != RS_RET_OK) {
         if (pWrkrData->dtls_rcvr_addrinfo != NULL) {
-            freeaddrinfo(pWrkrData->dtls_rcvr_addrinfo);
+            net.netns_freeaddrinfo(pWrkrData->dtls_rcvr_addrinfo);
             pWrkrData->dtls_rcvr_addrinfo = NULL;
         }
         iRet = RS_RET_SUSPENDED;
@@ -815,7 +819,7 @@ static rsRetVal dtls_close(wrkrInstanceData_t *pWrkrData) {
 
     // Free Memory
     if (pWrkrData->dtls_rcvr_addrinfo != NULL) {
-        freeaddrinfo(pWrkrData->dtls_rcvr_addrinfo);
+        net.netns_freeaddrinfo(pWrkrData->dtls_rcvr_addrinfo);
         pWrkrData->dtls_rcvr_addrinfo = NULL;
     }
 

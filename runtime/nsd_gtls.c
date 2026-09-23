@@ -2435,13 +2435,18 @@ static int SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
     }
 }
 
-/* open a connection to a remote host (server). With GnuTLS, we always
- * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
- * rgerhards, 2008-03-19
+/**
+ * @brief Open a GnuTLS network stream using versioned parameters.
+ * @param pNsd GnuTLS driver instance that will own the TCP and TLS state.
+ * @param params Borrowed destination, namespace, device, and source-policy
+ *        settings valid for this call.
+ * @return RS_RET_OK on success or an rsRetVal parameter, TCP, or TLS error.
+ * @details The aggregated plain-TCP driver creates and binds the socket. In TLS
+ *        mode this function initializes credentials and performs the handshake.
  */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
-static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+static rsRetVal Connect2(nsd_t *pNsd, const nsd_connect_params_t *params) {
     nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     int sock;
     int gnuRet;
@@ -2450,15 +2455,21 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     static const int cert_type_priority[2] = {GNUTLS_CRT_X509, 0};
 #endif
     DEFiRet;
-    dbgprintf("Connect to %s:%s\n", host, port);
 
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
-    assert(port != NULL);
-    assert(host != NULL);
+    if (params == NULL || params->version != NSD_CONNECT_PARAMS_VERSION || params->port == NULL ||
+        params->host == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    dbgprintf("Connect to %s:%s\n", params->host, params->port);
+    assert(params != NULL);
+    assert(params->version == NSD_CONNECT_PARAMS_VERSION);
+    assert(params->port != NULL);
+    assert(params->host != NULL);
 
     CHKiRet(gtlsInitCred(pThis));
     CHKiRet(gtlsAddOurCert(pThis));
-    CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
+    CHKiRet(nsd_ptcp.Connect2(pThis->pTcp, params));
 
     if (pThis->iMode == 0) FINALIZE;
 
@@ -2467,7 +2478,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     pThis->bHaveSess = 1;
     pThis->bIsInitiator = 1;
 
-    CHKgnutls(SetServerNameIfPresent(pThis, host));
+    CHKgnutls(SetServerNameIfPresent(pThis, params->host));
 
     /* in the client case, we need to set a callback that ensures our certificate
      * will be presented to the server even if it is not signed by one of the server's
@@ -2557,7 +2568,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
      * permitted peer names are given. Using the hostname is quite useful. It permits
      * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
      */
-    CHKmalloc(pThis->pszConnectHost = (uchar *)strdup((char *)host));
+    CHKmalloc(pThis->pszConnectHost = (uchar *)strdup((char *)params->host));
 
     /* and perform the handshake */
     gnutls_handshake_set_timeout(pThis->sess, 3000);
@@ -2585,6 +2596,21 @@ finalize_it:
     }
 
     RETiRet;
+}
+
+/**
+ * @brief Adapt the legacy GnuTLS Connect interface to Connect2().
+ * @param pNsd GnuTLS driver instance.
+ * @param family Resolver address family.
+ * @param port Borrowed destination service or numeric port.
+ * @param host Borrowed destination host name or address.
+ * @param device Borrowed optional SO_BINDTODEVICE name.
+ * @return Result from Connect2().
+ * @details Uses the current namespace, OS source selection, and disabled free-bind.
+ */
+static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+    const nsd_connect_params_t params = {NSD_CONNECT_PARAMS_VERSION, family, port, host, device, NULL, NULL, 0};
+    return Connect2(pNsd, &params);
 }
 #pragma GCC diagnostic pop
 
@@ -2637,6 +2663,7 @@ BEGINobjQueryInterface(nsd_gtls)
     pIf->FmtRemotePortStr = FmtRemotePortStr;
     pIf->SetRemoteSNI = SetRemoteSNI;
     pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
+    pIf->Connect2 = Connect2;
 
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)

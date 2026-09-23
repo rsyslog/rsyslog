@@ -386,7 +386,8 @@ static rsRetVal addListner(instanceConf_t *inst) {
 
     DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
 
-    newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf, 0, inst->ipfreebind, inst->pszBindDevice);
+    newSocks =
+        net.netns_create_udp_socket(bindAddr, port, 1, inst->rcvbuf, 0, inst->ipfreebind, inst->pszBindDevice, NULL);
     if (newSocks != NULL) {
         if (inst->pszLstnPortFileName != NULL && newSocks[0] != 1) {
             LogError(0, RS_RET_INVALID_PARAMS,
