@@ -1,5 +1,10 @@
 # Campaign lessons
 
+Abandoned candidates from this and later campaigns belong in
+[doc/ai/rejected_engineering_paths.md](../../../../doc/ai/rejected_engineering_paths.md)
+with `recorded`, `last_reviewed`, and `stale_after` dates. This file stays a
+short transferable-methods note, not the retry/do-not-retry log.
+
 The first evidence source was the segmented disk queue and DA spill/drain
 campaign in `benchmarks/segmented-diskqueue/`.
 

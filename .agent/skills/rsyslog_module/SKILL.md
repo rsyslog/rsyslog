@@ -18,6 +18,9 @@ This skill captures the essential technical patterns for authoring and maintaini
 
 ### 1. Concurrency & Locking
 Rsyslog v8 has a high-concurrency worker model.
+- Before changing queue mutex hold time, worker wakeup, or list-node
+  allocation, consult
+  [doc/ai/rejected_engineering_paths.md](../../../doc/ai/rejected_engineering_paths.md).
 - **Shared State (`pData`)**: Mutable state shared across workers MUST be protected by a mutex in `pData`.
 - **Per-Worker State (`WID`)**: Never share `wrkrInstanceData_t`.
 - **Belt and Suspenders**:

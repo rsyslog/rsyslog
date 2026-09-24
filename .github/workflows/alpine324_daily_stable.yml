@@ -153,16 +153,22 @@ jobs:
           baseline_dir="$RUNNER_TEMP/alpine-aports"
           baseline_fetched=false
           for attempt in 1 2 3; do
-            rm -rf "$baseline_dir"
-            if timeout 90s git clone --depth 1 --branch "$ALPINE_BRANCH" \
-              --filter=blob:none --sparse \
-              https://gitlab.alpinelinux.org/alpine/aports.git "$baseline_dir"; then
-              if timeout 90s git -C "$baseline_dir" sparse-checkout set main/rsyslog; then
-                baseline_fetched=true
-                break
+            for baseline_remote in \
+              https://gitlab.alpinelinux.org/alpine/aports.git \
+              https://github.com/alpinelinux/aports.git; do
+              rm -rf "$baseline_dir"
+              if timeout 90s git clone --depth 1 --branch "$ALPINE_BRANCH" \
+                --filter=blob:none --sparse "$baseline_remote" "$baseline_dir"; then
+                if timeout 90s git -C "$baseline_dir" sparse-checkout set main/rsyslog; then
+                  baseline_fetched=true
+                  break
+                fi
               fi
+              echo "::warning::Alpine baseline fetch failed from $baseline_remote (attempt $attempt/3)"
+            done
+            if [ "$baseline_fetched" = true ]; then
+              break
             fi
-            echo "::warning::Alpine baseline fetch failed (attempt $attempt/3)"
             [ "$attempt" -eq 3 ] || sleep "$((attempt * 15))"
           done
           [ "$baseline_fetched" = true ] || {
