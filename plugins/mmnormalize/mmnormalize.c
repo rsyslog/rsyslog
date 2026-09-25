@@ -59,6 +59,7 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "statsobj.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -79,6 +80,15 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
+#ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+DEFobjCurrIf(statsobj)
+    /* Module-level impstats. turbo.truncated counts messages for which the
+     * TurboVM result hit a per-result capacity and was therefore declined: the
+     * standard parser produced the fields instead. It is a cost signal, not a
+     * loss signal -- a non-zero value means those messages were parsed twice. */
+    static statsobj_t *mmnormalizeStats;
+STATSCOUNTER_DEF(ctrTurboTruncated, mutCtrTurboTruncated)
+#endif
 
 static struct cnfparamdescr modpdescr[] = {{"allowregex", eCmdHdlrBinary, 0}};
 
@@ -675,7 +685,22 @@ BEGINdoAction_NoStrings
                                 pWrkrData->pData->pszPath[2] == '\0';
         const ln_fast_result_t *result = NULL;
         r = ln_turbo_normalize_raw(pWrkrData->ctxlnTurbo, (char *)buf, len, &result);
-        if (r == 0 && result != NULL) {
+        sbool turboTruncated = 0;
+    #ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+        /* A truncated result is missing fields the rulebase did match. Decline
+         * it and let the standard parser below produce the complete set, the
+         * way ln_normalize_to_str() does. Counting it here, at the point the
+         * fast path is abandoned, keeps the counter exact: it can never report
+         * a message the standard parser went on to parse in full anyway. */
+        if (r == 0 && result != NULL && ln_fast_result_is_truncated(result)) {
+            STATSCOUNTER_INC(ctrTurboTruncated, mutCtrTurboTruncated);
+            DBGPRINTF(
+                "mmnormalize: turbo result truncated, "
+                "falling back to standard normalization\n");
+            turboTruncated = 1;
+        }
+    #endif
+        if (r == 0 && result != NULL && !turboTruncated) {
             /* SNAPSHOT PATH: when path is "$!" (CEE root).
              * Create a deep-copy snapshot of the turbo result.
              * The snapshot is a single allocation (~6KB) that owns
@@ -1031,6 +1056,10 @@ ENDdoHUP
 
 BEGINmodExit
     CODESTARTmodExit;
+#ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+    if (mmnormalizeStats != NULL) statsobj.Destruct(&mmnormalizeStats);
+    objRelease(statsobj, CORE_COMPONENT);
+#endif
 ENDmodExit
 
 
@@ -1098,6 +1127,16 @@ BEGINmodInit()
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
                                STD_LOADABLE_MODULE_ID));
+#ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(statsobj.Construct(&mmnormalizeStats));
+    CHKiRet(statsobj.SetName(mmnormalizeStats, (uchar *)"mmnormalize"));
+    CHKiRet(statsobj.SetOrigin(mmnormalizeStats, (uchar *)"mmnormalize"));
+    STATSCOUNTER_INIT(ctrTurboTruncated, mutCtrTurboTruncated);
+    CHKiRet(statsobj.AddCounter(mmnormalizeStats, UCHAR_CONSTANT("turbo.truncated"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &ctrTurboTruncated));
+    CHKiRet(statsobj.ConstructFinalize(mmnormalizeStats));
+#endif
 ENDmodInit
 
 /* vi:set ai:
