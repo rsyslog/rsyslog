@@ -660,7 +660,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: check-${{ matrix.config }}
 
@@ -1126,7 +1126,7 @@ jobs:
             steps.run_tests.outputs.status != 'success' &&
             env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
           }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: >-
             macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
@@ -1229,7 +1229,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: elasticsearch-check
 
@@ -1313,7 +1313,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: victorialogs-check
 
@@ -1467,7 +1467,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: kafka-distcheck
 
@@ -1717,7 +1717,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: arm64-check
 
@@ -1867,7 +1867,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: i386-check
 

@@ -404,7 +404,7 @@ jobs:
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: daily-${{ matrix.lane }}-check
 

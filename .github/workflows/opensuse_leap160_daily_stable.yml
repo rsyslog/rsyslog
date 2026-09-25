@@ -268,7 +268,7 @@ jobs:
 
       - name: Upload package-build failure evidence
         if: failure() && steps.package_build.outcome == 'failure'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: openSUSE Leap 16.0 daily stable package build
 
@@ -686,7 +686,7 @@ jobs:
 
       - name: Upload publication failure evidence
         if: failure() && steps.published_install.outcome == 'failure'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: openSUSE Leap 16.0 daily stable verification
 

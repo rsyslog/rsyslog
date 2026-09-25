@@ -140,7 +140,7 @@ jobs:
 
       - name: Upload test failure evidence
         if: steps.run_tests.outputs.status == 'failure'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: >-
             weekly-macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}

@@ -121,7 +121,7 @@ jobs:
         if: >-
           steps.run_tests.outputs.status == 'failure' &&
           env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: distro-${{ matrix.lane }}
 
