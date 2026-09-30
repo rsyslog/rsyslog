@@ -1007,6 +1007,58 @@ done:
     }
 }
 
+/* Return a pointer to the "b=" (boot id) field of a journal cursor, or NULL
+ * if the cursor does not contain one. Cursors produced by
+ * sd_journal_get_cursor() have the form "s=..;i=..;b=..;m=..;t=..;x=..".
+ */
+static const char *cursorBootIdField(const char *cursor) {
+    const char *p;
+
+    if (cursor == NULL) {
+        return NULL;
+    }
+    if (strncmp(cursor, "b=", 2) == 0) {
+        return cursor;
+    }
+    p = strstr(cursor, ";b=");
+    return (p == NULL) ? NULL : p + 1;
+}
+
+/* Check whether the journal is currently positioned on the entry described
+ * by cursor.
+ *
+ * sd_journal_test_cursor() rejects a cursor as soon as its seqnum id ("s=")
+ * differs from the file holding the current entry. journald assigns a new
+ * seqnum id when it copies entries from the runtime journal (/run) to the
+ * persistent journal (/var), e.g. on "journalctl --flush", so the very same
+ * entry is not recognized after it has been moved. In that case compare the
+ * remaining fields (boot id, monotonic and realtime timestamps and the xor
+ * hash of the entry payload), which journald preserves when copying.
+ *
+ * Returns 1 if the current entry matches, 0 if it does not and a negative
+ * errno-style value if the current entry could not be inspected.
+ */
+static int journalAtCursor(sd_journal *j, const char *cursor) {
+    char *current = NULL;
+    const char *want;
+    const char *have;
+    int r;
+
+    r = sd_journal_test_cursor(j, cursor);
+    if (r != 0) {
+        return r;
+    }
+    r = sd_journal_get_cursor(j, &current);
+    if (r < 0) {
+        return r;
+    }
+    want = cursorBootIdField(cursor);
+    have = cursorBootIdField(current);
+    r = (want != NULL && have != NULL && strcmp(want, have) == 0) ? 1 : 0;
+    free(current);
+    return r;
+}
+
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile) {
@@ -1225,14 +1277,16 @@ static rsRetVal doRun(journal_etry_t const *etry) {
              * returns 1, indicating the current entry matches the specified cursor,
              * we need to manually advance the cursor. This is because, after calling sd_journal_next,
              * the cursor should point to a new entry; otherwise, we read the same entry twice.
+             * journalAtCursor() also recognizes the entry when it has been copied to a file
+             * with a different seqnum id (e.g. by "journalctl --flush").
              */
             if (etry->journalContext->cursor != NULL) {
-                int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
+                int test = journalAtCursor(etry->journalContext->j, etry->journalContext->cursor);
                 if (test == 1) {
                     DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
                     continue;
                 } else if (test < 0) {
-                    LogError(-test, RS_RET_ERR, "imjournal: sd_journal_test_cursor() failed");
+                    LogError(-test, RS_RET_ERR, "imjournal: checking the journal cursor failed");
                     CHKiRet(tryRecover(etry->journalContext, stateFile));
                     continue;
                 }
