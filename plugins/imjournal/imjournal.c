@@ -1139,6 +1139,27 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
                         iRet = RS_RET_ERR;
                     }
                     journalContext->atHead = 1;
+                } else if (journalAtCursor(journalContext->j, readCursor) == 0) {
+                    /*
+                     * The entry referenced by the saved cursor no longer exists
+                     * (e.g. it was vacuumed or its file was rotated away), so
+                     * sd_journal_seek_cursor() placed us next to where it used to be
+                     * and sd_journal_next() already moved onto the first entry that
+                     * has not been processed yet. doRun() calls sd_journal_next()
+                     * before reading, so step back to avoid dropping that entry.
+                     */
+                    r = sd_journal_previous(journalContext->j);
+                    if (r == 0) {
+                        /* the first unread entry is the first entry of the journal */
+                        if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
+                            LogError(-r, RS_RET_ERR, "imjournal: sd_journal_seek_head() failed\n");
+                            iRet = RS_RET_ERR;
+                        }
+                        journalContext->atHead = 1;
+                    } else if (r < 0) {
+                        LogError(-r, RS_RET_ERR, "imjournal: sd_journal_previous() failed\n");
+                        iRet = RS_RET_ERR;
+                    }
                 }
                 free(tmp_cursor);
             }
