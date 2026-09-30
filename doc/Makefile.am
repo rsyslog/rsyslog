@@ -622,6 +622,7 @@ EXTRA_DIST = \
     source/reference/parameters/imjournal-ratelimit-interval.rst \
     source/reference/parameters/imjournal-ratelimit-name.rst \
     source/reference/parameters/imjournal-remote.rst \
+    source/reference/parameters/imjournal-scopebybootid.rst \
     source/reference/parameters/imjournal-statefile.rst \
     source/reference/parameters/imjournal-usepid.rst \
     source/reference/parameters/imjournal-usepidfromsystem.rst \
