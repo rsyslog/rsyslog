@@ -46,8 +46,8 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-nil
 EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
 
-TESTS_MERMAID_OFFLINE = mermaid-offline.py
-EXTRA_DIST += $(TESTS_MERMAID_OFFLINE)
+TESTS_MERMAID_OFFLINE = mermaid-offline.sh
+EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
 
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
