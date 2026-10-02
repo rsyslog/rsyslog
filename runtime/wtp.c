@@ -129,7 +129,7 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
     /* alloc and construct workers - this can only be done in finalizer as we previously do
      * not know the max number of workers
      */
-    CHKmalloc(pThis->pWrkr = malloc(sizeof(wti_t *) * pThis->iNumWorkerThreads));
+    CHKmalloc(pThis->pWrkr = calloc((size_t)pThis->iNumWorkerThreads, sizeof(wti_t *)));
 
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
         CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
@@ -165,7 +165,11 @@ BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODE
     assert(pThis->iCurNumWrkThrd == 0);
 
     /* destruct workers */
-    for (i = 0; i < pThis->iNumWorkerThreads; ++i) wtiDestruct(&pThis->pWrkr[i]);
+    if (pThis->pWrkr != NULL) {
+        for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
+            if (pThis->pWrkr[i] != NULL) wtiDestruct(&pThis->pWrkr[i]);
+        }
+    }
 
     free(pThis->pWrkr);
     pThis->pWrkr = NULL;
@@ -326,6 +330,80 @@ rsRetVal ATTR_NONNULL() wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj)
     RETiRet;
 }
 
+/* Local families never pass monotonic timestamps to the legacy realtime
+ * condition. Selection happens before publication of the pool to any thread. */
+rsRetVal wtpUseMonotonicTermination(wtp_t *const pThis) {
+#if defined(_POSIX_CLOCK_SELECTION) && _POSIX_CLOCK_SELECTION >= 0
+    pthread_condattr_t attr;
+    int ret;
+    if (pThis->pWrkr != NULL || pThis->iCurNumWrkThrd != 0) return RS_RET_PARAM_ERROR;
+    if (pthread_condattr_init(&attr) != 0) return RS_RET_ERR;
+    ret = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    if (ret == 0) {
+        ret = pthread_cond_destroy(&pThis->condThrdTrm);
+        if (ret == 0) {
+            ret = pthread_cond_init(&pThis->condThrdTrm, &attr);
+            if (ret != 0) pthread_cond_init(&pThis->condThrdTrm, NULL);
+        }
+    }
+    pthread_condattr_destroy(&attr);
+    if (ret != 0) return RS_RET_ERR;
+    pThis->monotonicTermination = 1;
+    return RS_RET_OK;
+#else
+    (void)pThis;
+    return RS_RET_NOT_IMPLEMENTED;
+#endif
+}
+
+rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
+    d_pthread_mutex_lock(pThis->pmutUsr);
+    wtpSetState(pThis, command);
+    wtpWakeupAllWrkr(pThis);
+    for (int i = 0; i < pThis->iNumWorkerThreads; ++i) wtiWakeupThrd(pThis->pWrkr[i]);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
+    return RS_RET_OK;
+}
+
+/* The local family has already exhausted its shared cooperative phase.
+ * Request every cancellation before joining any worker: the legacy helper
+ * waits and joins each slot and would serialize another grace period per FE.
+ * mutWtp keeps each pthread ID owned until its request is issued; startup and
+ * terminal WAIT_JOIN publication use the same mutex. No logging, sleep or join
+ * may reenter a queue or wait for worker cleanup while holding this mutex. */
+rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
+    rsRetVal result = RS_RET_OK;
+    if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
+    for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {
+        wti_t *const worker = pThis->pWrkr[i];
+        const int state = wtiGetState(worker);
+        if (state == WRKTHRD_RUNNING || state == WRKTHRD_INITIALIZING) {
+            const int cancelResult = pthread_cancel(worker->thrdID);
+            const int signalResult = pthread_kill(worker->thrdID, SIGTTIN);
+            if ((cancelResult != 0 && cancelResult != ESRCH) || (signalResult != 0 && signalResult != ESRCH))
+                result = RS_RET_ERR;
+        }
+    }
+    d_pthread_mutex_unlock(&pThis->mutWtp);
+    return result;
+}
+
+/* NULL deadline is reserved for joining after cancellation: resource lifetime
+ * cannot be bounded by a policy deadline while a callback still executes. */
+rsRetVal wtpWaitShutdownUntil(wtp_t *const pThis, const struct timespec *const deadline) {
+    int ret = 0;
+    if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
+    while (ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) != 0 && ret == 0) {
+        ret = deadline == NULL ? pthread_cond_wait(&pThis->condThrdTrm, &pThis->mutWtp)
+                               : pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, deadline);
+    }
+    wtpJoinTerminatedWrkr(pThis);
+    d_pthread_mutex_unlock(&pThis->mutWtp);
+    return ret == 0 ? RS_RET_OK : ret == ETIMEDOUT ? RS_RET_TIMED_OUT : RS_RET_ERR;
+}
+
 
 /* this function contains shared code for both regular worker shutdown as
  * well as shutdown via cancellation. We can not simply use pthread_cleanup_pop(1)
@@ -353,7 +431,10 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
     const int numWorkersNow = ATOMIC_LOAD_32BIT_RELAXED(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
     DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtpGetDbgHdr(pThis), (unsigned long)pWti,
               numWorkersNow);
-    if (numWorkersNow > 0) {
+    /* Local terminal publication must remain under mutWtp until broadcast.
+     * Emitting a queue message here could recurse into that local BE/pool.
+     * Debug output and the explicit local lifetime counters remain available. */
+    if (numWorkersNow > 0 && !pThis->monotonicTermination) {
         // TODO: did the thread ID experiment (pthread_self) work out? rgerhards, 2024-07-25
         LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
                "%s: worker thread %lx (%" PRIuPTR ") terminated, now %d active worker threads", wtpGetDbgHdr(pThis),
@@ -377,9 +458,12 @@ static void wtpWrkrExecCancelCleanup(void *arg) {
     d_pthread_mutex_lock(pThis->pmutUsr);
     wtiMarkExiting(pWti);
     d_pthread_mutex_unlock(pThis->pmutUsr);
+    /* Local monotonic waiters test the active count under mutWtp. Pair the
+     * cancellation transition with that mutex to prevent a lost final wake. */
+    if (pThis->monotonicTermination) d_pthread_mutex_lock(&pThis->mutWtp);
     wtpWrkrExecCleanup(pWti);
-
-    pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+    pthread_cond_broadcast(&pThis->condThrdTrm);
+    if (pThis->monotonicTermination) d_pthread_mutex_unlock(&pThis->mutWtp);
 }
 
 

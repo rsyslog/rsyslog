@@ -4514,6 +4514,90 @@ struct modListNode {
 static struct modListNode *modListRoot = NULL;
 static struct modListNode *modListLast = NULL;
 
+/* Cold-path S2 whitelist. Restrict paths to literal nonempty components so
+ * encoded separators, indirect names and global variables cannot slip through
+ * the ordinary prefix-based property classification. */
+int cnfvarIsLocalQueueSafe(const uchar *name) {
+    propid_t id;
+    if (name == NULL || propNameToID((uchar *)name, &id) != RS_RET_OK || (id != PROP_CEE && id != PROP_LOCAL_VAR))
+        return 0;
+    const uchar *p = name + (name[0] == '$');
+    if (*p != '!' && *p != '.') return 0;
+    ++p;
+    int haveComponent = 0;
+    for (; *p != '\0'; ++p) {
+        if (*p == '!') {
+            if (!haveComponent) return 0;
+            haveComponent = 0;
+        } else if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_') {
+            haveComponent = 1;
+        } else {
+            return 0;
+        }
+    }
+    return haveComponent;
+}
+
+static int cnfexprLocalQueueSafeDepth(const struct cnfexpr *const expr, const unsigned depth) {
+    if (expr == NULL || depth > 256) return 0;
+    switch (expr->nodetype) {
+        case 'N':
+        case 'S':
+            return 1;
+        case 'V':
+            return ((const struct cnfvar *)expr)->prop.id != PROP_GLOBAL_VAR;
+        case CMP_NE:
+        case CMP_EQ:
+        case CMP_LE:
+        case CMP_GE:
+        case CMP_LT:
+        case CMP_GT:
+        case CMP_STARTSWITH:
+        case CMP_ENDSWITH:
+        case CMP_STARTSWITHI:
+        case CMP_CONTAINS:
+        case CMP_CONTAINSI:
+        case OR:
+        case AND:
+        case '&':
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        case '%':
+            return cnfexprLocalQueueSafeDepth(expr->l, depth + 1) && cnfexprLocalQueueSafeDepth(expr->r, depth + 1);
+        case NOT:
+        case 'M':
+            return cnfexprLocalQueueSafeDepth(expr->r, depth + 1);
+        case 'F': {
+            const struct cnffunc *const f = (const struct cnffunc *)expr;
+            if (f->fPtr != doFunc_parse_json || f->nParams != 2 || f->expr[0]->nodetype != 'S' ||
+                f->expr[1]->nodetype != 'S')
+                return 0;
+            es_str_t *const dest = ((const struct cnfstringval *)f->expr[1])->estr;
+            es_str_t *const json = ((const struct cnfstringval *)f->expr[0])->estr;
+            /* es strings can contain embedded NUL; runtime conversion must not
+             * make the audited value differ from the value actually evaluated. */
+            const size_t len = es_strlen(dest);
+            const uchar *const bytes = es_getBufAddr(dest);
+            if (len < 3 || bytes[0] != '$' || bytes[1] != '!' || memchr(bytes, 0, len) != NULL ||
+                memchr(es_getBufAddr(json), 0, es_strlen(json)) != NULL)
+                return 0;
+            char *const name = es_str2cstr(dest, NULL);
+            if (name == NULL) return 0;
+            const int safe = cnfvarIsLocalQueueSafe((uchar *)name);
+            free(name);
+            return safe;
+        }
+        default:
+            return 0;
+    }
+}
+
+int cnfexprIsLocalQueueSafe(const struct cnfexpr *const expr) {
+    return cnfexprLocalQueueSafeDepth(expr, 0);
+}
+
 static struct scriptFunct functions[] = {
     {"strlen", 1, 1, doFunct_StrLen, NULL, NULL},
     {"getenv", 1, 1, doFunct_Getenv, NULL, NULL},
@@ -5402,6 +5486,7 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         cnfstmtDisable(cnfstmt);
         goto done;
     }
+    qqueueNoteLocalConfigIntent(lst);
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
         parser_errmsg("warnings occurred in file '%s' around line %d", cnfcurrfn, yylineno);

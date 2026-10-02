@@ -138,6 +138,7 @@ tests/runtime_unit_linkedlist
 tests/runtime_unit_msg_replace
 tests/runtime_unit_ommongodb_date
 tests/runtime_unit_parser_pri
+tests/runtime_unit_queue_lease
 tests/runtime_unit_stringbuf
 
 # Python cache artifacts

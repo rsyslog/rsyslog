@@ -60,6 +60,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <assert.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +83,9 @@
 #include "errmsg.h"
 #include "batch.h"
 #include "wti.h"
+#ifdef ENABLE_TESTBENCH
+    #include "queue_local.h"
+#endif
 #include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
@@ -113,6 +117,76 @@ static rsRetVal doSubmitToActionQComplex(action_t *const pAction, wti_t *const p
 static rsRetVal doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *const pWti, smsg_t *);
 static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWti);
 static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti);
+
+#ifdef ENABLE_TESTBENCH
+/* Cold-selected, one-shot dispatch stimulus for the local ownership test.
+ * The real module is bypassed exactly once with SUSPENDED. This is not a
+ * claim that omfile itself returns FORCE_TERM: the ordinary actionCommit
+ * retry loop must observe source shutdown and produce that result. All
+ * settings are initialized before input startup and freed after workers. */
+static struct {
+    action_t *action;
+    char *entry;
+    int releaseFd;
+    int fired;
+} localTestCommit = {.releaseFd = -1};
+
+static rsRetVal localTestCommitPrepare(action_t *const action) {
+    const char *const name = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ACTION");
+    if (name == NULL || action->pszName == NULL || strcmp(name, (const char *)action->pszName)) return RS_RET_OK;
+    const char *const entry = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ENTRY");
+    const char *const release = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_RELEASE");
+    struct stat st;
+    if (!runConf->bLocalConfigRequested || !action->isTransactional || action->pQueue->qType != QUEUETYPE_DIRECT ||
+        action->pMod->cnfName == NULL || strcmp((const char *)action->pMod->cnfName, "omfile") || entry == NULL ||
+        entry[0] != '/' || release == NULL || release[0] != '/' || localTestCommit.action != NULL)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    /* O_RDWR avoids a startup rendezvous with the test's later writer. */
+    const int fd = open(release, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) return RS_RET_LOCAL_QUEUE_CONFIG;
+    if (fstat(fd, &st) != 0 || !S_ISFIFO(st.st_mode) || fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK) < 0) {
+        close(fd);
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    }
+    localTestCommit.entry = strdup(entry);
+    if (localTestCommit.entry == NULL) {
+        close(fd);
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    localTestCommit.releaseFd = fd;
+    localTestCommit.action = action;
+    return RS_RET_OK;
+}
+
+static void localTestCommitCleanup(void *const context) {
+    int *const fds = context;
+    if (fds[0] >= 0) close(fds[0]);
+    if (fds[1] >= 0) close(fds[1]);
+}
+
+static void localTestCommitWait(void) {
+    int fds[2] = {localTestCommit.releaseFd, -1};
+    int oldCancelState;
+    char release;
+    ssize_t n;
+    /* Only the elected invocation consumes this fd; action destruction is
+     * after worker joins. No source or module mutex is held at dispatch. */
+    localTestCommit.releaseFd = -1;
+    pthread_cleanup_push(localTestCommitCleanup, fds);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
+    fds[1] = open(localTestCommit.entry, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NONBLOCK, 0600);
+    pthread_setcancelstate(oldCancelState, NULL);
+    if (fds[1] >= 0) {
+        const char marker[] = "transaction-dispatch=1 injected=SUSPENDED\n";
+        if (write(fds[1], marker, sizeof(marker) - 1) != sizeof(marker) - 1)
+            DBGPRINTF("local queue test: cannot publish transaction entry marker\n");
+    }
+    do {
+        n = read(fds[0], &release, 1);
+    } while (n < 0 && errno == EINTR);
+    pthread_cleanup_pop(1);
+}
+#endif
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj) DEFobjCurrIf(datetime) DEFobjCurrIf(module) DEFobjCurrIf(statsobj) DEFobjCurrIf(ruleset)
@@ -313,6 +387,14 @@ rsRetVal actionDestruct(action_t *const pThis) {
     if (pThis->pQueue != NULL) {
         qqueueDestruct(&pThis->pQueue);
     }
+#ifdef ENABLE_TESTBENCH
+    if (localTestCommit.action == pThis) {
+        if (localTestCommit.releaseFd >= 0) close(localTestCommit.releaseFd);
+        free(localTestCommit.entry);
+        localTestCommit.entry = NULL;
+        localTestCommit.action = NULL;
+    }
+#endif
 
     /* destroy stats object, if we have one (may not always be
      * be the case, e.g. if turned off)
@@ -1468,7 +1550,17 @@ static rsRetVal ATTR_NONNULL() actionCallCommitTransaction(action_t *const pThis
     DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n", pThis->pszName,
               getActStateName(pThis, pWti), nparams);
 
-    iRet = pThis->pMod->mod.om.commitTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, iparams, nparams);
+#ifdef ENABLE_TESTBENCH
+    if (localTestCommit.action == pThis && qqueueLocalWorker(pWti) &&
+        !__atomic_exchange_n(&localTestCommit.fired, 1, __ATOMIC_RELAXED)) {
+        localTestCommitWait();
+        iRet = RS_RET_SUSPENDED;
+    } else
+#endif
+    {
+        iRet =
+            pThis->pMod->mod.om.commitTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, iparams, nparams);
+    }
     DBGPRINTF(
         "actionCallCommitTransaction[%s] state: %s "
         "mod commitTransaction returned %d\n",
@@ -1945,6 +2037,10 @@ finalize_it:
         free(iparams);
     }
     wrkrInfo->p.tx.currIParam = 0; /* reset to beginning */
+#ifdef ENABLE_TESTBENCH
+    if (iRet == RS_RET_FORCE_TERM && pThis->isTransactional)
+        qqueueLocalTestNoteForceTerm(pWti, wrkrInfo->p.tx.currIParam);
+#endif
     RETiRet;
 }
 
@@ -2341,6 +2437,28 @@ PRAGMA_DIAGNOSTIC_POP
 DEFFUNC_llExecFunc(doActivateActions) {
     rsRetVal localRet;
     action_t *const pThis = (action_t *)pData;
+    rsRetVal *const preparationResult = pParam;
+    if (*preparationResult != RS_RET_OK) return *preparationResult;
+#ifdef ENABLE_TESTBENCH
+    localRet = localTestCommitPrepare(pThis);
+    if (localRet != RS_RET_OK) {
+        *preparationResult = localRet;
+        LogError(0, localRet, "local queue test: cannot prepare named transactional dispatch hook");
+        return localRet;
+    }
+#endif
+    if (runConf->bLocalConfigRequested && pThis->pMod->cnfName != NULL &&
+        !strcmp((const char *)pThis->pMod->cnfName, "omfile")) {
+        rsRetVal (*prepare)(void *) = NULL;
+        localRet = pThis->pMod->modQueryEtryPt((uchar *)"localQueuePrepareAction", (rsRetVal(**)()) & prepare);
+        if (localRet == RS_RET_OK && prepare != NULL) localRet = prepare(pThis->pModData);
+        if (localRet != RS_RET_OK || prepare == NULL) {
+            *preparationResult = localRet == RS_RET_OK ? RS_RET_LOCAL_QUEUE_CONFIG : localRet;
+            LogError(0, localRet, "local queue: cannot prepare qualified omfile action '%s' before input startup",
+                     pThis->pszName);
+            return *preparationResult;
+        }
+    }
     setSuspendMessageConfVars(pThis);
     localRet = qqueueStart(runConf, pThis->pQueue);
     if (localRet != RS_RET_OK) {
@@ -2371,7 +2489,12 @@ DEFFUNC_llExecFunc(doActivateActions) {
  */
 rsRetVal activateActions(void) {
     DEFiRet;
-    iRet = ruleset.IterateAllActions(runConf, doActivateActions, NULL);
+    /* The script action iterator intentionally ignores callback returns.
+     * Preserve the first local preparation failure in an explicit context so
+     * rsconf activation aborts before main/ruleset queues and inputs run. */
+    rsRetVal preparationResult = RS_RET_OK;
+    iRet = ruleset.IterateAllActions(runConf, doActivateActions, &preparationResult);
+    if (iRet == RS_RET_OK) iRet = preparationResult;
     RETiRet;
 }
 
@@ -2427,6 +2550,10 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
 
     for (i = 0; i < pblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
+        /* Record for later local-graph qualification even if this action was
+         * declared before scope=local. Preserve existing global conversions. */
+        if (pvals[i].val.datatype == 'N' && (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX))
+            pAction->bLocalQueueNumericError = 1;
         if (!strcmp(pblk.descr[i].name, "name")) {
             pAction->pszName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(pblk.descr[i].name, "type")) {
