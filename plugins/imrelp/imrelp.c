@@ -56,6 +56,9 @@ MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imrelp")
 
+/* librelp's supported DATALEN parser accepts at most nine decimal digits. */
+#define IMRELP_MAX_DATA_SIZE ((size_t)999999999)
+
 /* static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(glbl) DEFobjCurrIf(statsobj)
@@ -552,6 +555,12 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
             CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "maxdatasize")) {
+            if (pvals[i].val.d.n > (long long)IMRELP_MAX_DATA_SIZE) {
+                LogError(0, RS_RET_INVALID_PARAMS,
+                         "imrelp: maxDataSize (%lld) exceeds the largest value supported by librelp framing (%zu)",
+                         pvals[i].val.d.n, IMRELP_MAX_DATA_SIZE);
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
             inst->maxDataSize = (size_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
             if (!es_strconstcmp(pvals[i].val.d.estr, "none")) {
@@ -795,14 +804,26 @@ BEGINcheckCnf
         }
         std_checkRuleset(pModConf, inst);
 
-
+        if (inst->maxDataSize > IMRELP_MAX_DATA_SIZE) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imrelp: maxDataSize (%zu) exceeds the largest value supported by librelp framing (%zu)",
+                     inst->maxDataSize, IMRELP_MAX_DATA_SIZE);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+        maxMessageSize = (size_t)glbl.GetMaxLine(loadConf);
+        if (maxMessageSize > IMRELP_MAX_DATA_SIZE) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imrelp: global parameter maxMessageSize (%zu) exceeds the largest maxDataSize supported by "
+                     "librelp framing (%zu)",
+                     maxMessageSize, IMRELP_MAX_DATA_SIZE);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
         if (inst->maxDataSize == 0) {
             /* We set default value for maxDataSize here because
              * otherwise the maxMessageSize isn't set.
              */
             inst->maxDataSize = glbl.GetMaxLine(loadConf);
         }
-        maxMessageSize = (size_t)glbl.GetMaxLine(loadConf);
         if (inst->maxDataSize < maxMessageSize) {
             LogError(0, RS_RET_INVALID_PARAMS,
                      "error: "
