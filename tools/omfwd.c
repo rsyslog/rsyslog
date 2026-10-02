@@ -120,15 +120,14 @@ typedef struct _instanceData {
     char *targetSrv;
     int nPorts;
     char **ports;
-    char *address;
+    net_source_policy_t *source_policy; /**< Immutable configured source-address selection policy */
     char *device;
     int compressionLevel; /* 0 - no compression, else level for zlib */
 #define COMPRESS_DRIVER_ZLIB 0
 #define COMPRESS_DRIVER_ZSTD 1
     uint8_t compressionDriver;
     int protocol;
-    char *networkNamespace;
-    int originalNamespace;
+    char *network_namespace;
     int iRebindInterval; /* rebind interval */
     sbool bKeepAlive;
     int iKeepAliveIntvl;
@@ -164,6 +163,17 @@ typedef struct _instanceData {
     targetStats_t *target_stats;
 } instanceData;
 
+/**
+ * @brief Worker-owned UDP socket bound to one source-policy entry.
+ * @details Nodes are created lazily during UDP delivery and cached per target
+ *          until that target is destroyed or rebound.
+ */
+typedef struct udpSourceSocket_s {
+    const net_source_entry_t *source; /**< Policy entry that selected this bound socket */
+    int fd; /**< UDP socket descriptor bound to @c source */
+    struct udpSourceSocket_s *next; /**< Next socket in the target's cache */
+} udpSourceSocket_t;
+
 typedef struct targetData {
     instanceData *pData;
     struct wrkrInstanceData *pWrkrData; /* forward def of struct */
@@ -172,7 +182,8 @@ typedef struct targetData {
     char *target_name;
     char *port;
     struct addrinfo *f_addr;
-    int *pSockArray; /* sockets to use for UDP */
+    int *pSockArray; /**< Legacy UDP sockets for OS-selected source addresses; unused with source_policy */
+    udpSourceSocket_t *udpSourceSockets; /**< Per-policy-source UDP socket cache; unused without source_policy */
     int bIsConnected; /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
     int nXmit; /* number of transmissions since last (re-)bind */
     tcpclt_t *pTCPClt; /* our tcpclt object */
@@ -236,7 +247,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 static struct cnfparamdescr actpdescr[] = {
     {"target", eCmdHdlrArray, 0},
     {"targetsrv", eCmdHdlrGetWord, 0},
-    {"address", eCmdHdlrGetWord, 0},
+    {"address", eCmdHdlrArray, 0},
     {"device", eCmdHdlrGetWord, 0},
     {"port", eCmdHdlrArray, 0},
     {"protocol", eCmdHdlrGetWord, 0},
@@ -831,8 +842,14 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         net.closeUDPListenSockets(pTarget->pSockArray);
         pTarget->pSockArray = NULL;
     }
+    while (pTarget->udpSourceSockets != NULL) {
+        udpSourceSocket_t *const next = pTarget->udpSourceSockets->next;
+        close(pTarget->udpSourceSockets->fd);
+        free(pTarget->udpSourceSockets);
+        pTarget->udpSourceSockets = next;
+    }
     if (pTarget->f_addr != NULL) {
-        freeaddrinfo(pTarget->f_addr);
+        net.netns_freeaddrinfo(pTarget->f_addr);
         pTarget->f_addr = NULL;
     }
 
@@ -1045,7 +1062,7 @@ BEGINfreeInstance
     free(pData->pszStrmDrvrRemoteSNI);
     free(pData->gnutlsPriorityString);
     free(pData->targetSrv);
-    free(pData->networkNamespace);
+    free(pData->network_namespace);
     if (pData->ports != NULL) { /* could happen in error case (very unlikely) */
         for (int j = 0; j < pData->nPorts; ++j) {
             free(pData->ports[j]);
@@ -1060,7 +1077,7 @@ BEGINfreeInstance
         free(pData->target_stats);
     }
     free(pData->target_name);
-    free(pData->address);
+    net.source_policy_destruct(&pData->source_policy);
     free(pData->device);
     free((void *)pData->pszStrmDrvrCAFile);
     free((void *)pData->pszStrmDrvrCRLFile);
@@ -1104,10 +1121,91 @@ ENDdbgPrintInstInfo
  * rgehards, 2007-12-20
  */
 #define UDP_MAX_MSGSIZE 65507 /* limit per RFC definition */
+/**
+ * @brief Return or lazily create a worker-owned UDP socket for a source entry.
+ * @param pTarget Worker-local target state containing the socket cache.
+ * @param source Borrowed entry from the action's immutable source policy.
+ * @return Cached or newly created socket descriptor, or -1 on failure.
+ * @details Cache nodes and descriptors are owned by @p pTarget and released by
+ *        DestructTargetData(). Entry pointers remain owned by the action policy.
+ */
+static int get_udp_source_socket(targetData_t *const pTarget, const net_source_entry_t *const source) {
+    for (udpSourceSocket_t *socket = pTarget->udpSourceSockets; socket != NULL; socket = socket->next) {
+        if (socket->source == source) {
+            return socket->fd;
+        }
+    }
+
+    udpSourceSocket_t *created = calloc(1, sizeof(*created));
+    if (created == NULL) {
+        return -1;
+    }
+    created->fd = -1;
+    instanceData *const pData = pTarget->pData;
+    if (net.create_udp_source_socket(&created->fd, source, pData->UDPSendBuf, pData->ipfreebind, pData->device,
+                                     pData->network_namespace) != RS_RET_OK) {
+        free(created);
+        return -1;
+    }
+    created->source = source;
+    created->next = pTarget->udpSourceSockets;
+    pTarget->udpSourceSockets = created;
+    return created->fd;
+}
+
+/**
+ * @brief Send one datagram through a specific UDP socket.
+ * @param stats Target counters updated after a successful send.
+ * @param socket Socket descriptor used for sendto().
+ * @param msg Message bytes to send.
+ * @param len Number of bytes in @p msg.
+ * @param destination Destination socket address.
+ * @param destinationLength Size of @p destination.
+ * @param sent Output containing the final sendto() result.
+ * @param reInit Set true after a non-EMSGSIZE send failure.
+ * @param lastErrno Output containing the final socket error.
+ * @param lastSocket Output containing the descriptor that failed.
+ * @return RSTRUE after a successful datagram send, otherwise RSFALSE.
+ * @details EMSGSIZE causes bounded payload truncation and retry, preserving
+ *        the historical omfwd UDP behavior.
+ */
+static sbool send_udp_socket(targetStats_t *const stats,
+                             int socket,
+                             const uchar *const msg,
+                             size_t len,
+                             const struct sockaddr *const destination,
+                             socklen_t destinationLength,
+                             ssize_t *const sent,
+                             sbool *const reInit,
+                             int *const lastErrno,
+                             int *const lastSocket) {
+    size_t lenThisTry = len;
+    while (1) {
+        *sent = sendto(socket, msg, lenThisTry, 0, destination, destinationLength);
+        const int sendErrno = errno;
+        if (*sent == (ssize_t)lenThisTry) {
+            ATOMIC_ADD_uint64(&stats->sentBytes, &stats->mut_sentBytes, lenThisTry);
+            return RSTRUE;
+        }
+        if (sendErrno == EMSGSIZE) {
+            const size_t newlen = lenThisTry > 1024 ? lenThisTry - 1024 : 512;
+            LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE,
+                     "omfwd/udp: message size %u is too large for this system; truncating to %u and retrying",
+                     (unsigned)lenThisTry, (unsigned)newlen);
+            lenThisTry = newlen;
+            continue;
+        }
+        *reInit = RSTRUE;
+        *lastErrno = sendErrno;
+        *lastSocket = socket;
+        LogError(sendErrno, RS_RET_ERR_UDPSEND, "omfwd/udp: socket %d: sendto() error", socket);
+        return RSFALSE;
+    }
+}
+
 static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar *__restrict__ const msg, size_t len) {
     DEFiRet;
     struct addrinfo *r;
-    int i;
     ssize_t lsent = 0;
     sbool bSendSuccess;
     sbool reInit = RSFALSE;
@@ -1122,11 +1220,11 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
         DestructTargetData(pTarget, 1);
     }
 
-    if (pWrkrData->target[0].pSockArray == NULL) {
+    if (!pTarget->bIsConnected) {
         CHKiRet(doTryResume(pTarget)); /* for UDP, we have only a single target! */
     }
 
-    if (pTarget->pSockArray == NULL) {
+    if (!pTarget->bIsConnected) {
         FINALIZE;
     }
 
@@ -1149,37 +1247,31 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
      */
     bSendSuccess = RSFALSE;
     for (r = pTarget->f_addr; r; r = r->ai_next) {
-        int runSockArrayLoop = 1;
-        for (i = 0; runSockArrayLoop && (i < *pTarget->pSockArray); i++) {
-            int try_send = 1;
-            size_t lenThisTry = len;
-            while (try_send) {
-                int sendErrno;
-                lsent = sendto(pTarget->pSockArray[i + 1], msg, lenThisTry, 0, r->ai_addr, r->ai_addrlen);
-                sendErrno = errno;
-                if (lsent == (ssize_t)lenThisTry) {
-                    bSendSuccess = RSTRUE;
-                    ATOMIC_ADD_uint64(&pTargetStats->sentBytes, &pTargetStats->mut_sentBytes, lenThisTry);
-                    try_send = 0;
-                    runSockArrayLoop = 0;
-                } else if (sendErrno == EMSGSIZE) {
-                    const size_t newlen = (lenThisTry > 1024) ? lenThisTry - 1024 : 512;
-                    LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE,
-                             "omfwd/udp: send failed due to message being too "
-                             "large for this system. Message size was %u bytes. "
-                             "Truncating to %u bytes and retrying.",
-                             (unsigned)lenThisTry, (unsigned)newlen);
-                    lenThisTry = newlen;
-                } else {
-                    reInit = RSTRUE;
-                    lasterrno = sendErrno;
-                    lasterr_sock = pTarget->pSockArray[i + 1];
-                    LogError(lasterrno, RS_RET_ERR_UDPSEND, "omfwd/udp: socket %d: sendto() error", lasterr_sock);
-                    try_send = 0;
+        sbool sentToDestination = RSFALSE;
+        if (pWrkrData->pData->source_policy == NULL) {
+            for (int i = 0; !sentToDestination && i < *pTarget->pSockArray; ++i) {
+                sentToDestination = send_udp_socket(pTargetStats, pTarget->pSockArray[i + 1], msg, len, r->ai_addr,
+                                                    r->ai_addrlen, &lsent, &reInit, &lasterrno, &lasterr_sock);
+            }
+        } else {
+            const net_source_entry_t *source = NULL;
+            while (!sentToDestination &&
+                   (source = net.source_policy_select(pWrkrData->pData->source_policy, r->ai_addr, source)) != NULL) {
+                const int socket = get_udp_source_socket(pTarget, source);
+                if (socket < 0) {
+                    lasterrno = errno == 0 ? EADDRNOTAVAIL : errno;
+                    continue;
                 }
+                sentToDestination = send_udp_socket(pTargetStats, socket, msg, len, r->ai_addr, r->ai_addrlen, &lsent,
+                                                    &reInit, &lasterrno, &lasterr_sock);
             }
         }
-        if (lsent == (ssize_t)len && !pWrkrData->pData->bSendToAll) break;
+        if (sentToDestination) {
+            bSendSuccess = RSTRUE;
+        }
+        if (sentToDestination && !pWrkrData->pData->bSendToAll) {
+            break;
+        }
     }
 
     /* one or more send failures; close sockets and re-init */
@@ -1554,7 +1646,13 @@ finalize_it:
 }
 
 
-/* initializes a TCP session to a single Target
+/**
+ * @brief Initialize one worker-local TCP or TLS target connection.
+ * @param pTarget Worker-owned target state to initialize and connect.
+ * @return RS_RET_OK on success or an rsRetVal stream, driver, or connection error.
+ * @details Constructs the selected stream driver, applies immutable action
+ *        settings, and passes namespace and source policy through Connect2().
+ *        Partial transport state is destroyed on failure.
  */
 static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
     DEFiRet;
@@ -1604,8 +1702,15 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
             CHKiRet(netstrm.SetGnutlsPriorityString(pTarget->pNetstrm, pData->gnutlsPriorityString));
         }
         CHKiRet(netstrm.SetTcpUserTimeout(pTarget->pNetstrm, pData->tcp_user_timeout_ms));
-        CHKiRet(netstrm.Connect(pTarget->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf), (uchar *)pTarget->port,
-                                (uchar *)pTarget->target_name, pData->device));
+        const nsd_connect_params_t connectParams = {NSD_CONNECT_PARAMS_VERSION,
+                                                    glbl.GetDefPFFamily(runModConf->pConf),
+                                                    (uchar *)pTarget->port,
+                                                    (uchar *)pTarget->target_name,
+                                                    pData->device,
+                                                    pData->network_namespace,
+                                                    pData->source_policy,
+                                                    pData->ipfreebind};
+        CHKiRet(netstrm.Connect2(pTarget->pNetstrm, &connectParams));
 
         ATOMIC_INC_uint64(&pTarget->pTargetStats->numConnects, &pTarget->pTargetStats->mut_numConnects);
 
@@ -1649,42 +1754,6 @@ static rsRetVal TCPSendPrepRetry(void *pvData) {
      * provide a return status.
      */
     return RS_RET_OK;
-}
-
-
-/* change to network namespace pData->networkNamespace and keep the file
- * descriptor to the original namespace.
- */
-static rsRetVal changeToNs(instanceData *const pData __attribute__((unused))) {
-    DEFiRet;
-#ifdef HAVE_SETNS
-    if (pData->networkNamespace) {
-        CHKiRet(net.netns_save(&pData->originalNamespace));
-        CHKiRet(net.netns_switch(pData->networkNamespace));
-    }
-finalize_it:
-#else /* #ifdef HAVE_SETNS */
-    dbgprintf("omfwd: OS does not support network namespaces\n");
-#endif /* #ifdef HAVE_SETNS */
-    RETiRet;
-}
-
-
-/* return to the original network namespace. This should be called after
- * changeToNs().
- */
-static rsRetVal returnToOriginalNs(instanceData *const pData __attribute__((unused))) {
-    DEFiRet;
-#ifdef HAVE_SETNS
-    /* only in case a network namespace is given and a file descriptor to
-     * the original namespace exists */
-    if (pData->networkNamespace && pData->originalNamespace >= 0) {
-        CHKiRet(net.netns_restore(&pData->originalNamespace));
-        dbgprintf("omfwd: returned to original network namespace\n");
-    }
-finalize_it:
-#endif /* #ifdef HAVE_SETNS */
-    RETiRet;
 }
 
 
@@ -1754,9 +1823,6 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
     int iErr;
     struct addrinfo *res = NULL;
     struct addrinfo hints;
-    int bBindRequired = 0;
-    int bNeedReturnNs = 0;
-    const char *address;
     DEFiRet;
 
     const int nActiveTargets =
@@ -1787,60 +1853,47 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
         hints.ai_flags = AI_NUMERICSERV;
         hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
         hints.ai_socktype = SOCK_DGRAM;
-        if ((iErr = (getaddrinfo(pTarget->target_name, pTarget->port, &hints, &res))) != 0) {
+        if ((iErr = (net.netns_getaddrinfo(pTarget->target_name, pTarget->port, &hints, &res,
+                                           pData->network_namespace))) != 0) {
             LogError(0, RS_RET_SUSPENDED, "omfwd: could not get addrinfo for hostname '%s':'%s': %s",
-                     pTarget->target_name, pTarget->port, gai_strerror(iErr));
+                     pTarget->target_name, pTarget->port, net.netns_gai_strerror(iErr));
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
-        address = pTarget->target_name;
-        if (pData->address) {
-            struct addrinfo *addr;
-            /* The AF of the bind addr must match that of target */
-            hints.ai_family = res->ai_family;
-            hints.ai_flags |= AI_PASSIVE;
-            iErr = getaddrinfo(pData->address, pTarget->port, &hints, &addr);
-            if (iErr != 0) {
-                LogError(0, RS_RET_SUSPENDED, "omfwd: cannot use bind address '%s' for host '%s': %s", pData->address,
-                         pTarget->target_name, gai_strerror(iErr));
+        if (pData->source_policy != NULL) {
+            const struct addrinfo *destination;
+            for (destination = res; destination != NULL; destination = destination->ai_next) {
+                if (net.source_policy_select(pData->source_policy, destination->ai_addr, NULL) != NULL) {
+                    break;
+                }
+            }
+            if (destination == NULL) {
+                LogError(0, RS_RET_SUSPENDED, "omfwd: no configured source address matches a destination family");
                 ABORT_FINALIZE(RS_RET_SUSPENDED);
             }
-            freeaddrinfo(addr);
-            bBindRequired = 1;
-            address = pData->address;
         }
         DBGPRINTF("%s found, resuming.\n", pTarget->target_name);
         pTarget->f_addr = res;
         res = NULL;
-        if (pTarget->pSockArray == NULL) {
-            CHKiRet(changeToNs(pData));
-            bNeedReturnNs = 1;
-            pTarget->pSockArray = net.create_udp_socket((uchar *)address, NULL, bBindRequired, 0, pData->UDPSendBuf,
-                                                        pData->ipfreebind, pData->device);
-            CHKiRet(returnToOriginalNs(pData));
-            bNeedReturnNs = 0;
+        if (pData->source_policy == NULL && pTarget->pSockArray == NULL) {
+            pTarget->pSockArray =
+                net.netns_create_udp_socket((uchar *)pTarget->target_name, NULL, 0, 0, pData->UDPSendBuf,
+                                            pData->ipfreebind, pData->device, pData->network_namespace);
         }
-        if (pTarget->pSockArray != NULL) {
+        if (pData->source_policy != NULL || pTarget->pSockArray != NULL) {
             pTarget->bIsConnected = 1;
         }
     } else {
-        CHKiRet(changeToNs(pData));
-        bNeedReturnNs = 1;
         CHKiRet(TCPSendInitTarget((void *)pTarget));
-        CHKiRet(returnToOriginalNs(pData));
-        bNeedReturnNs = 0;
         pTarget->bIsConnected = 1;
     }
 
 finalize_it:
     if (res != NULL) {
-        freeaddrinfo(res);
+        net.netns_freeaddrinfo(res);
     }
     if (iRet != RS_RET_OK) {
-        if (bNeedReturnNs) {
-            returnToOriginalNs(pData);
-        }
         if (pTarget->f_addr != NULL) {
-            freeaddrinfo(pTarget->f_addr);
+            net.netns_freeaddrinfo(pTarget->f_addr);
             pTarget->f_addr = NULL;
         }
         iRet = RS_RET_SUSPENDED;
@@ -2153,8 +2206,8 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->pAction = NULL;
     pData->targetSrv = NULL;
     pData->protocol = FORW_UDP;
-    pData->networkNamespace = NULL;
-    pData->originalNamespace = -1;
+    pData->network_namespace = NULL;
+    pData->source_policy = NULL;
     pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
     pData->tcp_framingDelimiter = '\n';
     pData->pszStrmDrvr = NULL;
@@ -2333,6 +2386,43 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Convert an omfwd Address configuration array into a source policy.
+ * @param pData Action instance that takes ownership of the constructed policy.
+ * @param array Borrowed configuration array; scalar Address values have already
+ *        been normalized to one element by nvlstGetParams().
+ * @return RS_RET_OK on success or an rsRetVal conversion, parse, or allocation error.
+ * @details Temporary C strings are always freed before return. An empty array
+ *        leaves the action policy NULL and therefore retains OS source selection.
+ */
+static rsRetVal construct_source_policy(instanceData *const pData, const struct cnfarray *const array) {
+    char **specs = NULL;
+    size_t converted = 0;
+    DEFiRet;
+
+    if (array->nmemb == 0) {
+        CHKiRet(net.source_policy_construct(&pData->source_policy, NULL, 0));
+        FINALIZE;
+    }
+    CHKmalloc(specs = calloc((size_t)array->nmemb, sizeof(*specs)));
+    for (; converted < (size_t)array->nmemb; ++converted) {
+        CHKmalloc(specs[converted] = (char *)es_str2cstr(array->arr[converted], NULL));
+    }
+    iRet = net.source_policy_construct(&pData->source_policy, (const char *const *)specs, converted);
+    if (iRet != RS_RET_OK) {
+        parser_errmsg("omfwd: invalid source address in address parameter");
+    }
+
+finalize_it:
+    if (specs != NULL) {
+        for (size_t index = 0; index < converted; ++index) {
+            free(specs[index]);
+        }
+    }
+    free(specs);
+    RETiRet;
+}
+
 
 BEGINnewActInst
     struct cnfparamvals *pvals;
@@ -2371,7 +2461,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "targetsrv")) {
             CHKmalloc(pData->targetSrv = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "address")) {
-            CHKmalloc(pData->address = es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKiRet(construct_source_policy(pData, pvals[i].val.d.ar));
         } else if (!strcmp(actpblk.descr[i].name, "device")) {
             CHKmalloc(pData->device = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
@@ -2401,7 +2491,7 @@ BEGINnewActInst
                 ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
             }
         } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
-            CHKmalloc(pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKmalloc(pData->network_namespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tcp_framing")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"traditional", 11)) {
                 pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -2689,10 +2779,6 @@ BEGINnewActInst
         }
     }
 
-    if (pData->address && (pData->protocol == FORW_TCP)) {
-        LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter \"address\" not supported for tcp -- ignored");
-    }
-
     warnIfNonTlsForwardingConfigured(pData);
 
     if (pData->pszRatelimitName != NULL) {
@@ -2816,7 +2902,7 @@ BEGINparseSelectorAct
 
     pData->tcp_framing = tcp_framing;
     pData->ports = NULL;
-    pData->networkNamespace = NULL;
+    pData->network_namespace = NULL;
 
     CHKmalloc(pData->target_name = (char **)malloc(sizeof(char *) * pData->nTargets));
     CHKmalloc(pData->ports = (char **)calloc(pData->nTargets, sizeof(char *)));

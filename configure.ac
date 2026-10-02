@@ -193,6 +193,28 @@ AC_SEARCH_LIBS(gai_error, anl)
 GAI_LIBS=$LIBS
 LIBS=$save_LIBS
 
+save_LIBS=$LIBS
+LIBS="$LIBS $GAI_LIBS"
+AC_LINK_IFELSE(
+	[AC_LANG_PROGRAM([[
+#define _GNU_SOURCE 1
+#include <netdb.h>
+#include <signal.h>
+#include <time.h>
+	]], [[
+		struct gaicb req;
+		struct gaicb *list[1];
+		struct timespec timeout;
+		list[0] = &req;
+		return getaddrinfo_a(GAI_NOWAIT, list, 1, (struct sigevent *) 0) +
+			gai_suspend((const struct gaicb *const *)list, 1, &timeout) +
+			gai_error(&req) +
+			gai_cancel(&req);
+	]])],
+	[AC_DEFINE([HAVE_GNU_GETADDRINFO_A], [1],
+		[Define if GNU getaddrinfo_a and gai_* APIs are available])])
+LIBS=$save_LIBS
+
 AC_SUBST(RT_LIBS)
 AC_SUBST(DL_LIBS)
 AC_SUBST(GAI_LIBS)
@@ -276,7 +298,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf vasprintf close_range pthread_setname_np])
+AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir ppoll regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf vasprintf close_range pthread_setname_np])
 AC_CHECK_DECLS([asprintf, vasprintf], [], [], [[#include <stdio.h>]])
 AC_CHECK_FUNC([setns], [AC_DEFINE([HAVE_SETNS], [1], [Define if setns exists.])])
 AC_CHECK_TYPES([off64_t])

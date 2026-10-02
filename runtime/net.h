@@ -25,9 +25,13 @@
 #define INCLUDED_NET_H
 
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
+#include <signal.h>
+#include <time.h>
 #include <sys/socket.h> /* this is needed on HP UX -- rgerhards, 2008-03-04 */
 #include "netns_socket.h"
+#include "netns_gai.h"
 
 typedef enum _TCPFRAMINGMODE {
     TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
@@ -154,8 +158,6 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
     void (*PrintAllowedSenders)(int iListToPrint);
     void (*clearAllowedSenders)(uchar *);
     void (*debugListenInfo)(int fd, char *type);
-    int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int sndbuf, int ipfreebind,
-                              char *device);
     void (*closeUDPListenSockets)(int *finet);
     int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
     rsRetVal (*getLocalHostname)(rsconf_t *const, uchar **);
@@ -233,8 +235,147 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
      *          that fd and reset the value to -1.
      */
     rsRetVal (*netns_restore)(int *fd);
+    /* v13 resolver and source-selection additions */
+    /**
+     * @brief Resolve a node and service through the configured resolver backend.
+     * @param node Host name or numeric address, or NULL.
+     * @param service Service name or numeric port, or NULL.
+     * @param hints Optional getaddrinfo() hints.
+     * @param res Output result list owned by the caller on success.
+     * @param ns Optional namespace name, or NULL/empty for the current namespace.
+     * @return Zero on success or an EAI_* resolver error.
+     */
+    int (*netns_getaddrinfo)(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res,
+                             const char *ns);
+    /**
+     * @brief Release a resolver list returned by netns_getaddrinfo().
+     * @param res Owned result list; NULL is permitted.
+     */
+    void (*netns_freeaddrinfo)(struct addrinfo *res);
+    /**
+     * @brief Convert an EAI_* resolver error to text.
+     * @param errcode Resolver error code.
+     * @return Static error-description string.
+     */
+    const char *(*netns_gai_strerror)(int errcode);
+    /**
+     * @brief Reverse-resolve a socket address with cancellation disabled.
+     * @param sa Socket address to resolve.
+     * @param salen Size of @p sa.
+     * @param host Optional output host buffer.
+     * @param hostlen Size of @p host.
+     * @param serv Optional output service buffer.
+     * @param servlen Size of @p serv.
+     * @param flags NI_* resolver flags.
+     * @param ns Optional namespace name, or NULL/empty for the current namespace.
+     * @return Zero on success or an EAI_* resolver error.
+     * @details The wrapper restores the caller's prior cancellation state.
+     */
+    int (*netns_getnameinfo)(const struct sockaddr *sa, socklen_t salen, char *host, socklen_t hostlen, char *serv,
+                             socklen_t servlen, int flags, const char *ns);
+#ifdef HAVE_GNU_GETADDRINFO_A
+    /**
+     * @brief Submit asynchronous resolver requests.
+     * @param mode GNU resolver mode, such as GAI_WAIT or GAI_NOWAIT.
+     * @param list Array of request pointers owned by the caller.
+     * @param ent Number of requests in @p list.
+     * @param sig Optional completion notification.
+     * @param ns Optional namespace name, or NULL/empty for the current namespace.
+     * @return Zero on submission success or an EAI_* resolver error.
+     */
+    int (*netns_getaddrinfo_a)(int mode, struct gaicb *list[__restrict_arr], int ent, struct sigevent *sig,
+                               const char *ns);
+    /**
+     * @brief Wait for at least one asynchronous resolver request.
+     * @param list Array of submitted request pointers.
+     * @param ent Number of requests in @p list.
+     * @param timeout Optional relative timeout.
+     * @return Zero on completion or an EAI_* status.
+     */
+    int (*netns_gai_suspend)(const struct gaicb *const list[], int ent, const struct timespec *timeout);
+    /**
+     * @brief Query one asynchronous resolver request.
+     * @param req Submitted request to inspect.
+     * @return EAI_INPROGRESS, zero, or another EAI_* status.
+     */
+    int (*netns_gai_error)(struct gaicb *req);
+    /**
+     * @brief Attempt to cancel one asynchronous resolver request.
+     * @param req Submitted request, or NULL where supported by the backend.
+     * @return An EAI_* cancellation status.
+     */
+    int (*netns_gai_cancel)(struct gaicb *req);
+#endif /* HAVE_GNU_GETADDRINFO_A */
+    /**
+     * @brief Create UDP sockets in an optional network namespace.
+     * @param hostname Local server address or client socket address; may be
+     *        NULL when @p LogPort is provided.
+     * @param LogPort Local service/port; may be NULL when @p hostname is provided.
+     * @param bIsServer Nonzero to bind and configure nonblocking server sockets.
+     * @param rcvbuf Requested receive-buffer size, or zero for the OS default.
+     * @param sndbuf Requested send-buffer size, or zero for the OS default.
+     * @param ipfreebind IPFREEBIND_* mode used when a server bind reports
+     *        EADDRNOTAVAIL.
+     * @param device Optional SO_BINDTODEVICE name.
+     * @param network_namespace Optional namespace name, or NULL/empty for the
+     *        calling thread's current namespace.
+     * @return Owned integer array whose first element is the socket count, or
+     *         NULL when no socket can be created. Destroy it with
+     *         closeUDPListenSockets().
+     */
+    int *(*netns_create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int sndbuf,
+                                    int ipfreebind, char *device, const char *network_namespace);
+    /**
+     * @brief Construct an immutable source-address selection policy.
+     * @param policy Output location, which must point to NULL on entry.
+     * @param specs Numeric source-address strings with optional CIDR prefixes.
+     * @param count Number of entries in @p specs; zero produces a NULL policy.
+     * @return RS_RET_OK on success or an rsRetVal argument, parse, or allocation error.
+     */
+    rsRetVal (*source_policy_construct)(net_source_policy_t **policy, const char *const *specs, size_t count);
+    /**
+     * @brief Destroy an owned source-address policy.
+     * @param policy Address of the policy pointer; reset to NULL on return.
+     */
+    void (*source_policy_destruct)(net_source_policy_t **policy);
+    /**
+     * @brief Select the next ranked source entry for a destination.
+     * @param policy Immutable source policy.
+     * @param destination Concrete destination socket address.
+     * @param after Previously returned entry, or NULL for the first selection.
+     * @return Borrowed next entry, or NULL when no compatible entry remains.
+     */
+    const net_source_entry_t *(*source_policy_select)(
+        const net_source_policy_t *policy, const struct sockaddr *destination, const net_source_entry_t *after);
+    /**
+     * @brief Bind a socket to one selected source entry.
+     * @param fd Open socket whose family matches @p entry.
+     * @param entry Borrowed source-policy entry.
+     * @param ipfreebind IPFREEBIND_* mode for a nonlocal source address.
+     * @return RS_RET_OK on success or an rsRetVal argument or bind error.
+     */
+    rsRetVal (*source_policy_bind)(int fd, const net_source_entry_t *entry, int ipfreebind);
+    /**
+     * @brief Return the number of entries in a source policy.
+     * @param policy Policy to inspect, or NULL for an empty policy.
+     * @return Number of configured source entries.
+     */
+    size_t (*source_policy_count)(const net_source_policy_t *policy);
+    /**
+     * @brief Create and bind one UDP client socket for a selected source entry.
+     * @param fd Output descriptor location; set to -1 on failure.
+     * @param source Borrowed source-policy entry to bind.
+     * @param sndbuf Requested send-buffer size, or zero for the OS default.
+     * @param ipfreebind IPFREEBIND_* mode for a nonlocal source address.
+     * @param device Optional SO_BINDTODEVICE name.
+     * @param network_namespace Optional namespace name, or NULL/empty for the
+     *        calling thread's current namespace.
+     * @return RS_RET_OK on success or an rsRetVal socket, option, or bind error.
+     */
+    rsRetVal (*create_udp_source_socket)(int *fd, const net_source_entry_t *source, int sndbuf, int ipfreebind,
+                                         char *device, const char *network_namespace);
 ENDinterface(net)
-#define netCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

@@ -97,8 +97,16 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar *file);
     /* v18 -- allow remote server's TLS SNI to be set manually */
     rsRetVal (*SetDrvrRemoteSNI)(netstrm_t *pThis, uchar *pszRemoteSNI);
+    /**
+     * @brief Open an outbound stream using versioned connection parameters.
+     * @param pThis Network-stream instance containing the active driver.
+     * @param params Borrowed parameters valid until this call returns.
+     * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for invalid parameters,
+     *         or the active driver's connection or TLS error.
+     */
+    rsRetVal (*Connect2)(netstrm_t *pThis, const nsd_connect_params_t *params);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 20 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 21 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -112,6 +120,7 @@ ENDinterface(netstrm)
  * interface version 18 added SetDrvrRemoteSNI -- jfcantu, 2020-01-15
  * interface version 19 added SetTcpUserTimeout
  * interface version 20 added SetDrvrTlsCAExtraFiles
+ * interface version 21 added Connect2
  * */
 
 /* prototypes */

@@ -72,6 +72,8 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 typedef rsRetVal (*errLogFunc_t)(uchar *);
 /* this is a trick to store a function ptr to a function returning a function ptr... */
 typedef struct permittedPeers_s permittedPeers_t;
+typedef struct net_source_policy_s net_source_policy_t;
+typedef struct net_source_entry_s net_source_entry_t;
 /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct permittedPeerWildcard_s permittedPeerWildcard_t;
 /* this should go away in the long term -- rgerhards, 2008-05-19 */

@@ -5,7 +5,9 @@
 # Each event is rendered before enqueue and again after action-queue recovery;
 # exact file equality is the oracle, so type, value, ordering, or field loss is
 # detected without depending on timing. A deliberately missing omfile parent
-# directory keeps the action suspended until the first daemon is killed.
+# directory keeps the action suspended until the first daemon is killed. A
+# marker written while processing the final message confirms that the complete
+# injection batch reached the blocked action before shutdown.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100
@@ -13,13 +15,14 @@ SPOOL_DIR="$PWD/${RSYSLOG_DYNNAME}.spool"
 REFERENCE_FILE="$PWD/${RSYSLOG_DYNNAME}.reference.log"
 RECOVERED_FILE="$PWD/${RSYSLOG_DYNNAME}.recovered.log"
 BLOCKED_FILE="$PWD/${RSYSLOG_DYNNAME}.missing/output.log"
+MARKER_FILE="$PWD/${RSYSLOG_DYNNAME}.blocked.marker"
 
 if [ "${SEGDISK_EVENT_DA:-0}" = 1 ]; then
 	SEGDISK_DA_QUEUE_TYPE=${SEGDISK_DA_QUEUE_TYPE:-LinkedList}
 	QUEUE_CONFIG='queue.type="'"$SEGDISK_DA_QUEUE_TYPE"'"
 	queue.filename="eventq"
 	queue.diskQueueType="segmentedDisk"
-	queue.size="20"
+	queue.size="100"
 	queue.highWatermark="5"
 	queue.lowWatermark="2"'
 else
@@ -77,6 +80,9 @@ if $msg contains "msgnum:" then {
 		queue.dequeueBatchSize="8"
 		queue.saveOnShutdown="on")
 }
+if $msg contains "msgnum:00000099" then {
+	action(type="omfile" file="'"$MARKER_FILE"'" template="eventSnapshot" queue.type="Direct")
+}
 '
 }
 
@@ -84,6 +90,7 @@ write_conf "$BLOCKED_FILE"
 startup
 injectmsg 0 "$NUMMESSAGES"
 wait_file_lines "$REFERENCE_FILE" "$NUMMESSAGES"
+wait_file_lines "$MARKER_FILE" 1
 shutdown_immediate
 if [ "${SEGDISK_EVENT_DA:-0}" != 1 ]; then
 	. "$srcdir/diag.sh" kill-immediate
