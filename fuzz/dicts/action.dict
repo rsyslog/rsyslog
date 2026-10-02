@@ -1,0 +1,12 @@
+# Action formatting dictionary.
+"action("
+"type=\"omfile\""
+"type=\"omfwd\""
+"target=\"127.0.0.1\""
+"protocol=\"tcp\""
+"template=\"RSYSLOG_FileFormat\""
+"template=\"RSYSLOG_ForwardFormat\""
+"RSYSLOG_FileFormat"
+"RSYSLOG_ForwardFormat"
+"RSYSLOG_TraditionalForwardFormat"
+"%msg%"

@@ -1,0 +1,2 @@
+# Malformed priority - no closing bracket
+<164Jan  1 00:00:00 localhost test: malformed priority
