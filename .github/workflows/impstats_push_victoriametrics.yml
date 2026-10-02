@@ -175,6 +175,6 @@ jobs:
 
       - name: Upload test failure evidence
         if: failure()
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: impstats-victoriametrics
