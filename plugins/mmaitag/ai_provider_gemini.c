@@ -89,21 +89,18 @@ finalize_it:
     RETiRet;
 }
 
-static CURLcode gemini_configure_transfer_limits(CURL *curl) {
+static CURLcode gemini_configure_transfer_limits(CURL *curl, const ai_provider_transfer_limits_t *limits) {
     CURLcode result;
 
     if ((result = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, mmaitag_gemini_response_write)) != CURLE_OK)
         return result;
     if ((result = curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L)) != CURLE_OK) return result;
-    if ((result = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, MMAITAG_GEMINI_TOTAL_TIMEOUT_MS)) != CURLE_OK)
+    if ((result = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, limits->total_timeout_ms)) != CURLE_OK) return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, limits->connect_timeout_ms)) != CURLE_OK)
         return result;
-    if ((result = curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, MMAITAG_GEMINI_CONNECT_TIMEOUT_MS)) != CURLE_OK)
-        return result;
-    if ((result = curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, MMAITAG_GEMINI_LOW_SPEED_LIMIT)) != CURLE_OK)
-        return result;
-    if ((result = curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, MMAITAG_GEMINI_LOW_SPEED_TIME)) != CURLE_OK)
-        return result;
-    return curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, (curl_off_t)MMAITAG_GEMINI_MAX_RESPONSE_BYTES);
+    if ((result = curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, limits->low_speed_limit)) != CURLE_OK) return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, limits->low_speed_time)) != CURLE_OK) return result;
+    return curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, (curl_off_t)limits->max_response_bytes);
 }
 
 /**
@@ -138,7 +135,7 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
 
     curl = curl_easy_init();
     if (curl == NULL) ABORT_FINALIZE(RS_RET_ERR);
-    curl_result = gemini_configure_transfer_limits(curl);
+    curl_result = gemini_configure_transfer_limits(curl, &prov->transfer_limits);
     if (curl_result != CURLE_OK) {
         LogError(0, RS_RET_ERR, "mmaitag: could not configure Gemini transfer limits: %s",
                  curl_easy_strerror(curl_result));
@@ -152,7 +149,7 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
 
     for (size_t i = 0; i < n; ++i) {
         struct curl_slist *headers = NULL;
-        struct mmaitag_gemini_response resp = {.max_bytes = MMAITAG_GEMINI_MAX_RESPONSE_BYTES};
+        struct mmaitag_gemini_response resp = {.max_bytes = prov->transfer_limits.max_response_bytes};
         struct json_object *req = NULL;
         char *full_prompt = NULL;
         char *api_key_header = NULL;
@@ -233,7 +230,7 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
             if (resp.limit_exceeded || cc == CURLE_FILESIZE_EXCEEDED) {
                 LogError(0, RS_RET_ERR,
                          "mmaitag: gemini request for a message failed: response exceeded the %zu-byte limit",
-                         MMAITAG_GEMINI_MAX_RESPONSE_BYTES);
+                         prov->transfer_limits.max_response_bytes);
             } else if (cc != CURLE_OK) {
                 LogError(0, RS_RET_ERR, "mmaitag: gemini request for a message failed: %s", curl_easy_strerror(cc));
             } else {

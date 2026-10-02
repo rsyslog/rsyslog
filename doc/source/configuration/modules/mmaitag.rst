@@ -29,10 +29,15 @@ Gemini response limits
 ----------------------
 
 The Gemini provider bounds each synchronous request so that a stalled or
-malformed provider response cannot consume resources indefinitely. It accepts
-at most 1 MiB (1,048,576 bytes) of response data, allows 60 seconds for the
-complete transfer and 10 seconds to establish the connection, and aborts a
-transfer that remains below one byte per second for 15 seconds.
+malformed provider response cannot consume resources indefinitely. By default,
+it accepts at most 1 MiB (1,048,576 bytes) of response data, allows 60 seconds
+for the complete transfer and 10 seconds to establish the connection, and
+aborts a transfer that remains below one byte per second for 15 seconds.
+
+These budgets can be tuned per action. Their built-in ceilings preserve a
+finite defense-in-depth bound: responses cannot exceed 64 MiB, request and
+connection timeouts cannot exceed one hour, the low-speed threshold cannot
+exceed 1 MiB per second, and its observation period cannot exceed one hour.
 
 When a request exceeds a limit or otherwise fails, ``mmaitag`` uses the
 ``REGULAR`` fallback tag and records an error without copying the provider
@@ -95,6 +100,26 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmaitag-apikey_file.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmaitag-response-maxbytes`
+     - .. include:: ../../reference/parameters/mmaitag-response-maxbytes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-request-timeoutms`
+     - .. include:: ../../reference/parameters/mmaitag-request-timeoutms.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-request-connecttimeoutms`
+     - .. include:: ../../reference/parameters/mmaitag-request-connecttimeoutms.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-request-lowspeedlimit`
+     - .. include:: ../../reference/parameters/mmaitag-request-lowspeedlimit.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-request-lowspeedtime`
+     - .. include:: ../../reference/parameters/mmaitag-request-lowspeedtime.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -106,6 +131,11 @@ Action Parameters
    ../../reference/parameters/mmaitag-inputproperty
    ../../reference/parameters/mmaitag-apikey
    ../../reference/parameters/mmaitag-apikey_file
+   ../../reference/parameters/mmaitag-response-maxbytes
+   ../../reference/parameters/mmaitag-request-timeoutms
+   ../../reference/parameters/mmaitag-request-connecttimeoutms
+   ../../reference/parameters/mmaitag-request-lowspeedlimit
+   ../../reference/parameters/mmaitag-request-lowspeedtime
 
 Example
 =======

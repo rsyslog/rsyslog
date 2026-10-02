@@ -1,4 +1,15 @@
 /* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2026 Adiscon GmbH.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * -or-
+ * see COPYING.ASL20 in the source distribution
+ */
 #include "config.h"
 
 /* Verify that Gemini response accumulation accepts data through the exact
@@ -38,6 +49,11 @@ int main(void) {
     CHECK(MMAITAG_GEMINI_CONNECT_TIMEOUT_MS <= MMAITAG_GEMINI_TOTAL_TIMEOUT_MS);
     CHECK(MMAITAG_GEMINI_LOW_SPEED_LIMIT > 0);
     CHECK(MMAITAG_GEMINI_LOW_SPEED_TIME > 0);
+    CHECK(MMAITAG_GEMINI_MAX_RESPONSE_BYTES <= MMAITAG_GEMINI_MAX_CONFIG_RESPONSE_BYTES);
+    CHECK(MMAITAG_GEMINI_TOTAL_TIMEOUT_MS <= MMAITAG_GEMINI_MAX_CONFIG_TIMEOUT_MS);
+    CHECK(MMAITAG_GEMINI_CONNECT_TIMEOUT_MS <= MMAITAG_GEMINI_MAX_CONFIG_TIMEOUT_MS);
+    CHECK(MMAITAG_GEMINI_LOW_SPEED_LIMIT <= MMAITAG_GEMINI_MAX_CONFIG_LOW_SPEED_LIMIT);
+    CHECK(MMAITAG_GEMINI_LOW_SPEED_TIME <= MMAITAG_GEMINI_MAX_CONFIG_LOW_SPEED_TIME);
 
     CHECK(mmaitag_gemini_response_write("abcd", 1, 4, &response) == 4);
     CHECK(mmaitag_gemini_response_write("efgh", 2, 2, &response) == 4);

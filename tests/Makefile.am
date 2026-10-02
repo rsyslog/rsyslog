@@ -1021,7 +1021,8 @@ TESTS_MMUTF8FIX_SD = \
 
 TESTS_MMAITAG = \
         mmaitag-basic.sh \
-        mmaitag-invalid-key.sh
+		mmaitag-invalid-key.sh \
+		mmaitag-transfer-limits-invalid.sh
 
 TESTS_MAIL = \
 	ommail_errmsg_no_params.sh \
