@@ -604,3 +604,80 @@ remediation attempts only when the failure appears locally fixable. Record the
 command, log path, failure summary, each attempt, the affected PR/unit, and
 whether host-side validation passed. If it still fails after those attempts,
 carry the error forward in the session ledger instead of spinning.
+
+## Recording validation for a worktree push
+
+The Codex push hook is an agent guard, not a security attestation. Push sibling
+worktrees explicitly with `git -C /absolute/worktree push ...`: a Bash hook may
+receive only the session directory, not an exec tool's separate `workdir`.
+The gate must check the pushed worktree, not the checkout containing the hook.
+
+After reviewing a completed run, use `devtools/record-container-validation.py`
+to record it in the **target** worktree. The validation tree may be a disposable
+checkout, but its current tracked source/test/build contents and executable bits
+must match the declared source commit, as must the target. A documentation-only
+commit after that source commit is permitted. The recorder never runs tests or
+changes source; it validates local evidence and writes the existing ignored
+`.codex/container_validated.marker` plus `.codex/container_validation.json`.
+Do not advance a marker manually to work around an unexplained rejection.
+
+The evidence JSON has this shape (replace placeholders with real values):
+
+```json
+{
+  "schema_version": 1,
+  "source_commit": "FULL_VALIDATED_COMMIT",
+  "validation_tree": "/absolute/validated-worktree",
+  "image": "registry/image@sha256:FULL_IMAGE_DIGEST",
+  "coverage_limits": ["Elasticsearch tests omitted by maintainer request"],
+  "broad": {
+    "source_commit": "FULL_VALIDATED_COMMIT",
+    "image": "registry/image@sha256:FULL_IMAGE_DIGEST",
+    "command": "devtools/run-ci.sh (include actual environment/options)",
+    "exit_code": 2,
+    "log": "initial/test-suite.log"
+  },
+  "reruns": [{
+    "test": "example-failure",
+    "source_commit": "FULL_VALIDATED_COMMIT",
+    "image": "registry/image@sha256:FULL_IMAGE_DIGEST",
+    "command": "cd tests && ./example-failure.sh",
+    "exit_code": 0,
+    "log": "reruns/example-failure.log"
+  }]
+}
+```
+
+Log paths are relative to the manifest. Supply one original Automake
+`test-suite.log`, not a concatenated console log. Use its exact failed-test
+headings for `test`; Automake may omit the `.sh` suffix, which the recorder
+accepts in direct `diag.sh` SUCCESSFUL records. A rerun log must contain an
+exact-test success, not merely exit zero or the success of another test.
+Record source/image provenance at execution time and keep the validation tree
+unchanged until recording. The tool checks consistency of these operator-supplied
+facts; it cannot retrospectively attest which binary produced an arbitrary log.
+
+For a clean broad run, use exit code zero and an empty `reruns` list. For broad
+failures that all pass focused reruns on the same source and pinned image, an
+explicit maintainer acceptance is required:
+
+```sh
+python3 devtools/record-container-validation.py \
+  --target /absolute/feature-worktree --evidence /absolute/evidence.json \
+  --accept-flakes 'Maintainer accepts these successful isolated reruns; original failures retained'
+git -C /absolute/feature-worktree push origin feature-branch
+```
+
+Use `--accept-flakes` only when that acceptance exists, never to infer approval
+from an isolated pass. The audit outcome is `flake_reconciled` and
+`broad_clean=false`; keep the original failures and coverage limitations visible.
+This is an acceptable push outcome under the maintainer's rerun policy, not a
+claim that the broad run was clean. Errors, unexpected passes, missing reruns,
+failed reruns or source/image mismatches cannot be reconciled this way. Other
+required lanes (security review, analyzer, sanitizers as applicable) retain their
+own reporting and acceptance requirements; this marker does not replace them.
+
+After source/test/build changes, rerun the affected validation and record new
+evidence. The marker deliberately remains at the validated source commit when
+only documentation changes follow it. Never select an older successful log while
+omitting a later relevant failure from the acceptance decision.
