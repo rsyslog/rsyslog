@@ -1,5 +1,9 @@
 .. index:: ! mmaitag
 
+.. meta::
+   :description: Configure mmaitag AI classification and its bounded Gemini request behavior.
+   :keywords: mmaitag, Gemini, AI classification, response limits, timeouts
+
 ********************************
 mmaitag: AI-based classification
 ********************************
@@ -13,9 +17,26 @@ mmaitag: AI-based classification
 Purpose
 =======
 
+.. summary-start
+
 The **mmaitag** module enriches log messages with classification tags
 obtained from an external AI service. Each message is sent to the provider
 individually and the resulting tag is stored in a custom variable.
+
+.. summary-end
+
+Gemini response limits
+----------------------
+
+The Gemini provider bounds each synchronous request so that a stalled or
+malformed provider response cannot consume resources indefinitely. It accepts
+at most 1 MiB (1,048,576 bytes) of response data, allows 60 seconds for the
+complete transfer and 10 seconds to establish the connection, and aborts a
+transfer that remains below one byte per second for 15 seconds.
+
+When a request exceeds a limit or otherwise fails, ``mmaitag`` uses the
+``REGULAR`` fallback tag and records an error without copying the provider
+response body into rsyslog diagnostics.
 
 Default labels
 --------------

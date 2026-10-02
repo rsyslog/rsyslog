@@ -169,6 +169,7 @@ EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
+EXTRA_DIST += unit/mmaitag_gemini_response_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -2677,11 +2678,12 @@ CLEANFILES=\
 
 CLEANFILES+= \
 	IN_AUTO_DEBUG \
-	runtime_unit_imbeats_seq
+	runtime_unit_imbeats_seq \
+	runtime_unit_mmaitag_gemini_response
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
-# runtime_unit_imbeats_seq is conditional, but an outer build with imbeats
-# enabled can leave it for an inner distcheck configured without imbeats.
+# These unit binaries are conditional, but an outer build with their modules
+# enabled can leave them for an inner distcheck configured without them.
 
 
 check_LTLIBRARIES =
@@ -2771,6 +2773,17 @@ runtime_unit_imbeats_parser_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	$(ZLIB_CFLAGS)
 runtime_unit_imbeats_parser_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+endif
+
+if ENABLE_MMAITAG
+check_PROGRAMS += runtime_unit_mmaitag_gemini_response
+TESTS += runtime_unit_mmaitag_gemini_response
+
+runtime_unit_mmaitag_gemini_response_SOURCES = \
+	unit/mmaitag_gemini_response_test.c
+
+runtime_unit_mmaitag_gemini_response_CPPFLAGS = \
+	-I$(top_srcdir)/plugins/mmaitag
 endif
 
 runtime_unit_linkedlist_CPPFLAGS = \
