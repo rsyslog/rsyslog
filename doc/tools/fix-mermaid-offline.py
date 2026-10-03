@@ -71,9 +71,10 @@ def fix_mermaid_offline(html_dir):
 
             # 3. Replace inline ESM import with UMD script (unpatched sphinxcontrib-mermaid)
             #    e.g. <script type="module">import mermaid from "vendor/mermaid/mermaid.min.js";
-            #    The import path "vendor/..." is wrong for HTTP; use correct _static path.
+            #    Accept both legacy vendor paths and Sphinx page-relative _static paths.
             esm_import_pat = re.compile(
-                r'<script type="module">\s*import mermaid from ["\']vendor/mermaid/mermaid\.min\.js["\'];\s*\n',
+                r'<script type="module">\s*import mermaid from ["\']'
+                r'(?:\.\.?/)*(?:_static/)?vendor/mermaid/mermaid\.min\.js["\'];\s*\n',
                 re.IGNORECASE
             )
             if esm_import_pat.search(content):
