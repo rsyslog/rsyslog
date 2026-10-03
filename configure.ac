@@ -3175,15 +3175,24 @@ AS_IF([test "x$enable_omkinesis" = "xyes" -o "x$enable_omkinesis" = "xoptional"]
         ])
         AS_IF([test "x$enable_omkinesis" != "xno"], [
                 rsyslog_saved_CPPFLAGS="$CPPFLAGS"
+                rsyslog_saved_LIBS="$LIBS"
                 CPPFLAGS="$CPPFLAGS $OMKINESIS_CURL_CFLAGS"
-                AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <curl/curl.h>]],
-                        [[CURLoption option = CURLOPT_AWS_SIGV4; CURLU *url = curl_url();
-                          curl_url_cleanup(url); return option == 0;]])], [], [
+                LIBS="$OMKINESIS_CURL_LIBS $LIBS"
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <curl/curl.h>]],
+                        [[CURLoption option = CURLOPT_AWS_SIGV4;
+                          CURLU *url = curl_url();
+                          char *host = 0;
+                          curl_url_set(url, CURLUPART_URL, "https://example.com", 0);
+                          curl_url_get(url, CURLUPART_HOST, &host, 0);
+                          curl_free(host);
+                          curl_url_cleanup(url);
+                          return option == 0;]])], [], [
                         AS_IF([test "x$enable_omkinesis" = "xyes"],
                               [AC_MSG_FAILURE([omkinesis requires libcurl AWS SigV4 and URL API support])],
                               [enable_omkinesis=no])
                 ])
                 CPPFLAGS="$rsyslog_saved_CPPFLAGS"
+                LIBS="$rsyslog_saved_LIBS"
         ])
 ])
 AM_CONDITIONAL(ENABLE_OMKINESIS, test "x$enable_omkinesis" = "xyes" -o "x$enable_omkinesis" = "xoptional")
