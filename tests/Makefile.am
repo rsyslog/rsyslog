@@ -2078,6 +2078,7 @@ TESTS_RELP = \
 	 imrelp-basic-hup.sh \
 	 imrelp-manyconn.sh \
 	 imrelp-maxDataSize-error.sh \
+	 imrelp-maxDataSize-range.sh \
 	 imrelp-long-msg.sh \
 	 imrelp-oversizeMode-truncate.sh \
 	 imrelp-oversizeMode-accept.sh \
@@ -2091,7 +2092,8 @@ TESTS_RELP = \
 	 glbl-oversizeMsg-split.sh
 
 TESTS_RELP_YAML = \
-	imrelp-persource-ratelimit-policy.sh
+	imrelp-persource-ratelimit-policy.sh \
+	 yaml-imrelp-maxDataSize-range.sh
 
 TESTS_RELP_OPENSSL = \
 	 omrelp-tls-ossl-authfail-no-cacert.sh \
