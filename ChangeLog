@@ -1,6 +1,10 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-??
 
+- 2026-10-03: omkinesis: add Kinesis Data Streams output
+  The new action sends signed PutRecord requests with configurable stream,
+  region, credentials, payload template, and fixed or template-based
+  partition keys. RainerScript and YAML configurations are supported.
 - 2026-08-23: omsendertrack: recover safely from invalid state files
   Sender tracking now treats missing and empty state files as a normal first
   start and can preserve corrupt JSON before starting with empty statistics. A

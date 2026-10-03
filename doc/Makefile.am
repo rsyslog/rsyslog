@@ -270,6 +270,7 @@ EXTRA_DIST = \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omawslogshlc.rst \
+    source/configuration/modules/omkinesis.rst \
     source/configuration/modules/omazureeventhubs.rst \
     source/configuration/modules/omclickhouse.rst \
     source/configuration/modules/omczmq.rst \
@@ -966,6 +967,16 @@ EXTRA_DIST = \
     source/reference/parameters/omawslogshlc-max_batch_size.rst \
     source/reference/parameters/omawslogshlc-region.rst \
     source/reference/parameters/omawslogshlc-template.rst \
+    source/reference/parameters/omkinesis-stream.rst \
+    source/reference/parameters/omkinesis-region.rst \
+    source/reference/parameters/omkinesis-partition_key.rst \
+    source/reference/parameters/omkinesis-partition_key_template.rst \
+    source/reference/parameters/omkinesis-template.rst \
+    source/reference/parameters/omkinesis-access_key.rst \
+    source/reference/parameters/omkinesis-secret_key.rst \
+    source/reference/parameters/omkinesis-session_token.rst \
+    source/reference/parameters/omkinesis-endpoint.rst \
+    source/reference/parameters/omkinesis-timeout.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \

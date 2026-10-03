@@ -139,6 +139,12 @@ omawslogshlc:
   notes:
     - Each worker owns its CURL handle and HLC batch buffer; action configuration is immutable after startup.
 
+omkinesis:
+  paths: ["plugins/omkinesis/"]
+  requires_serialization: false
+  notes:
+    - Each worker owns its CURL handle; action configuration is immutable.
+
 contrib_omhttp:
   paths: ["contrib/omhttp/"]
   requires_serialization: false
