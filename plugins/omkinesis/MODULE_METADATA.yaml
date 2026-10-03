@@ -1,0 +1,17 @@
+support_status: contributor-supported
+maturity_level: experimental
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-10-03
+build_dependencies:
+  - libcurl >= 7.75.0 with AWS SigV4 support
+runtime_dependencies:
+  - Amazon Kinesis Data Streams PutRecord endpoint
+  - AWS access key and secret key, supplied in the action or environment; session token optional
+ci_targets:
+  - omkinesis-mock.sh
+  - yaml-omkinesis-mock.sh
+documentation:
+  - doc/source/configuration/modules/omkinesis.rst
+notes:
+  - Each worker owns its curl handle; action configuration is immutable.
+  - Sends one record per action call so HTTP failure is visible to action retries.

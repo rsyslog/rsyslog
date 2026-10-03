@@ -248,6 +248,10 @@ if ENABLE_OMAWSLOGSHLC
 SUBDIRS += plugins/omawslogshlc
 endif
 
+if ENABLE_OMKINESIS
+SUBDIRS += plugins/omkinesis
+endif
+
 if ENABLE_IMDTLS
 SUBDIRS += plugins/imdtls
 endif
@@ -609,6 +613,10 @@ endif
 
 if ENABLE_OMAWSLOGSHLC
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omawslogshlc
+endif
+
+if ENABLE_OMKINESIS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omkinesis
 endif
 
 if ENABLE_IMDTLS

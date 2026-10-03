@@ -488,6 +488,16 @@ Description: HTTP output plugin for rsyslog
  to remote HTTP or HTTPS endpoints. It facilitates integration with web services,
  APIs, and modern centralized log management platforms that accept logs over HTTP.
 
+Package: rsyslog-omkinesis
+Architecture: any
+Priority: extra
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         rsyslog (= ${binary:Version})
+Description: Amazon Kinesis Data Streams output plugin for rsyslog
+ This package provides the omkinesis module for sending log messages to
+ Amazon Kinesis Data Streams with AWS Signature Version 4 authentication.
+
 Package: rsyslog-imhttp
 Architecture: any
 Priority: extra
