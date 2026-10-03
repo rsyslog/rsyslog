@@ -1,10 +1,13 @@
 #!/bin/bash
+# Copyright 2026 Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0.
 # Verify one PutRecord request, SigV4 headers, base64 data and partition key.
 # The server publishes its bound port before rsyslog starts; the captured
 # request is the success oracle after synchronized shutdown. Readiness allows
 # 20 seconds (200 100-ms polls) because broad CI can heavily load the runner.
 . ${srcdir:=.}/diag.sh init
 require_plugin omkinesis
+command -v python3 >/dev/null 2>&1 || exit 77
 
 port_file="${RSYSLOG_DYNNAME}.kinesis.port"
 capture_file="${RSYSLOG_DYNNAME}.kinesis.capture"
@@ -43,7 +46,7 @@ YAML_EOF
     add_conf '
 module(load="../plugins/omkinesis/.libs/omkinesis")
 include(file="'${RSYSLOG_DYNNAME}'.kinesis.yaml")
-call main
+if $msg contains "msgnum:" then call main
 '
 else
     add_conf '

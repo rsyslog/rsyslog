@@ -27,12 +27,16 @@ supported for temporary credentials. Credential values are read at
 configuration time; restart rsyslog to rotate them. IAM roles and AWS shared
 credential files are not read by this module.
 
-Each action call sends one record. A non-200 response or transport failure
-suspends the action, so standard ``action.resumeInterval`` and
-``action.resumeRetryCount`` settings control retry behavior. As with other
-retriable outputs, delivery can be duplicated after an uncertain response.
-The module currently limits the rendered data to 1 MiB per record and the
-partition key to 256 bytes.
+Each action call sends one record. Transport failures, HTTP 429 and 5xx
+responses, and HTTP 400 responses containing
+``ProvisionedThroughputExceededException``, ``InternalFailure``, or
+``KMSThrottlingException`` suspend the action. Standard
+``action.resumeInterval`` and ``action.resumeRetryCount`` settings control
+these retries. Other non-200 responses are not retried. Delivery can be
+duplicated after an uncertain response. The partition key is limited to 256
+bytes. The default combined data and partition key limit is 1 MiB; set
+``max_record_size`` up to 10 MiB only after enabling larger records on the
+Kinesis stream.
 
 Configuration parameters
 ========================
@@ -50,6 +54,7 @@ Configuration parameters
    ../../reference/parameters/omkinesis-session_token
    ../../reference/parameters/omkinesis-endpoint
    ../../reference/parameters/omkinesis-timeout
+   ../../reference/parameters/omkinesis-max_record_size
 
 RainerScript example
 ====================

@@ -326,6 +326,12 @@ Group: System Environment/Daemons
 Requires: %name = %version-%release
 BuildRequires: libcurl-devel
 
+%package omkinesis
+Summary: Amazon Kinesis Data Streams output module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+BuildRequires: libcurl-devel
+
 %package imhttp
 Summary: imhttp input module for rsyslog
 Group: System Environment/Daemons
@@ -546,6 +552,9 @@ Function module for rainerscript function hash.
 
 %description omhttp
 HTTP output module for sending syslog messages to HTTP endpoints.
+
+%description omkinesis
+Output module for sending syslog messages to Amazon Kinesis Data Streams.
 
 %description imhttp
 This module provides support for HTTP server.
@@ -1021,6 +1030,10 @@ done
 %files omhttp
 %defattr(-,root,root)
 %{_libdir}/rsyslog/omhttp.so
+
+%files omkinesis
+%defattr(-,root,root)
+%{_libdir}/rsyslog/omkinesis.so
 
 %files imhttp
 %defattr(-,root,root)

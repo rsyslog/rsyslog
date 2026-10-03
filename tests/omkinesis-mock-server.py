@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0.
 """One-request mock Kinesis PutRecord endpoint for the config parity tests."""
 import http.server
 import json

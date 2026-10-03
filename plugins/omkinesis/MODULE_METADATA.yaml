@@ -6,6 +6,7 @@ build_dependencies:
   - libcurl >= 7.75.0 with AWS SigV4 support
 runtime_dependencies:
   - Amazon Kinesis Data Streams PutRecord endpoint
+  - AWS access key and secret key, supplied in the action or environment; session token optional
 ci_targets:
   - omkinesis-mock.sh
   - yaml-omkinesis-mock.sh

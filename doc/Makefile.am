@@ -977,6 +977,7 @@ EXTRA_DIST = \
     source/reference/parameters/omkinesis-session_token.rst \
     source/reference/parameters/omkinesis-endpoint.rst \
     source/reference/parameters/omkinesis-timeout.rst \
+    source/reference/parameters/omkinesis-max_record_size.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \

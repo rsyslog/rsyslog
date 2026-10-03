@@ -1368,7 +1368,8 @@ TESTS_OMAWSLOGSHLC_IMTCP = \
 
 # The mock is local and needs no AWS account or external service.
 TESTS_OMKINESIS = \
-	omkinesis-mock.sh
+	omkinesis-mock.sh \
+	omkinesis-endpoint-validation.sh
 TESTS_OMKINESIS_YAML = \
 	yaml-omkinesis-mock.sh
 

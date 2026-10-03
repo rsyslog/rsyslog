@@ -40,6 +40,7 @@ typedef struct _instanceData {
     char *sigv4;
     char *userpwd;
     long timeout;
+    long maxRecordSize;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -58,6 +59,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"template", eCmdHdlrGetWord, 0},     {"access_key", eCmdHdlrString, 0},
     {"secret_key", eCmdHdlrString, 0},    {"session_token", eCmdHdlrString, 0},
     {"endpoint", eCmdHdlrString, 0},      {"timeout", eCmdHdlrInt, 0},
+    {"max_record_size", eCmdHdlrInt, 0},
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
@@ -87,11 +89,26 @@ static int validRegion(const char *region) {
 }
 
 static int validEndpoint(const char *url) {
-    if (!strncmp(url, "https://", 8)) return url[8] != '\0';
-    const char *host = NULL;
-    if (!strncmp(url, "http://127.0.0.1", 16)) host = url + 16;
-    if (!strncmp(url, "http://localhost", 16)) host = url + 16;
-    return host != NULL && (*host == ':' || *host == '/' || *host == '\0');
+    CURLU *parsed = curl_url();
+    char *scheme = NULL, *host = NULL, *user = NULL, *password = NULL;
+    int valid = 0;
+    if (parsed == NULL || curl_url_set(parsed, CURLUPART_URL, url, 0) != CURLUE_OK ||
+        curl_url_get(parsed, CURLUPART_SCHEME, &scheme, 0) != CURLUE_OK ||
+        curl_url_get(parsed, CURLUPART_HOST, &host, 0) != CURLUE_OK)
+        goto done;
+    /* Credentials in the authority can conceal the real host. */
+    if (curl_url_get(parsed, CURLUPART_USER, &user, 0) == CURLUE_OK ||
+        curl_url_get(parsed, CURLUPART_PASSWORD, &password, 0) == CURLUE_OK)
+        goto done;
+    valid = !strcmp(scheme, "https") ||
+            (!strcmp(scheme, "http") && (!strcmp(host, "127.0.0.1") || !strcmp(host, "localhost")));
+done:
+    curl_free(scheme);
+    curl_free(host);
+    curl_free(user);
+    curl_free(password);
+    curl_url_cleanup(parsed);
+    return valid;
 }
 
 static char *base64Encode(const unsigned char *src, size_t len) {
@@ -151,9 +168,9 @@ static rsRetVal putRecord(wrkrInstanceData_t *pWrkrData, const char *message, co
         LogError(0, RS_RET_PARAM_ERROR, "omkinesis: partition key must be 1..256 bytes");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
-    /* Keep the conservative 1 MiB record ceiling supported by older streams. */
-    if (msgLen > 1024 * 1024) {
-        LogError(0, RS_RET_PARAM_ERROR, "omkinesis: record exceeds 1 MiB");
+    /* Kinesis counts the partition key and raw data toward the configured limit. */
+    if (msgLen > (size_t)pData->maxRecordSize - keyLen) {
+        LogError(0, RS_RET_PARAM_ERROR, "omkinesis: record exceeds configured max_record_size");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
     CHKmalloc(encoded = base64Encode((const unsigned char *)message, msgLen));
@@ -203,7 +220,8 @@ static rsRetVal putRecord(wrkrInstanceData_t *pWrkrData, const char *message, co
         const int retryable =
             status == 429 || status >= 500 ||
             (status == 400 && (strstr(response.data, "ProvisionedThroughputExceededException") != NULL ||
-                               strstr(response.data, "InternalFailure") != NULL));
+                               strstr(response.data, "InternalFailure") != NULL ||
+                               strstr(response.data, "KMSThrottlingException") != NULL));
         iRet = retryable ? RS_RET_SUSPENDED : RS_RET_ERR;
         LogError(0, iRet, "omkinesis: PutRecord returned HTTP %ld%s", status, retryable ? " (retryable)" : "");
         FINALIZE;
@@ -296,11 +314,14 @@ BEGINnewActInst
     if (pvals == NULL) ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     CHKiRet(createInstance(&pData));
     pData->timeout = 30;
+    pData->maxRecordSize = 1024 * 1024;
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         const char *name = actpblk.descr[i].name;
         if (!strcmp(name, "timeout")) {
             pData->timeout = pvals[i].val.d.n;
+        } else if (!strcmp(name, "max_record_size")) {
+            pData->maxRecordSize = pvals[i].val.d.n;
         } else {
             uchar **target = NULL;
             if (!strcmp(name, "stream"))
@@ -339,6 +360,7 @@ BEGINnewActInst
         (pData->partitionKeyTplName != NULL && *pData->partitionKeyTplName == '\0') || pData->region == NULL ||
         !validRegion((const char *)pData->region) || pData->accessKey == NULL || *pData->accessKey == '\0' ||
         pData->secretKey == NULL || *pData->secretKey == '\0' || pData->timeout < 1 || pData->timeout > 300 ||
+        pData->maxRecordSize < 1024 * 1024 || pData->maxRecordSize > 10 * 1024 * 1024 ||
         (pData->endpoint != NULL && !validEndpoint((const char *)pData->endpoint))) {
         LogError(0, RS_RET_PARAM_ERROR,
                  "omkinesis: invalid stream, partition_key or partition_key_template, region, credentials, endpoint, "
