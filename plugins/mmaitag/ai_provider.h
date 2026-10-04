@@ -16,6 +16,17 @@
 typedef struct ai_provider_s ai_provider_t;
 
 /**
+ * @brief Per-action resource budgets for synchronous provider requests.
+ */
+typedef struct ai_provider_transfer_limits_s {
+    size_t max_response_bytes;
+    long total_timeout_ms;
+    long connect_timeout_ms;
+    long low_speed_limit;
+    long low_speed_time;
+} ai_provider_transfer_limits_t;
+
+/**
  * @brief Function pointer type for initializing a provider.
  *
  * @param[in] prov The provider instance to initialize.
@@ -56,6 +67,7 @@ typedef void (*ai_provider_cleanup_t)(ai_provider_t *prov);
  */
 struct ai_provider_s {
     void *data;  ///< Pointer to provider-specific private state data.
+    ai_provider_transfer_limits_t transfer_limits;  ///< Bounded request resource use.
     ai_provider_init_t init;  ///< Pointer to the provider's init function.
     ai_provider_classify_t classify;  ///< Pointer to the provider's classification function.
     ai_provider_cleanup_t cleanup;  ///< Pointer to the provider's cleanup function.

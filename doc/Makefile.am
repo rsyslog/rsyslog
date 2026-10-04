@@ -838,6 +838,11 @@ EXTRA_DIST = \
     source/reference/parameters/mmaitag-inputproperty.rst \
     source/reference/parameters/mmaitag-model.rst \
     source/reference/parameters/mmaitag-provider.rst \
+    source/reference/parameters/mmaitag-request-connecttimeoutms.rst \
+    source/reference/parameters/mmaitag-request-lowspeedlimit.rst \
+    source/reference/parameters/mmaitag-request-lowspeedtime.rst \
+    source/reference/parameters/mmaitag-request-timeoutms.rst \
+    source/reference/parameters/mmaitag-response-maxbytes.rst \
     source/reference/parameters/mmaitag-tag.rst \
     source/reference/parameters/mmanon-embeddedipv4-anonmode.rst \
     source/reference/parameters/mmanon-embeddedipv4-bits.rst \
