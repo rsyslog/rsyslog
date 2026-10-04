@@ -1,5 +1,7 @@
 #!/bin/bash
 # Verify that imfile ignores a malformed state file and falls back to a fresh read.
+# The sequence wait proves imfile reached EOF before each shutdown, so the
+# persisted state and the fallback assertion cannot depend on runner timing.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
@@ -21,6 +23,7 @@ if $msg contains "msgnum:" then
 
 ./inputfilegen -m5 > "$RSYSLOG_DYNNAME.input"
 startup
+wait_seq_check 0 4
 shutdown_when_empty
 wait_shutdown
 seq_check 0 4
@@ -36,6 +39,7 @@ printf '{"curr_offs":\n' > "$statefile"
 rm -f "$RSYSLOG_OUT_LOG"
 
 startup
+wait_seq_check 0 4
 shutdown_when_empty
 wait_shutdown
 seq_check 0 4

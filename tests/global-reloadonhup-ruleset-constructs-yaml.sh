@@ -1,9 +1,13 @@
 #!/bin/bash
 # Verify that private YAML ruleset materialization preserves foreach and both
-# capture-only legacy filter forms. Each HUP changes only the existing ruleset,
+# capture-only legacy filter forms, then distinguishes an else-if selector from
+# an explicit nested if with otherwise identical syntax trees. Each HUP changes
+# only the existing ruleset,
 # reuses the same named action, and must publish exactly one new generation.
 # A persistent TCP stream plus a visible record after every cutover proves the
 # prepared tree is executable and that action ownership survives retirement.
+# Generations five and six must both activate: the selector-identity marker
+# must participate in the fingerprint rather than allowing a false no-op.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -108,6 +112,59 @@ fi
 printf '<167>Mar 10 01:00:00 host app: priority-live\n' >&9 || error_exit 1
 wait_content 'priority-live' "$RSYSLOG_OUT_LOG"
 
+# Structural else-if identity survives private cloning and optimization. The
+# existing parser and sink each occur exactly once, preserving action binding.
+sed -n '1,/^modules:/p' "$yaml_conf" | sed '$d' >"$yaml_conf.candidate"
+mv "$yaml_conf.candidate" "$yaml_conf"
+write_yaml_config '    script: |
+      action(type="mmjsonparse" name="construct_parser")
+      if $msg contains "selector-first" then {
+        set $.pick = 1;
+      } else if $msg contains "selector-second" then {
+        set $.pick = 2;
+      } else {
+        set $.pick = 3;
+      }
+      if $.pick == 2 then
+        action(type="omfile" name="construct_sink" file="'$RSYSLOG_OUT_LOG'")'
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=5"* ||
+      "$reload_status" != *"modified=1 invalid=0"* ]]; then
+	echo "FAIL: YAML else-if selector plan did not activate: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: selector-second-chain-live\n' >&9 || error_exit 1
+wait_content 'selector-second-chain-live' "$RSYSLOG_OUT_LOG"
+
+# Braces introduce no statement node: this else body contains only the nested
+# if, with no siblings. Expressions and bodies match the preceding tree; only
+# is_else_if differs. Generation six is the deterministic fingerprint oracle.
+sed -n '1,/^modules:/p' "$yaml_conf" | sed '$d' >"$yaml_conf.candidate"
+mv "$yaml_conf.candidate" "$yaml_conf"
+write_yaml_config '    script: |
+      action(type="mmjsonparse" name="construct_parser")
+      if $msg contains "selector-first" then {
+        set $.pick = 1;
+      } else {
+        if $msg contains "selector-second" then {
+          set $.pick = 2;
+        } else {
+          set $.pick = 3;
+        }
+      }
+      if $.pick == 2 then
+        action(type="omfile" name="construct_sink" file="'$RSYSLOG_OUT_LOG'")'
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=6"* ||
+      "$reload_status" != *"modified=1 invalid=0"* ]]; then
+	echo "FAIL: YAML nested-if identity change did not activate: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: selector-second-nested-live\n' >&9 || error_exit 1
+wait_content 'selector-second-nested-live' "$RSYSLOG_OUT_LOG"
+
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
@@ -115,4 +172,6 @@ content_check 'startup-live' "$RSYSLOG_OUT_LOG"
 content_check 'foreach-live' "$RSYSLOG_OUT_LOG"
 content_check 'property-live' "$RSYSLOG_OUT_LOG"
 content_check 'priority-live' "$RSYSLOG_OUT_LOG"
+content_check 'selector-second-chain-live' "$RSYSLOG_OUT_LOG"
+content_check 'selector-second-nested-live' "$RSYSLOG_OUT_LOG"
 exit_test

@@ -236,7 +236,8 @@ static int tryExec(uchar *pszCmd, wrkrInstanceData_t *pWrkrData) {
     execState = PQresultStatus(pgRet);
     if (execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
         // complain a lot in case any issues with DB communication
-        LogError(0, execState, "postgres query execution failed: %s", PQresStatus(PQresultStatus(pgRet)));
+        LogError(0, execState, "postgres query execution failed: %s: %s", PQresStatus(execState),
+                 PQresultErrorMessage(pgRet));
         bHadError = 1;
     }
     PQclear(pgRet);

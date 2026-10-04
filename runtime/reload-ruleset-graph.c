@@ -190,6 +190,7 @@ static rsRetVal appendStmt(es_str_t **out, const struct cnfstmt *stmt) {
             }
             break;
         case S_IF:
+            CHKiRet(appendUnsigned(out, stmt->d.s_if.is_else_if));
             CHKiRet(appendExpr(out, stmt->d.s_if.expr));
             CHKiRet(appendStmtList(out, stmt->d.s_if.t_then));
             CHKiRet(appendStmtList(out, stmt->d.s_if.t_else));

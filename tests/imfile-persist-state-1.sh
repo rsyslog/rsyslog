@@ -1,4 +1,7 @@
 #!/bin/bash
+# Verify imfile persists its state after consuming a complete multiline input.
+# Waiting for the expected sequence before shutdown prevents a loaded runner
+# from persisting a partial read and turning this into a timing-dependent test.
 # added 2016-11-02 by rgerhards
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -24,6 +27,7 @@ if $msg contains "msgnum:" then
 # soon as it start up (so the file should exist at that point).
 ./inputfilegen -m5 -d4000 > $RSYSLOG_DYNNAME.input
 startup
+wait_seq_check 0 3
 shutdown_when_empty
 wait_shutdown
 seq_check 0 3

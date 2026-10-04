@@ -2,7 +2,9 @@
  * Unit coverage for abort-safe reload syntax cloning. Every expression and
  * statement kind accepted by the production clone is represented here. The
  * source tree is destroyed before inspecting the clone, proving independent
- * ownership. Unsupported nodes placed after supported subtrees must fail
+ * ownership. Exact metadata assertions preserve else-if syntax while resetting
+ * variable slots and condition-cache sizes for private optimizer recomputation.
+ * Unsupported nodes placed after supported subtrees must fail
  * atomically with a NULL output; leak checking is the cleanup oracle.
  */
 #include "config.h"
@@ -285,6 +287,7 @@ static int testExpressionClone(void) {
     array->arr[0] = es_newStrFromCStr("alpha", 5);
     array->arr[1] = es_newStrFromCStr("beta", 4);
     variable->nodetype = 'V';
+    variable->cache_slot = 7;
     variable->name = strdup("$.route");
     CHECK(array->arr[0] != NULL && array->arr[1] != NULL && variable->name != NULL);
     source = binary(CMP_CONTAINS, (struct cnfexpr *)variable, (struct cnfexpr *)array);
@@ -293,6 +296,7 @@ static int testExpressionClone(void) {
     cnfexprDestruct(source);
     CHECK(strcmp(((struct cnfvar *)clone->l)->name, "$.route") == 0);
     CHECK(((struct cnfvar *)clone->l)->prop.id == PROP_LOCAL_VAR);
+    CHECK(((struct cnfvar *)clone->l)->cache_slot == -1);
     CHECK(strcmp((const char *)((struct cnfvar *)clone->l)->prop.name, "!route") == 0);
     CHECK(estrEquals(((struct cnfarray *)clone->r)->arr[1], "beta"));
     cnfexprDestruct(clone);
@@ -406,6 +410,9 @@ static int testStatementClone(void) {
     struct cnfstmt *tail;
 
     CHECK(source != NULL);
+    /* Syntax survives cloning; optimizer-derived cache sizes must not. */
+    source->d.s_if.is_else_if = 1;
+    source->d.s_if.cache_slots = 7;
     source->printable = (uchar *)strdup("if expression");
     source->d.s_if.expr = binary(CMP_EQ, (struct cnfexpr *)number(1), (struct cnfexpr *)number(1));
     source->d.s_if.t_then = statement(S_SET);
@@ -461,6 +468,8 @@ static int testStatementClone(void) {
     CHECK(cnfstmtCloneReloadSafe(source, &clone) == RS_RET_OK);
     cnfstmtDestructLst(source);
     CHECK(strcmp((char *)clone->printable, "if expression") == 0);
+    CHECK(clone->d.s_if.is_else_if == 1);
+    CHECK(clone->d.s_if.cache_slots == 0);
     CHECK(strcmp((char *)clone->d.s_if.t_then->d.s_set.varname, "$.route") == 0);
     CHECK(clone->d.s_if.t_else->d.s_prifilt.t_then->nodetype == S_RELOAD_ACT);
     CHECK(estrEquals(clone->d.s_if.t_else->d.s_prifilt.t_then->d.reload_action->val.d.estr, "omfile"));

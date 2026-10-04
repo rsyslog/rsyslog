@@ -4,7 +4,7 @@
 # This is a cheap -N1 translation test for runtime/translate.c's script
 # serializer. It covers escaped strings, arrays, unary minus, set/reset/unset,
 # boolean/comparison expressions, exists(), foreach, call, call_indirect, and
-# if/else block formatting. The translated RainerScript is validated again so
+# if/else and else-if formatting. The translated RainerScript is validated again so
 # the exact-output oracle proves the emitted config remains parseable.
 #
 # Part of the testbench for rsyslog.
@@ -33,6 +33,13 @@ ruleset(name="main") {
   } else {
     call_indirect "tar" & "get";
   }
+  if $msg contains "first" then {
+    stop
+  } else if $msg contains "second" then {
+    stop
+  } else {
+    stop
+  }
 }
 RS_EOF
 sed "s|@TARGET_OUT@|${target_out}|g" "${RSYSLOG_DYNNAME}.conf" >"${RSYSLOG_DYNNAME}.conf.tmp" &&
@@ -58,6 +65,13 @@ ruleset(name="main") {
     }
   } else {
     call_indirect ("tar" & "get");
+  }
+  if ($msg contains "first") then {
+    stop
+  } else if ($msg contains "second") then {
+    stop
+  } else {
+    stop
   }
 }
 

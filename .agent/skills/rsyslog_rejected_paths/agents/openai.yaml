@@ -1,0 +1,4 @@
+interface:
+  display_name: "rsyslog Rejected Engineering Paths"
+  short_description: "Avoid repeating dated, already-abandoned designs"
+  default_prompt: "Use $rsyslog_rejected_paths before retrying a performance or locking idea, and update the catalog when a candidate is abandoned."

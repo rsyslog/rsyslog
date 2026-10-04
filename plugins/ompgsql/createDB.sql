@@ -22,7 +22,7 @@ CREATE TABLE SystemEvents
         MinUsage int NULL,
         MaxUsage int NULL,
         InfoUnitID int NULL ,
-        SysLogTag varchar(60),
+        SysLogTag varchar(128),
         EventLogType varchar(60),
         GenericFileName VarChar(60),
         SystemID int NULL

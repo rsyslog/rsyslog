@@ -92,6 +92,7 @@ extern int yyerror(const char*);
 %token IF
 %token THEN
 %token ELSE
+%token ELSEIF
 %token FOREACH
 %token ITERATOR_ASSIGNMENT
 %token DO
@@ -117,7 +118,7 @@ extern int yyerror(const char*);
 %type <obj> obj property constant
 %type <objlst> propconst
 %type <expr> expr
-%type <stmt> stmt s_act actlst block script
+%type <stmt> stmt s_act actlst block script elseif_tail
 %type <itr> iterator_decl
 %type <fparams> fparams
 %type <arr> array arrayelt
@@ -128,7 +129,7 @@ extern int yyerror(const char*);
 %destructor { free($$); } LEGACY_ACTION LEGACY_RULESET PRIFILT PROPFILT BSD_TAG_SELECTOR BSD_HOST_SELECTOR VAR
 %destructor { es_deleteStr($$); } NAME FUNC STRING
 %destructor { cnfobjDestructAll($$); } obj property constant
-%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script
+%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script elseif_tail
 %destructor { nvlstDestruct($$); } nv nvlst value
 %destructor { objlstDestruct($$); } propconst
 %destructor { cnfexprDestruct($$); } expr
@@ -142,10 +143,9 @@ extern int yyerror(const char*);
 %left '*' '/' '%'
 %nonassoc UMINUS NOT
 
-%expect 1 /* dangling else */
-/* If more erors show up, Use "bison -v grammar.y" if more conflicts arise and
- * check grammar.output for were exactly these conflicts exits.
- */
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE ELSEIF
+
 %%
 /* note: we use left recursion below, because that saves stack space AND
  * offers the right sequence so that we can submit the top-layer objects
@@ -192,7 +192,8 @@ value:	  STRING			{ $$ = nvlstNewStr($1); }
 script:	  stmt				{ $$ = $1; }
 	| script stmt			{ $$ = scriptAddStmt($1, $2); }
 stmt:	  actlst			{ $$ = $1; }
-	| IF expr THEN block 		{ $$ = cnfstmtNew(S_IF);
+	| IF expr THEN block %prec LOWER_THAN_ELSE
+					{ $$ = cnfstmtNew(S_IF);
 					  $$->d.s_if.expr = $2;
 					  $$->d.s_if.t_then = $4;
 					  $$->d.s_if.t_else = NULL; }
@@ -200,6 +201,15 @@ stmt:	  actlst			{ $$ = $1; }
 					  $$->d.s_if.expr = $2;
 					  $$->d.s_if.t_then = $4;
 					  $$->d.s_if.t_else = $6; }
+	| IF expr THEN block ELSEIF expr THEN block elseif_tail
+					{ $$ = cnfstmtNew(S_IF);
+					  $$->d.s_if.expr = $2;
+					  $$->d.s_if.t_then = $4;
+					  $$->d.s_if.t_else = cnfstmtNew(S_IF);
+					  $$->d.s_if.t_else->d.s_if.expr = $6;
+					  $$->d.s_if.t_else->d.s_if.t_then = $8;
+					  $$->d.s_if.t_else->d.s_if.t_else = $9;
+					  $$->d.s_if.t_else->d.s_if.is_else_if = 1; }
 	| FOREACH iterator_decl DO block { $$ = cnfstmtNew(S_FOREACH);
 					  $$->d.s_foreach.iter = $2;
 					  $$->d.s_foreach.body = $4;}
@@ -211,6 +221,14 @@ stmt:	  actlst			{ $$ = $1; }
 	| RELOAD_LOOKUP_TABLE_PROCEDURE '(' fparams ')' { $$ = cnfstmtNewReloadLookupTable($3);}
 	| include			{ $$ = NULL; }
 	| BEGINOBJ			{ $$ = NULL; parser_errmsg("declarative object '%s' not permitted in action block [stmt]", yytext);}
+elseif_tail:			%prec LOWER_THAN_ELSE { $$ = NULL; }
+	| ELSE block			{ $$ = $2; }
+	| ELSEIF expr THEN block elseif_tail
+					{ $$ = cnfstmtNew(S_IF);
+					  $$->d.s_if.expr = $2;
+					  $$->d.s_if.t_then = $4;
+					  $$->d.s_if.t_else = $5;
+					  $$->d.s_if.is_else_if = 1; }
 block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }

@@ -367,7 +367,7 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]) {
 
         /* skip cruft */
         if (*q) {
-            while (strchr(",;", *q)) q++;
+            while (*q && strchr(",;", *q)) q++;
         }
 
         /* decode priority name */

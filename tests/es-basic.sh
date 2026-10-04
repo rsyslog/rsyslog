@@ -1,5 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify omelasticsearch publishes per-request duration summaries through
+# impstats. The oracle checks algebraic bounds rather than timing thresholds,
+# because Elasticsearch and the test host determine the actual request time.
 . ${srcdir:=.}/diag.sh init
 export ES_PORT=19200
 export NUMMESSAGES=1000 # 1000 is sufficient, as this test is pretty slow
@@ -55,7 +58,16 @@ for line in sys.stdin:
 		hsh = json.loads(line[jstart:])
 		if hsh["origin"] == "omelasticsearch":
 			actual = hsh
-if not expected == actual:
+for name, value in expected.items():
+	if actual.get(name) != value:
+		sys.stderr.write("ERROR: unexpected value for {}: expected {}, got {}\n".format(name, value, actual.get(name)))
+		sys.exit(1)
+request_count = actual.get("requests.count", 0)
+request_time = actual.get("requests.time_ms", 0)
+request_min = actual.get("requests.time_ms.min", 0)
+request_max = actual.get("requests.time_ms.max", 0)
+if not (request_count > 0 and request_time >= request_count and
+		1 <= request_min <= request_max <= request_time):
 	sys.stderr.write("ERROR: expected stats not equal to actual stats\n")
 	sys.stderr.write("ERROR: expected {}\n".format(expected))
 	sys.stderr.write("ERROR: actual {}\n".format(actual))

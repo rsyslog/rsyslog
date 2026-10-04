@@ -29,6 +29,8 @@
 #include "batch.h"
 #include "action.h"
 
+struct rscript_var_cache;
+
 
 #define ACT_STATE_RDY 0 /* action ready, waiting for new transaction */
 #define ACT_STATE_ITX 1 /* transaction active, waiting for new data or commit */
@@ -84,6 +86,21 @@ struct wti_s {
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
+        /* Queue-local deferred batch cleanup is bounded by batch.maxElem. */
+        smsg_t **p_deferred_msgs;
+        int n_deferred_msgs;
+        /* Both fields are protected by pWtp->pmutUsr, the queue mutex used
+         * with pcondBusy. A producer reserves a registered waiter before it
+         * signals, preventing one enqueue from being spent on a running slot.
+         */
+        uint8_t bWaitingForWork;
+        uint8_t bWakeupReserved;
+        /* Set immediately before wtiWorker leaves its queue loop. The thread
+         * may still release action-worker state afterwards, but it must no
+         * longer be budgeted as a queue consumer. It is atomic because cancel
+         * cleanup may race a producer holding pmutUsr.
+         */
+        int bExiting;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */
@@ -93,6 +110,7 @@ struct wti_s {
                                     * also be added as a user-selectable option (not implemented yet)
                                     */
             uint16_t rulesetCallDepth; /* synchronous ruleset call nesting depth */
+            struct rscript_var_cache *var_cache; /* selector-local RainerScript snapshots */
         } execState; /* state for the execution engine */
 };
 
@@ -105,6 +123,80 @@ static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
 #endif
 }
 
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1) wtiReserveWakeup(wti_t *const pWti) {
+    if (ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) || !pWti->bWaitingForWork || pWti->bWakeupReserved)
+        return 0;
+    pWti->bWakeupReserved = 1;
+    return 1;
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. A worker that is
+ * executing queue work counts toward the requested parallelism. A registered
+ * waiter counts only after a producer has reserved its signal: until then it
+ * cannot make progress on the current enqueue. WAIT_JOIN is deliberately not
+ * counted, because it can no longer consume queue work even before its slot
+ * is reset to STOPPED.
+ */
+static inline int ATTR_NONNULL(1) wtiCountsTowardWorkerBudget(wti_t *const pWti) {
+    const int state = ATOMIC_LOAD_32BIT(&pWti->bIsRunning, &pWti->mutIsRunning);
+
+    return state == WRKTHRD_RUNNING && !ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) &&
+           (!pWti->bWaitingForWork || pWti->bWakeupReserved);
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. A registered waiter is
+ * live capacity because it can be signalled; an exiting worker is not, even
+ * though its thread has not yet reached WAIT_JOIN.
+ */
+static inline int ATTR_NONNULL(1) wtiCountsTowardWorkerStartBudget(wti_t *const pWti) {
+    const int state = ATOMIC_LOAD_32BIT(&pWti->bIsRunning, &pWti->mutIsRunning);
+
+    return !ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) &&
+           (state == WRKTHRD_INITIALIZING || state == WRKTHRD_RUNNING);
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1)
+    wtiGetWorkerStartBudget(wti_t *const *const ppWti, const int nWorkers, const int nMaxWrkr) {
+    int i;
+    int nLive = 0;
+
+    for (i = 0; i < nWorkers; ++i) {
+        if (wtiCountsTowardWorkerStartBudget(ppWti[i])) ++nLive;
+    }
+
+    return nLive < nMaxWrkr ? nMaxWrkr - nLive : 0;
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1)
+    wtiGetWakeupBudget(wti_t *const *const ppWti, const int nWorkers, const int nMaxWrkr) {
+    int i;
+    int nAvailable = 0;
+
+    for (i = 0; i < nWorkers; ++i) {
+        if (wtiCountsTowardWorkerBudget(ppWti[i])) ++nAvailable;
+    }
+
+    return nAvailable < nMaxWrkr ? nMaxWrkr - nAvailable : 0;
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiClearWaitReservation(wti_t *const pWti) {
+    pWti->bWaitingForWork = 0;
+    pWti->bWakeupReserved = 0;
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiMarkExiting(wti_t *const pWti) {
+    ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 1);
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiClearExiting(wti_t *const pWti) {
+    ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 0);
+}
 
 /* prototypes */
 rsRetVal wtiConstruct(wti_t **ppThis);
@@ -151,6 +243,7 @@ static inline void __attribute__((unused)) wtiResetExecState(wti_t *const pWti, 
     pWti->execState.bPrevWasSuspended = 0;
     pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
     pWti->execState.rulesetCallDepth = 0;
+    pWti->execState.var_cache = NULL;
 }
 
 

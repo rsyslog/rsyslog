@@ -1,5 +1,9 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
+# Verify that imfile's inotify mode follows rapid wildcard log rotations without
+# losing or duplicating records. The exact 10000-record sequence is the oracle;
+# rotations occur during active writes so the final close-flushed tail exercises
+# watch replacement rather than relying on a fixed delay.
 . $srcdir/diag.sh check-inotify-only
 . ${srcdir:=.}/diag.sh init
 check_command_available logrotate
@@ -173,19 +177,19 @@ fi
 
 # Output extra information
 echo ======================:
-echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log)
+echo "LINES: $(wc -l "$RSYSLOG_DYNNAME.input.log")"
 echo TAIL	$RSYSLOG_DYNNAME.input.log:
 tail $RSYSLOG_DYNNAME.input.log
 echo ""
-echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.1)
+echo "LINES: $(wc -l "$RSYSLOG_DYNNAME.input.log.1")"
 echo TAIL	$RSYSLOG_DYNNAME.input.log.1:
 tail $RSYSLOG_DYNNAME.input.log.1
 echo ""
-echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.2)
+echo "LINES: $(wc -l "$RSYSLOG_DYNNAME.input.log.2")"
 echo TAIL	$RSYSLOG_DYNNAME.input.log.2:
 tail $RSYSLOG_DYNNAME.input.log.2
 echo ""
-echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.3)
+echo "LINES: $(wc -l "$RSYSLOG_DYNNAME.input.log.3")"
 echo TAIL	$RSYSLOG_DYNNAME.input.log.3:
 tail $RSYSLOG_DYNNAME.input.log.3
 echo ""

@@ -309,6 +309,7 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.cry.provider", eCmdHdlrGetWord, 0},
                                            {"queue.samplinginterval", eCmdHdlrInt, 0},
                                            {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0},
+                                           {"queue.mutexcontentionstats", eCmdHdlrBinary, 0},
                                            {"queue.oncorruption", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
@@ -478,6 +479,7 @@ void qqueueDbgPrint(qqueue_t *pThis) {
               (pThis->pszFilePrefix == NULL) ? "[NONE]" : (char *)pThis->pszFilePrefix);
     dbgoprint((obj_t *)pThis, "queue.size: %d\n", pThis->iMaxQueueSize);
     dbgoprint((obj_t *)pThis, "queue.dequeuebatchsize: %d\n", pThis->iDeqBatchSize);
+    dbgoprint((obj_t *)pThis, "queue.mutexcontentionstats: %d\n", pThis->bMutexContentionStats);
     dbgoprint((obj_t *)pThis, "queue.mindequeuebatchsize: %d\n", pThis->iMinDeqBatchSize);
     dbgoprint((obj_t *)pThis, "queue.mindequeuebatchsize.timeout: %d\n", pThis->toMinDeqBatchSize);
     dbgoprint((obj_t *)pThis, "queue.maxdiskspace: %lld\n", pThis->sizeOnDiskMax);
@@ -528,6 +530,39 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
         segdiskStoreMayHaveData(pThis->tVars.segdisk))
         return 1;
     return size;
+}
+
+/*
+ * Acquire the queue mutex while optionally recording observable contention.
+ * The normal path deliberately remains a plain mutex lock. The diagnostic
+ * path is selected explicitly per queue because trylock affects throughput.
+ * Observed wait time includes scheduler delay and is not mutex hold time.
+ */
+static inline void qqueueLock(qqueue_t *const pThis) {
+    if (!pThis->bMutexContentionStats || !STATSCOUNTER_ENABLED()) {
+        d_pthread_mutex_lock(pThis->mut);
+        return;
+    }
+
+    const int trylock_ret = d_pthread_mutex_trylock(pThis->mut);
+    if (trylock_ret == 0) return;
+    if (trylock_ret != EBUSY) {
+        d_pthread_mutex_lock(pThis->mut);
+        return;
+    }
+
+    STATSCOUNTER_INC(pThis->ctrMutexContention, pThis->mutCtrMutexContention);
+    struct timespec before;
+    const int have_before = clock_gettime(CLOCK_MONOTONIC, &before) == 0;
+    d_pthread_mutex_lock(pThis->mut);
+    if (have_before) {
+        struct timespec after;
+        if (clock_gettime(CLOCK_MONOTONIC, &after) == 0) {
+            const int64_t wait_ns =
+                ((int64_t)(after.tv_sec - before.tv_sec) * 1000000000LL) + (int64_t)(after.tv_nsec - before.tv_nsec);
+            if (wait_ns >= 0) STATSCOUNTER_ADD(pThis->ctrMutexWaitNs, pThis->mutCtrMutexWaitNs, (uint64_t)wait_ns);
+        }
+    }
 }
 
 static int64 getQueueDiskBytes(qqueue_t *pThis) {
@@ -2674,6 +2709,8 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
     INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
     INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
     INIT_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+    STATSCOUNTER_INIT(pThis->ctrMutexContention, pThis->mutCtrMutexContention);
+    STATSCOUNTER_INIT(pThis->ctrMutexWaitNs, pThis->mutCtrMutexWaitNs);
     CHKiRet(qqueueSetiNumWorkerThreads(pThis, iWorkerThreads));
 
 finalize_it:
@@ -2714,6 +2751,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->bMutexContentionStats = 0;
     pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
@@ -2746,6 +2784,7 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->bMutexContentionStats = 0;
     pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
@@ -2911,7 +2950,15 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
             /* awake possibly waiting enq process */
             pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
         }
-    } else { /* memory queue */
+    } else if (pThis->qType == QUEUETYPE_FIXED_ARRAY) {
+        /* RAM retirement releases completed counts, not the original slots of
+         * this batch: another worker may finish an older batch later. Batch
+         * pointers own the messages independently of these reusable slots.
+         * Subtraction avoids overflowing head + nElem near INT_MAX. */
+        const int remaining = pThis->iMaxQueueSize - pThis->tVars.farray.head;
+        assert(nElem >= 0 && nElem <= pThis->iMaxQueueSize);
+        pThis->tVars.farray.head = nElem >= remaining ? nElem - remaining : pThis->tVars.farray.head + nElem;
+    } else { /* linked-list memory queue */
         for (i = 0; i < nElem; ++i) {
             pThis->qDel(pThis);
         }
@@ -2952,9 +2999,9 @@ typedef enum tdlPhase_e { TDL_EMPTY, TDL_PROCESS_HEAD, TDL_QUEUE } tdlPhase_t;
  *   current batch.
  * - TDL_QUEUE:  current batch cannot be deleted and is queued for later.
  *
- * The dequeue identifier advances strictly monotonically, ensuring
- * deterministic order and proper resource release for both disk and
- * memory queue implementations.
+ * RAM batches release completed counts, including out-of-order worker
+ * completions when the list is empty. Do not turn this into an ordered RAM
+ * retirement frontier: workers already own independent message references.
  */
 static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
     toDeleteLst_t *pTdl;
@@ -3010,12 +3057,47 @@ finalize_it:
 }
 
 
+/* Concurrency & Locking: completed batch references move to a worker-owned
+ * buffer under the queue mutex, after store commit. The buffer holds at most
+ * one batch and is drained without the queue mutex and with cancellation
+ * disabled. No other worker, producer, or shutdown path accesses this buffer.
+ */
+static void qqueueDrainDeferred(wti_t *const pWti) {
+    for (int i = 0; i < pWti->n_deferred_msgs; ++i) {
+        msgDestruct(&pWti->p_deferred_msgs[i]);
+    }
+    pWti->n_deferred_msgs = 0;
+}
+
+/* Exceptional idle/minbatch/cleanup path: never retain a completed batch
+ * across a condition wait. Recheck queue predicates after reacquiring. */
+static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) {
+    if (pWti->n_deferred_msgs != 0) {
+        d_pthread_mutex_unlock(pThis->mut);
+        qqueueDrainDeferred(pWti);
+        qqueueLock(pThis);
+    }
+}
+
+static void qqueueDeferBatch(wti_t *const pWti) {
+    batch_t *const pBatch = &pWti->batch;
+    assert(pWti->n_deferred_msgs == 0);
+    assert(pBatch->nElem <= pBatch->maxElem);
+    for (int i = 0; i < pBatch->nElem; ++i) {
+        pWti->p_deferred_msgs[i] = pBatch->pElem[i].pMsg;
+        pBatch->pElem[i].pMsg = NULL;
+    }
+    pWti->n_deferred_msgs = pBatch->nElem;
+    pBatch->nElem = pBatch->nElemDeq = 0;
+}
+
 /* Delete a batch of processed user objects from the queue, which includes
  * destructing the objects themself. Any entries not marked as finally
  * processed are enqueued again. The new enqueue is necessary because we have a
  * rgerhards, 2009-05-13
  */
-static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
+static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
+    batch_t *const pBatch = &pWti->batch;
     int i;
     smsg_t *pMsg;
     int nEnqueued = 0;
@@ -3030,11 +3112,6 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
         int retried = 0;
         iRet = pThis->qCompleteBatch(pThis, pBatch, &committed, &retried);
         if (iRet != RS_RET_OK) RETiRet;
-        for (i = 0; i < pBatch->nElem; ++i) {
-            pMsg = pBatch->pElem[i].pMsg;
-            msgDestruct(&pMsg);
-            pBatch->pElem[i].pMsg = NULL;
-        }
         /* committed is the physical-record count. It intentionally includes
          * salvaged corrupt records because recovery included those records in
          * iQueueSize; retried counts only decoded messages appended again. */
@@ -3051,7 +3128,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
             qqueueAddOverallQueueSize(added);
         }
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
-        pBatch->nElem = pBatch->nElemDeq = 0;
+        qqueueDeferBatch(pWti);
         pBatch->storeData = NULL;
         RETiRet;
     }
@@ -3069,7 +3146,6 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
                     localRet);
             }
         }
-        msgDestruct(&pMsg);
     }
 
     DBGPRINTF("DeleteProcessedBatch: we deleted %d objects and enqueued %d objects\n", i - nEnqueued, nEnqueued);
@@ -3078,7 +3154,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
 
     iRet = DeleteBatchFromQStore(pThis, pBatch);
 
-    pBatch->nElem = pBatch->nElemDeq = 0; /* reset batch */  // TODO: more fine init, new fields! 2010-06-14
+    qqueueDeferBatch(pWti);
 
     RETiRet;
 }
@@ -3110,7 +3186,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     DEFiRet;
 
     nDeleted = pWti->batch.nElemDeq;
-    localRet = DeleteProcessedBatch(pThis, &pWti->batch);
+    localRet = DeleteProcessedBatch(pThis, pWti);
     if (pThis->qCompleteBatch != NULL) CHKiRet(localRet);
 
     nDequeued = nDiscarded = 0;
@@ -3342,6 +3418,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
         pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
         ++nDequeued;
         if (nDequeued < iMinDeqBatchSize && getLogicalQueueSize(pThis) == 0) {
+            qqueueDrainDeferredLocked(pThis, pWti);
             while (!qqueueIsShutdownImmediate(pThis) && keep_running && nDequeued < iMinDeqBatchSize &&
                    getLogicalQueueSize(pThis) == 0) {
                 dbgprintf(
@@ -3536,17 +3613,19 @@ static rsRetVal RateLimiter(qqueue_t *pThis, wti_t *pWti) {
 
     if (iDelay > 0) {
         struct timespec deadline;
-        int waitRet;
+        int waitRet = 0;
         DBGOPRINT((obj_t *)pThis, "outside dequeue time window, delaying %d seconds\n", iDelay);
         timeoutComp(&deadline, (long)iDelay * 1000L);
         /* The condition wait releases the queue mutex atomically. A reload
          * quiesce or shutdown request signals this worker condition, so a
          * long dequeue window can never strand a batch-boundary barrier.
-         * Ordinary worker wakeups are ignored while the pool stays RUNNING. */
-        do {
+         * Ordinary worker wakeups are ignored while the pool stays RUNNING.
+         * Check before waiting as well: the request may have signalled while
+         * the preceding consumer callback had released the queue mutex. */
+        while (waitRet == 0 && (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pWti->pWtp->wtpState, &pWti->pWtp->mutWtpState) ==
+                                   wtpState_RUNNING) {
             waitRet = d_pthread_cond_timedwait(&pWti->pcondBusy, pThis->mut, &deadline);
-        } while (waitRet == 0 && (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pWti->pWtp->wtpState,
-                                                               &pWti->pWtp->mutWtpState) == wtpState_RUNNING);
+        }
     }
 
     RETiRet;
@@ -3563,12 +3642,18 @@ static rsRetVal DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSki
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pWti, wti);
 
+retry_dequeue:
     CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
     if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
 
-
 finalize_it:
+    if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
+        qqueueDrainDeferredLocked(pThis, pWti);
+        /* An enqueue during disposal could not signal us as a waiter yet.
+         * Retest under the mutex before returning IDLE to the wait loop. */
+        if (iRet == RS_RET_IDLE && getLogicalQueueSize(pThis) > 0) goto retry_dequeue;
+    }
     RETiRet;
 }
 
@@ -3590,10 +3675,14 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pWti, wti);
 
     int iCancelStateSave;
+    /* DeleteProcessedBatch() defers final message destruction by resetting
+     * the batch counters, so retain the dequeue count for checkpointing. */
+    const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DeleteProcessedBatch(pThis, &pWti->batch);
-    qqueueChkPersist(pThis, pWti->batch.nElemDeq);
+    DeleteProcessedBatch(pThis, pWti);
+    qqueueChkPersist(pThis, nElemDeq);
+    qqueueDrainDeferredLocked(pThis, pWti);
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
@@ -3605,7 +3694,7 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
  * rgerhards, 2008-01-21
  */
 static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
-    int iCancelStateSave;
+    int iCancelStateSave = PTHREAD_CANCEL_DISABLE;
     int bNeedReLock = 0; /**< do we need to lock the mutex again? */
     int skippedMsgs = 0; /**< did the queue loose any messages (can happen with
                           ** disk queue if .qi file is corrupt */
@@ -3621,7 +3710,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
         DBGOPRINT((obj_t *)pThis, "got 'file not found' error %d, queue defunct\n", iRet);
         iRet = queueSwitchToEmergencyMode(pThis, iRet);
         // TODO: think about what to return as iRet -- keep RS_RET_FILE_NOT_FOUND?
-        d_pthread_mutex_lock(pThis->mut);
+        qqueueLock(pThis);
     }
     if (iRet != RS_RET_OK) {
         FINALIZE;
@@ -3630,6 +3719,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     /* we now have a non-idle batch of work, so we can release the queue mutex and process it */
     d_pthread_mutex_unlock(pThis->mut);
     bNeedReLock = 1;
+    qqueueDrainDeferred(pWti);
 
     /* report errors, now that we are outside of queue lock */
     if (skippedMsgs > 0) {
@@ -3656,15 +3746,15 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
         srSleep(pThis->iDeqSlowdown / 1000000, pThis->iDeqSlowdown % 1000000);
     }
 
-    /* but now cancellation is no longer permitted */
-    pthread_setcancelstate(iCancelStateSave, NULL);
-
 finalize_it:
+    /* Consumer errors also leave cancellation disabled before taking the
+     * queue mutex. The cancel handler therefore always enters unlocked. */
+    pthread_setcancelstate(iCancelStateSave, NULL);
     DBGPRINTF("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet, getLogicalQueueSize(pThis),
               getPhysicalQueueSize(pThis));
 
     /* now we are done, but potentially need to re-acquire the mutex */
-    if (bNeedReLock) d_pthread_mutex_lock(pThis->mut);
+    if (bNeedReLock) qqueueLock(pThis);
 
     RETiRet;
 }
@@ -3681,7 +3771,7 @@ finalize_it:
  */
 static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     int i;
-    int iCancelStateSave;
+    int iCancelStateSave = PTHREAD_CANCEL_DISABLE;
     int bNeedReLock = 0; /**< do we need to lock the mutex again? */
     int skippedMsgs = 0;
     DEFiRet;
@@ -3694,6 +3784,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     /* we now have a non-idle batch of work, so we can release the queue mutex and process it */
     d_pthread_mutex_unlock(pThis->mut);
     bNeedReLock = 1;
+    qqueueDrainDeferred(pWti);
 
     /* at this spot, we may be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
@@ -3727,10 +3818,9 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
         pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
     }
 
-    /* but now cancellation is no longer permitted */
-    pthread_setcancelstate(iCancelStateSave, NULL);
-
 finalize_it:
+    /* Early errors must also restore the queue-locked cancellation contract. */
+    pthread_setcancelstate(iCancelStateSave, NULL);
     /*	Check the last return state of qqueueEnqMsg. If an error was returned, we acknowledge it only.
      *	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we reset the return state to RS_RET_OK.
      *	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the
@@ -3758,7 +3848,7 @@ finalize_it:
     }
 
     /* now we are done, but potentially need to re-acquire the mutex */
-    if (bNeedReLock) d_pthread_mutex_lock(pThis->mut);
+    if (bNeedReLock) qqueueLock(pThis);
 
     RETiRet;
 }
@@ -4013,7 +4103,15 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     /* if the queue already contains data, we need to start the correct number of worker threads. This can be
      * the case when a disk queue has been loaded. If we did not start it here, it would never start.
      */
+    /* qqueueAdviseMaxWorkers() publishes worker wakeup reservations under
+     * the queue mutex. A top-level queue is started without that mutex held;
+     * a DA child is started from InitDA(), which already holds its parent's
+     * shared mutex. Keep the child path lock-free here to avoid relocking the
+     * non-recursive parent mutex. */
+    const int bNeedQueueLock = pThis->pqParent == NULL;
+    if (bNeedQueueLock) qqueueLock(pThis);
     qqueueAdviseMaxWorkers(pThis);
+    if (bNeedQueueLock) d_pthread_mutex_unlock(pThis->mut);
 
     /* support statistics gathering */
     qName = obj.GetName((obj_t *)pThis);
@@ -4043,6 +4141,13 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     STATSCOUNTER_INIT(pThis->ctrNFDscrd, pThis->mutCtrNFDscrd);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrNFDscrd));
+
+    if (pThis->bMutexContentionStats) {
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.contention"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &pThis->ctrMutexContention));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.wait_ns"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &pThis->ctrMutexWaitNs));
+    }
 
     pThis->ctrMaxqsize = 0; /* no mutex needed, thus no init call */
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"), ctrType_Int, CTR_FLAG_NONE,
@@ -4249,7 +4354,13 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     qqueueSetShutdownImmediate(pThis, 0); /* would terminate the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
+    /* Unlike the normal enqueue advice path, destruction does not already
+     * hold this pool's queue mutex. The targeted-wakeup predicates are
+     * protected by that mutex, including a worker's exiting transition.
+     */
+    d_pthread_mutex_lock(pThis->pWtpDA->pmutUsr);
     wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
+    d_pthread_mutex_unlock(pThis->pWtpDA->pmutUsr);
 
     DBGOPRINT((obj_t *)pThis, "waiting for DA worker to terminate...\n");
     timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
@@ -4353,6 +4464,8 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexContention);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexWaitNs);
 
         /* type-specific destructor */
         iRet = pThis->qDestruct(pThis);
@@ -4615,7 +4728,7 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
     assert(pMultiSub != NULL);
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    d_pthread_mutex_lock(pThis->mut);
+    qqueueLock(pThis);
     for (i = 0; i < pMultiSub->nElem; ++i) {
         localRet = doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void *)pMultiSub->ppMsgs[i]);
         if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) ABORT_FINALIZE(localRet);
@@ -4664,7 +4777,7 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
 
     if (isNonDirectQ) {
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-        d_pthread_mutex_lock(pThis->mut);
+        qqueueLock(pThis);
     }
 
     CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg));
@@ -5064,6 +5177,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
             pThis->iSmpInterval = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.takeflowctlfrommsg")) {
             pThis->takeFlowCtlFromMsg = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.mutexcontentionstats")) {
+            pThis->bMutexContentionStats = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.oncorruption")) {
             char *mode;
             CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -5189,8 +5304,8 @@ int queuesEqual(qqueue_t *pOld, qqueue_t *pNew) {
             NUM_EQUALS(toActShutdown) && NUM_EQUALS(toEnq) && NUM_EQUALS(toWrkShutdown) &&
             NUM_EQUALS(iMinMsgsPerWrkr) && NUM_EQUALS(iMaxFileSize) && NUM_EQUALS(bSaveOnShutdown) &&
             NUM_EQUALS(iDeqSlowdown) && NUM_EQUALS(iDeqtWinFromHr) && NUM_EQUALS(iDeqtWinToHr) &&
-            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(takeFlowCtlFromMsg) && qdaLifecycleConfigEqual(&old_da, &new_da) &&
-            USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
+            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(bMutexContentionStats) && NUM_EQUALS(takeFlowCtlFromMsg) &&
+            qdaLifecycleConfigEqual(&old_da, &new_da) && USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
 }
 
 

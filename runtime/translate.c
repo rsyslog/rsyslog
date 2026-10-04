@@ -48,7 +48,8 @@ struct rsconfTranslateWarning_s {
     struct rsconfTranslateWarning_s *next;
 };
 
-static void addWarning(struct rsconfTranslateWarning_s **head, const char *fmt, ...);
+static void addWarning(struct rsconfTranslateWarning_s **head, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
 
 struct rsconfTranslateYamlAction_s {
     struct nvlst *nvlst;
@@ -192,7 +193,8 @@ int rsconfTranslateHasFatal(void) {
 }
 
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wformat_nonliteral static char *translateVasprintf(const char *fmt, va_list ap) {
+PRAGMA_IGNORE_Wformat_nonliteral static char *__attribute__((format(printf, 1, 0))) translateVasprintf(const char *fmt,
+                                                                                                       va_list ap) {
     va_list ap_copy;
     char *buf;
     int len;
@@ -213,7 +215,8 @@ PRAGMA_IGNORE_Wformat_nonliteral static char *translateVasprintf(const char *fmt
     return buf;
 }
 
-PRAGMA_IGNORE_Wformat_nonliteral static void addWarning(struct rsconfTranslateWarning_s **head, const char *fmt, ...) {
+PRAGMA_IGNORE_Wformat_nonliteral static void __attribute__((format(printf, 2, 3))) addWarning(
+    struct rsconfTranslateWarning_s **head, const char *fmt, ...) {
     va_list ap;
     char *buf;
     struct rsconfTranslateWarning_s *w;
@@ -1163,21 +1166,33 @@ static int stmtListToString(es_str_t **out,
                     estrAppendVarName(out, (char *)stmt->d.s_unset.varname) != 0 || estrAppendCstr(out, ";\n") != 0)
                     return -1;
                 break;
-            case S_IF:
-                if (appendIndent(out, indent) != 0 || estrAppendCstr(out, "if ") != 0 ||
-                    exprToString(out, stmt->d.s_if.expr, warnings) != 0 || estrAppendCstr(out, " then {\n") != 0 ||
-                    stmtListToString(out, stmt->d.s_if.t_then, indent + 1, warnings) != 0)
-                    return -1;
-                if (appendIndent(out, indent) != 0) return -1;
-                if (stmt->d.s_if.t_else != NULL) {
-                    if (estrAppendCstr(out, "} else {\n") != 0 ||
-                        stmtListToString(out, stmt->d.s_if.t_else, indent + 1, warnings) != 0 ||
-                        appendIndent(out, indent) != 0 || estrAppendCstr(out, "}\n") != 0)
+            case S_IF: {
+                const struct cnfstmt *if_stmt = stmt;
+
+                for (;;) {
+                    if (appendIndent(out, indent) != 0 ||
+                        estrAppendCstr(out, if_stmt == stmt ? "if " : "} else if ") != 0 ||
+                        exprToString(out, if_stmt->d.s_if.expr, warnings) != 0 ||
+                        estrAppendCstr(out, " then {\n") != 0 ||
+                        stmtListToString(out, if_stmt->d.s_if.t_then, indent + 1, warnings) != 0)
                         return -1;
-                } else if (estrAppendCstr(out, "}\n") != 0) {
-                    return -1;
+                    if (if_stmt->d.s_if.t_else != NULL && if_stmt->d.s_if.t_else->nodetype == S_IF &&
+                        if_stmt->d.s_if.t_else->next == NULL && if_stmt->d.s_if.t_else->d.s_if.is_else_if) {
+                        if_stmt = if_stmt->d.s_if.t_else;
+                        continue;
+                    }
+                    if (appendIndent(out, indent) != 0) return -1;
+                    if (if_stmt->d.s_if.t_else != NULL) {
+                        if (estrAppendCstr(out, "} else {\n") != 0 ||
+                            stmtListToString(out, if_stmt->d.s_if.t_else, indent + 1, warnings) != 0 ||
+                            appendIndent(out, indent) != 0 || estrAppendCstr(out, "}\n") != 0)
+                            return -1;
+                    } else if (estrAppendCstr(out, "}\n") != 0) {
+                        return -1;
+                    }
+                    break;
                 }
-                break;
+            } break;
             case S_FOREACH:
                 if (appendIndent(out, indent) != 0 || estrAppendCstr(out, "foreach (") != 0 ||
                     estrAppendVarName(out, stmt->d.s_foreach.iter->var) != 0 || estrAppendCstr(out, " in ") != 0 ||

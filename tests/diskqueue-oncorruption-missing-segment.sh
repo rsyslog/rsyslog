@@ -1,6 +1,9 @@
 #!/bin/bash
 # Validate queue.onCorruption behavior when a middle disk-queue segment
 # is missing at startup.
+# In-memory recovery is proven by its two internal diagnostics before an
+# immediate shutdown; waiting for them avoids racing the asynchronous omfile
+# action on loaded parallel test runners.
 # added 2026-02-07 by AI-assisted development, released under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
@@ -60,7 +63,7 @@ create_missing_middle_segment() {
 		seg_files+=("$base")
 	done
 	if [ "${#seg_files[@]}" -gt 0 ]; then
-		IFS=$'\n' seg_files=($(printf '%s\n' "${seg_files[@]}" | sort -t. -k2,2n))
+		mapfile -t seg_files < <(printf '%s\n' "${seg_files[@]}" | sort -t. -k2,2n)
 		unset IFS
 	fi
 
@@ -94,7 +97,10 @@ run_mode_check() {
 	: > "$STARTED_LOG"
 
 	startup
-	$TESTTOOL_DIR/msleep 500
+	if [ "$mode" = "inMemory" ]; then
+		wait_content "Queue corruption detected. Entering emergency in-memory mode" "$STARTED_LOG"
+		wait_content "pure in-memory emergency mode" "$STARTED_LOG"
+	fi
 	shutdown_immediate
 	if [ "$mode" = "ignore" ]; then
 		wait_shutdown "" "${TB_TEST_TIMEOUT:-90}"

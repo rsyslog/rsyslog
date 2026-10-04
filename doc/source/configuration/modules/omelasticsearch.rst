@@ -302,6 +302,19 @@ Parameters are:
    times a failure occurred (a potentially much smaller number). Counting messages
    would be quite performance-intense and is thus not done.
 
+-  **requests.count** - number of attempted index or bulk HTTP requests. This
+   includes requests that later fail at the transport or HTTP level.
+
+-  **requests.time_ms** - accumulated libcurl total time in milliseconds for
+   these requests. It includes name resolution, connection setup, TLS, request
+   transmission, and response transfer, but excludes request preparation,
+   response parsing, health checks, and platform detection. The average request
+   duration for an impstats interval is ``requests.time_ms / requests.count``.
+
+-  **requests.time_ms.min** and **requests.time_ms.max** - shortest and longest
+   observed request duration in milliseconds for the interval. A value of zero
+   means no request was observed in that interval.
+
 The following counters are available when `retryfailures="on"` is used:
 
 -  **response.success** - number of records successfully sent in bulk index

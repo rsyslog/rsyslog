@@ -26,6 +26,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 | [`rsyslog_module`](.agent/skills/rsyslog_module/SKILL.md) | Technical patterns for concurrency and module authoring. |
 | [`rsyslog_config`](.agent/skills/rsyslog_config/SKILL.md) | Dual-frontend config architecture (RainerScript + YAML) and parity rules. |
 | [`rsyslog-performance`](.agent/skills/rsyslog-performance/SKILL.md) | Evidence-based, safety-preserving runtime performance optimization. |
+| [`rsyslog_rejected_paths`](.agent/skills/rsyslog_rejected_paths/SKILL.md) | Dated catalog of tried-and-abandoned designs; consult before retrying. |
 | [`rsyslog_issue_triage`](.agent/skills/rsyslog_issue_triage/SKILL.md) | GitHub issue backlog triage, clustering, closure comments, and local evidence boards. |
 | [`rsyslog_continuous_issue_session`](.agent/skills/rsyslog_continuous_issue_session/SKILL.md) | Long-running issue-fix sessions with a rolling active PR set, validation gates, babysitting, cleanup, and automatic refill from the local issue cache. |
 | [`rsyslog_commit`](.agent/skills/rsyslog_commit/SKILL.md) | Compliant commit messages and branching policies. |
@@ -52,6 +53,11 @@ after formatting if you already validated the code immediately before.
 - **Architecture**: Microkernel core (`runtime/`) + Loadable Plugins (`plugins/`)
 - **Metadata**: Every module directory contains `MODULE_METADATA.yaml`.
 - **Knowledge Base**: `doc/ai/` contains canonical patterns for RAG ingestion.
+- **Rejected paths**: [`doc/ai/rejected_engineering_paths.md`](./doc/ai/rejected_engineering_paths.md)
+  records what was tried, the result, and why it was not pursued, with
+  `recorded` / `last_reviewed` / `stale_after` dates. Use the
+  [`rsyslog_rejected_paths`](.agent/skills/rsyslog_rejected_paths/SKILL.md)
+  skill before repeating a familiar optimization or locking experiment.
 - **Security Triage**: [`doc/ai/security_triage_rubric.md`](./doc/ai/security_triage_rubric.md)
   defines how AI agents must distinguish confirmed issues from potential
   issues, hardening, and invalid findings before using security severity or CWE
@@ -104,12 +110,17 @@ validation as the final validation gate when container tooling is available.
   and untracked files, so it is safer than manually inspecting only
   `origin/main...HEAD` during active local work.
 - Agent-documentation and skill-only edits, limited to files such as
-  `AGENTS.md`, `AGENTS.local.md`, `.agent/skills/**`, or `.codex/skills/**`,
+  `AGENTS.md`, `AGENTS.local.md`, `.agent/skills/**`, `.codex/skills/**`,
   do not require a full local CI container run or static analyzer. Validate
   them with text review, targeted command-snippet checks when useful, and the
   relevant documentation/style checks. If the same change also touches code,
   tests, workflows, build files, or scripts, validate those touched areas via
   the container-testing skill.
+- Internal `doc/ai/**` catalogs that are not Sphinx inputs share this exception
+  because they affect agent guidance only, not runtime behavior, tests,
+  workflows, build files, or rendered documentation. Validate them with text,
+  link, and YAML checks; use the full validation path when a change also
+  touches an in-scope runtime or documentation input.
 - User-facing documentation edits that affect rendered Sphinx docs under
   `doc/source/**`, or Sphinx support files for that tree, should run a
   high-concurrency docs build instead of local runtime CI:

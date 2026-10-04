@@ -13,7 +13,12 @@ template(name="outfmt" type="string" string="%msg% %$.aitag%\n")
 
 
 if($msg contains "msgnum:00") then {
-	action(type="mmaitag" provider="gemini_mock" apikey="dummy")
+	action(type="mmaitag" provider="gemini_mock" apikey="dummy"
+	       response.maxBytes="2097152"
+	       request.timeoutMs="30000"
+	       request.connectTimeoutMs="5000"
+	       request.lowSpeedLimit="2"
+	       request.lowSpeedTime="10")
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
