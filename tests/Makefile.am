@@ -2760,12 +2760,12 @@ check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_par
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
-	runtime_unit_tcpsrv_fence runtime_unit_parser_policy_snapshot runtime_unit_wtp_wakeup
+	runtime_unit_tcpsrv_fence runtime_unit_tcpsrv_prepared runtime_unit_parser_policy_snapshot runtime_unit_wtp_wakeup
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
-	runtime_unit_tcpsrv_fence runtime_unit_parser_policy_snapshot runtime_unit_wtp_wakeup
+	runtime_unit_tcpsrv_fence runtime_unit_tcpsrv_prepared runtime_unit_parser_policy_snapshot runtime_unit_wtp_wakeup
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2818,6 +2818,9 @@ runtime_unit_wtp_quiesce_SOURCES = \
 
 runtime_unit_tcpsrv_fence_SOURCES = \
 	unit/tcpsrv_fence_test.c
+
+runtime_unit_tcpsrv_prepared_SOURCES = \
+	unit/tcpsrv_prepared_test.c
 
 runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
@@ -2925,6 +2928,8 @@ runtime_unit_wtp_quiesce_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_tcpsrv_fence_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_tcpsrv_prepared_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-Wno-inline
@@ -2944,6 +2949,7 @@ runtime_unit_reload_candidate_graph_LDADD = $(LIBESTR_LIBS)
 runtime_unit_reload_syntax_clone_LDADD = $(LIBESTR_LIBS)
 runtime_unit_wtp_quiesce_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_tcpsrv_fence_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_tcpsrv_prepared_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG

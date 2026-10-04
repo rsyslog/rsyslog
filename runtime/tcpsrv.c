@@ -212,6 +212,7 @@ static rsRetVal ATTR_NONNULL()
         pioDescr->event.data.ptr = (void *)pioDescr;
         if (epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD, sock, &pioDescr->event) < 0) {
             LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed on fd %d, isLstn %d\n", sock, isLstn);
+            ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
         }
     } else if (op == EPOLL_CTL_DEL) {
         dbgprintf("removing epoll entry %d, socket %d\n", id, sock);
@@ -966,8 +967,8 @@ finalize_it:
  * Closes the session, runs the module-specific regular or error close hook,
  * and updates the event notification set. On EPOLL builds the I/O descriptor
  * is heap-allocated and is freed here after best-effort removal from the epoll
- * set. A NULL descriptor is accepted for fenced policy closure on poll builds
- * (where descriptors are transient).
+ * set. A NULL descriptor is accepted on poll builds (where descriptors are
+ * transient), or when epoll session setup failed before descriptor publication.
  *
  * No locking is performed; callers are responsible for any required
  * mutex handling before/after this call.
@@ -982,8 +983,8 @@ finalize_it:
  *
  * \pre  If \p pioDescr is non-NULL, it references \p pSess and has type
  *       NSD_PTR_TYPE_SESS.
- * \post The session object is destroyed. On EPOLL builds, \p pioDescr is
- *       freed; on non-EPOLL builds, the session table entry is cleared.
+ * \post The session object is destroyed and its table entry is cleared.
+ *       On EPOLL builds, a non-NULL \p pioDescr is freed.
  * \post Callers must not access \p pioDescr or \c pSess after return.
  *
  * \note epoll removal is performed on a best-effort basis; teardown proceeds
@@ -1299,6 +1300,11 @@ finalize_it:
             DESTROY_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
             free(pDescrNew);
         }
+        /* SessAccept already transferred the accepted session into its table.
+         * If descriptor allocation, socket lookup, or epoll registration fails,
+         * unwind that ownership too. The failed descriptor was never published
+         * to the session/backend, so close with NULL and retain the init error. */
+        if (pNewSess != NULL) (void)closeSessWithMode(pThis, NULL, pNewSess, iSess, 1);
         srSleep(0, 20000); /* Sleep 20ms */
     }
 no_more_data:
@@ -1713,7 +1719,8 @@ static rsRetVal ATTR_NONNULL() processWorkset(const int numEntries, tcpsrv_io_de
 /* This function is called to gather input.
  */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const pThis) {
+PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL(1) rsRetVal
+    RunPoll(tcpsrv_t *const pThis, tcpsrv_activation_gate_t gate, void *context) {
     DEFiRet;
     int nfds;
     int i;
@@ -1740,11 +1747,27 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
      * become really rare. 2025-02-25 RGerhards
      */
     /* The reservation includes the trailing sentinel even at exact capacity. */
-    CHKiRet(tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, 0, 1));
+    iRet = tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, 0, 1);
+    if (iRet != RS_RET_OK) return iRet;
     /* Add the TCP listen sockets to the list of read descriptors. */
     for (i = 0; i < pThis->iLstnCurr; ++i) {
-        CHKiRet(poll_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
+        iRet = poll_Add(pThis, pThis->ppLstn[i], NSDSEL_RD);
+        if (iRet != RS_RET_OK) return iRet;
     }
+
+    /* Reserve control and sentinel storage before reporting activation-ready.
+     * Initial failures must not jump into the historical per-batch retry label. */
+    iRet = tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, pThis->evtdata.poll.currfds, 1);
+    if (iRet != RS_RET_OK) return iRet;
+    const uint32_t initialControlIdx = pThis->evtdata.poll.currfds++;
+    pThis->evtdata.poll.fds[initialControlIdx].fd = pThis->controlPipe[0];
+    pThis->evtdata.poll.fds[initialControlIdx].events = POLLIN;
+    pThis->evtdata.poll.fds[initialControlIdx].revents = 0;
+    pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
+    pthread_mutex_lock(&pThis->fenceMut);
+    pThis->fenceReady = 1;
+    pthread_mutex_unlock(&pThis->fenceMut);
+    if (gate != NULL && (iRet = gate(context)) != RS_RET_OK) return iRet;
 
     while (1) {
         if (pThis->retireWhenDrained && !tcpsrvHasSessions(pThis)) break;
@@ -1856,7 +1879,7 @@ PRAGMA_DIAGNOSTIC_POP
 
 
 #if defined(ENABLE_IMTCP_EPOLL)
-static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL(1) RunEpoll(tcpsrv_t *const pThis, tcpsrv_activation_gate_t gate, void *context) {
     DEFiRet;
     int i;
     tcpsrv_io_descr_t *workset[NSPOLL_MAX_EVENTS_PER_WAIT];
@@ -1882,6 +1905,11 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
         DBGPRINTF("Added listener %d\n", i);
     }
 
+    pthread_mutex_lock(&pThis->fenceMut);
+    pThis->fenceReady = 1;
+    pthread_mutex_unlock(&pThis->fenceMut);
+    if (gate != NULL) CHKiRet(gate(context));
+
     while (glbl.GetGlobalInputTermState() == 0) {
         if (pThis->retireWhenDrained && !tcpsrvHasSessions(pThis)) break;
         numEntries = sizeof(workset) / sizeof(tcpsrv_io_descr_t *);
@@ -1903,6 +1931,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
         if (haveControl) tcpsrvActivateFence(pThis);
     }
 
+finalize_it:
     /* Workers can still process listener events queued just before shutdown.
      * Join them before freeing listener descriptors so rearmIoEvent() cannot
      * observe descriptor storage that RunEpoll() is tearing down.
@@ -1916,13 +1945,17 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
     /* remove the tcp listen sockets from the epoll set */
     for (i = 0; i < pThis->iLstnMax; ++i) {
         if (pThis->ppioDescrPtr[i] == NULL) continue;
-        if (pThis->ppLstn[i] != NULL) CHKiRet(epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL));
+        /* DEL may fail for a descriptor whose ADD failed during preparation.
+         * Never skip the remaining descriptor cleanup or replace the init error. */
+        if (pThis->ppLstn[i] != NULL) {
+            localRet = epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL);
+            if (iRet == RS_RET_OK && localRet != RS_RET_OK) iRet = localRet;
+        }
         DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
         free(pThis->ppioDescrPtr[i]);
         pThis->ppioDescrPtr[i] = NULL;
     }
 
-finalize_it:
     RETiRet;
 }
 #endif
@@ -1933,7 +1966,7 @@ finalize_it:
  * select() equivalent.
  * rgerhards, 2009-11-18
  */
-static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL(1) RunWithGate(tcpsrv_t *const pThis, tcpsrv_activation_gate_t gate, void *context) {
     DEFiRet;
     int controlInitialized = 0;
     int eventInitialized = 0;
@@ -1941,6 +1974,7 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
 
     if (pThis->iLstnCurr == 0) {
         dbgprintf("tcpsrv: no listeners at all (probably init error), terminating\n");
+        if (gate != NULL) ABORT_FINALIZE(RS_RET_ERR);
         FINALIZE;
     }
 
@@ -1956,6 +1990,7 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     if (pThis->workQueue.numWrkr > 1) {
         iRet = startWrkrPool(pThis);
         if (iRet != RS_RET_OK) {
+            if (gate != NULL) FINALIZE;
             LogError(errno, iRet,
                      "tcpsrv could not start worker pool "
                      "- now running single threaded '%s')",
@@ -1963,14 +1998,11 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
             pThis->workQueue.numWrkr = 1;
         }
     }
-    pthread_mutex_lock(&pThis->fenceMut);
-    pThis->fenceReady = 1;
-    pthread_mutex_unlock(&pThis->fenceMut);
 #if defined(ENABLE_IMTCP_EPOLL)
-    iRet = RunEpoll(pThis);
+    iRet = RunEpoll(pThis, gate, context);
 #else
     /* fall back to select */
-    iRet = RunPoll(pThis);
+    iRet = RunPoll(pThis, gate, context);
 #endif
 
 finalize_it:
@@ -1984,6 +2016,15 @@ finalize_it:
     if (eventInitialized) eventNotify_exit(pThis);
     if (controlInitialized) controlNotifyExit(pThis);
     RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
+    return RunWithGate(pThis, NULL, NULL);
+}
+
+static rsRetVal RunPrepared(tcpsrv_t *const server, tcpsrv_activation_gate_t gate, void *context) {
+    if (server == NULL || gate == NULL) return RS_RET_PARAM_ERROR;
+    return RunWithGate(server, gate, context);
 }
 
 
@@ -2864,6 +2905,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SwapRateLimiterLive = tcpsrvSwapRateLimiterLive;
     pIf->ValidateListenerTableCapacity = tcpsrvValidateListenerTableCapacity;
     pIf->SwapListenerTablesLive = tcpsrvSwapListenerTablesLive;
+    pIf->RunPrepared = RunPrepared;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

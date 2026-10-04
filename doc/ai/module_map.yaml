@@ -55,6 +55,7 @@ runtime_tcpsrv:
   paths:
     - "runtime/tcpsrv.c"
     - "runtime/tcpsrv-fence.c"
+    - "runtime/tcpsrv-prepared.h"
     - "runtime/tcpsrv.h"
     - "runtime/tcps_sess.c"
     - "runtime/tcps_sess.h"
@@ -63,6 +64,8 @@ runtime_tcpsrv:
     - imtcp sessions own independent decompressor state.
     - A finite zstd aggregate-window limit uses a listener-local 64-bit atomic reservation counter; only platforms without 64-bit atomics use the helper-mutex fallback.
     - Transactional imtcp profile updates acquire the event-loop/worker fence before mutating listener or session snapshots; unnamed Linux-like limiter counters are reset only inside that safepoint.
+    - Prepared listener threads finish backend registration before reporting ready, then wait for explicit commit authorization before I/O dispatch. The private handshake mutex and condition carry readiness, cancellation, and completion; owners join the server thread before destroying its state or backend.
+    - Endpoint addition, removal, and replacement activation remains rejected by the current existing-listener-only classifier; the prepared-thread handshake is a lifecycle foundation, not an expanded configuration capability.
 
 runtime_msg:
   paths: ["runtime/msg.c", "runtime/msg.h"]

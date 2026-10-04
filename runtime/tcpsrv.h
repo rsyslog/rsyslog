@@ -315,6 +315,10 @@ struct tcpsrv_workset_s {
 };
 
 
+/* Private control-path callback invoked after backend/listener registration,
+ * before any accept or dispatch. Its context lives until RunPrepared returns. */
+typedef rsRetVal (*tcpsrv_activation_gate_t)(void *context);
+
 /* interfaces */
 BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     INTERFACEObjDebugPrint(tcpsrv);
@@ -464,9 +468,11 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*ValidateListenerTableCapacity)(const tcpsrv_t *server, int capacity);
     void (*SwapListenerTablesLive)(tcpsrv_t *server, tcpsrv_listener_tables_t *prepared,
                                    tcpsrv_listener_tables_t *retired);
+    /* v44 proves prepared backend readiness, then gates dispatch until commit. */
+    rsRetVal (*RunPrepared)(tcpsrv_t *server, tcpsrv_activation_gate_t gate, void *context);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 43 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 44 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -549,6 +555,7 @@ rsRetVal tcpsrvValidateListenerTableCapacity(const tcpsrv_t *server, int capacit
 void tcpsrvSwapListenerTablesLive(tcpsrv_t *server,
                                   tcpsrv_listener_tables_t *prepared,
                                   tcpsrv_listener_tables_t *retired);
+
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

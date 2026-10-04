@@ -66,6 +66,7 @@
 #include "glbl.h"
 #include "srUtils.h"
 #include "tcpsrv.h"
+#include "tcpsrv-prepared.h"
 #include "ruleset.h"
 #include "rainerscript.h"
 #include "parserif.h"
@@ -91,16 +92,20 @@ typedef struct tcpsrv_etry_s {
     enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
-    pthread_mutex_t startMut;
-    pthread_cond_t startCond;
+    tcpsrvPrepared_t activation;
     int startSyncInitialized;
-    int startAuthorized;
-    int startCancelled;
-    int runFinished;
+    int preparedWorker; /* immutable while the server thread is running */
     struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
 
-/* Runtime-owned endpoint registry. Reload preparation builds entries privately;
+/* Concurrency & Locking: activation.mut guards prepared/ready/authorized and
+ * cancelled/finished phases. A prepared worker initializes its backend then
+ * parks at the activation gate; no userspace accept or dispatch precedes commit.
+ * Abort broadcasts cancellation and joins before freeing the server/context.
+ * The registry state describes published endpoint operation, not readiness of
+ * an unpublished candidate (which is tracked by activation.ready).
+ *
+ * Runtime-owned endpoint registry. Reload preparation builds entries privately;
  * commit publishes additions or disables accepts for removals while established
  * sessions retain their tcpsrv generation until retirement. Registry access is
  * confined to the serialized input/control lifecycle, never the message path. */
@@ -174,11 +179,7 @@ static rsRetVal endpointRegistryBuild(tcpsrv_t *const server,
         }
     }
     if (configName != NULL) CHKmalloc(entry->config_name = strdup((const char *)configName));
-    if (pthread_mutex_init(&entry->startMut, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
-    if (pthread_cond_init(&entry->startCond, NULL) != 0) {
-        pthread_mutex_destroy(&entry->startMut);
-        ABORT_FINALIZE(RS_RET_ERR);
-    }
+    CHKiRet(tcpsrvPreparedInit(&entry->activation));
     entry->startSyncInitialized = 1;
     entry->tcpsrv = server;
     entry->source_ordinal = sourceOrdinal;
@@ -226,8 +227,7 @@ static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
 static void endpointRegistryRemove(tcpsrv_etry_t *const entry) {
     entry->state = IMTCP_ENDPOINT_RETIRING;
     if (entry->startSyncInitialized) {
-        pthread_cond_destroy(&entry->startCond);
-        pthread_mutex_destroy(&entry->startMut);
+        tcpsrvPreparedDestroy(&entry->activation);
     }
     free(entry->endpoint_key);
     free(entry->config_name);
@@ -2965,9 +2965,9 @@ static rsRetVal retireReloadV1(void *const pReloadState) {
     for (size_t i = 0; i < state->count; ++i) {
         imtcpReloadEntryV1_t *const reloadEntry = &state->entries[i];
         if (!reloadEntry->removal || reloadEntry->runtime == NULL) continue;
-        pthread_mutex_lock(&reloadEntry->runtime->startMut);
-        const int finished = reloadEntry->runtime->runFinished;
-        pthread_mutex_unlock(&reloadEntry->runtime->startMut);
+        pthread_mutex_lock(&reloadEntry->runtime->activation.mut);
+        const int finished = reloadEntry->runtime->activation.finished;
+        pthread_mutex_unlock(&reloadEntry->runtime->activation.mut);
         if (!finished) return RS_RET_RETRY;
     }
     for (size_t i = 0; i < state->count; ++i) {
@@ -3307,19 +3307,15 @@ ENDfreeCnf
 static void *RunServerThread(void *myself) {
     tcpsrv_etry_t *const etry = (tcpsrv_etry_t *)myself;
     rsRetVal iRet;
-    pthread_mutex_lock(&etry->startMut);
-    while (!etry->startAuthorized && !etry->startCancelled) pthread_cond_wait(&etry->startCond, &etry->startMut);
-    const int cancelled = etry->startCancelled;
-    pthread_mutex_unlock(&etry->startMut);
-    if (cancelled) return NULL;
-    iRet = tcpsrv.Run(etry->tcpsrv);
-    if (iRet != RS_RET_OK) {
-        LogError(0, iRet, "imtcp: error while terminating server; rsyslog may hang on shutdown");
+    iRet = etry->preparedWorker ? tcpsrv.RunPrepared(etry->tcpsrv, tcpsrvPreparedGate, &etry->activation)
+                                : tcpsrv.Run(etry->tcpsrv);
+    if (iRet != RS_RET_OK && iRet != RS_RET_FORCE_TERM) {
+        if (etry->preparedWorker)
+            LogError(0, iRet, "imtcp: prepared listener backend failed");
+        else
+            LogError(0, iRet, "imtcp: error while terminating server; rsyslog may hang on shutdown");
     }
-    pthread_mutex_lock(&etry->startMut);
-    etry->runFinished = 1;
-    pthread_cond_broadcast(&etry->startCond);
-    pthread_mutex_unlock(&etry->startMut);
+    tcpsrvPreparedFinish(&etry->activation, iRet);
     return NULL;
 }
 
@@ -3345,11 +3341,8 @@ static rsRetVal startSrvWrkr(tcpsrv_etry_t *const etry, const int parked) {
 
     pthread_attr_init(&sessThrdAttr);
     pthread_attr_setstacksize(&sessThrdAttr, 4096 * 1024);
-    pthread_mutex_lock(&etry->startMut);
-    etry->startAuthorized = !parked;
-    etry->startCancelled = 0;
-    etry->runFinished = 0;
-    pthread_mutex_unlock(&etry->startMut);
+    tcpsrvPreparedReset(&etry->activation, !parked);
+    etry->preparedWorker = parked;
     r = pthread_create(&etry->tid, &sessThrdAttr, RunServerThread, etry);
     if (r != 0) {
         LogError(r, NO_ERRCODE, "imtcp error creating server thread");
@@ -3360,22 +3353,31 @@ static rsRetVal startSrvWrkr(tcpsrv_etry_t *const etry, const int parked) {
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
-    return r == 0 ? RS_RET_OK : RS_RET_ERR;
+    if (r != 0) return RS_RET_ERR;
+    if (parked) {
+        struct timespec deadline;
+        /* Five seconds bounds the readiness wait, not the subsequent join.
+         * Cleanup assumes local backend setup returns. Success requires the
+         * actual backend callback to report readiness. */
+        if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) {
+            cancelParkedSrvWrkr(etry);
+            return RS_RET_ERR;
+        }
+        deadline.tv_sec += 5;
+        const rsRetVal readyRet = tcpsrvPreparedWait(&etry->activation, &deadline);
+        if (readyRet != RS_RET_OK) cancelParkedSrvWrkr(etry);
+        return readyRet;
+    }
+    return RS_RET_OK;
 }
 
 static void authorizeSrvWrkr(tcpsrv_etry_t *const etry) {
-    pthread_mutex_lock(&etry->startMut);
-    etry->startAuthorized = 1;
-    pthread_cond_signal(&etry->startCond);
-    pthread_mutex_unlock(&etry->startMut);
+    tcpsrvPreparedAuthorize(&etry->activation);
 }
 
 static void cancelParkedSrvWrkr(tcpsrv_etry_t *const etry) {
     if (!etry->thread_started) return;
-    pthread_mutex_lock(&etry->startMut);
-    etry->startCancelled = 1;
-    pthread_cond_signal(&etry->startCond);
-    pthread_mutex_unlock(&etry->startMut);
+    tcpsrvPreparedCancel(&etry->activation);
     pthread_join(etry->tid, NULL);
     etry->thread_started = 0;
 }
@@ -3388,6 +3390,10 @@ static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
     }
 
     DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
+    /* A published prepared worker may still be parked at its activation gate.
+     * SIGTTIN alone cannot release a condition wait. Cancellation is inert once
+     * the worker has passed the gate; normal event-loop shutdown still follows. */
+    tcpsrvPreparedCancel(&etry->activation);
     pthread_kill(etry->tid, SIGTTIN);
     pthread_join(etry->tid, NULL);
     etry->thread_started = 0;
