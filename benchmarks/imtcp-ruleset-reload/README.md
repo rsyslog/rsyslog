@@ -16,11 +16,19 @@ is counterbalanced baseline-first/candidate-first; two independent sessions
 must use identical revisions, source fingerprints, workload sets, and the
 fixed schema-versioned policy.
 
-`config.reloadOnHUP=validate` is intentionally unsupported by the current
-runtime. The reload lane probes the daemon controller diagnostic before it
-sends benchmark traffic. If it sees the explicit unsupported diagnostic, it
-records `skipped-unsupported` and the comparison is **not a pass**. It never
-substitutes legacy HUP behavior or invents a successful validation result.
+The current branch supports `config.reloadOnHUP=validate`. During reload-phase
+traffic, `trial.sh` requires the candidate daemon to report
+`shadow_reload event=request result=reported_only mode=validate` after HUP;
+missing that diagnostic fails the trial. Older baseline revisions may lack
+transactional validation support: the baseline role uses its legacy HUP path
+as the comparison workload, not as evidence of successful validation. The
+candidate never substitutes legacy HUP behavior or invents a successful
+validation result. Comparison data marked `skipped-unsupported` remain **not a
+pass**; the current trial does not automatically produce that skip result.
+
+This validate lane measures private candidate validation/reporting alongside
+traffic, not `on`-mode activation performance or complete acceptance of the
+current bounded reload milestone.
 
 ```sh
 benchmarks/imtcp-ruleset-reload/run.sh \
@@ -57,7 +65,8 @@ diagnostic evidence, not acceptance gates.
 
 The documented smoke profile is one selected representative profile and both
 phases, for example `--payload 128 --tcp-sessions 1 --ruleset default --queue
-direct --batch-size 1`. It verifies harness plumbing only; runtime validate
-will currently skip explicitly, so it cannot demonstrate a successful reload
-gate. Run `python3 benchmarks/imtcp-ruleset-reload/selftest.py` after changing
-the harness.
+direct --batch-size 1`. It verifies harness plumbing and, for the current
+candidate, the validate/reporting diagnostic only; it is not a full acceptance
+run or evidence of `on`-mode activation performance. An older candidate without
+validate support cannot pass by substituting legacy HUP. Run
+`python3 benchmarks/imtcp-ruleset-reload/selftest.py` after changing the harness.
