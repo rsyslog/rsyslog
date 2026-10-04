@@ -293,7 +293,7 @@ finalize_it:
 
 
 #else /* no epoll, let's use poll()  ------------------------------------------------------------ */
-    #define FDSET_INCREMENT 1024 /* increment for struct pollfds array allocation */
+    #include "tcpsrv-poll.h"
 
 
 static rsRetVal ATTR_NONNULL() eventNotify_init(tcpsrv_t *const pThis ATTR_UNUSED) {
@@ -304,6 +304,9 @@ static rsRetVal ATTR_NONNULL() eventNotify_init(tcpsrv_t *const pThis ATTR_UNUSE
 static rsRetVal ATTR_NONNULL() eventNotify_exit(tcpsrv_t *const pThis) {
     DEFiRet;
     free(pThis->evtdata.poll.fds);
+    pThis->evtdata.poll.fds = NULL;
+    pThis->evtdata.poll.maxfds = 0;
+    pThis->evtdata.poll.currfds = 0;
     RETiRet;
 }
 
@@ -315,13 +318,7 @@ static rsRetVal ATTR_NONNULL() poll_Add(tcpsrv_t *const pThis, netstrm_t *const 
 
     CHKiRet(netstrm.GetSock(pStrm, &sock));
 
-    if (pThis->evtdata.poll.currfds == pThis->evtdata.poll.maxfds) {
-        struct pollfd *newfds;
-        CHKmalloc(newfds = realloc(pThis->evtdata.poll.fds,
-                                   sizeof(struct pollfd) * (pThis->evtdata.poll.maxfds + FDSET_INCREMENT)));
-        pThis->evtdata.poll.maxfds += FDSET_INCREMENT;
-        pThis->evtdata.poll.fds = newfds;
-    }
+    CHKiRet(tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, pThis->evtdata.poll.currfds, 1));
 
     switch (waitOp) {
         case NSDSEL_RD:
@@ -1742,10 +1739,8 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
      * but this is currently not considered worth the effort as non-epoll platforms
      * become really rare. 2025-02-25 RGerhards
      */
-    pThis->evtdata.poll.maxfds = FDSET_INCREMENT;
-
-    /* we need to alloc one pollfd more, because the list must be 0-terminated! */
-    CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
+    /* The reservation includes the trailing sentinel even at exact capacity. */
+    CHKiRet(tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, 0, 1));
     /* Add the TCP listen sockets to the list of read descriptors. */
     for (i = 0; i < pThis->iLstnCurr; ++i) {
         CHKiRet(poll_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
@@ -1770,20 +1765,15 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
             iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
         }
 
-        if (pThis->evtdata.poll.currfds == pThis->evtdata.poll.maxfds) {
-            struct pollfd *const newfds = realloc(
-                pThis->evtdata.poll.fds, sizeof(struct pollfd) * (pThis->evtdata.poll.maxfds + FDSET_INCREMENT + 1));
-            if (newfds == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            pThis->evtdata.poll.maxfds += FDSET_INCREMENT;
-            pThis->evtdata.poll.fds = newfds;
-        }
+        CHKiRet(
+            tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, pThis->evtdata.poll.currfds, 1));
         const uint32_t controlIdx = pThis->evtdata.poll.currfds++;
         pThis->evtdata.poll.fds[controlIdx].fd = pThis->controlPipe[0];
         pThis->evtdata.poll.fds[controlIdx].events = POLLIN;
         pThis->evtdata.poll.fds[controlIdx].revents = 0;
 
         /* zero-out the last fd - space for it is always reserved! */
-        assert(pThis->evtdata.poll.maxfds != pThis->evtdata.poll.currfds);
+        assert(pThis->evtdata.poll.currfds <= pThis->evtdata.poll.maxfds);
         pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
         /* wait for io to become ready */
         CHKiRet(poll_Poll(pThis, &nfds));

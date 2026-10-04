@@ -6,6 +6,8 @@
  * participants are parked. It also verifies fenced listener snapshot and
  * ownership swaps, including a prepared rate limiter. Bounded absolute
  * deadlines prevent a broken fence from hanging the unit test.
+ * Poll capacity checks call the production reservation helper at exact and
+ * growth boundaries, writing the control descriptor and trailing sentinel.
  */
 #include "config.h"
 
@@ -20,6 +22,7 @@
 #include "rsyslog.h"
 #include "ruleset.h"
 #include "tcpsrv.h"
+#include "../../runtime/tcpsrv-poll.h"
 
 static ratelimit_t *rateLimitCalls[4];
 static unsigned rateLimitIntervals[4];
@@ -521,7 +524,41 @@ static int rulesetSnapshot(void) {
     return 0;
 }
 
+static int pollCapacity(void) {
+    struct pollfd *fds = NULL;
+    uint32_t capacity = 0;
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 0, 1) == RS_RET_OK);
+    CHECK(capacity == 1024);
+    fds[0].fd = 42;
+    /* 1,023 data descriptors plus control exactly fill the logical capacity;
+     * the sentinel remains writable without requiring a spare logical slot. */
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 1023, 1) == RS_RET_OK);
+    CHECK(capacity == 1024);
+    fds[1023].fd = 43;
+    /* Volatile accesses preserve the sanitizer boundary oracle even when
+     * ordinary sentinel stores could be eliminated as dead writes. */
+    ((volatile struct pollfd *)fds)[1024].fd = 0;
+    CHECK(((volatile struct pollfd *)fds)[1024].fd == 0);
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 1024, 1) == RS_RET_OK);
+    CHECK(capacity == 2048 && fds[0].fd == 42 && fds[1023].fd == 43);
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 2047, 1) == RS_RET_OK);
+    CHECK(capacity == 2048);
+    fds[2047].fd = 44;
+    ((volatile struct pollfd *)fds)[2048].fd = 0;
+    CHECK(((volatile struct pollfd *)fds)[2048].fd == 0);
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 2048, 1) == RS_RET_OK);
+    CHECK(capacity == 3072 && fds[2047].fd == 44);
+    ((volatile struct pollfd *)fds)[3072].fd = 0;
+    CHECK(((volatile struct pollfd *)fds)[3072].fd == 0);
+    struct pollfd *const retained = fds;
+    CHECK(tcpsrvPollReserve(&fds, &capacity, UINT32_MAX, 1) == RS_RET_OUT_OF_MEMORY);
+    CHECK(fds == retained && capacity == 3072 && fds[0].fd == 42);
+    free(fds);
+    return 0;
+}
+
 int main(void) {
+    if (pollCapacity() != 0) return 1;
     if (singleWorkerRoundTrip() != 0) return 1;
     if (timeoutDrainAndRetry() != 0) return 1;
     if (termWhileParked() != 0) return 1;
