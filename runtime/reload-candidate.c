@@ -77,8 +77,10 @@ static rsRetVal appendObjectCatalogClone(rsReloadCandidate_t *const catalog, con
     DEFiRet;
 
     if (catalog == NULL || object == NULL) return RS_RET_PARAM_ERROR;
+    if (object->objType == CNFOBJ_RULESET && object->subobjs != NULL) return RS_RET_NOT_IMPLEMENTED;
+    if (object->objType == CNFOBJ_RULESET && object->nvlst == NULL) return RS_RET_OK;
     if (object->objType != CNFOBJ_GLOBAL && object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT &&
-        object->objType != CNFOBJ_RATELIMIT)
+        object->objType != CNFOBJ_RATELIMIT && object->objType != CNFOBJ_RULESET)
         return RS_RET_OK;
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &parameters));
     copy = cnfobjNew(object->objType, parameters);
@@ -1468,6 +1470,63 @@ static rsRetVal candidateRatelimitUsage(const rsReloadCandidate_t *const candida
     return RS_RET_OK;
 }
 
+/* Activation replaces only the script root/last pointers. Preserve and compare
+ * the complete header, including unknown keys, rather than silently accepting
+ * queue/parser settings that the materializer cannot apply. */
+static rsRetVal rulesetMetadataFingerprint(const rsReloadCandidate_t *catalog,
+                                           const char *identity,
+                                           char **fingerprint) {
+    const rsReloadCandidateObject_t *entry;
+    es_str_t *serialized = NULL;
+    int found = 0;
+    DEFiRet;
+
+    if (catalog == NULL || identity == NULL) return RS_RET_NOT_IMPLEMENTED;
+    CHKmalloc(serialized = es_newStr(128));
+    for (entry = catalog->head; entry != NULL; entry = entry->next) {
+        char *entryIdentity = NULL;
+        rsRetVal ret;
+        if (entry->object->objType != CNFOBJ_RULESET || entry->object->nvlst == NULL) continue;
+        ret = makeIdentity(entry->object, 0, &entryIdentity);
+        if (ret != RS_RET_OK) ABORT_FINALIZE(ret);
+        lowerRulesetIdentity(entryIdentity);
+        if (!strcmp(identity, entryIdentity)) {
+            free(entryIdentity);
+            if (found) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            found = 1;
+            CHKiRet(appendNvlst(&serialized, entry->object->nvlst));
+            /* Subobjects are not materialized either. Fail closed. */
+            if (entry->object->subobjs != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        } else {
+            free(entryIdentity);
+        }
+    }
+    /* The implicit default ruleset consists of headerless script fragments. */
+    if (!found && strcmp(identity, "ruleset:default")) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    CHKiRet(sha256Fingerprint(serialized, fingerprint));
+
+finalize_it:
+    if (serialized != NULL) es_deleteStr(serialized);
+    RETiRet;
+}
+
+static rsRetVal checkRulesetMetadata(const rsReloadCandidate_t *active,
+                                     const rsReloadCandidate_t *candidate,
+                                     const char *identity) {
+    char *activeFingerprint = NULL;
+    char *candidateFingerprint = NULL;
+    DEFiRet;
+
+    CHKiRet(rulesetMetadataFingerprint(active, identity, &activeFingerprint));
+    CHKiRet(rulesetMetadataFingerprint(candidate, identity, &candidateFingerprint));
+    if (strcmp(activeFingerprint, candidateFingerprint)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+
+finalize_it:
+    free(activeFingerprint);
+    free(candidateFingerprint);
+    RETiRet;
+}
+
 rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
                                                   const rsReloadCandidate_t *const candidate,
                                                   const rsReloadReportV1_t *const report,
@@ -1487,8 +1546,11 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
             entry->diffKind != RS_RELOAD_DIFF_REMOVED)
             return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_RULESET) {
-            if (entry->diffKind == RS_RELOAD_DIFF_MODIFIED) continue;
-            return RS_RET_NOT_IMPLEMENTED;
+            rsRetVal ret;
+            if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
+            ret = checkRulesetMetadata(activeSourceCatalog, candidate, entry->identity);
+            if (ret != RS_RET_OK) return ret;
+            continue;
         }
         if (entry->objectKind == RS_RELOAD_OBJ_GLOBAL && (authorizations & RS_RELOAD_AUTHORIZE_BASE_V1) != 0) continue;
         if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
@@ -1585,7 +1647,7 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
         return;
     }
     if (object->objType == CNFOBJ_GLOBAL || object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT ||
-        object->objType == CNFOBJ_RATELIMIT) {
+        object->objType == CNFOBJ_RATELIMIT || object->objType == CNFOBJ_RULESET) {
         if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
             sourceError = 1;
             return;

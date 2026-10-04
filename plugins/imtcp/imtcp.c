@@ -2301,6 +2301,13 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
     for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
+    /* Existing-listener-only milestone: adding/removing/replacing accept
+     * endpoints must remain fail-closed until prepared workers can prove
+     * their event loop is activation-ready before old accepts are closed.
+     * Classify before Prepare allocates or binds any live resource; validate
+     * mode therefore reports the same restart requirement without activation.
+     * Keep the private lifecycle implementation for that future milestone. */
+    if (oldCount != newCount) FINALIZE;
     CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
     CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
     if (oldIdentitiesUsable && newIdentitiesUsable) {
@@ -2309,18 +2316,14 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
             CHKiRet(reloadFindInstanceByIdentity(newConfig, identity, &matchedInst));
             free(identity);
             identity = NULL;
-            if (matchedInst == NULL) {
-                mergeReloadCapability(&capability, 0, 0, 1);
-                continue;
-            }
+            if (matchedInst == NULL) FINALIZE;
             ++matchedCount;
             if (!mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability)) FINALIZE;
         }
-        if (newCount > matchedCount) mergeReloadCapability(&capability, 1, 0, 0);
+        if (matchedCount != newCount) FINALIZE;
         *pCapability = capability;
         FINALIZE;
     }
-    if (oldCount != newCount) FINALIZE;
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {

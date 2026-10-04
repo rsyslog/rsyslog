@@ -157,6 +157,7 @@ TESTS_GSSAPI_LIBYAML = \
 EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
 EXTRA_DIST += unit/impcap_arp_parser_test.c
+EXTRA_DIST += unit/parser_policy_snapshot_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
@@ -488,7 +489,9 @@ TESTS_DEFAULT = \
 	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
 	global-reloadonhup-imtcp-reorder-rainerscript.sh \
 	global-reloadonhup-imtcp-replace-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-validate-rainerscript.sh \
 	global-reloadonhup-imtcp-add-rainerscript.sh \
+	global-reloadonhup-imtcp-add-validate-rainerscript.sh \
 	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
@@ -1756,7 +1759,9 @@ TESTS_LIBYAML_IMTCP = \
 	global-reloadonhup-imtcp-ruleset-yaml.sh \
 	global-reloadonhup-imtcp-reorder-yaml.sh \
 	global-reloadonhup-imtcp-replace-yaml.sh \
+	global-reloadonhup-imtcp-replace-validate-yaml.sh \
 	global-reloadonhup-imtcp-add-yaml.sh \
+	global-reloadonhup-imtcp-add-validate-yaml.sh \
 	global-reloadonhup-on-yaml.sh \
 	global-reloadonhup-ruleset-constructs-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \
@@ -2726,12 +2731,12 @@ check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_par
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
-	runtime_unit_tcpsrv_fence
+	runtime_unit_tcpsrv_fence runtime_unit_parser_policy_snapshot
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
-	runtime_unit_tcpsrv_fence
+	runtime_unit_tcpsrv_fence runtime_unit_parser_policy_snapshot
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2745,6 +2750,9 @@ runtime_unit_stringbuf_SOURCES = \
 
 runtime_unit_parser_pri_SOURCES = \
 	unit/parser_pri_test.c
+
+runtime_unit_parser_policy_snapshot_SOURCES = \
+	unit/parser_policy_snapshot_test.c
 
 runtime_unit_msg_replace_SOURCES = \
 	unit/msg_replace_test.c
@@ -2849,6 +2857,8 @@ runtime_unit_stringbuf_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_parser_pri_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_parser_policy_snapshot_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_msg_replace_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_ommongodb_date_CPPFLAGS = \
@@ -2876,6 +2886,7 @@ runtime_unit_tcpsrv_fence_CPPFLAGS = \
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_parser_policy_snapshot_LDADD =
 runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD =
@@ -2892,6 +2903,7 @@ if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_stringbuf_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_parser_policy_snapshot_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 

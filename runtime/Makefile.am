@@ -31,12 +31,14 @@ librsyslog_la_SOURCES = \
 	rsconf.c \
 	rsconf.h \
 	parser.h \
+	parser_sanitize_helper.h \
 	parser.c \
 	strgen.h \
 	strgen.c \
 	msg.c \
 	msg.h \
 	msg_replace_helper.h \
+	msg_programname_helper.h \
 	linkedlist.c \
 	linkedlist.h \
 	objomsr.c \

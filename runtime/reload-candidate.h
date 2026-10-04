@@ -31,8 +31,9 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
                                          rsReloadCandidateObjectVisitorV1_t visitor,
                                          void *context);
-/* Build an independent, ordered catalog containing global, module, input, and
- * named rate-limit declarations. This is the source material required by base
+/* Build an independent, ordered catalog containing global, module, input,
+ * named rate-limit declarations, and named ruleset headers (never scripts).
+ * This is the source material required by base
  * and module-specific effective-profile classifiers; unrelated scripts and
  * objects are omitted. Sequential global blocks retain parse order so a
  * private lowerer can reproduce the startup last-write merge. Rate-limit
@@ -84,7 +85,10 @@ typedef enum rsReloadCandidateAuthorizationV1_e {
     RS_RELOAD_AUTHORIZE_BASE_V1 = 1U << 1,
     RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 = RS_RELOAD_AUTHORIZE_BASE_V1
 } rsReloadCandidateAuthorizationV1_t;
-/* Ruleset modifications remain the baseline capability. Additional report
+/* Ruleset script modifications with unchanged complete headers remain the
+ * baseline capability. Both catalogs are required for modified rulesets;
+ * queue/parser/other header changes are not applied by script activation.
+ * Additional report
  * object kinds are accepted only when the caller has already prepared and
  * authorized the corresponding private runtime transition. */
 rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *activeSourceCatalog,
