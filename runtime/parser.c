@@ -304,6 +304,10 @@ static rsRetVal uncompressMessage(smsg_t *pMsg) {
                      ret);
             FINALIZE; /* unconditional exit, nothing left to do... */
         }
+        if (iLenDefBuf == 0) {
+            DBGPRINTF("legacy zlib decompression produced an empty message; discarding\n");
+            ABORT_FINALIZE(RS_RET_EMPTY_MSG);
+        }
         MsgSetRawMsg(pMsg, (char *)deflateBuf, iLenDefBuf);
     }
 finalize_it:
@@ -342,7 +346,7 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     uchar szSanBuf[32 * 1024]; /* buffer used for sanitizing a string */
 
     assert(pMsg != NULL);
-    assert(pMsg->iLenRawMsg > 0);
+    if (pMsg->iLenRawMsg == 0) ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
     pszMsg = pMsg->pszRawMsg;
     lenMsg = pMsg->iLenRawMsg;
