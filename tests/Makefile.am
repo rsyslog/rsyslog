@@ -59,6 +59,10 @@ EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
+TESTS_IMUDP_BUFFER_SIZING = imudp-batchsize-range.sh imudp-batchsize-runtime.sh \
+	yaml-imudp-batchsize-range.sh
+EXTRA_DIST += $(TESTS_IMUDP_BUFFER_SIZING)
+
 TESTS_PRIFILT_TRAILING_SEPARATOR = prifilt-trailing-separator.sh prifilt-trailing-separator-vg.sh
 EXTRA_DIST += $(TESTS_PRIFILT_TRAILING_SEPARATOR)
 
@@ -2694,10 +2698,10 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup
+	runtime_unit_wtp_wakeup runtime_unit_imudp_buffer
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup
+	runtime_unit_wtp_wakeup runtime_unit_imudp_buffer
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2729,6 +2733,9 @@ runtime_unit_omazuredce_utils_SOURCES = \
 
 runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
+
+runtime_unit_imudp_buffer_SOURCES = \
+	unit/imudp_buffer_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -2820,6 +2827,9 @@ runtime_unit_queue_da_CPPFLAGS = \
 runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-Wno-inline
+runtime_unit_imudp_buffer_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-I$(top_srcdir)/plugins/imudp
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -2840,6 +2850,7 @@ endif
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
+TESTS += $(TESTS_IMUDP_BUFFER_SIZING)
 check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
