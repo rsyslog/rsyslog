@@ -1465,42 +1465,7 @@ finalize_it:
 }
 
 
-/* Parse and set the "programname" for a given MSG object. Programname
- * is a BSD concept, it is the tag without any instance-specific information.
- * Precisely, the programname is terminated by either (whichever occurs first):
- * - end of tag
- * - nonprintable character
- * - ':'
- * - '['
- * - '/'
- * The above definition has been taken from the FreeBSD syslogd sources.
- *
- * The program name is not parsed by default, because it is infrequently-used.
- * IMPORTANT: A locked message object must be provided, else a crash will occur.
- * rgerhards, 2005-10-19
- */
-static rsRetVal acquireProgramName(smsg_t *const pM) {
-    int i;
-    uchar *pszTag, *pszProgName;
-    DEFiRet;
-
-    assert(pM != NULL);
-    pszTag = (uchar *)((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
-    for (i = 0; (i < pM->iLenTAG) && isprint((int)pszTag[i]) && (pszTag[i] != '\0') && (pszTag[i] != ':') &&
-                (pszTag[i] != '[') && (glblGetParserPermitSlashInProgramName(runConf) || (pszTag[i] != '/'));
-         ++i); /* just search end of PROGNAME */
-    if (i < CONF_PROGNAME_BUFSIZE) {
-        pszProgName = pM->PROGNAME.szBuf;
-    } else {
-        CHKmalloc(pM->PROGNAME.ptr = malloc(i + 1));
-        pszProgName = pM->PROGNAME.ptr;
-    }
-    memcpy((char *)pszProgName, (char *)pszTag, i);
-    pszProgName[i] = '\0';
-    pM->iLenPROGNAME = i;
-finalize_it:
-    RETiRet;
-}
+#include "msg_programname_helper.h"
 
 
 /* Access methods - dumb & easy, not a comment for each ;)

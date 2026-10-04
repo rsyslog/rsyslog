@@ -1,17 +1,16 @@
 .. _transactional-config-reload-adr:
 
 .. meta::
-   :description: ADR for transactional configuration reloads, generation ownership, and zero-disruption input preservation in rsyslog.
-   :keywords: rsyslog, ADR, configuration reload, generation, ruleset, imtcp, transactional, performance
+   :description: Current bounded transactional reload capabilities and the staged lifecycle roadmap for rsyslog configuration generations.
+   :keywords: rsyslog, ADR, configuration reload, generation, ruleset, imtcp, transactional, capability boundary
 
 Transactional configuration reload
 ==================================
 
 .. summary-start
 
-This ADR defines the staged transactional-reload contract: private validation
-and capability reporting precede activation; live changes commit atomically;
-and retiring work drains only after consumers quiesce at a batch boundary.
+This ADR distinguishes the current bounded reload milestone from the staged
+roadmap for private validation, atomic activation, and generation retirement.
 
 .. summary-end
 
@@ -21,6 +20,30 @@ Status
 Accepted as the implementation contract for the staged transactional-reload
 program.  This is a developer design record, not a statement that every stage
 is already available in a released rsyslog version.
+
+Current capability boundary
+---------------------------
+
+The current bounded milestone is not full configuration reload.  With
+``config.reloadOnHUP="on"``, it supports script-only updates to existing named
+rulesets and the existing implicit default ruleset's script fragments within
+the private compiler's supported syntax, selected single global-policy changes,
+and compatible updates to existing ``imtcp`` listeners.  Every header or
+metadata change to an explicitly configured ruleset is rejected, even when its
+script is unchanged; the headerless implicit default ruleset has no configurable
+header.  Ruleset addition/removal, calls, action/template/queue changes, and
+unclassified module or global changes remain unsupported.  Unsupported changes
+reject the candidate before live preparation rather than falling back to full
+reload.
+
+``imtcp`` endpoint addition, removal, and replacement are temporarily disabled
+for activation and rejected before preparation, including distinct fixed socket
+tuples.  Existing-listener live rate-limit, ACL, ruleset-binding, and compatible
+capacity updates remain supported; framing, keepalive, and compression updates
+retain their new-session-only contract.  The lifecycle, tombstone, action, and
+endpoint-reconciliation sections below describe the broader ADR goals, not
+additional capabilities of this milestone.  This boundary is not a release
+readiness or performance-gate result.
 
 Context
 -------
@@ -128,9 +151,12 @@ the reload began.  Candidate cleanup must not close, flush, detach, or mutate
 an active resource shared by identity with the candidate.
 
 Activation has a single commit point.  Once the publication switch completes,
-newly admitted work uses the new generation and old work completes against the
-old one.  Errors after that point are retirement errors, not grounds for a
-partial reverse switch.  The reload result and counters must distinguish
+work beginning execution uses the new generation and an already executing
+batch completes against the old one.  Queued messages that have not started
+execution are not pinned to their enqueue-time plan: they use the new ruleset
+plan at the next batch boundary.  Errors after that point are retirement
+errors, not grounds for a partial reverse switch.  The reload result and
+counters must distinguish
 ``rejected before activation``, ``activated with retirement pending``, and
 ``retirement failed`` so operators do not infer an incorrect active state.
 
@@ -197,7 +223,8 @@ session protocol behavior.  Endpoint reconciliation uses the complete endpoint
 tuple, not merely a port.  A ruleset or downstream action change alone must not
 close the listener or its active sessions.
 
-When an endpoint is removed, it stops accepting new sessions but its existing
+In the future endpoint-reconciliation lifecycle, when an endpoint is removed,
+it stops accepting new sessions but its existing
 sessions remain alive.  For those sessions, TLS, framing, and compression are
 frozen for the lifetime of the session.  A compatible ruleset update changes a
 session's ruleset-shell pointer through an event-loop control event at the
@@ -211,11 +238,15 @@ hostnames are also eligible when the unchanged active base has
 resolution remains restart-required.  Removing a ruleset still bound to a
 preserved session rejects the candidate; no fallback rebinding is permitted.
 
-If a listener is incompatible, the candidate must prepare the replacement
+The future replacement lifecycle requires that an incompatible listener's
+candidate prepare the replacement
 without disturbing the active listener; inability to bind or prepare the
 replacement rejects the transaction before activation.  A deliberate handoff
 policy for the same endpoint must be explicit and tested, because it cannot be
 assumed from generic module reuse.
+The current existing-listener-only milestone rejects endpoint additions,
+removals, and replacements before preparation instead of exercising these
+lifecycle paths.
 
 Tombstones and removed objects
 ------------------------------
@@ -288,10 +319,13 @@ constructing replacement endpoints without consuming or mutating the candidate
 configuration.
 
 Release C extends that foundation with a deliberately narrow private compiler
-and batch-boundary activation path.  Modifications to existing supported
-rulesets can be prepared and atomically activated.  Added or removed rulesets
-and every unclassified change to actions, parsers, queues, templates, modules,
-inputs, or global settings remain rejected as
+and batch-boundary activation path.  Modifications to supported scripts in
+existing named rulesets or the existing implicit default ruleset's script
+fragments can be prepared and atomically activated.  Explicitly configured
+ruleset headers and metadata must remain unchanged; the implicit default
+ruleset is headerless.  Every header/metadata change, calls, added or removed
+rulesets, and every unclassified change to actions, parsers, queues, templates,
+modules, inputs, or global settings remain rejected as
 ``candidate_scope_unsupported``.  Unsupported ruleset syntax and consumer
 queues without a safe batch barrier are rejected before commit.
 
@@ -316,7 +350,17 @@ and subsequent JSON serialization uses the selected compact or traditional
 spaced representation.  Messages parsed after a trailing-LF or trailing-CR
 policy commit use the newly selected handling, and subsequent message parsing
 uses the selected control-character, TAB, C-style, 8-bit-character, and
-LF-spacing policies. Changing more than one supported scalar in one generation,
+LF-spacing policies.  Sanitization samples each setting at most once before
+its first use and reuses that value thereafter within the operation.  Scan and
+trailing-character-drop flags are sampled at entry; rewrite-only TAB, C-style,
+escape-prefix, and maximum-line settings are first sampled at rewrite entry.
+There is no coherent global or configuration-generation snapshot: a commit
+during scanning may determine rewrite settings that have not yet been sampled.
+Program-name extraction samples the slash policy once at extraction entry and
+keeps it throughout that extraction.  These operation-local values are not
+queue-generation or enqueue-time policy pins; already sanitized or cached
+properties are not recomputed.  Changing more than one supported
+scalar in one generation,
 or changing any other global setting, remains unsupported. In ``validate``
 mode all candidate parsing remains report-only.
 
@@ -364,12 +408,15 @@ restart-required.  TLS, endpoint-in-place replacement, and remaining
 listener-structure fields remain conservatively restart-required until
 their corresponding prepare, ownership, and reconciliation contracts are
 implemented.
-An endpoint change that resolves to a distinct fixed socket tuple is reconciled
-as a prepared addition plus drain-removal: the old accept socket closes at
-commit, its established sessions retain the retired listener generation, and
-the replacement begins accepting on the newly published tuple.  Dynamic or
-service-name replacements that cannot bind privately without publishing a
-port-file side effect remain restart-required.
+Endpoint addition, drain-removal, and replacement activation are temporarily
+disabled in the current milestone, including changes to distinct fixed socket
+tuples.  They are rejected before preparation.  The future endpoint lifecycle
+will reconcile a distinct fixed tuple as a prepared addition plus drain-removal:
+the old accept socket will close at commit, established sessions will retain
+the retired listener generation, and the replacement will begin accepting on
+the newly published tuple.  Dynamic or service-name replacements that cannot
+bind privately without publishing a port-file side effect remain
+restart-required.
 An effective ``maxSessions`` resize is live when the effective listen backlog
 stays unchanged: Prepare reserves the next session-slot table and the fenced
 commit swaps it without disturbing established session indices.  Growth is
@@ -391,8 +438,11 @@ for configuration provenance or audit logging.
 Delivery plan and gates
 -----------------------
 
-The program is staged so that invariants become testable before broad module
-reuse is enabled.
+The following roadmap describes target stages, not the current supported
+capability matrix.  In particular, calls, action/template/queue lifecycle
+changes, and endpoint addition/removal/replacement remain outside the current
+bounded milestone.  The program is staged so that invariants become testable
+before broad module reuse is enabled.
 
 Release A
   Publish this ADR and establish the terminology, state machine, atomicity

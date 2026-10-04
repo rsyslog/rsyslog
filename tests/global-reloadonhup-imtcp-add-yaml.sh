@@ -1,167 +1,138 @@
 #!/bin/bash
-# Verify native YAML reaches the same transactional imtcp endpoint-add path as
-# RainerScript. The kernel first assigns the future fixed port to a seed
-# listener, which is retired before the add request, so the test never guesses
-# an unused port outside rsyslog. A connection to the new fixed port plus
-# records from both persistent sockets prove publication and session retention.
-# Rewriting that port with leading zeroes proves canonical endpoint matching.
-# Removal stops new accepts while the old session stays usable. After closing
-# it, bounded 100 ms status polling proves automatic retirement without another
-# HUP. The 50 polls
-# are only a hang bound; retirement_pending=0 is the completion oracle.
+# Deliberate existing-listener-only milestone: additions, removals and endpoint
+# replacements require restart until worker activation readiness is provable.
+# Completed HUP/status, unchanged generation, absent candidate port file and
+# old-session/new-old-listener messages prove rejection before resource prepare.
+# Restoring startup config proves the accepted baseline did not advance; a
+# retained-listener profile update must still reload. No sleep is an oracle.
+# Also run with RSYSLOG_RELOAD_ENDPOINT_MODE=validate: report-only mode must
+# classify restart_required without activation.
 . ${srcdir:=.}/diag.sh init
-require_yaml_support
 require_plugin imtcp
+MODE="${RSYSLOG_RELOAD_ENDPOINT_MODE:-on}"
+case "$MODE" in on|validate) ;; *) error_exit 1 ;; esac
+require_yaml_support
 generate_conf --yaml-only
-sed -i '/debug.abortOnProgramError:/a\  config.reloadOnHUP: "on"' "${TESTCONF_NM}.yaml"
-add_yaml_conf 'modules:'
-add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
-add_yaml_conf 'inputs:'
-add_yaml_conf '  - type: imtcp'
-add_yaml_conf '    port: "0"'
-add_yaml_conf '    listenPortFileName: "'$RSYSLOG_DYNNAME'.tcpflood_port"'
-add_yaml_conf '    name: first'
-add_yaml_conf '    ruleset: main'
-add_yaml_conf '  # seed endpoint'
-add_yaml_conf '  - type: imtcp'
-add_yaml_conf '    address: "127.0.0.1"'
-add_yaml_conf '    port: "0"'
-add_yaml_conf '    listenPortFileName: "'$RSYSLOG_DYNNAME'.seed_port"'
-add_yaml_conf '    name: seed'
-add_yaml_conf '    ruleset: main'
-add_yaml_conf 'rulesets:'
-add_yaml_conf '  - name: main'
-add_yaml_conf '    actions:'
-add_yaml_conf '      - type: omfile'
-add_yaml_conf '        name: sink'
-add_yaml_conf '        file: "'$RSYSLOG_OUT_LOG'"'
+sed -i '/debug.abortOnProgramError:/a\  config.reloadOnHUP: "'$MODE'"' "$TESTCONF_NM.yaml"
+add_yaml_conf '
+modules:
+  - load: "../plugins/imtcp/.libs/imtcp"
+inputs:
+  - type: imtcp
+    port: "0"
+    listenPortFileName: "'$RSYSLOG_DYNNAME'.tcpflood_port"
+    name: first
+    ruleset: main
+  # seed endpoint
+  - type: imtcp
+    address: "127.0.0.1"
+    port: "0"
+    listenPortFileName: "'$RSYSLOG_DYNNAME'.seed_port"
+    name: seed
+    ruleset: main
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        name: sink
+        file: "'$RSYSLOG_OUT_LOG'"
+'
 startup
-exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
 wait_file_exists "$RSYSLOG_DYNNAME.seed_port"
-ADDED_PORT="$(<"$RSYSLOG_DYNNAME.seed_port")"
+SEED_PORT="$(<"$RSYSLOG_DYNNAME.seed_port")"
+exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+exec 8<>"/dev/tcp/127.0.0.1/$SEED_PORT"
 cp "$CONF_FILE" "$CONF_FILE.startup"
-sed '/^  # seed endpoint$/,/^    ruleset: main$/d' "$CONF_FILE.startup" >"$CONF_FILE.base"
 
-# The seed has no sessions, but its listener control thread may finish retiring
-# just after HUP publication. These bounded polls are only a hang guard; stable
-# generation 2 and retirement_pending=0 prove the port is ready for reuse.
-cp "$CONF_FILE.base" "$CONF_FILE"
-issue_HUP
-for ((seed_retire_try = 1; seed_retire_try <= 50; ++seed_retire_try)); do
+assert_endpoint_rejected() {
+	issue_HUP
 	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=activated active_generation=2"* &&
-	      "$reload_status" == *"added=0 removed=1"* &&
-	      "$reload_status" == *"source_capability=drain_replace"* &&
-	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
-	if [[ "$reload_status" != *"result=activated active_generation=2"* ||
-	      "$reload_status" != *"added=0 removed=1"* ||
-	      "$reload_status" != *"source_capability=drain_replace"* ||
-	      "$reload_status" != *"retirement_pending=1"* ]]; then
-		echo "FAIL: unexpected YAML status while retiring seed endpoint: $reload_status"
+	expected_result=candidate_scope_unsupported
+	[[ "$MODE" == validate ]] && expected_result=reported_only
+	if [[ "$reload_status" != *"result=$expected_result active_generation=1"* ||
+	      "$reload_status" != *"source_capability=restart_required"* ||
+	      "$reload_status" != *"retirement_pending=0"* ]]; then
+		echo "FAIL: candidate escaped existing-listener scope: $reload_status"
 		error_exit 1
 	fi
-	"$TESTTOOL_DIR/msleep" 100
-done
-if [[ "$reload_status" != *"result=activated active_generation=2"* ||
+	[[ ! -e "$RSYSLOG_DYNNAME.candidate_port" ]] || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: retained-first-%s\n' "$1" >&9 || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: retained-seed-%s\n' "$1" >&8 || error_exit 1
+	wait_content "retained-first-$1" "$RSYSLOG_OUT_LOG"
+	wait_content "retained-seed-$1" "$RSYSLOG_OUT_LOG"
+	exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+	printf '<167>Mar 10 01:00:00 host app: retained-accept-%s\n' "$1" >&7 || error_exit 1
+	exec 7>&-
+	wait_content "retained-accept-$1" "$RSYSLOG_OUT_LOG"
+	exec 7<>"/dev/tcp/127.0.0.1/$SEED_PORT"
+	printf '<167>Mar 10 01:00:00 host app: seed-accept-%s\n' "$1" >&7 || error_exit 1
+	exec 7>&-
+	wait_content "seed-accept-$1" "$RSYSLOG_OUT_LOG"
+}
+awk -v candidate="$RSYSLOG_DYNNAME.candidate_port" '
+	/^rulesets:/ {
+		print "  - type: imtcp"
+		print "    port: \"0\""
+		print "    listenPortFileName: \"" candidate "\""
+		print "    name: added"
+		print "    ruleset: main"
+	}
+	{ print }
+' "$CONF_FILE.startup" >"$CONF_FILE"
+assert_endpoint_rejected addition
+
+awk '
+	/^  # seed endpoint$/ { skipping = 1 }
+	/^rulesets:/ { skipping = 0 }
+	!skipping { print }
+' "$CONF_FILE.startup" >"$CONF_FILE"
+assert_endpoint_rejected removal
+
+# Bind conflicts must be scope rejections, not failed live-resource prepares.
+awk -v port="$IMDIAG_PORT" '
+	/^rulesets:/ {
+		print "  - type: imtcp"
+		print "    address: \"127.0.0.1\""
+		print "    port: \"" port "\""
+		print "    name: conflict"
+		print "    ruleset: main"
+	}
+	{ print }
+' "$CONF_FILE.startup" >"$CONF_FILE"
+assert_endpoint_rejected bind-conflict
+
+cp "$CONF_FILE.startup" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=1"* ||
+      "$reload_status" != *"added=0 removed=0 modified=0 invalid=0"* ||
+      "$reload_status" != *"source_capability=reuse"* ||
       "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: YAML seed endpoint did not finish retirement after $((seed_retire_try - 1)) attempts: $reload_status"
-	error_exit 1
-fi
-if (exec 7<>"/dev/tcp/127.0.0.1/$ADDED_PORT") 2>/dev/null; then
-	echo "FAIL: YAML retired seed endpoint still accepts new connections"
+	echo "FAIL: rejection changed accepted baseline: $reload_status"
 	error_exit 1
 fi
 
-sed '/^rulesets:/i\  - type: imtcp\
-    address: "127.0.0.1"\
-    port: "'$ADDED_PORT'"\
-    name: second\
-    ruleset: main' "$CONF_FILE.base" >"$CONF_FILE"
+sed '/    name: first/i\    flowControl: "off"' "$CONF_FILE.startup" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3"* ||
-      "$reload_status" != *"added=1 removed=0"* ||
-      "$reload_status" != *"source_capability=live_swap"* ]]; then
-	echo "FAIL: YAML added endpoint was not activated: $reload_status"
-	error_exit 1
+expected_result=activated
+expected_generation=2
+if [[ "$MODE" == validate ]]; then
+	expected_result=reported_only
+	expected_generation=1
 fi
-exec 8<>"/dev/tcp/127.0.0.1/$ADDED_PORT"
-if ! printf '<167>Mar 10 01:00:00 host app: yaml-add-first\n' >&9; then error_exit 1; fi
-if ! printf '<167>Mar 10 01:00:00 host app: yaml-add-second\n' >&8; then error_exit 1; fi
-wait_content 'yaml-add-first' "$RSYSLOG_OUT_LOG"
-wait_content 'yaml-add-second' "$RSYSLOG_OUT_LOG"
-
-# A source-level spelling change of the same numeric port must reuse the
-# listener and both established sessions rather than demand a restart.
-sed 's/port: "'$ADDED_PORT'"/port: "0'$ADDED_PORT'"/' "$CONF_FILE" >"$CONF_FILE.candidate"
-mv "$CONF_FILE.candidate" "$CONF_FILE"
-issue_HUP
-reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4"* ||
+if [[ "$reload_status" != *"result=$expected_result active_generation=$expected_generation"* ||
       "$reload_status" != *"added=0 removed=0 modified=1 invalid=0"* ||
-      "$reload_status" != *"source_capability=reuse"* ]]; then
-	echo "FAIL: YAML canonical endpoint spelling was not reused: $reload_status"
-	error_exit 1
-fi
-if ! printf '<167>Mar 10 01:00:00 host app: yaml-canonical-endpoint-session\n' >&8; then error_exit 1; fi
-wait_content 'yaml-canonical-endpoint-session' "$RSYSLOG_OUT_LOG"
-cp "$CONF_FILE" "$CONF_FILE.added"
-
-# The already-bound imdiag port makes listener preparation fail
-# deterministically. Generation four and both existing sessions prove that
-# the YAML candidate was rolled back before publication.
-sed '/^rulesets:/i\  - type: imtcp\
-    address: "127.0.0.1"\
-    port: "'$IMDIAG_PORT'"\
-    name: bind-conflict\
-    ruleset: main' "$CONF_FILE.added" >"$CONF_FILE"
-issue_HUP
-reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activation_failed active_generation=4"* ||
-      "$reload_status" != *"added=1"* ]]; then
-	echo "FAIL: YAML listener bind failure did not roll back prepare: $reload_status"
-	error_exit 1
-fi
-if ! printf '<167>Mar 10 01:00:00 host app: yaml-add-survives-bind-failure\n' >&8; then error_exit 1; fi
-wait_content 'yaml-add-survives-bind-failure' "$RSYSLOG_OUT_LOG"
-
-cp "$CONF_FILE.base" "$CONF_FILE"
-issue_HUP
-reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=5"* ||
-      "$reload_status" != *"removed=1"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ||
-      "$reload_status" != *"retirement_pending=1"* ]]; then
-	echo "FAIL: YAML endpoint removal was not activated: $reload_status"
-	error_exit 1
-fi
-if (exec 7<>"/dev/tcp/127.0.0.1/$ADDED_PORT") 2>/dev/null; then
-	echo "FAIL: YAML removed endpoint still accepts new connections"
-	error_exit 1
-fi
-if ! printf '<167>Mar 10 01:00:00 host app: yaml-remove-existing-session-survives\n' >&8; then error_exit 1; fi
-wait_content 'yaml-remove-existing-session-survives' "$RSYSLOG_OUT_LOG"
-
-exec 8>&-
-for ((retire_try = 1; retire_try <= 50; ++retire_try)); do
-	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=activated active_generation=5"* &&
-	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
-	if [[ "$reload_status" != *"result=activated active_generation=5"* ||
-	      "$reload_status" != *"retirement_pending=1"* ]]; then
-		echo "FAIL: unexpected YAML status while retiring drained endpoint: $reload_status"
-		error_exit 1
-	fi
-	"$TESTTOOL_DIR/msleep" 100
-done
-if [[ "$reload_status" != *"result=activated active_generation=5"* ||
+      "$reload_status" != *"source_capability=live_swap"* ||
       "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: YAML removed endpoint did not finish retirement after $((retire_try - 1)) attempts: $reload_status"
+	echo "FAIL: supported retained-listener profile rejected: $reload_status"
 	error_exit 1
 fi
-if ! printf '<167>Mar 10 01:00:00 host app: yaml-original-after-remove-retire\n' >&9; then error_exit 1; fi
-wait_content 'yaml-original-after-remove-retire' "$RSYSLOG_OUT_LOG"
-
+printf '<167>Mar 10 01:00:00 host app: retained-profile-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: retained-profile-seed\n' >&8 || error_exit 1
+wait_content 'retained-profile-first' "$RSYSLOG_OUT_LOG"
+wait_content 'retained-profile-seed' "$RSYSLOG_OUT_LOG"
+exec 8>&-
 exec 9>&-
 shutdown_when_empty
 wait_shutdown

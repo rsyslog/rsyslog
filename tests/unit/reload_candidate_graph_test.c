@@ -3,7 +3,8 @@
  * checks structural-only graph behavior without parsing, modules, a daemon,
  * or activation: default fragments merge, ruleset identities fold, secrets
  * never appear in digests, duplicate parameter keys fail, the source catalog
- * retains owned global/module/input/ratelimit syntax, fixed imtcp endpoint
+ * retains owned global/module/input/ratelimit/ruleset header syntax, modified
+ * rulesets authorize only unchanged headers (not queue/parser/unknown keys), fixed imtcp endpoint
  * identities are canonical and collision-safe, and enumeration is
  * deterministic.
  */
@@ -477,12 +478,13 @@ int main(void) {
         CHECK(failedObserved.count == 3);
         CHECK(rsReloadCandidateBuildObjectCatalogV1(candidate, &objectCatalog) == RS_RET_OK);
         CHECK(rsReloadCandidateVisitObjectsV1(objectCatalog, observeObject, &catalogObserved) == RS_RET_OK);
-        CHECK(catalogObserved.count == 4);
+        CHECK(catalogObserved.count == 5);
         CHECK(catalogObserved.types[0] == CNFOBJ_GLOBAL);
-        CHECK(catalogObserved.types[1] == CNFOBJ_RATELIMIT &&
-              !strcmp(catalogObserved.discriminator[1], "candidate-policy"));
-        CHECK(catalogObserved.types[2] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[2], "imtcp"));
+        CHECK(catalogObserved.types[1] == CNFOBJ_RULESET);
+        CHECK(catalogObserved.types[2] == CNFOBJ_RATELIMIT &&
+              !strcmp(catalogObserved.discriminator[2], "candidate-policy"));
         CHECK(catalogObserved.types[3] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[3], "imtcp"));
+        CHECK(catalogObserved.types[4] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[4], "imtcp"));
         rsReloadCandidateDestruct(&objectCatalog);
     }
     /* A narrow base classifier can extract one effective global string while
@@ -804,6 +806,7 @@ int main(void) {
         struct cnfobj *namedObject;
         struct cnfobj *otherObject;
         struct cnfobj *anonymousObject;
+        struct cnfobj *rulesetObject;
 
         CHECK(namedInput != NULL && moduleParams != NULL);
         moduleParams->next = parameter("networknamespace", "blue");
@@ -816,6 +819,9 @@ int main(void) {
         namedObject = object(CNFOBJ_INPUT, namedInput, NULL);
         otherObject = object(CNFOBJ_INPUT, parameter("type", "imudp"), NULL);
         anonymousObject = object(CNFOBJ_INPUT, parameter("type", "ImTcP"), NULL);
+        rulesetObject = object(CNFOBJ_RULESET, parameter("name", "source-ruleset"),
+                               propertyFilter(action("source-action", "same-config")));
+        CHECK(rulesetObject != NULL);
         CHECK(moduleObject != NULL && globalObject != NULL && globalObject->nvlst != NULL && ratelimitObject != NULL &&
               ratelimitObject->nvlst != NULL && namedObject != NULL && otherObject != NULL && anonymousObject != NULL &&
               otherObject->nvlst != NULL && anonymousObject->nvlst != NULL);
@@ -826,8 +832,13 @@ int main(void) {
         rsReloadCandidateSourceCaptureObject(namedObject);
         rsReloadCandidateSourceCaptureObject(otherObject);
         rsReloadCandidateSourceCaptureObject(anonymousObject);
+        rsReloadCandidateSourceCaptureObject(rulesetObject);
         CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder, &observedSourceCatalog) == RS_RET_OK);
-        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 6);
+        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 7);
+        CHECK(observedSourceCatalog->tail->object->objType == CNFOBJ_RULESET);
+        CHECK(observedSourceCatalog->tail->object->script == NULL);
+        CHECK(observedSourceCatalog->tail->object->nvlst != rulesetObject->nvlst);
+        cnfobjDestruct(rulesetObject);
         cnfobjDestruct(globalObject);
         cnfobjDestruct(moduleObject);
         cnfobjDestruct(ratelimitObject);
@@ -837,7 +848,7 @@ int main(void) {
         {
             objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
             CHECK(rsReloadCandidateVisitObjectsV1(observedSourceCatalog, observeObject, &catalogObserved) == RS_RET_OK);
-            CHECK(catalogObserved.count == 6);
+            CHECK(catalogObserved.count == 7);
             CHECK(catalogObserved.types[0] == CNFOBJ_GLOBAL);
             CHECK(catalogObserved.types[1] == CNFOBJ_MODULE);
             CHECK(!strcmp(catalogObserved.discriminator[1], "imtcp"));
@@ -845,10 +856,11 @@ int main(void) {
             CHECK(!strcmp(catalogObserved.discriminator[2], "source-policy"));
             CHECK(catalogObserved.types[5] == CNFOBJ_INPUT);
             CHECK(!strcmp(catalogObserved.discriminator[5], "ImTcP"));
+            CHECK(catalogObserved.types[6] == CNFOBJ_RULESET);
         }
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
         CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
-        CHECK(sourceObserved.count == 6);
+        CHECK(sourceObserved.count == 8);
         CHECK(findObserved(&sourceObserved, "global") != NULL);
         CHECK(findObserved(&sourceObserved, "ratelimit:source-policy") != NULL);
         CHECK(findObserved(&sourceObserved, "input:imtcp:anonymous:1") != NULL);
@@ -902,6 +914,38 @@ int main(void) {
         }
         CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_OK);
         CHECK(report != NULL && report->modifiedCount == 1 && report->invalidCount == 0);
+        /* The script-only positive control must work using an owned catalog;
+         * both header-only and combined header/body edits must fail closed. */
+        {
+            rsReloadCandidate_t *catalog = NULL;
+            const char *keys[] = {"queue.type", "parser", "unknown.parameter"};
+            const char *values[] = {"LinkedList", "rsyslog.rfc3164", "ignored"};
+            size_t key;
+            CHECK(rsReloadCandidateBuildObjectCatalogV1(activeCandidate, &catalog) == RS_RET_OK);
+            CHECK(catalog->head->object->script == NULL);
+            CHECK(rsReloadCandidateCheckAuthorizedReportV1(catalog, rulesetCandidate, report, 0) == RS_RET_OK);
+            CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, rulesetCandidate, report, 0) ==
+                  RS_RET_NOT_IMPLEMENTED);
+            for (key = 0; key < sizeof(keys) / sizeof(keys[0]); ++key) {
+                struct nvlst *extra = parameter(keys[key], values[key]);
+                CHECK(extra != NULL);
+                rulesetCandidate->head->object->nvlst->next = extra;
+                CHECK(rsReloadCandidateCheckAuthorizedReportV1(
+                          catalog, rulesetCandidate, report,
+                          RS_RELOAD_AUTHORIZE_IMTCP_V1 | RS_RELOAD_AUTHORIZE_BASE_V1) == RS_RET_NOT_IMPLEMENTED);
+                rulesetCandidate->head->object->nvlst->next = NULL;
+                nvlstDestruct(extra);
+                extra = parameter(keys[key], values[key]);
+                CHECK(extra != NULL);
+                activeCandidate->head->object->nvlst->next = extra;
+                CHECK(rsReloadCandidateCheckAuthorizedReportV1(catalog, activeCandidate, report, 0) ==
+                      RS_RET_NOT_IMPLEMENTED);
+                activeCandidate->head->object->nvlst->next = NULL;
+                nvlstDestruct(extra);
+            }
+            CHECK(rsReloadCandidateCheckAuthorizedReportV1(catalog, rulesetCandidate, report, 0) == RS_RET_OK);
+            rsReloadCandidateDestruct(&catalog);
+        }
         rsReloadReportDestructV1(&report);
         {
             rsReloadNormalizedGraphBuilderV1_t *candidateBuilder = NULL;

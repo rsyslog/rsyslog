@@ -1,11 +1,37 @@
+.. _global-configuration-object:
+
+.. meta::
+   :description: Global rsyslog configuration parameters and bounded transactional reload behavior.
+   :keywords: rsyslog, global, configuration, parser, transactional reload
+
 global() configuration object
 =============================
+
+.. summary-start
+
+The global configuration object sets process-wide policies, including parser
+behavior and selected parameters eligible for transactional HUP updates.
+
+.. summary-end
 
 The global configuration object permits to set global parameters. Note
 that each parameter can only be set once and cannot be re-set
 thereafter. If a parameter is set multiple times, the behaviour is
 unpredictable. As with other configuration objects, parameters for this
 object are case-insensitive.
+
+Transactional parser-policy updates use operation-local sampling.  Message
+sanitization samples each setting at most once before first use and reuses that
+value thereafter: scan and trailing-character-drop flags are sampled at entry,
+while rewrite-only TAB, C-style, escape-prefix, and maximum-line settings are
+first sampled at rewrite entry.  This is not a coherent global or generation
+snapshot; a commit during scanning may affect rewrite settings not yet sampled.
+Program-name extraction samples the slash policy once at extraction entry and
+keeps that value throughout the extraction.  These values are not pinned to a
+queue generation or enqueue time, and already sanitized or cached properties
+are not recomputed.  Transactional HUP currently supports only a
+bounded set of changes, not full configuration reload; see
+:ref:`transactional-config-reload-adr` for its current capability boundary.
 
 The following parameters can be set:
 
@@ -327,8 +353,10 @@ The following parameters can be set:
   ``app/foo``.
 
   A sole change to this parameter can be activated transactionally by
-  ``config.reloadOnHUP="on"``. Program names evaluated after the commit use
-  the new value; combined global changes remain fail-closed.
+  ``config.reloadOnHUP="on"``. Program-name extraction operations starting
+  after commit use the new value; an in-progress extraction keeps its initial
+  snapshot, and already cached program names are not recomputed. Combined
+  global changes remain fail-closed.
 
 - **parser.escapeControlCharacterTab** [on/off] available since 8.7.0
 

@@ -1,99 +1,96 @@
 #!/bin/bash
-# Verify transactional replacement of a named imtcp endpoint with a different
-# fixed socket tuple. A seed listener lets the kernel select the replacement
-# port without an external free-port race; it is retired before prepare binds
-# that port. HUP completion proves publication, failed connects prove each old
-# accept socket is closed, and records on the established old session plus the
-# new listener prove drain-retirement without loss. The bounded retirement
-# loop observes state, not elapsed time, and exists only as a hang guard.
+# Deliberate existing-listener-only milestone: additions, removals and endpoint
+# replacements require restart until worker activation readiness is provable.
+# Completed HUP/status, unchanged generation, absent candidate port file and
+# old-session/new-old-listener messages prove rejection before resource prepare.
+# Restoring startup config proves the accepted baseline did not advance; a
+# retained-listener profile update must still reload. No sleep is an oracle.
+# Also run with RSYSLOG_RELOAD_ENDPOINT_MODE=validate: report-only mode must
+# classify restart_required without activation.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
+MODE="${RSYSLOG_RELOAD_ENDPOINT_MODE:-on}"
+case "$MODE" in on|validate) ;; *) error_exit 1 ;; esac
 generate_conf
-add_conf 'global(config.reloadOnHUP="on")'
-add_conf 'module(load="../plugins/imtcp/.libs/imtcp")'
-add_conf 'input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" name="replace" ruleset="main")'
-add_conf 'input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2" name="seed" ruleset="main")'
-add_conf 'ruleset(name="main") {'
-add_conf '  action(type="omfile" name="sink" file="'$RSYSLOG_OUT_LOG'")'
-add_conf '}'
+add_conf '
+global(config.reloadOnHUP="'$MODE'")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" name="first" ruleset="main")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.seed_port" name="seed" ruleset="main")
+ruleset(name="main") {
+  action(type="omfile" name="sink" file="'$RSYSLOG_OUT_LOG'")
+}
+'
 startup
-assign_tcpflood_port2 "$RSYSLOG_DYNNAME.tcpflood_port2"
+wait_file_exists "$RSYSLOG_DYNNAME.seed_port"
+SEED_PORT="$(<"$RSYSLOG_DYNNAME.seed_port")"
 exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
-REPLACEMENT_PORT="$TCPFLOOD_PORT2"
+exec 8<>"/dev/tcp/127.0.0.1/$SEED_PORT"
 cp "$CONF_FILE" "$CONF_FILE.startup"
 
-# Release the kernel-selected replacement port before private prepare binds it.
-sed 's/input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2" name="seed" ruleset="main")//' \
-	"$CONF_FILE.startup" >"$CONF_FILE.base"
-cp "$CONF_FILE.base" "$CONF_FILE"
-issue_HUP
-# Listener-thread retirement can complete just after publication. Polling is
-# only a hang bound; stable generation 2 and pending 1 -> 0 prove completion.
-for ((seed_retire_try = 1; seed_retire_try <= 50; ++seed_retire_try)); do
+assert_endpoint_rejected() {
+	issue_HUP
 	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=activated active_generation=2"* &&
-	      "$reload_status" == *"removed=1"* &&
-	      "$reload_status" == *"source_capability=drain_replace"* &&
-	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
-	if [[ "$reload_status" != *"result=activated active_generation=2"* ||
-	      "$reload_status" != *"removed=1"* ||
-	      "$reload_status" != *"source_capability=drain_replace"* ||
-	      "$reload_status" != *"retirement_pending=1"* ]]; then
-		echo "FAIL: unexpected status while retiring replacement seed: $reload_status"
+	expected_result=candidate_scope_unsupported
+	[[ "$MODE" == validate ]] && expected_result=reported_only
+	if [[ "$reload_status" != *"result=$expected_result active_generation=1"* ||
+	      "$reload_status" != *"source_capability=restart_required"* ||
+	      "$reload_status" != *"retirement_pending=0"* ]]; then
+		echo "FAIL: candidate escaped existing-listener scope: $reload_status"
 		error_exit 1
 	fi
-	"$TESTTOOL_DIR/msleep" 100
-done
-if [[ "$reload_status" != *"result=activated active_generation=2"* ||
-      "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: replacement seed did not finish retirement after $((seed_retire_try - 1)) attempts: $reload_status"
-	error_exit 1
-fi
-if (exec 7<>"/dev/tcp/127.0.0.1/$REPLACEMENT_PORT") 2>/dev/null; then
-	echo "FAIL: retired seed still accepts replacement-port connections"
-	error_exit 1
-fi
+	[[ ! -e "$RSYSLOG_DYNNAME.candidate_port" ]] || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: retained-first-%s\n' "$1" >&9 || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: retained-seed-%s\n' "$1" >&8 || error_exit 1
+	wait_content "retained-first-$1" "$RSYSLOG_OUT_LOG"
+	wait_content "retained-seed-$1" "$RSYSLOG_OUT_LOG"
+	exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+	printf '<167>Mar 10 01:00:00 host app: retained-accept-%s\n' "$1" >&7 || error_exit 1
+	exec 7>&-
+	wait_content "retained-accept-$1" "$RSYSLOG_OUT_LOG"
+	exec 7<>"/dev/tcp/127.0.0.1/$SEED_PORT"
+	printf '<167>Mar 10 01:00:00 host app: seed-accept-%s\n' "$1" >&7 || error_exit 1
+	exec 7>&-
+	wait_content "seed-accept-$1" "$RSYSLOG_OUT_LOG"
+}
+# Changing a dynamic endpoint's port-file identity must not privately bind
+# a replacement accept socket. Both established and new old sessions survive.
+sed 's/\.tcpflood_port"/.candidate_port"/' "$CONF_FILE.startup" >"$CONF_FILE"
+assert_endpoint_rejected replacement
 
-# The normalized input identity remains name=replace, while the effective
-# endpoint changes from dynamic/portfile to a fixed tuple. Prepare must create
-# the fixed listener before commit and retire only the old accept side.
-sed 's|port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" name="replace"|address="127.0.0.1" port="'$REPLACEMENT_PORT'" name="replace"|' \
-	"$CONF_FILE.base" >"$CONF_FILE"
+cp "$CONF_FILE.startup" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3"* ||
-      "$reload_status" != *"modified=1 invalid=0"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ||
-      "$reload_status" != *"retirement_pending=1"* ]]; then
-	echo "FAIL: fixed endpoint replacement was not activated: $reload_status"
-	error_exit 1
-fi
-if (exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT") 2>/dev/null; then
-	echo "FAIL: replaced listener still accepts new sessions"
-	error_exit 1
-fi
-exec 8<>"/dev/tcp/127.0.0.1/$REPLACEMENT_PORT"
-if ! printf '<167>Mar 10 01:00:00 host app: replace-old-session\n' >&9; then error_exit 1; fi
-if ! printf '<167>Mar 10 01:00:00 host app: replace-new-listener\n' >&8; then error_exit 1; fi
-wait_content 'replace-old-session' "$RSYSLOG_OUT_LOG"
-wait_content 'replace-new-listener' "$RSYSLOG_OUT_LOG"
-
-exec 9>&-
-for ((retire_try = 1; retire_try <= 50; ++retire_try)); do
-	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=activated active_generation=3"* &&
-	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
-	"$TESTTOOL_DIR/msleep" 100
-done
-if [[ "$reload_status" != *"result=activated active_generation=3"* ||
+if [[ "$reload_status" != *"result=reported_only active_generation=1"* ||
+      "$reload_status" != *"added=0 removed=0 modified=0 invalid=0"* ||
+      "$reload_status" != *"source_capability=reuse"* ||
       "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: replaced endpoint did not retire after its session closed: $reload_status"
+	echo "FAIL: rejection changed accepted baseline: $reload_status"
 	error_exit 1
 fi
-if ! printf '<167>Mar 10 01:00:00 host app: replace-after-retire\n' >&8; then error_exit 1; fi
-wait_content 'replace-after-retire' "$RSYSLOG_OUT_LOG"
 
+sed 's/name="first"/flowControl="off" name="first"/' "$CONF_FILE.startup" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+expected_result=activated
+expected_generation=2
+if [[ "$MODE" == validate ]]; then
+	expected_result=reported_only
+	expected_generation=1
+fi
+if [[ "$reload_status" != *"result=$expected_result active_generation=$expected_generation"* ||
+      "$reload_status" != *"added=0 removed=0 modified=1 invalid=0"* ||
+      "$reload_status" != *"source_capability=live_swap"* ||
+      "$reload_status" != *"retirement_pending=0"* ]]; then
+	echo "FAIL: supported retained-listener profile rejected: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: retained-profile-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: retained-profile-seed\n' >&8 || error_exit 1
+wait_content 'retained-profile-first' "$RSYSLOG_OUT_LOG"
+wait_content 'retained-profile-seed' "$RSYSLOG_OUT_LOG"
 exec 8>&-
+exec 9>&-
 shutdown_when_empty
 wait_shutdown
 exit_test
