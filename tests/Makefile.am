@@ -880,6 +880,7 @@ TESTS_IMTCP = \
 	imtcp_framing_regex_maxmsg_overflow.sh \
 	imtcp-multiline.sh \
 	imtcp-spacelf-escape.sh \
+	legacy-zlib-empty-output.sh \
 	imtcp-basic-hup.sh \
 	imtcp-shutdown-pending-accepts.sh \
 	imtcp-impstats-single-thread.sh \

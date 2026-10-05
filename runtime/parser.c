@@ -260,6 +260,8 @@ finalize_it:
  * rgerhards, 2008-10-09
  */
 static rsRetVal uncompressMessage(smsg_t *pMsg) {
+    static unsigned int empty_msg_err_rate_limiter = 0;
+    static pthread_mutex_t mut_empty_msg_err_rate_limiter = PTHREAD_MUTEX_INITIALIZER;
     DEFiRet;
     uchar *deflateBuf = NULL;
     uLongf iLenDefBuf;
@@ -304,6 +306,20 @@ static rsRetVal uncompressMessage(smsg_t *pMsg) {
                      ret);
             FINALIZE; /* unconditional exit, nothing left to do... */
         }
+        if (iLenDefBuf == 0) {
+            int shouldLog = 0;
+            pthread_mutex_lock(&mut_empty_msg_err_rate_limiter);
+            if (empty_msg_err_rate_limiter < 1000) {
+                ++empty_msg_err_rate_limiter;
+                shouldLog = 1;
+            }
+            pthread_mutex_unlock(&mut_empty_msg_err_rate_limiter);
+            if (shouldLog) {
+                LogError(0, NO_ERRCODE, "legacy zlib decompression produced an empty message; discarding");
+            }
+            DBGPRINTF("legacy zlib decompression produced an empty message; discarding\n");
+            ABORT_FINALIZE(RS_RET_EMPTY_MSG);
+        }
         MsgSetRawMsg(pMsg, (char *)deflateBuf, iLenDefBuf);
     }
 finalize_it:
@@ -342,7 +358,7 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     uchar szSanBuf[32 * 1024]; /* buffer used for sanitizing a string */
 
     assert(pMsg != NULL);
-    assert(pMsg->iLenRawMsg > 0);
+    if (pMsg->iLenRawMsg == 0) ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
     pszMsg = pMsg->pszRawMsg;
     lenMsg = pMsg->iLenRawMsg;
