@@ -260,8 +260,8 @@ finalize_it:
  * rgerhards, 2008-10-09
  */
 static rsRetVal uncompressMessage(smsg_t *pMsg) {
-    static unsigned int iEmptyMsgErrRateLimiter = 0;
-    static pthread_mutex_t mutEmptyMsgErrRateLimiter = PTHREAD_MUTEX_INITIALIZER;
+    static unsigned int empty_msg_err_rate_limiter = 0;
+    static pthread_mutex_t mut_empty_msg_err_rate_limiter = PTHREAD_MUTEX_INITIALIZER;
     DEFiRet;
     uchar *deflateBuf = NULL;
     uLongf iLenDefBuf;
@@ -308,12 +308,12 @@ static rsRetVal uncompressMessage(smsg_t *pMsg) {
         }
         if (iLenDefBuf == 0) {
             int shouldLog = 0;
-            pthread_mutex_lock(&mutEmptyMsgErrRateLimiter);
-            if (iEmptyMsgErrRateLimiter < 1000) {
-                ++iEmptyMsgErrRateLimiter;
+            pthread_mutex_lock(&mut_empty_msg_err_rate_limiter);
+            if (empty_msg_err_rate_limiter < 1000) {
+                ++empty_msg_err_rate_limiter;
                 shouldLog = 1;
             }
-            pthread_mutex_unlock(&mutEmptyMsgErrRateLimiter);
+            pthread_mutex_unlock(&mut_empty_msg_err_rate_limiter);
             if (shouldLog) {
                 LogError(0, NO_ERRCODE, "legacy zlib decompression produced an empty message; discarding");
             }
