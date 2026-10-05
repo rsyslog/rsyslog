@@ -1,23 +1,22 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Regression test for empty output from the legacy per-message zlib extension.
 # A nonempty TCP frame or UDP datagram can contain a valid zlib stream that
 # expands to zero bytes. The parser must discard that record without aborting
 # or reading before the message buffer. The oracle is daemon survival and
 # delivery of a valid legacy-compressed follow-up on both transports; exactly
 # those two successfully decompressed controls must reach the selected output.
-# The debug log must contain exactly one boundary-specific discard for each
-# transport. That exact count distinguishes the fixed decompression guard from
-# the old release-build behavior, which could survive the invalid empty record
-# and discard it only after an out-of-bounds sanitizer access. Daemon survival
-# and control delivery are asserted independently through normal omfile output.
-#
-# Released under ASL 2.0
-. ${srcdir:=.}/diag.sh init
+# Each transport must produce one operational error for the empty record. The
+# exact count distinguishes the fixed guard from the old release-build
+# behavior, while the output file independently proves daemon survival and
+# delivery of both valid controls after synchronized shutdown.
+. "${srcdir:=.}/diag.sh" init
 require_plugin imtcp
 require_plugin imudp
 check_command_available python3
-export RSYSLOG_DEBUG="debug nostdout"
-export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debug.log"
 
 TCP_PORT_FILE="$RSYSLOG_DYNNAME.tcp.port"
 UDP_PORT_FILE="$RSYSLOG_DYNNAME.udp.port"
@@ -82,7 +81,7 @@ wait_shutdown
 
 content_check "legacy-zlib-tcp-control" "$RSYSLOG_OUT_LOG"
 content_check "legacy-zlib-udp-control" "$RSYSLOG_OUT_LOG"
-content_count_check "legacy zlib decompression produced an empty message; discarding" 2 "$RSYSLOG_DEBUGLOG"
+content_count_check "legacy zlib decompression produced an empty message; discarding" 2 "$RSYSLOG_DYNNAME.started"
 if [ "$(wc -l < "$RSYSLOG_OUT_LOG")" -ne 2 ]; then
 	echo "FAIL: empty legacy zlib records produced unexpected output"
 	exit 1
