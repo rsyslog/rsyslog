@@ -72,6 +72,7 @@ struct action_s {
     sbool bReportSuspensionCont;
     int bDisabled; /* disable flag; accessed atomically via mutCAS helper */
     sbool isTransactional;
+    sbool bLocalQueueNumericError; /* raw numeric value cannot be qualified for local S2 */
     sbool bCopyMsg;
     int iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
     time_t ttResumeRtry; /* when is it time to retry the resume? */

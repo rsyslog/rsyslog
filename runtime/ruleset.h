@@ -98,7 +98,11 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
  * calling sequence, so here we go...
  */
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
+void rulesetActivateLocalGraph(rsconf_t *conf);
+rsRetVal rulesetShutdownLocalGraph(rsconf_t *conf);
+void rulesetFreeLocalGraph(rsconf_t *conf);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
+rsRetVal rulesetValidateLocalQueues(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
 rsRetVal activateRulesetQueues(void);
 

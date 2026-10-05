@@ -95,6 +95,28 @@ struct queue_s {
     BEGINobjInstance
         ;
         queueType_t qType;
+        struct qqueueLocal_s *local; /* logical family; NULL for global queues */
+        struct qqueueLocalStats_s *localStats; /* unlink before any local worker pool is destroyed */
+        struct qqueueLocalFrontend_s *localSource; /* private FE source, never a DA parent */
+        /* Experimental local configuration; immutable after the shared activation gate. */
+        sbool bLocalScope;
+        struct queue_s *localRetiredDA; /* emergency-detached child, retained through graph join */
+        rsconf_t *localGraphConf; /* graph owner; NULL outside qualified local configurations */
+        sbool localGraphReady; /* queue mutex: all graph destinations initialized */
+        sbool localDAActive; /* BE mutex: DA transfer has priority over optional FE helpers */
+        sbool localDASaving; /* joined callback pools; existing persistence phase */
+        sbool localGraphStopped; /* shutdown-owner only, before object destruction */
+        sbool localGraphClosed; /* admission predicate, protected by queue mutex */
+        sbool localGraphDraining; /* deadline published under queue mutex */
+        struct timespec localGraphActionDeadline;
+        int localFrontendSize;
+        int localMaxFrontends;
+        sbool localFrontendStats;
+        sbool localHelperBatchSizeSet;
+        int localHelperBatchSize; /* unset inherits min(frontend size, dequeue batch size); explicit 0 disables */
+        sbool bLocalConfigValidated;
+        sbool bLocalConfigError;
+        uint64_t localExplicitParams;
         int nLogDeq; /* number of elements currently logically dequeued */
         int bShutdownImmediate; /* should all workers cease processing messages? */
         DEF_ATOMIC_HELPER_MUT(mutShutdownImmediate);
@@ -283,17 +305,22 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
 rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal qqueueValidateLocalConfig(qqueue_t *pThis);
 rsRetVal qqueueConstruct(qqueue_t **ppThis,
                          queueType_t qType,
                          int iWorkerThreads,
                          int iMaxQueueSize,
                          rsRetVal (*pConsumer)(void *, batch_t *, wti_t *));
+void qqueueNoteLocalConfigIntent(struct nvlst *lst);
 int queueCnfParamsSet(struct nvlst *lst);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst);
 void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
+void qqueueActivateGraphNode(qqueue_t *queue);
+rsRetVal qqueueFinalizeGraphNode(qqueue_t *queue);
+rsRetVal qqueueShutdownGraphNode(qqueue_t *queue, const struct timespec *graceful, const struct timespec *action);
 void qqueueDoneLoadCnf(void);
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
 void qqueueCorrectParams(qqueue_t *pThis);
@@ -327,6 +354,11 @@ PROTOTYPEpropSetMeth(qqueue, iSmpInterval, int);
 extern unsigned int iOverallQueueSize;
 rsRetVal qqueueSetSegDiskTestFault(qqueue_t *pThis, const char *point, unsigned int hit_count);
 rsRetVal qqueueClearSegDiskTestFault(qqueue_t *pThis);
+#endif
+
+#ifdef ENABLE_TESTBENCH
+/* Testbench-only source-attribution and fresh-local-BE-idle fixtures. */
+rsRetVal qqueueTestLeaseCompletionPaths(qqueue_t *owner);
 #endif
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

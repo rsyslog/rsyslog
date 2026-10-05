@@ -30,12 +30,51 @@ state are uncontrolled. Raw logs and host paths belong in ignored artifacts.
 This compact workload is a screening result, not broad performance acceptance;
 small per-batch improvements may be hidden by startup and testbench overhead.
 
+## Fixed-offered-rate latency observation
+
+`compare-latency.py` is a separate workload and does not alter the primary
+throughput trial. It uses one Python monotonic clock domain for timestamps made
+immediately before payload framing and for complete-line observations in the
+omfile sink. It separately records the timestamp-to-immediately-before-`sendall`
+preparation interval and dispatch lateness. The reported latency includes that
+preparation, `sendall`, omfile visibility, and reader scheduling. It is not a
+callback or wire-service-time measurement.
+
+```
+python3 benchmarks/queue-contention/compare-latency.py --before /path/to/baseline \
+  --after /path/to/candidate --output /path/to/ignored/latency-session \
+  --offered-rate 10000 --connections 16 --before-scope global --after-scope local \
+  --before-queue-size 1088192 --before-consumer-workers 10 \
+  --after-queue-size 1000000 --after-consumer-workers 2 \
+  --frontend-capacity 10000 --frontend-max 8 --worker-minimum 1
+```
+
+The driver alternates builds and requires the same input workers, connections,
+offered rate, polling interval, synchronous omfile flush policy, dequeue batch,
+and worker-minimum policy per side. Per-side queue/consumer/scope resources are
+recorded rather than inferred. Every sample rejects missing or duplicate IDs,
+invalid output, timestamp mismatch, send errors, rate drift above two percent,
+dispatch lateness, timestamp-to-dispatch preparation, or completed reader
+iteration intervals above 400 microseconds. These configured instrumentation
+budgets are below the one-millisecond decision floor; they are not an aggregate
+measurement-error bound. A delay inside or after `sendall`, the daemon, kernel,
+or filesystem cannot be independently bounded by this observer. After clean
+shutdown, the helper reparses the entire sink against the sender's exact
+ID/timestamp manifest, including required payload padding, late duplicate/extra
+lines, and trailing bytes. The healthy-output p99
+guardrail is accepted only when every pair is valid and each satisfies
+`after <= before + max(10% of before, 1 ms)`; paired p99 margin median and MAD
+are reported as dispersion, not substituted for the per-pair rule.
+
 Use the multi-producer screening workload for queue contention. It runs 16
 concurrent sending threads/connections, 8 imtcp input workers, and 4 main-queue
 consumers (configurable with `--consumer-workers 8`). Each trial checks exact
-IDs, generator success, complete drain, and clean daemon shutdown. The primary
-metric is generation plus drain; raw data also separates generation, drain,
-and full lifecycle. Drain polling uses 10 ms intervals to reduce quantization. Start with 3 measured pairs, then expand if the effect is
+IDs, generator success, complete receiver line barrier, and clean daemon
+shutdown. The primary metric is generation plus receiver line barrier; raw data
+also separates generation, drain, full lifecycle, and post-shutdown exact-ID
+verification time. The latter is deliberately excluded from the timing metric,
+but a verification failure makes the trial fail. Drain polling uses 10 ms
+intervals to reduce quantization. Start with 3 measured pairs, then expand if the effect is
 clear. Keep the single-imdiag-producer workload as a low-contention guardrail.
 
 ```
@@ -43,6 +82,89 @@ python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/multi-screen \
   --workload multi --messages 1000000 --pairs 3
 ```
+
+Run the exact-ID oracle selftest against a built testbench binary before a
+baseline campaign. It must reject both fixture corruptions:
+
+```
+docker run --rm -u "$(id -u):$(id -g)" \
+  -v /path/to/baseline:/rsyslog \
+  -v "$(pwd)/benchmarks/queue-contention:/campaign:ro" \
+  -w /rsyslog/tests rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+  bash /campaign/selftest.sh ./chkseq
+```
+
+`--queue-size`, `--dequeue-batch-size`, and `--worker-minimum` parameterize
+the FixedArray configuration. Per-side `--before-queue-size` and
+`--after-queue-size`, `--before-consumer-workers` and
+`--after-consumer-workers`, and `--before-scope`/`--after-scope` make an S2
+comparison explicit in `result.json`. Both scopes default to `global`; the
+driver then emits neither `queue.scope` nor a `queue.local.*` parameter, so
+the frozen S0 configuration stays unchanged. A side using `local` must also
+supply `--{side}-frontend-size` and `--{side}-max-frontends`; those are passed
+only to that local daemon. `--print-configuration` validates these arguments
+and prints the resolved bounds without starting Docker, which is useful when
+reviewing a campaign command.
+
+For the S2 10K/1M matched capacity comparison, use the planned imtcp worker
+front cap, not TCP connection count. `queue-size` means global capacity for
+the control and backend capacity for the local candidate. The bounded local
+reservation is `B + N * (F + D)`, so eight fronts with `F=10000`, backend
+`B=1000000`, and `D=1024` require 1,088,192 slots. The global control uses
+that total as its single queue size; the candidate uses eight FE workers and
+two backend workers while the control uses ten global workers:
+
+```
+python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
+  --after /path/to/candidate --output /path/to/ignored/10k-1m \
+  --workload multi --messages 1000000 --pairs 3 --input-workers 8 \
+  --connections 16 --worker-minimum 1 --dequeue-batch-size 1024 --payload 512 \
+  --before-scope global --before-queue-size 1088192 --before-consumer-workers 10 \
+  --after-scope local --after-queue-size 1000000 --after-consumer-workers 2 \
+  --after-frontend-size 10000 --after-max-frontends 8
+```
+
+`--producer-mode balanced` uses all configured TCP connections. `--producer-mode
+skew` retains the configured imtcp and consumer worker budgets but uses one
+active TCP connection for the finite connection-skew control. imtcp's dynamic
+scheduling means this does not establish hot producer identity. It is an MPMC
+baseline only: it does not claim to instantiate inactive local fronts.
+
+Pass `--impstats` only for a diagnostic run. It enables queue mutex-contention
+statistics and copies the raw JSON `log.file` output into the result directory
+for every trial. Those runs are not timing evidence: impstats changes the
+workload and still does not provide actual batch-size distributions.
+
+Configured dequeue sizes are not actual-batch evidence. imtcp may submit
+variable batches, and this harness currently records no producer-submit or
+queue-dequeue histogram. Add diagnostic instrumentation before making claims
+about actual producer, dequeue, or output-request batch distributions.
+
+## S0 mutation-fixture correction, 2026-09-14
+
+The current built-in `parse_json` takes JSON and a destination path and returns a
+status. The former one-argument fixture did not establish the claimed mutation.
+Both trial scripts now call the two-argument form, require the expected nested
+value before writing an ID, and abort on an unclean configuration. Missing
+mutation therefore prevents exact-ID success. Treat the measurements below as
+historical; do not compare them directly with the corrected workload or infer
+that they measured this mutation. The S0 campaign establishes a fresh baseline.
+
+The initial eight-front reference has 1,080,000 waiting slots. When front slots
+are released at acquisition, its accepted-obligation bound also includes eight
+active batches of 1024: use `--queue-size 1088192` for the obligation-matched MPMC
+comparison. Allocation bytes and RSS must be reported separately.
+
+## Local-queue S0 evidence, 2026-09-14
+
+The [execution ledger](../../doc/ai/designs/local-queue-execution-ledger.md)
+tracks stage acceptance and the frozen workload/guardrails.
+[Normalized evidence](evidence/local-queue-s0/) retains paired samples, binary
+hashes and diagnostic limitations. Both S0 runtimes are unchanged controls;
+their ratio is not a local-queue speedup. Balanced and low controls have two
+independent sessions; connection skew has a separate characterization session.
+The small debugger-observed batch diagnostic demonstrates actual variable
+counts, but its scheduling is perturbed and its timings are excluded.
 
 ## Measured results, 2026-09-05
 
@@ -104,3 +226,7 @@ next action callback or idle/minbatch wait. Final validation covered broad
 Ubuntu 26.04 tests, the static analyzer, ASan/UBSan, TSan, both compiler
 portability builds, mock distcheck, and deterministic enqueue/shutdown and
 out-of-order-retirement regressions.
+
+`compare.py --output-mode omfwd` is supported only with `--workload multi`.
+It replaces the timed trial's omfile sink with omfwd and a mock TCP receiver;
+`--output-mode omfile` remains the default.

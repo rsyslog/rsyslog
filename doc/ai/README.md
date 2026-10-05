@@ -22,6 +22,20 @@
 | `module_map.yaml` | Module paths and locking hints |
 | `templates/` | RST templates for concept, tutorial, and module pages |
 
+## Upcoming designs
+
+These documents describe proposed work, not current runtime behavior.
+
+- [Local queue front ends with shared overflow](designs/local-queue-frontends.md):
+  private SPSC fast paths, shared MPMC overflow, BE helping, and existing disk
+  assistance within one logical queue.
+- [Local queue implementation plan](designs/local-queue-implementation-plan.md):
+  staged MVP-to-full delivery, threading validation, and performance gates.
+- [Local queue related work and synthesis](designs/local-queue-related-work.md):
+  primary-source precedents, cautious novelty assessment, and implementation lessons.
+- [Local queue target measurement method](designs/local-queue-target-measurement-method.md):
+  target-environment evidence for persistent TCP inputs and Elasticsearch output.
+
 ## RAG Knowledge Base
 
 The documentation build generates a machine-readable RAG dataset at
@@ -38,3 +52,9 @@ See [chunking_and_embeddings.md](chunking_and_embeddings.md) for schema details.
 - Use `getting_started/beginner_tutorials/` (no `learning_path/`).
 
 _Last reviewed: 2025-12-23_
+
+The local-queue execution records are the
+[S0 contracts](designs/local-queue-s0-contracts.md),
+[source ownership inventory](designs/local-queue-s0-ownership.md), and
+[stage ledger](designs/local-queue-execution-ledger.md). They distinguish reviewed
+contracts from completed runtime validation and measured stage acceptance.
