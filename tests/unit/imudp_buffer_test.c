@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+ */
+
 #include "config.h"
 
 /* Verify imudp receive-layout arithmetic without allocating the large boundary cases. */
@@ -17,60 +22,60 @@
     } while (0)
 
 static int test_default_layout(void) {
-    size_t slotSize = 0;
-    size_t bufferSize = 0;
+    size_t slot_size = 0;
+    size_t buffer_size = 0;
 
-    CHECK(imudpComputeBufferLayout(8192, 32, &slotSize, &bufferSize));
-    CHECK(slotSize == 8193);
-    CHECK(bufferSize == 262176);
+    CHECK(imudp_compute_buffer_layout(8192, 32, &slot_size, &buffer_size));
+    CHECK(slot_size == 8193);
+    CHECK(buffer_size == 262176);
     return 0;
 }
 
 static int test_large_layout_does_not_wrap_to_int(void) {
-    size_t slotSize = 0;
-    size_t bufferSize = 0;
+    size_t slot_size = 0;
+    size_t buffer_size = 0;
 
 #if SIZE_MAX > UINT32_MAX
-    CHECK(imudpComputeBufferLayout(134217728, 32, &slotSize, &bufferSize));
-    CHECK(slotSize == 134217729);
-    CHECK(bufferSize == UINT64_C(4294967328));
+    CHECK(imudp_compute_buffer_layout(134217728, 32, &slot_size, &buffer_size));
+    CHECK(slot_size == 134217729);
+    CHECK(buffer_size == UINT64_C(4294967328));
 #else
-    CHECK(!imudpComputeBufferLayout(134217728, 32, &slotSize, &bufferSize));
+    CHECK(!imudp_compute_buffer_layout(134217728, 32, &slot_size, &buffer_size));
 #endif
     return 0;
 }
 
 static int test_int_max_single_message_layout(void) {
-    size_t slotSize = 0;
-    size_t bufferSize = 0;
+    size_t slot_size = 0;
+    size_t buffer_size = 0;
 
-    CHECK(imudpComputeBufferLayout((size_t)INT_MAX, 1, &slotSize, &bufferSize));
-    CHECK(slotSize == (size_t)INT_MAX + 1);
-    CHECK(bufferSize == slotSize);
+    CHECK(imudp_compute_buffer_layout((size_t)INT_MAX, 1, &slot_size, &buffer_size));
+    CHECK(slot_size == (size_t)INT_MAX + 1);
+    CHECK(buffer_size == slot_size);
     return 0;
 }
 
 static int test_rejects_unrepresentable_layouts(void) {
-    size_t slotSize = 0;
-    size_t bufferSize = 0;
+    size_t slot_size = 0;
+    size_t buffer_size = 0;
 
-    CHECK(!imudpComputeBufferLayout(SIZE_MAX, 1, &slotSize, &bufferSize));
-    CHECK(!imudpComputeBufferLayout(SIZE_MAX - 1, 2, &slotSize, &bufferSize));
-    CHECK(!imudpComputeBufferLayout(8192, 0, &slotSize, &bufferSize));
-    CHECK(!imudpComputeBufferLayout(8192, 32, NULL, &bufferSize));
-    CHECK(!imudpComputeBufferLayout(8192, 32, &slotSize, NULL));
+    CHECK(!imudp_compute_buffer_layout(SIZE_MAX, 1, &slot_size, &buffer_size));
+    CHECK(!imudp_compute_buffer_layout(SIZE_MAX - 1, 2, &slot_size, &buffer_size));
+    CHECK(!imudp_compute_buffer_layout(8192, 0, &slot_size, &buffer_size));
+    CHECK(!imudp_compute_buffer_layout(8192, 32, NULL, &buffer_size));
+    CHECK(!imudp_compute_buffer_layout(8192, 32, &slot_size, NULL));
     return 0;
 }
 
 static int test_checked_multiply_boundaries(void) {
     size_t result = 1;
 
-    CHECK(imudpCheckedSizeMul(0, SIZE_MAX, &result));
+    CHECK(imudp_checked_size_mul(0, SIZE_MAX, &result));
     CHECK(result == 0);
-    CHECK(imudpCheckedSizeMul(SIZE_MAX, 1, &result));
+    CHECK(imudp_checked_size_mul(SIZE_MAX, 1, &result));
     CHECK(result == SIZE_MAX);
-    CHECK(!imudpCheckedSizeMul(SIZE_MAX, 2, &result));
-    CHECK(!imudpCheckedSizeMul(1, 1, NULL));
+    CHECK(!imudp_checked_size_mul(SIZE_MAX, 2, &result));
+    CHECK(!imudp_checked_size_mul(1, 1, NULL));
     return 0;
 }
 

@@ -1,10 +1,12 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 #
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify YAML parity for imudp BatchSize validation. Configuration validation
 # is the oracle: a normal tuning value is accepted while zero and a value that
 # cannot be represented by the recvmmsg count are rejected before activation.
-. ${srcdir:=.}/diag.sh init
+. "${srcdir:=.}/diag.sh" init
 require_plugin imudp
 require_yaml_support
 

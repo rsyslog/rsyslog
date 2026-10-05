@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+ */
+
 #ifndef INCLUDED_IMUDP_BUFFER_H
 #define INCLUDED_IMUDP_BUFFER_H
 
@@ -5,7 +10,7 @@
 #include <stdint.h>
 
 /* Keep every receive slot and its aggregate allocation in one checked size_t domain. */
-static inline int imudpCheckedSizeMul(const size_t count, const size_t size, size_t *const result) {
+static inline int imudp_checked_size_mul(const size_t count, const size_t size, size_t *const result) {
     if (result == NULL || (count != 0 && size > SIZE_MAX / count)) {
         return 0;
     }
@@ -14,24 +19,24 @@ static inline int imudpCheckedSizeMul(const size_t count, const size_t size, siz
     return 1;
 }
 
-static inline int imudpComputeBufferLayout(const size_t maxMessageSize,
-                                           const size_t batchSize,
-                                           size_t *const slotSize,
-                                           size_t *const bufferSize) {
+static inline int imudp_compute_buffer_layout(const size_t max_message_size,
+                                              const size_t batch_size,
+                                              size_t *const slot_size,
+                                              size_t *const buffer_size) {
     size_t slot;
     size_t total;
 
-    if (slotSize == NULL || bufferSize == NULL || batchSize == 0 || maxMessageSize == SIZE_MAX) {
+    if (slot_size == NULL || buffer_size == NULL || batch_size == 0 || max_message_size == SIZE_MAX) {
         return 0;
     }
 
-    slot = maxMessageSize + 1;
-    if (!imudpCheckedSizeMul(batchSize, slot, &total)) {
+    slot = max_message_size + 1;
+    if (!imudp_checked_size_mul(batch_size, slot, &total)) {
         return 0;
     }
 
-    *slotSize = slot;
-    *bufferSize = total;
+    *slot_size = slot;
+    *buffer_size = total;
     return 1;
 }
 

@@ -1,11 +1,13 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 #
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Exercise a non-default imudp BatchSize through the live recvmmsg receive
 # path. The oracle waits for every locally sent datagram, verifies their exact
 # sequence, and requires a clean shutdown; this proves the validated buffer
 # layout is also used by the runtime iovec setup without relying on a delay.
-. ${srcdir:=.}/diag.sh init
+. "${srcdir:=.}/diag.sh" init
 require_plugin imudp
 
 if ! grep -q '^#define HAVE_RECVMMSG 1' ../config.h; then

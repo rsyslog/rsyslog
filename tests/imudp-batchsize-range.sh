@@ -1,11 +1,13 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 #
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify RainerScript imudp BatchSize validation before the value is narrowed
 # to the recvmmsg API's integer count. Configuration validation is the oracle:
 # ordinary positive sizes are accepted and zero, negative, and above-INT_MAX
 # values are rejected without starting a listener or allocating receive buffers.
-. ${srcdir:=.}/diag.sh init
+. "${srcdir:=.}/diag.sh" init
 require_plugin imudp
 
 if ! grep -q '^#define HAVE_RECVMMSG 1' ../config.h; then
