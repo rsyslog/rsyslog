@@ -1579,6 +1579,7 @@ TESTS_IMPSTATS_VALGRIND = \
 
 TESTS_IMPTCP = \
 	manyptcp.sh \
+	imptcp-debug-recv-length.sh \
 	imptcp-epoll-add-failure.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
@@ -2868,6 +2869,12 @@ liboverride_epoll_ctl_la_SOURCES = override_epoll_ctl.c
 liboverride_epoll_ctl_la_CFLAGS =
 liboverride_epoll_ctl_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_epoll_ctl_la_LIBADD = $(DL_LIBS)
+
+check_LTLIBRARIES += liboverride_recv_imptcp.la
+liboverride_recv_imptcp_la_SOURCES = override_recv_imptcp.c
+liboverride_recv_imptcp_la_CFLAGS =
+liboverride_recv_imptcp_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_recv_imptcp_la_LIBADD = $(DL_LIBS)
 endif
 
 if ENABLE_OMUDPSPOOF
