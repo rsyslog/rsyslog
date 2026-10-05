@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Regression test for imptcp's counted receive-buffer diagnostic. A recv()
 # interposer puts a sentinel immediately after the returned two-byte frame; the
 # debug record must report only those bytes and must not expose the sentinel.
