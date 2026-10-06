@@ -343,7 +343,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      * @brief Set the Network Namespace into the listener parameters
      * @param pThis The associated TCP Server instance
      * @param cnf_params The listener parameters to configure
-     * @param networkNamespace The namespace parameter to set into the
+     * @param network_namespace The namespace parameter to set into the
      *                         listener configuration parameters
      * @return RS_RET_OK on success, otherwise a failure code.
      * @details For platforms that do not support network namespaces,
@@ -355,7 +355,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      *          original startup network namespace.
      */
     rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
-                                    const char *const networkNamespace);
+                                    const char *const network_namespace);
 
 ENDinterface(tcpsrv)
 #define tcpsrvCURR_IF_VERSION 32 /* increment whenever you change the interface structure! */

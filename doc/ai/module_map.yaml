@@ -87,6 +87,8 @@ mmnormalize:
 
 netstream_driver_api:
   paths:
+    - "runtime/net_source.c"
+    - "runtime/net_source.h"
     - "runtime/nsd.h"
     - "runtime/netstrm.h"
     - "runtime/netstrm.c"
@@ -94,10 +96,17 @@ netstream_driver_api:
     - "runtime/nsd_mbedtls.c"
     - "runtime/nsd_ossl.c"
     - "runtime/nsd_ptcp.c"
+    - "runtime/net_ossl.c"
+    - "runtime/net_ossl.h"
   requires_serialization: false
   notes:
     - netstrm API v20 delegates SetDrvrTlsCAExtraFiles() to NSD API v21 SetTlsCAExtraFiles().
     - Every NSD driver implementation must provide SetTlsCAExtraFiles(), returning its normal unsupported-setting result when it cannot load additional CA sources.
+    - netstrm API v21 and NSD API v22 add Connect2() with versioned connection parameters; every NSD driver must forward the network namespace to its transport socket creator.
+    - The OpenSSL client keeps borrowed device and network-namespace pointers for its connection lifetime so OCSP resolver and socket operations use the same routing context as the TLS connection.
+    - net API v13 provides immutable numeric source policies, longest-prefix destination ranking, common bind handling, and bound UDP client socket creation.
+    - Namespace-aware net callbacks use a netns_ prefix and place the optional namespace last; the UDP helper is netns_create_udp_socket().
+    - Connect2 parameter version 2 carries a borrowed source policy and free-bind mode through plain TCP, TLS, and OpenSSL OCSP connections.
     - The ossl driver accepts comma-separated file lists or strict pkcs11: URI lists; the other current drivers reject non-null extra CA sources as unsupported.
 
 omfile:
@@ -108,8 +117,10 @@ omfile:
       field: pData.mutWrite
 
 omfwd:
-  paths: ["plugins/omfwd/"]
+  paths: ["tools/omfwd.c"]
   requires_serialization: false
+  notes:
+    - Source-address policy is immutable action configuration in pData; each worker owns its TCP connection and lazily created UDP sockets for selected policy entries.
 
 omelasticsearch:
   paths: ["plugins/omelasticsearch/"]

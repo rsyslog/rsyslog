@@ -2174,15 +2174,15 @@ finalize_it:
 
 static rsRetVal SetNetworkNamespace(tcpsrv_t *pThis __attribute__((unused)),
                                     tcpLstnParams_t *const cnf_params,
-                                    const char *const networkNamespace) {
+                                    const char *const network_namespace) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     free(cnf_params->pszNetworkNamespace);
-    if (!networkNamespace || !*networkNamespace) {
+    if (!network_namespace || !*network_namespace) {
         cnf_params->pszNetworkNamespace = NULL;
     } else {
 #ifdef HAVE_SETNS
-        CHKmalloc(cnf_params->pszNetworkNamespace = strdup(networkNamespace));
+        CHKmalloc(cnf_params->pszNetworkNamespace = strdup(network_namespace));
 #else  // ndef HAVE_SETNS
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "Namespaces are not supported");
         ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
