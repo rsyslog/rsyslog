@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for lookup-table shutdown in daemon mode.
 #
 # Issues #1071 and #5301 reported crashes or hangs while rsyslog shut down

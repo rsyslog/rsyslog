@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Ensure action-level dynaFileCacheSize values below 1 are normalized instead
 # of crashing startup or dynafile writes.
 . ${srcdir:=.}/diag.sh init

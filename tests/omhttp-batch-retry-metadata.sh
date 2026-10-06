@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 #
 # Verify omhttp batch retry metadata. The helper returns retryable HTTP 207

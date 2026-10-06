@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2019-11-13 by alorbach
 # Verify RELP TLS configuration command handling for incompatible receiver and
 # sender protocol constraints. The receiver binds an ephemeral IPv4 listener and

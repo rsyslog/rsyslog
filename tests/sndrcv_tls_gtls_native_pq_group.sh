@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Native GnuTLS PQ smoke test. Requires a GnuTLS build with
 # GROUP-X25519-MLKEM768 support.
 . ${srcdir:=.}/diag.sh init

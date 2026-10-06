@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2018-04-25 by PascalWithopf, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 ./have_relpSrvSetOversizeMode

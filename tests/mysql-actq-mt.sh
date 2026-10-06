@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that ommysql preserves all messages when a bounded linked-list action
 # queue is drained by multiple worker threads.  The queue size is intentionally
 # small compared to the injected message count so the test covers backpressure.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test to check that mainq and actionq can be disk assisted without
 # any problems. This was created to reproduce a segfault issue:
 # https://github.com/rsyslog/rsyslog/issues/3681

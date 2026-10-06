@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=.}/diag.sh init
 UNEXPECTED_LOG="${RSYSLOG_DYNNAME}.unexpected.log"
 generate_conf

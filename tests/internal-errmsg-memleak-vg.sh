@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests a memory leak we have seen when processing internal error
 # message with the settings used in this test. We use imfile as it is
 # easist to reproduce this way. Note that we are only interested in

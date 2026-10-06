@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released  under ASL 2.0
 # Written 2019-06-21 by Rainer Gerhards
 # Exercise omfile output while HUPs are issued during a long tcpflood send. The

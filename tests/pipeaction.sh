@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test the pipe output action with a disk-backed main queue.
 #
 # The test creates a FIFO, lets rsyslog write formatted messages to it, and

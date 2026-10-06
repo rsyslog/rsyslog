@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Author: John Cantu
 # Test that "custom-sni" is sent as SNI by omfwd, when configured
 

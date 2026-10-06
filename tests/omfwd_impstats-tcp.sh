@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify impstats reports omfwd TCP byte counters after forwarding a complete
 # message sequence. The oracle is both a non-zero bytes.sent statistic and the
 # received 0..9999 sequence. The receiver readiness wait avoids startup loss

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests YAML list-template control-character handling for the modern
 # property() parameter surface. The oracle is exact omfile output: a newline
 # and tab in a message variable must be emitted as octal #012 and #011 when

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Regression test for imudp interval ratelimiting preserving parsed identity
 ## properties. The rate limiter consults APP-NAME for diagnostics before the
 ## message reaches the main queue; for RFC5424 messages this must not cache an

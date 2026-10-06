@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the "stop" statement inside a YAML script: block.
 # Sends 10 messages starting at sequence 1; the script stops the very first
 # message (00000001) and lets messages 2-10 through.

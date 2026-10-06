@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for automatic creation of dynafile directories
 # note that we use the "'${RSYSLOG_DYNNAME}'.spool" directory, because it is handled by diag.sh
 # in any case, so we do not need to add any extra new test dir.

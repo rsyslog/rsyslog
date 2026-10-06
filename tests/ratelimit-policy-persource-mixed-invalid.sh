@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Regression test for ambiguous per-source ratelimit configuration.
 ## A policy YAML file that contains a perSource section is the canonical
 ## source of per-source settings; mixing it with legacy perSourcePolicy or

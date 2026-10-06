@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify modern allowedSender ACLs for imtcp and imudp. Module-level
 # allowedSender values act as defaults, input-level values override them, and
 # /0 masks remain non-allow-all. The oracle is deterministic: allowed inputs

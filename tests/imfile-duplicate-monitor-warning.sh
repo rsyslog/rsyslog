@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies that imfile warns only for probably accidental duplicate file
 # monitors. The first config-check uses three identical monitors and must emit
 # one bounded warning per later duplicate, not every equivalent pair. The

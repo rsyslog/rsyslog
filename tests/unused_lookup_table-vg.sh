@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test for ensuring clean destruction of lookup-table even when it is never used
 # added 2015-09-30 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2017-03-01 by RGerhards, released under ASL 2.0
 # Verifies that omfile logs an open error for a read-only output file. The
 # oracle requires the current user and filesystem to reject appends to a 0400

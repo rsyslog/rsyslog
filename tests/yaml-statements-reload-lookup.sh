@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests reload_lookup_table: statement in a YAML statements: block.
 #
 # A lookup table is loaded via lookup_tables: and a statements: block

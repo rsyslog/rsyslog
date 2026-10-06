@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-07-13 by Codex, released under ASL 2.0
 # Exercises the listener-wide zstd decoder-window budget with deliberately held
 # frames. Diagnostics prove exact aggregate rejection and oversized-window

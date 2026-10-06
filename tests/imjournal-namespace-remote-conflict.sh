@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imjournal Namespace validation. Namespace uses the local
 # systemd journal namespace API, while Remote uses the normal journal-open path
 # for local plus remote journal files; the two settings must be rejected

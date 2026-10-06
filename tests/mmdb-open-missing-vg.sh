@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Valgrind companion for GitHub issue #4024. The missing-database path used to
 # leave a partially-created worker instance behind, which could crash only after
 # shutdown cleanup. Running the same scenario under Valgrind makes that oracle

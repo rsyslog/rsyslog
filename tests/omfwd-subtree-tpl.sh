@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify omfwd forwards messages when using subtree-type templates. The oracle
 # is the received JSON subtree payload, and the receiver must be listening
 # before rsyslog starts so the single test message is not lost to startup

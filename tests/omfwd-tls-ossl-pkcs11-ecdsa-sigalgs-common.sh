@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Common positive ECDSA matrix for PKCS#11-backed omfwd mTLS signing tests.
 . ${srcdir:=.}/diag.sh init
 

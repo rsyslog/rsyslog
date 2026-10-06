@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is not a real test, but a script to start clickhouse. It is
 # implemented as test so that we can start clickhouse at the time we need
 # it (do so via Makefile.am).

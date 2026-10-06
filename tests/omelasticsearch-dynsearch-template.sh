@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for omelasticsearch bulk mode with both a message template and
 # a dynamic search-index template. The oracle is clean startup, processing, and
 # shutdown with an unavailable Elasticsearch endpoint: this exercises the local

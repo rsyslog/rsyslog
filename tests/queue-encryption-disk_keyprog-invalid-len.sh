@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify gcry keyprogram length parsing rejects trailing non-numeric data. The
 # oracle is rsyslogd -N1 failing with the keyprogram error, proving a length
 # such as "16abc" is not accepted as 16 bytes.

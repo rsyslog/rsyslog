@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 # Exercise a retryable synchronous Azure DCE post failure followed by recovery.
 # The oracle sums successful batch record counts after queue drain: it must equal

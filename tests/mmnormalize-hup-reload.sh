@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that HUP safely replaces the shared non-Turbo liblognorm context and
 # that messages after the acknowledged HUP use the new rulebase. The two
 # synchronized output records are the oracle: the first must use the original

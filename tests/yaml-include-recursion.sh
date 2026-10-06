@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test: YAML include recursion must be detected and ignored.
 # Setup: root YAML includes itself and also defines a ruleset that writes to
 # RSYSLOG_OUT_LOG. Oracle: rsyslog starts and processes messages (no crash /

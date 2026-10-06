@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that TCP rebind preserves forwarding while repeatedly tearing down
 # and reconnecting the target transport.  The tiny rebind interval forces the
 # rebind path for every message; the receiver sequence check proves all data

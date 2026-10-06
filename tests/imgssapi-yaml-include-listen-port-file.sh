@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a YAML top-level config can include legacy imgssapi directives
 # and still exercise the listenPortFileName forwarding path.
 . ${srcdir:=.}/diag.sh init

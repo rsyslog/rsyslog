@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for gnutls loggedWarnings functionality with omfwd
 # This test verifies that warnings for missing cert/key files are logged only once
 # even when the action retries multiple times (loggedWarnings mechanism)

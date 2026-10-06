@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## rscript_random_warning.sh
 ## Verify that random() warns when max exceeds platform limit
 . ${srcdir:=.}/diag.sh init

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2017-06-06 by alorbach
 #	This tests the keepFailedMessages feature in omkafka
 # This file is part of the rsyslog project, released under ASL 2.0

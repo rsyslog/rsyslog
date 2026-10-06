@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that duplicate RainerScript lookup_table names are rejected during
 # config validation. This covers the issue #5316 regression path where repeated
 # generated definitions created unreachable lookup tables and one reloader

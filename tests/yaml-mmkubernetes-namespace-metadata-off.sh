@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify includeNamespaceMetadata=off reaches mmkubernetes through the YAML
 # frontend. The retained pod metadata and absent namespace metadata are the
 # observable parity oracle. The two-minute server timeout is hang protection;

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test tests impstats omfwd counters in TCP mode
 # added 2025-03-17 by Croppi. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

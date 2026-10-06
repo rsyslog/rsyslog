@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Exercise classic DA recovery from a deliberately mangled .qi file. This test
 # inspects classic state directly, so the modern queue configuration pins the
 # classic engine; restart must recover the full sequence, allowing duplicates.

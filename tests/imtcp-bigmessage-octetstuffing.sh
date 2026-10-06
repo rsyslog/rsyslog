@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2020-05-14 by alorbach, released under ASL 2.0
 export NUMMESSAGES=10
 export TEST_BYTES_SENDSIZE=4037

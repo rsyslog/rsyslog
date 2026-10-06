@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is a rather complex test that runs a number of features together.
 #
 # added 2010-03-16 by Rgerhards

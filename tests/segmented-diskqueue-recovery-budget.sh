@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Corrupt more than the 1 MiB per-attempt recovery budget in a sealed segment.
 # Recovery must yield and retain its cursor, accept new producer data, keep the
 # queue non-empty, and eventually deliver records from later segments. Counter

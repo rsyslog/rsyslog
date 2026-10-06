@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that -o refuses to write to the same file that -f is reading.
 # The oracle is twofold: rsyslogd must reject the unsafe configuration before
 # opening the output path, and the input config must remain byte-for-byte

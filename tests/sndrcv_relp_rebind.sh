@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2017-09-29 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 # Verify RELP forwarding while omrelp reconnects aggressively with

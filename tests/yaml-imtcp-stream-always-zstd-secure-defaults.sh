@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-07-20 by Codex, released under ASL 2.0
 # Provides YAML parity for the aggregate zstd window limit and secure-default
 # policy. Configuration-validation status and diagnostics are the oracle.

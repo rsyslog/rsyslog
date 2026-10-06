@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests checks for a anomaly we have seen in practice:
 # gethostname() may return an empty string as hostname (""). This broke
 # some versions of rsyslog, newer ones return "localhost" in that case.

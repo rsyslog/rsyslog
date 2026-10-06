@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check canonical RainerScript -> YAML -> RainerScript round-trip.
 #
 # Part of the testbench for rsyslog.

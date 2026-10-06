@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test hardens pmciscoios against truncated messages after delimiter
 # skips. The oracle is that malformed Cisco-looking input does not move parser
 # walks past the logical message and a following marker message is processed.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies that omudpspoof does not spin forever when libnet_write() fails
 # while sending a fragmented message. The oracle is successful shutdown after
 # injecting one oversized message while a preload shim forces every raw packet

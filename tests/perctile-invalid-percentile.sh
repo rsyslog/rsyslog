@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify percentile_stats rejects malformed percentile entries during config
 # validation. The oracle is rsyslogd -N1 failing with the perctile validation
 # diagnostic, proving non-numeric trailing text is not silently accepted as a

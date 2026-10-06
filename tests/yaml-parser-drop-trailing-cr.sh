@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML support for parser.dropTrailingCROnReception using the same
 # receive-path oracle as the RainerScript test: final omfile output after
 # synchronized shutdown must not contain the escaped trailing CR.

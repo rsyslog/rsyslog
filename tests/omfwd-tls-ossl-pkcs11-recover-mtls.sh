@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omfwd with the ossl driver recovers from a TLS handshake failure
 # when the client-side CA certificate, client certificate, and client private
 # key are all loaded from valid pkcs11: URIs. The test first presents a server

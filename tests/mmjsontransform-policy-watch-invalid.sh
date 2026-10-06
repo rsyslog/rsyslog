@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmjsontransform keeps the previous policy when watch reload fails.
 
 . ${srcdir:=.}/diag.sh init

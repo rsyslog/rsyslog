@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test for lookup-table reload by rscript-stmt without stub
 # added 2015-12-18 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0

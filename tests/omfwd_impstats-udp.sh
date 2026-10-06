@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test tests impstats omfwd counters in UPD mode
 # added 2021-02-11 by rgerhards. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

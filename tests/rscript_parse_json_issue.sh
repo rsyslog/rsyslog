@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Reproduction for parse_json() issue
 . ${srcdir:=.}/diag.sh init
 generate_conf

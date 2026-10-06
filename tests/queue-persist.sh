@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for queue data persisting at shutdown. We use the actual driver
 # to carry out multiple tests with different queue modes
 # added 2009-05-27 by Rgerhards

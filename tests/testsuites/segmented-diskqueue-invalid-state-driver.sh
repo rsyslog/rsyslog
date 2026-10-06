@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Shared fail-fast startup driver for missing state and experimental v1 state.
 # A real SIGKILL leaves segment data; startup must emit the selected offline-
 # recovery diagnostic promptly rather than scanning payloads.

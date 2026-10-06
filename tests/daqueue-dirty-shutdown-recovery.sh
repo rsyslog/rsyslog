@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate dirty-shutdown handling for a disk-assisted main queue.
 #
 # The historical version of this test assumed that a forced shutdown always

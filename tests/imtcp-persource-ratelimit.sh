@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Test per-source ratelimiting for imtcp using the canonical ratelimit
 ## policy YAML. The oracle is that the shared ratelimit API drops the noisy
 ## sender while allowing the override sender through; imtcp itself does not

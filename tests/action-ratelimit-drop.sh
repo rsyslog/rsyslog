@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify generic action-level output rate limiting in drop mode.
 # The policy allows five messages in a long window; the oracle is that exactly
 # the first five injected messages reach omfile and later matching messages are

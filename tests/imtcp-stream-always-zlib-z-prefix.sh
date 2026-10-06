@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for the generic imtcp zlib stream decompression path with a
 # decompressed payload that begins with literal "z". Legacy single-message
 # compression also uses a leading "z" in built-in transport frame handling, but

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2015-03-02 by singh.janmejay
 # test to assert attempt to iterate upon a non-array json-object fails gracefully
 # This file is part of the rsyslog project, released under ASL 2.0

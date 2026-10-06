@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that non-truncate oversize modes still have an imkubernetes partial
 # hard cap, so an unfinished CRI P run cannot grow without bound.
 # The API helper signals readiness after binding; its 2m timeout is hang

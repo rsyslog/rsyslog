@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify mmpstrucdata's custom container name and no-SD null handling.
 # The oracle is rsyslog's configured omfile output after shutdown: one
 # RFC5424 message with structured data must populate the requested container,

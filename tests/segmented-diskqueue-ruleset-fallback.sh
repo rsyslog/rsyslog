@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Persist events that entered through a named ruleset, then restart without
 # that ruleset. Complete sequence recovery proves that a configuration rename
 # falls back to the current default ruleset instead of classifying otherwise

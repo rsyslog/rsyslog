@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Don't read a file with old timestamp
 echo [imfile-ignore-old-file-1.sh]
 . ${srcdir:=.}/diag.sh init

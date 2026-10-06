@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omfwd with the ossl driver can establish a mutual-TLS session to
 # an OpenSSL-based remote peer when CA, certificate, and key are all loaded
 # from regular files. The oracle is that the remote helper, which requires a

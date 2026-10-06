@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmsnareparse when receiving raw syslog messages over TCP.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

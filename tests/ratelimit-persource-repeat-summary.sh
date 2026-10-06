@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Repeated-message reduction can emit a summary for already accepted messages
 ## when the next distinct message arrives. If that distinct message is then
 ## dropped by per-source rate limiting, the summary must still be submitted.

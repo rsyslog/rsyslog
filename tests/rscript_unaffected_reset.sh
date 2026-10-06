@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Check if a set statement to the same subtree does not reset
 # other variables in that same subtree.
 # Copyright 2014-11-24 by Rainer Gerhards

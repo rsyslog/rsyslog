@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for Elasticsearch read-only-index bulk responses. A fake
 # Elasticsearch endpoint returns HTTP 200 with per-item status 403 and
 # cluster_block_exception, matching a read-only index. Success is proven by a

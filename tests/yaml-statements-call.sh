@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML-native statements: block — call: between two rulesets and
 # the set: variable assignment statement.
 # rs1 sets a local variable, then calls rs2; rs2 uses the variable in its

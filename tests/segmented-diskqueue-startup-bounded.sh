@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Run restart recovery with impstats assertions proving startup reads no payload
 # and probes only the bounded current/reserved segment paths.
 # This file is part of the rsyslog project, released under ASL 2.0.

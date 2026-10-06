@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that unfinished CRI partial records are bounded before enqueue.
 # The closing F record after an oversized partial run still belongs to that
 # logical message and must not be emitted as a standalone tail record.

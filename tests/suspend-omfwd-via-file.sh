@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify omfwd action suspension and resumption controlled by an external state
 # file. The oracle is the complete forwarded sequence after the action is first
 # active, then suspended, then resumed. The receiver readiness wait keeps this

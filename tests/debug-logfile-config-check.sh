@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for issue #1129: setting debug globals during -N1 config
 # validation must not make the config checker return failure when their setup
 # messages are informational.

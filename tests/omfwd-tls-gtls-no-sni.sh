@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Author: John Cantu
 # Test that no TLS SNI is sent by omfwd when connecting to an IP address
 

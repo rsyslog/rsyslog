@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2017-04-28 by Pascal Withopf, released under ASL 2.0
 echo [imfile-file-not-found-error.sh]
 . $srcdir/diag.sh check-inotify

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 echo \[lmsig_ksi_ls12.sh\]: test ksi_ls12
 
 rm -rf $srcdir/ksitest

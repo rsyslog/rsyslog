@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test $NOW family of system properties
 # addd 2016-01-12 by RGerhards, released under ASL 2.0
 # requires faketime

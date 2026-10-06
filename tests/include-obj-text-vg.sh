@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026 for https://github.com/rsyslog/rsyslog/issues/7402, released under ASL 2.0
 #
 # Note: on buildbot VMs (where there is no environment cleanup), the

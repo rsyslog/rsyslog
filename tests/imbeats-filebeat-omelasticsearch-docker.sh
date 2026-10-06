@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify real Filebeat traffic received by imbeats is delivered through
 # omelasticsearch and becomes queryable in Elasticsearch.
 . ${srcdir:=.}/diag.sh init

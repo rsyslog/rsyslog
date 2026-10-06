@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for GitHub issues #3485 and #3487. omclickhouse must
 # classify HTTP error replies as ClickHouse request failures even when the
 # response body does not match older DB::Exception string probes, and the

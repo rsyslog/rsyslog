@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check disabling a config construct via config.enable. Most
 # importantly ensure that it does not emit any error messages
 # for object parameters.

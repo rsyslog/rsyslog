@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for loading the GnuTLS netstream driver by absolute path.
 # The issue report used module(load="/custom/path/lmnsd_gtls.so"), which caused
 # early driver initialization to dereference runConf before a config was active.

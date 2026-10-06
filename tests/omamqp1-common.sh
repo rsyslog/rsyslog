@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 
 # version of qdrouterd to use for test
 QDROUTERD_VERSION=${QDROUTERD_VERSION:-1.7.0}

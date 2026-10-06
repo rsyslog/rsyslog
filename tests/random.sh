@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test if rsyslog survives sending truly random data to it...
 #
 # added 2010-04-01 by Rgerhards

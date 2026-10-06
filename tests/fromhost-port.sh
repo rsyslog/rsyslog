@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## fromhost-port.sh
 ## Check that fromhost-port property records sender port
 . ${srcdir:=.}/diag.sh init

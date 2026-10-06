@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify classic DA reactivation across receiver outages. The filesystem oracle
 # compares the classic numeric segment before and after drain, so the sender
 # pins diskQueueType="disk" through the modern main-queue frontend.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that mmkubernetes can try multiple kubernetesurl values configured as
 # a standard rsyslog array. The first URL is an unreachable localhost endpoint;
 # the oracle is that metadata enrichment still succeeds through the second,

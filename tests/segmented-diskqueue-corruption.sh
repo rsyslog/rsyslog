@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Shared record-corruption driver for payload CRC, framing, and codec failures.
 # The inspector targets msgnum 200; every mode must skip that record and reach
 # the final record without treating the queue as empty early.

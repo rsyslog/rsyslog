@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-22 by Codex, released under ASL 2.0
 # Regression coverage for issue #728: imfile metadata includes a persisted,
 # 1-based line_number value. The oracle uses exact omfile output across two

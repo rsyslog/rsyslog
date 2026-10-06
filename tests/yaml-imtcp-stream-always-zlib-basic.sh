@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-06-22 by Codex, released under ASL 2.0
 # Verifies YAML parsing of imtcp stream compression input parameters. The
 # receiver is configured via YAML with compression.mode, compression.driver,

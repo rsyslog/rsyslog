@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test concurrency of exec_template function with msg variables
 # Added 2015-12-11 by rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0

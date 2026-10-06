@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that the modern ompgsql action parameter parser accepts DNS names
 # longer than the historical MAXHOSTNAMELEN-sized storage. This covers issue
 # #4698 with config validation only; no PostgreSQL server is contacted.

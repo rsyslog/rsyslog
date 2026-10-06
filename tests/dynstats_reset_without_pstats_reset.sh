@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test to ensure correctness of stats-ctr reset when pstats reset is turned off
 # added 2015-11-16 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
