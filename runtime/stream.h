@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definition of serial stream class (strm).
  *
  * A serial stream provides serial data access. In theory, serial streams

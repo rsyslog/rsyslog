@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* netstrm.c
  *
  * This class implements a generic netstrmwork stream class. It supports

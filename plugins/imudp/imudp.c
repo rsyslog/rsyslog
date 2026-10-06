@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* imudp.c
  * This is the implementation of the UDP input module.
  *

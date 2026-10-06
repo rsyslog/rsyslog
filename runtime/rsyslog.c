@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* rsyslog.c - the main entry point into rsyslog's runtime library (RTL)
  *
  * This module contains all function which work on a RTL global level. It's

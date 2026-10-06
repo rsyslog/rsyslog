@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definitions for generic OpenSSL include stuff.
  *
  * Copyright 2023-2026 Andre Lorbach and Adiscon GmbH.

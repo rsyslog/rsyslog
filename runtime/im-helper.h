@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* im-helper.h
  * This file contains helper constructs that save time writing input modules. It
  * assumes some common field names and plumbing. It is intended to be used together

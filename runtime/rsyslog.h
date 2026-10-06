@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /**
  * @file rsyslog.h
  * @brief Public interface for the rsyslog runtime library.

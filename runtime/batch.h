@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definition of the batch_t data structure.
  * I am not sure yet if this will become a full-blown object. For now, this header just
  * includes the object definition and is not accompanied by code.

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* mmnormalize.c
  * This is a message modification module. It normalizes the input message with
  * the help of liblognorm. The message's JSON variables are updated.

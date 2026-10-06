@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* queue.c
  *
  * This file implements the queue object and its several queueing methods.

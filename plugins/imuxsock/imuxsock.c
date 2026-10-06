@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* imuxsock.c
  * This is the implementation of the Unix sockets input module.
  *
