@@ -3159,6 +3159,44 @@ if test "x$enable_omawslogshlc" = "xyes" -o "x$enable_omawslogshlc" = "xoptional
 fi
 AM_CONDITIONAL(ENABLE_OMAWSLOGSHLC, test x$enable_omawslogshlc = xyes -o x$enable_omawslogshlc = xoptional)
 
+# Amazon Kinesis Data Streams PutRecord output, signed by libcurl.
+AC_ARG_ENABLE(omkinesis,
+        [AS_HELP_STRING([--enable-omkinesis],[Compiles omkinesis output module (requires libcurl >= 7.75.0) @<:@default=optional@:>@])],
+        [case "${enableval}" in
+         yes|no|optional) enable_omkinesis="${enableval}" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omkinesis) ;;
+         esac],
+        [enable_omkinesis=optional])
+AS_IF([test "x$enable_omkinesis" = "xyes" -o "x$enable_omkinesis" = "xoptional"], [
+        PKG_CHECK_MODULES([OMKINESIS_CURL], [libcurl >= 7.75.0], [], [
+                AS_IF([test "x$enable_omkinesis" = "xyes"],
+                      [AC_MSG_FAILURE([omkinesis requires libcurl >= 7.75.0])],
+                      [enable_omkinesis=no])
+        ])
+        AS_IF([test "x$enable_omkinesis" != "xno"], [
+                rsyslog_saved_CPPFLAGS="$CPPFLAGS"
+                rsyslog_saved_LIBS="$LIBS"
+                CPPFLAGS="$CPPFLAGS $OMKINESIS_CURL_CFLAGS"
+                LIBS="$OMKINESIS_CURL_LIBS $LIBS"
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <curl/curl.h>]],
+                        [[CURLoption option = CURLOPT_AWS_SIGV4;
+                          CURLU *url = curl_url();
+                          char *host = 0;
+                          curl_url_set(url, CURLUPART_URL, "https://example.com", 0);
+                          curl_url_get(url, CURLUPART_HOST, &host, 0);
+                          curl_free(host);
+                          curl_url_cleanup(url);
+                          return option == 0;]])], [], [
+                        AS_IF([test "x$enable_omkinesis" = "xyes"],
+                              [AC_MSG_FAILURE([omkinesis requires libcurl AWS SigV4 and URL API support])],
+                              [enable_omkinesis=no])
+                ])
+                CPPFLAGS="$rsyslog_saved_CPPFLAGS"
+                LIBS="$rsyslog_saved_LIBS"
+        ])
+])
+AM_CONDITIONAL(ENABLE_OMKINESIS, test "x$enable_omkinesis" = "xyes" -o "x$enable_omkinesis" = "xoptional")
+
 # omazureeventhubs support for output module
 AC_ARG_ENABLE(omazureeventhubs,
         [AS_HELP_STRING([--enable-omazureeventhubs],[Compiles AzureEventHubs output module @<:@default=no@:>@])],
@@ -3747,6 +3785,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omazureeventhubs/Makefile \
 		plugins/omazuredce/Makefile \
 		plugins/omawslogshlc/Makefile \
+		plugins/omkinesis/Makefile \
 		plugins/imdtls/Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
@@ -3868,6 +3907,7 @@ echo "    omhiredis module will be compiled:        $enable_omhiredis"
 echo "    omazureeventhubs module will be compiled: $enable_omazureeventhubs"
 echo "    omazuredce module will be compiled:       $enable_omazuredce"
 echo "    omawslogshlc module will be compiled:     $enable_omawslogshlc"
+echo "    omkinesis module will be compiled:        $enable_omkinesis"
 echo "    omdtls module will be compiled:           $enable_omdtls"
 echo
 echo "---{ parser modules }---"

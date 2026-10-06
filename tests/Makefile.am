@@ -1370,6 +1370,13 @@ TESTS_OMAWSLOGSHLC = \
 TESTS_OMAWSLOGSHLC_IMTCP = \
 	omawslogshlc-event-too-large.sh
 
+# The mock is local and needs no AWS account or external service.
+TESTS_OMKINESIS = \
+	omkinesis-mock.sh \
+	omkinesis-endpoint-validation.sh
+TESTS_OMKINESIS_YAML = \
+	yaml-omkinesis-mock.sh
+
 TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
@@ -2556,6 +2563,7 @@ EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC)
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC_IMTCP)
+EXTRA_DIST += $(TESTS_OMKINESIS) $(TESTS_OMKINESIS_YAML) omkinesis-mock-common.sh omkinesis-mock-server.py
 EXTRA_DIST += omawslogshlc-env.sh
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
@@ -3489,6 +3497,13 @@ TESTS += $(TESTS_OMAWSLOGSHLC)
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_OMAWSLOGSHLC_IMTCP)
 endif
+endif
+endif
+
+if ENABLE_OMKINESIS
+TESTS += $(TESTS_OMKINESIS)
+if HAVE_LIBYAML
+TESTS += $(TESTS_OMKINESIS_YAML)
 endif
 endif
 
