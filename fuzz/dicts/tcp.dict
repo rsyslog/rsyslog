@@ -1,0 +1,13 @@
+# TCP framing dictionary for octet-counted and non-transparent framing.
+"0 "
+"1 "
+"2 "
+"10 "
+"9999999999 "
+"\n"
+"\r\n"
+"<34>1 "
+"<13>Jan "
+" "
+"["
+"]"

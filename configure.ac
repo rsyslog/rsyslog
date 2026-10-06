@@ -3725,6 +3725,7 @@ AC_CONFIG_FILES([Makefile \
 		compat/Makefile \
 		grammar/Makefile \
 		tools/Makefile \
+		fuzz/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
 		plugins/im3195/Makefile \

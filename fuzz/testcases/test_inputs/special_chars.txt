@@ -1,0 +1,2 @@
+# Special characters and control characters
+<164>Jan  1 00:00:00 localhost test: message with special chars \t\n\r\b\f\v\a\\\"\'\? and control chars \001\002\003

@@ -1,0 +1,2 @@
+# RFC 5424 with no structured data
+<165>1 2019-02-13T19:48:27.001Z mymachine.example.com app 12345 - No structured data
