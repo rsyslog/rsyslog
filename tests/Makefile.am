@@ -298,6 +298,7 @@ TESTS_DEFAULT = \
 	omfwd-lb-2target-hash.sh \
 	omfwd-lb-2target-hash-distinct-keys.sh \
 	omfwd-lb-2target-hash-failover.sh \
+	omfwd-hash-udp-rejected.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
 	omfwd-missing-target.sh \

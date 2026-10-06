@@ -2007,6 +2007,11 @@ BEGINcommitTransaction
     unsigned i;
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
     sbool bFlushRetry = 0;
+    /* pool.policy="hash": a connected target returned RS_RET_RETRY. Do not
+     * probe another slot. Mapped to RS_RET_SUSPENDED below, because the
+     * action engine treats a raw RS_RET_RETRY from commitTransaction as a
+     * permanent data failure and drops the batch. */
+    sbool bHashSendRetry = 0;
     CODESTARTcommitTransaction;
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
      * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to
@@ -2053,9 +2058,12 @@ BEGINcommitTransaction
         int trynbr = 0;
         int dotry = 1;
         /* pool.policy="hash": route by hash(routing-key) so the same key always
-         * lands on the same target; on a down target, linear-probe the pool so
-         * failover still works. Default (round-robin) keeps the historical
-         * per-worker counter behaviour untouched. */
+         * lands on the same target. A down target (not connected, or a send
+         * that suspended it) linear-probes the pool so failover still works.
+         * RS_RET_RETRY is not that case: the target is still connected and the
+         * send was only deferred, so the probe stops and the action retries.
+         * Default (round-robin) keeps the historical per-worker counter
+         * behaviour untouched, including its handling of RS_RET_RETRY. */
         /* Reduced mod nTargets here, once, rather than in the loop below: trynbr
          * is bounded by nTargets, so (hashBase + trynbr) can never overflow
          * unsigned, and the probe sequence can't skip or repeat a slot on wrap. */
@@ -2080,11 +2088,25 @@ BEGINcommitTransaction
                 iRet = processMsg(pTarget, &actParam(pParams, pWrkrData->pData->iNumTpls, i, 0));
                 if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
                     dotry = 0;
+                } else if (pWrkrData->pData->poolPolicy == POOL_HASH && iRet == RS_RET_RETRY) {
+                    DBGPRINTF(
+                        "omfwd: hash target %u deferred send (RS_RET_RETRY), "
+                        "not probing another pool member\n",
+                        actualTarget);
+                    dotry = 0;
+                    bHashSendRetry = 1;
                 }
             }
             trynbr++;
         }
 
+        if (bHashSendRetry) {
+            /* Keep the rest of this batch for the action-engine retry.
+             * iRet must not stay RS_RET_RETRY: that code is a data-fail
+             * once it leaves commitTransaction. */
+            iRet = RS_RET_OK;
+            break;
+        }
         if (dotry == 1) {
             LogMsg(0, RS_RET_SUSPENDED, LOG_INFO,
                    "omfwd: [wrkr %u] found no working target server when trying to send "
@@ -2134,11 +2156,14 @@ finalize_it:
      *   RS_RET_RETRY while flushing its pending TCP buffer. The target remains
      *   connected, but the action engine still needs to schedule another commit
      *   attempt for the retained buffered data.
-     * - If at least one target remains active and no flush retry is pending,
-     *   we keep returning OK here so that the action is not suspended at pool
-     *   level. Any buffered frames for failed targets remain in that target's
-     *   send buffer and will be flushed once doTryResume() re-establishes the
-     *   connection on a subsequent transaction.
+     * - Also return RS_RET_SUSPENDED when pool.policy="hash" gets RS_RET_RETRY
+     *   from the selected target. That target stays selected. Probing the next
+     *   slot would move the message to a different shard.
+     * - If at least one target remains active and no flush or hash send retry
+     *   is pending, we keep returning OK here so that the action is not
+     *   suspended at pool level. Any buffered frames for failed targets remain
+     *   in that target's send buffer and will be flushed once doTryResume()
+     *   re-establishes the connection on a subsequent transaction.
      */
     /* do pool stats */
 
@@ -2146,16 +2171,27 @@ finalize_it:
     const int nActiveTargets =
         ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
-    if (bFlushRetry || nActiveTargets == 0) {
+    if (bFlushRetry || bHashSendRetry || nActiveTargets == 0) {
         /*
-         * All pool members are currently unavailable, or a connected target
-         * needs a retry to finish flushing retained TCP data. Return
-         * RS_RET_SUSPENDED so the action engine schedules retry handling.
+         * All pool members are currently unavailable, a connected target
+         * needs a retry to finish flushing retained TCP data, or hash
+         * selection deferred a send. Return RS_RET_SUSPENDED so the action
+         * engine schedules retry handling. Do not return RS_RET_RETRY:
+         * handleActionExecResult treats that as a permanent data failure.
          */
         iRet = RS_RET_SUSPENDED;
     }
 
-    if (iRet == RS_RET_SUSPENDED) {
+    if (bHashSendRetry) {
+        DBGPRINTF(
+            "omfwd: [wrkr %u] pool.policy=hash send deferred, staying on that "
+            "target and suspending the action for retry\n",
+            pWrkrData->wrkrID);
+    }
+    /* The pool-down warning predates hash send retry. Keep it for every
+     * suspend except a pure deferred hash send, where targets are still up
+     * and the text would be wrong. */
+    if (iRet == RS_RET_SUSPENDED && !(bHashSendRetry && !bFlushRetry && nActiveTargets != 0)) {
         LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                "omfwd: [wrkr %d/%" PRIuPTR "] no working target servers in pool available, suspending action",
                pWrkrData->wrkrID, (uintptr_t)pthread_self());
@@ -2745,6 +2781,15 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR,
                  "omfwd: compression.driver=\"zstd\" with compression.mode=\"stream:always\" requires non-zero "
                  "zipLevel because libzstd treats level 0 as its default compression level");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->poolPolicy == POOL_HASH && pData->protocol == FORW_UDP) {
+        /* UDPSend() always uses target[0]. Accepting hash here would load
+         * a config that silently does not shard. Default protocol is UDP. */
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: pool.policy=\"hash\" requires protocol=\"tcp\" "
+                 "(UDP forwarding uses only the first target)");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 

@@ -462,14 +462,20 @@ pool.policy
    "word", "roundrobin", "no", "none"
 
 Selects how a target is chosen from a target pool (two or more entries in
-"target"). Only meaningful with TCP, as UDP uses the first target only.
+"target"). ``pool.policy="hash"`` requires ``protocol="tcp"``. UDP forwarding
+always uses the first target, so hash selection is rejected at configuration
+time when ``protocol="udp"`` and when ``protocol`` is omitted (the default is
+UDP).
 
 - "roundrobin" (default): each message is sent to the next target in turn.
   Distributes load but gives no affinity between a key and a target.
 - "hash": the target is chosen deterministically as ``hash(key) mod
   targetCount``, where "key" is rendered by "pool.hashkey". The same key
-  therefore always reaches the same target. If that target is unavailable, the
+  therefore always reaches the same target. If that target is down, the
   remaining targets are probed in order so delivery still succeeds (failover).
+  A deferred send on a target that is still connected does not fail over.
+  The action retries that same target. Sending the message to the next pool
+  member on a would-block would break the shard.
 
 Hash selection lets stateful downstream processing (deduplication,
 correlation, per-key aggregation, per-source rate limiting) be sharded across a
