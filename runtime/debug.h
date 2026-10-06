@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* debug.h
  *
  * Definitions for the debug module.

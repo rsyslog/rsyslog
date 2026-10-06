@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omclickhouse.c
  * This is the https://clickhouse.yandex/ output module.
  *

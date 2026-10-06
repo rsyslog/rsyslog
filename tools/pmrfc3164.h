@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmrfc3164.h
  * These are the definitions for the RFC3164 parser module.
  *

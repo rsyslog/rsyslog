@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* compatibility file for systems without asprintf.
  *
  * Copyright 2019 P Duveau

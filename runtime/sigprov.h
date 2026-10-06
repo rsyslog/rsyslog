@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The interface definition for (file) signature providers.
  *
  * This is just an abstract driver interface, which needs to be

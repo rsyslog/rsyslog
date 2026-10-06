@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The kernel log module.
  *
  * This is an abstracted module. As Linux and BSD kernel log is conceptually the

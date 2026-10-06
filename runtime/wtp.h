@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the worker thread pool (wtp) object.
  *
  * Copyright 2008-2018 Adiscon GmbH.

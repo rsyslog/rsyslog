@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omazureeventhubs.c
  * This output plugin make rsyslog talk to Azure EventHubs.
  *

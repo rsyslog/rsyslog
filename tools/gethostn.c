@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* gethostn - a small diagnostic utility to show what the
  * gethostname() API returns. Of course, this tool duplicates
  * functionality already found in other tools. But the point is

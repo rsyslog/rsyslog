@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* lmcry_ossl.c
  *
  * An implementation of the cryprov interface for openssl.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* header for timezones.c
  *
  * Copyright 2022 Attila Lakatos and Adiscon GmbH.

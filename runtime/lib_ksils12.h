@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* lib_ksils12.h - rsyslog's KSI-LS12 support library
  *
  * Copyright 2013-2017 Adiscon GmbH and Guardtime, Inc.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omfile.h
  * These are the definitions for the build-in file output module.
  *

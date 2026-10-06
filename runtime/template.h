@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the header for template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *

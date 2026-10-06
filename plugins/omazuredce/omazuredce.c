@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omazuredce.c
  * Prototype output module for Azure Monitor Logs Ingestion API (DCE/DCR).
  *

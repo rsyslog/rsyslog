@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* a very simplistic tcp receiver for the rsyslog testbench.
  *
  * Copyright 2016,2024 Rainer Gerhards and Adiscon GmbH.

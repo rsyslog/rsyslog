@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* fmhttp.c
  * This is a function module for http functions.
  *

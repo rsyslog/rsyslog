@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* combined imklog driver for BSD and Linux
  *
  * This contains OS-specific functionality to read the BSD

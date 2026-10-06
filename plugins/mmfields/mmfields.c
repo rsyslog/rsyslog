@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmfields.c
  * Parse all fields of the message into structured data inside the
  * JSON tree.

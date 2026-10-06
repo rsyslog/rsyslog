@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *

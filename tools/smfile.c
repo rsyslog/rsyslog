@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* smfile.c
  * This is a strgen module for the traditional file format.
  *

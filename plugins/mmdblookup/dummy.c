@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* a dummy module to be loaded if we cannot build this module, but
  * configure required it to be "optional".
  *

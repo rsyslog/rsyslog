@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file imczmq.c
  * @brief Input module for receiving messages via ZeroMQ.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmjsonparse.c
  * This is a message modification module. If give, it extracts JSON data
  * and populates the EE event structure with it.

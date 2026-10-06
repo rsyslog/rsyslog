@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The datetime object. Contains time-related functions.
  *
  * Copyright 2008-2015 Adiscon GmbH.

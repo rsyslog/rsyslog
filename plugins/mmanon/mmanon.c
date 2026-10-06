@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmanon.c
  * anonymize IP addresses inside the syslog message part
  *

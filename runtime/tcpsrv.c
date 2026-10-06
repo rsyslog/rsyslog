@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* tcpsrv.c
  *
  * Common code for plain TCP syslog based servers. This is currently being

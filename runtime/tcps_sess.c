@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* tcps_sess.c
  *
  * This implements a session of the tcpsrv object. For general

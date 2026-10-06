@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file net_ossl_store.c
  * @brief TLS object loading helpers for the OpenSSL netstream driver.

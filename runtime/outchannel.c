@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the output channel processing code of rsyslog.
  * Output channels - in the long term - will define how
  * messages will be sent to whatever file or other medium.

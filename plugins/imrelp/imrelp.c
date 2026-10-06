@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imrelp.c
  *
  * This is the implementation of the RELP input module.

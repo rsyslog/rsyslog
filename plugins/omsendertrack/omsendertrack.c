@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file omsendertrack.c
  * @brief Track and persist statistics for message senders.

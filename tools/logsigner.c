@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is a tool for offline signing logfiles via the guardtime API.
  *
  * NOTE: this currently is only a PoC and WiP! NOT suitable for

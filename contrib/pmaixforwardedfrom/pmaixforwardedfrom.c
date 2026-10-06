@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmaixforwardedfrom.c
  *
  * this cleans up messages forwarded from AIX

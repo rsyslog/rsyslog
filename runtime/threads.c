@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* threads.c
  *
  * This file implements threading support helpers (and maybe the thread object)

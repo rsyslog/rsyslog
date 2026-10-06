@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /** @file translate.c
  * @brief Canonical config translation support for rsyslog.
  *

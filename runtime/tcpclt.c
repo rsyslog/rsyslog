@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* tcpclt.c
  *
  * This is the implementation of TCP-based syslog clients (the counterpart
