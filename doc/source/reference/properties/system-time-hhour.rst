@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-system-time-hhour:
 .. _properties.system-time.hhour:
 

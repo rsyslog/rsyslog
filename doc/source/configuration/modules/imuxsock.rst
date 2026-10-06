@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 **********************************
 imuxsock: Unix Socket Input Module
 **********************************

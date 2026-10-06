@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omkafka-kafkaheader:
 .. _omkafka.parameter.module.kafkaheader:
 

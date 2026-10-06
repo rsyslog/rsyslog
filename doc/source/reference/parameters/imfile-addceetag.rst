@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-addceetag:
 .. _imfile.parameter.input.addceetag:
 .. _imfile.parameter.addceetag:

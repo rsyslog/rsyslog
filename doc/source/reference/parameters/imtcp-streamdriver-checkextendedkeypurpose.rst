@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-streamdriver-checkextendedkeypurpose:
 .. _imtcp.parameter.module.streamdriver-checkextendedkeypurpose:
 .. _imtcp.parameter.input.streamdriver-checkextendedkeypurpose:

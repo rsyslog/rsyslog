@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _concept-log-pipeline:
 .. _log.pipeline:
 

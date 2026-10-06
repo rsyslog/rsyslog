@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Receiving massive amounts of messages with high performance
 ===========================================================
 

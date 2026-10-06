@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omdtls-tls-authmode:
 .. _omdtls.parameter.input.tls-authmode:
 

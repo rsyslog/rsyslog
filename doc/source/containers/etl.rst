@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _containers-user-etl:
 .. _container.image.rsyslog-etl:
 

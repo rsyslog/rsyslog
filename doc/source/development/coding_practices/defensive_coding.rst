@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _defensive-coding-and-assertions:
 
 Defensive Coding and Assertions

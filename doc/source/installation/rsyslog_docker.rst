@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _install-rsyslog-docker:
 
 Using Rsyslog Docker Containers

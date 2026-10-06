@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-readmode:
 .. _imfile.parameter.input.readmode:
 .. _imfile.parameter.readmode:

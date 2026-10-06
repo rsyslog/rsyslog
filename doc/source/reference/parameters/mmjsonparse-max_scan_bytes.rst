@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmjsonparse-max_scan_bytes:
 .. _mmjsonparse.parameter.max_scan_bytes:
 

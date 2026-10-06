@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _about-ai-first:
 .. index:: AI First; Responsible AI; Golden Path; Guardrails; Safeguards
 

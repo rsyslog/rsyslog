@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imuxsock-syssock-flowcontrol:
 .. _imuxsock.parameter.module.syssock-flowcontrol:
 

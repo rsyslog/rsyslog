@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmkubernetes-tls-mycert:
 .. _mmkubernetes.parameter.action.tls-mycert:
 

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-impstats-push-tls-cafile:
 .. _impstats.parameter.module.push-tls-cafile:
 

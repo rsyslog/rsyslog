@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdocker-escapelf:
 .. _imdocker.parameter.module.escapelf:
 

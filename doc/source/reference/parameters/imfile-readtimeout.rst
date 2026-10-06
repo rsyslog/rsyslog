@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-readtimeout:
 .. _imfile.parameter.input.readtimeout:
 .. _imfile.parameter.readtimeout:

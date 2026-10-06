@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 *******************************
 imfifo: Named Pipe Input Module
 *******************************

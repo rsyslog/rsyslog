@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-starvationprotection-maxreads:
 .. _imtcp.parameter.module.starvationprotection-maxreads:
 

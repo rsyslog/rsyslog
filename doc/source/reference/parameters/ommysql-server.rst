@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-ommysql-server:
 .. _ommysql.parameter.input.server:
 

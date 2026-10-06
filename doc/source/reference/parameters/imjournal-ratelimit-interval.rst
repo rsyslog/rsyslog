@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imjournal-ratelimit-interval:
 .. _imjournal.parameter.module.ratelimit-interval:
 

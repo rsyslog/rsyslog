@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazuredce-table_name:
 .. _omazuredce.parameter.action.table_name:
 

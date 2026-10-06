@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _rosi-for-decision-makers:
 
 ROSI for Decision-Makers

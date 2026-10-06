@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omawslogshlc-region:
 .. _omawslogshlc.parameter.action.region:
 

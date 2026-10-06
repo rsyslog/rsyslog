@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-allowunsignedcerts:
 .. _omelasticsearch.parameter.module.allowunsignedcerts:
 

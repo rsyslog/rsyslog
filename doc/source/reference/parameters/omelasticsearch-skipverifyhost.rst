@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-skipverifyhost:
 .. _omelasticsearch.parameter.module.skipverifyhost:
 

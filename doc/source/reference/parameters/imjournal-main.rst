@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imjournal-main:
 .. _imjournal.parameter.input.main:
 

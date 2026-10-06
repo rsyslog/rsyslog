@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _getting_started:
 
 Getting Started with rsyslog

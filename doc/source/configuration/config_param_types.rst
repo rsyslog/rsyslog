@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Configuration Parameter Types
 =============================
 Configuration parameter values have different data types.

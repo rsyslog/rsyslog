@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omkafka-partitions-usefixed:
 .. _omkafka.parameter.module.partitions-usefixed:
 

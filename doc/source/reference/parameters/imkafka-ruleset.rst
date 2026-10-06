@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imkafka-ruleset:
 .. _imkafka.parameter.module.ruleset:
 .. _imkafka.parameter.input.ruleset:

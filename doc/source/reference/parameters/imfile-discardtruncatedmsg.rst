@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-discardtruncatedmsg:
 .. _imfile.parameter.input.discardtruncatedmsg:
 .. _imfile.parameter.discardtruncatedmsg:

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-pmrfc3164-detect-yearaftertimestamp:
 .. _pmrfc3164.parameter.module.detect-yearaftertimestamp:
 .. _pmrfc3164.parameter.module.detect.YearAfterTimestamp:

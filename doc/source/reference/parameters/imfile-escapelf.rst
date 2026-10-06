@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-escapelf:
 .. _imfile.parameter.input.escapelf:
 .. _imfile.parameter.escapelf:

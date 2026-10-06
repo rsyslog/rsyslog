@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-dynafilecachesize:
 .. _omfile.parameter.module.dynafilecachesize:
 

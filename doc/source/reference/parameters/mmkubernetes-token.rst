@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmkubernetes-token:
 .. _mmkubernetes.parameter.action.token:
 

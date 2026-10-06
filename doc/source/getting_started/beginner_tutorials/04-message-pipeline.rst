@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _tut-04-log-pipeline:
 
 The Log Pipeline: Inputs → Rulesets → Actions

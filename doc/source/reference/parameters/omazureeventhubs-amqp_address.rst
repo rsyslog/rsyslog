@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazureeventhubs-amqp_address:
 .. _omazureeventhubs.parameter.input.amqp_address:
 

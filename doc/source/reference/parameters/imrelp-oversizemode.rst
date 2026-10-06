@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imrelp-oversizemode:
 .. _imrelp.parameter.input.oversizemode:
 

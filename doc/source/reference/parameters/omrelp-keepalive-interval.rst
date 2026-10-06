@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omrelp-keepalive-interval:
 .. _omrelp.parameter.input.keepalive-interval:
 

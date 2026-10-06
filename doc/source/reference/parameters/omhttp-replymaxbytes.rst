@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Configure the maximum HTTP response size stored by omhttp.
    :keywords: rsyslog, omhttp, replymaxbytes, http, response size
