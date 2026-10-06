@@ -1,5 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0 */
-
 /* The config file handler (not yet a real object)
  *
  * This file is based on an excerpt from syslogd.c, which dates back
