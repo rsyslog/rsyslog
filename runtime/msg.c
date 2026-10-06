@@ -4438,9 +4438,11 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 --iTo;
             } else if (iTo < 0) {
                 /* note: we ADD negative value, 0-based (-1)! */
-                iTo = bufLen - 1 + iTo;
-                if (iTo < 0) {
+                /* Clamp before adding: bufLen - 1 + INT_MIN can overflow. */
+                if (iTo < 1 - bufLen) {
                     iTo = 0;
+                } else {
+                    iTo = bufLen - 1 + iTo;
                 }
             }
         }
@@ -4461,7 +4463,21 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             if (iTo >= bufLen) /* iTo is very large, if no to-position is set in the template! */
                 if (pTpe->data.field.options.bFixedWidth == 0) iTo = bufLen - 1;
 
-            iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+            if (iTo < iFrom) {
+                /* A negative position.to may push iTo in front of iFrom, e.g.
+                 * position.from="5" position.to="-2" on a 5-character value.
+                 * The requested substring is empty in that case. Without this
+                 * guard iLen stays negative, malloc(0) succeeds and the copy
+                 * loop below never terminates.
+                 */
+                DBGPRINTF(
+                    "msgGetProp: iTo %d is in front of iFrom %d, "
+                    "returning empty string\n",
+                    iTo, iFrom);
+                iLen = 0;
+            } else {
+                iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+            }
             pBufStart = pBuf = malloc(iLen + 1);
             if (pBuf == NULL) {
                 if (*pbMustBeFreed == 1) free(pRes);
