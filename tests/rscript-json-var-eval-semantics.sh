@@ -11,10 +11,12 @@
 . ${srcdir:=.}/diag.sh init
 export RSYSLOG_DEBUG="debug nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
+# __FILE__ is a basename in an in-tree build and srcdir-relative in VPATH.
+rainerscript_debug_file="$(dirname "$srcdir")/grammar/rainerscript.c"
 
 generate_conf
 add_conf '
-global(debug.whitelist="on" debug.files=["rainerscript.c"])
+global(debug.whitelist="on" debug.files=["rainerscript.c","'"$rainerscript_debug_file"'"])
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'"$RSYSLOG_DYNNAME"'.tcpflood_port")
 template(name="outfmt" type="string" string="%$!out%\n")
