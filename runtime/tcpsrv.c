@@ -704,7 +704,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
 
             LogError(
                 0, localRet,
-                "Could not create tcp listener, ignoring port "
+                "Could not create tcp listener for port "
                 "%s bind-address %s%s%s.",
                 (pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszPort,
                 (pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszAddr,
@@ -712,6 +712,8 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
         }
         pEntry = pEntry->pNext;
     }
+
+    if (pThis->failOnBindError && firstFailure != RS_RET_OK) ABORT_FINALIZE(firstFailure);
 
     /* OK, we had success. Now it is also time to
      * initialize our connections
@@ -726,7 +728,6 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
                  "message reception.");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    if (pThis->failOnBindError) iRet = firstFailure;
 
 finalize_it:
     RETiRet;
