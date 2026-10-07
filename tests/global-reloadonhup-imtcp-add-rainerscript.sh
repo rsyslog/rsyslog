@@ -1,10 +1,12 @@
 #!/bin/bash
-# Dynamic port-0 additions, removals and endpoint replacements remain
-# restart-required; fixed numeric plain-ptcp additions are covered separately.
-# Completed HUP/status, unchanged generation, absent candidate port file and
-# old-session/new-old-listener messages prove dynamic-add rejection before
-# resource prepare. The fixed-numeric bind conflict below must reach prepare
-# in on mode and fail without changing the baseline.
+# Dynamic port-0 additions and endpoint replacements remain restart-required;
+# fixed numeric plain-ptcp additions and named dynamic-listener retirement are
+# covered separately. A candidate that combines a named port-0 removal with an
+# unsupported port-0 addition must reject atomically: completed HUP/status,
+# unchanged generation, absent candidate port file, and old-session/new-old-
+# listener messages prove no partial retirement. The fixed-numeric bind
+# conflict below must reach prepare in on mode and fail without changing the
+# baseline.
 # Restoring startup config proves the accepted baseline did not advance; a
 # retained-listener profile update must still reload. No sleep is an oracle.
 # Also run with RSYSLOG_RELOAD_ENDPOINT_MODE=validate: report-only mode must
@@ -61,17 +63,19 @@ assert_endpoint_rejected() {
 	assert_old_state "$1"
 }
 sed '/name="first"/a input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.candidate_port" name="added" ruleset="main")' \
-	"$CONF_FILE.startup" >"$CONF_FILE"
+	"$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
 assert_endpoint_rejected addition
 
-sed '/name="seed"/d' "$CONF_FILE.startup" >"$CONF_FILE"
-assert_endpoint_rejected removal
+sed -e '/name="seed"/d' \
+	-e '/name="first"/a input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.candidate_port" name="added" ruleset="main")' \
+	"$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
+assert_endpoint_rejected removal-plus-unsupported-addition
 
 # This fixed numeric plain-ptcp addition is structurally supported, so the
 # already-bound imdiag port must fail resource preparation in on mode. Validate
 # mode reports support only and does not attempt the conflicting bind.
 sed '/name="first"/a input(type="imtcp" address="127.0.0.1" port="'$IMDIAG_PORT'" name="conflict" ruleset="main")' \
-	"$CONF_FILE.startup" >"$CONF_FILE"
+	"$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 expected_result=activation_failed
@@ -85,7 +89,7 @@ if [[ "$reload_status" != *"result=$expected_result active_generation=1"* ||
 fi
 assert_old_state bind-conflict
 
-cp "$CONF_FILE.startup" "$CONF_FILE"
+cp "$CONF_FILE.startup" "$CONF_FILE" || error_exit 1
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=reported_only active_generation=1"* ||
@@ -96,7 +100,7 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1"* ||
 	error_exit 1
 fi
 
-sed 's/name="first"/flowControl="off" name="first"/' "$CONF_FILE.startup" >"$CONF_FILE"
+sed 's/name="first"/flowControl="off" name="first"/' "$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 expected_result=activated
