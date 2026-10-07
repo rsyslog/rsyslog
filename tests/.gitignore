@@ -16,4 +16,5 @@ gnutls_sni_server
 openssl_sni_server
 openssl_mtls_server
 runtime_unit_msg_replace
+runtime_unit_imudp_buffer
 runtime_unit_ommongodb_date
