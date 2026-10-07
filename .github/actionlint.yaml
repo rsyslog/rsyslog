@@ -1,0 +1,6 @@
+# actionlint 1.7.7 predates GitHub's `$/` self-repository syntax.
+# Keep this compatibility ignore narrow until actionlint supports that syntax.
+paths:
+  '.github/workflows/**/*.{yml,yaml}':
+    ignore:
+      - 'specifying action "\$/.github/actions/upload-flake-evidence" in invalid format'
