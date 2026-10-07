@@ -176,6 +176,7 @@ EXTRA_DIST += unit/reload_report_test.c
 EXTRA_DIST += unit/reload_normalized_graph_test.c
 EXTRA_DIST += unit/wtp_quiesce_test.c
 EXTRA_DIST += unit/mmaitag_gemini_response_test.c
+EXTRA_DIST += unit/imtcp_lifecycle_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -2759,7 +2760,8 @@ CLEANFILES=\
 CLEANFILES+= \
 	IN_AUTO_DEBUG \
 	runtime_unit_imbeats_seq \
-	runtime_unit_mmaitag_gemini_response
+	runtime_unit_mmaitag_gemini_response \
+	runtime_unit_imtcp_lifecycle
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
 # These unit binaries are conditional, but an outer build with their modules
@@ -2779,6 +2781,13 @@ TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri r
 	runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
 	runtime_unit_tcpsrv_fence runtime_unit_tcpsrv_prepared runtime_unit_parser_policy_snapshot runtime_unit_wtp_wakeup
+
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_imtcp_lifecycle
+TESTS += runtime_unit_imtcp_lifecycle
+runtime_unit_imtcp_lifecycle_SOURCES = \
+	unit/imtcp_lifecycle_test.c
+endif # ENABLE_IMTCP_TESTS
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2990,6 +2999,9 @@ runtime_unit_tcpsrv_fence_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_tcpsrv_prepared_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imtcp_lifecycle_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-I$(top_srcdir)/plugins/imtcp
 runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-Wno-inline
@@ -3010,6 +3022,7 @@ runtime_unit_reload_syntax_clone_LDADD = $(LIBESTR_LIBS)
 runtime_unit_wtp_quiesce_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_tcpsrv_fence_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_tcpsrv_prepared_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_imtcp_lifecycle_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG

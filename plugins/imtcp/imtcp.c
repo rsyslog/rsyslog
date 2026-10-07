@@ -67,6 +67,7 @@
 #include "srUtils.h"
 #include "tcpsrv.h"
 #include "tcpsrv-prepared.h"
+#include "imtcp-lifecycle.h"
 #include "ruleset.h"
 #include "rainerscript.h"
 #include "parserif.h"
@@ -110,8 +111,14 @@ typedef struct tcpsrv_etry_s {
  * dispatch. Removed listeners close their accept sockets at the fence; their
  * sessions retain the complete server generation until its worker has drained.
  * Retiring entries do not participate in active endpoint identity matching.
- * Publication and shutdown are serialized by the main control lifecycle;
- * registry access is never on the message path. */
+ * endpointLifecycle serializes the input thread's entire startup publication
+ * and shutdown traversal against reload registry borrows, publication and
+ * join/unlink/free. Preparation returns RETRY if startup has not begun/completed;
+ * a child's activation.finished does not prove its creator published the handle.
+ * Main control owns pre-input configuration and sequential reload callbacks;
+ * afterRun runs after the input thread joins. Neither the registry gate nor
+ * registry access is on the message path; server workers never take the gate. */
+static imtcpLifecycle_t endpointLifecycle = IMTCP_LIFECYCLE_INITIALIZER;
 static struct {
     tcpsrv_etry_t *head;
     int count;
@@ -2689,6 +2696,8 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
     if (oldConfig == NULL || newConfig == NULL || newConfig->pConf == NULL || pReloadState == NULL ||
         *pReloadState != NULL)
         return RS_RET_PARAM_ERROR;
+    iRet = imtcpLifecycleLockReload(&endpointLifecycle);
+    if (iRet != RS_RET_OK) return iRet;
     CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
     if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE &&
         capability != eMOD_RELOAD_NEW_SESSIONS && capability != eMOD_RELOAD_LIVE_AND_NEW_SESSIONS &&
@@ -2854,6 +2863,7 @@ finalize_it:
     destructUnpublishedAdditions(state);
     freeReloadPreparedValues(state);
     free(state);
+    imtcpLifecycleUnlock(&endpointLifecycle);
     RETiRet;
 }
 
@@ -2861,6 +2871,7 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
     imtcpReloadStateV1_t *const state = pReloadState;
     rsRetVal ret = RS_RET_OK;
     if (state == NULL || deadline == NULL) return RS_RET_PARAM_ERROR;
+    imtcpLifecycleLock(&endpointLifecycle);
     for (size_t i = 0; i < state->count; ++i) {
         if (state->entries[i].addition) continue;
         ret = tcpsrv.RequestFence(state->entries[i].runtime->tcpsrv, &state->entries[i].fenceToken);
@@ -2936,10 +2947,12 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
             entry->fenceAcquired = 0;
         }
     }
+    imtcpLifecycleUnlock(&endpointLifecycle);
     return ret;
 }
 
-static rsRetVal resumeReloadV1(void *const pReloadState) {
+/* Caller owns endpointLifecycle, including abort/retire internal calls. */
+static rsRetVal resumeReloadV1Locked(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
     rsRetVal ret = RS_RET_OK;
     if (state == NULL) return RS_RET_PARAM_ERROR;
@@ -2953,8 +2966,16 @@ static rsRetVal resumeReloadV1(void *const pReloadState) {
     return ret;
 }
 
+static rsRetVal resumeReloadV1(void *const pReloadState) {
+    imtcpLifecycleLock(&endpointLifecycle);
+    const rsRetVal ret = resumeReloadV1Locked(pReloadState);
+    imtcpLifecycleUnlock(&endpointLifecycle);
+    return ret;
+}
+
 static void commitReloadV1(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
+    imtcpLifecycleLock(&endpointLifecycle);
     state->nextCommitted = committedReloadStates;
     committedReloadStates = state;
     for (size_t i = 0; i < state->count; ++i) {
@@ -3029,23 +3050,30 @@ static void commitReloadV1(void *const pReloadState) {
         entry->additionPublished = 1;
         authorizeSrvWrkr(entry->runtime);
     }
+    imtcpLifecycleUnlock(&endpointLifecycle);
 }
 
 static void abortReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return;
+    imtcpLifecycleLock(&endpointLifecycle);
     unlinkCommittedReloadState(pReloadState);
-    (void)resumeReloadV1(pReloadState);
+    (void)resumeReloadV1Locked(pReloadState);
     destructUnpublishedAdditions(pReloadState);
     freeReloadPreparedValues(pReloadState);
     free(pReloadState);
+    imtcpLifecycleUnlock(&endpointLifecycle);
 }
 
 static rsRetVal retireReloadV1(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
     rsRetVal ret;
     if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
-    ret = resumeReloadV1(pReloadState);
-    if (ret != RS_RET_OK) return ret;
+    imtcpLifecycleLock(&endpointLifecycle);
+    ret = resumeReloadV1Locked(pReloadState);
+    if (ret != RS_RET_OK) {
+        imtcpLifecycleUnlock(&endpointLifecycle);
+        return ret;
+    }
     int draining = 0;
     for (size_t i = 0; i < state->count; ++i) {
         imtcpReloadEntryV1_t *const reloadEntry = &state->entries[i];
@@ -3066,10 +3094,14 @@ static rsRetVal retireReloadV1(void *const pReloadState) {
         endpointRegistryRemove(reloadEntry->runtime);
         reloadEntry->runtime = NULL;
     }
-    if (draining) return RS_RET_RETRY;
+    if (draining) {
+        imtcpLifecycleUnlock(&endpointLifecycle);
+        return RS_RET_RETRY;
+    }
     unlinkCommittedReloadState(state);
     freeReloadPreparedValues(state);
     free(pReloadState);
+    imtcpLifecycleUnlock(&endpointLifecycle);
     return RS_RET_OK;
 }
 
@@ -3299,6 +3331,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
     instanceConf_t *inst;
     CODESTARTactivateCnfPrePrivDrop;
+    endpointLifecycle.startupComplete = 0; /* control-owned, before input creation */
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         addListner(runModConf, inst);
@@ -3493,20 +3526,27 @@ static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
  */
 BEGINrunInput
     CODESTARTrunInput;
+    imtcpLifecycleLock(&endpointLifecycle);
+    pthread_cleanup_push(imtcpLifecycleUnlock, &endpointLifecycle);
     tcpsrv_etry_t *etry = endpoint_registry.head;
     while (etry != NULL) {
         (void)startSrvWrkr(etry, 0);
         etry = etry->next;
     }
+    imtcpLifecycleStartupComplete(&endpointLifecycle);
+    pthread_cleanup_pop(1);
 
     while (glbl.GetGlobalInputTermState() == 0) srSleep(0, 100000);
 
     /* De-initialize every runtime server, including endpoints added by HUP. */
-    etry = endpoint_registry.head;
+    imtcpLifecycleLock(&endpointLifecycle);
+    pthread_cleanup_push(imtcpLifecycleUnlock, &endpointLifecycle);
+    tcpsrv_etry_t *etry = endpoint_registry.head;
     while (etry != NULL) {
         stopSrvWrkr(etry);
         etry = etry->next;
     }
+    pthread_cleanup_pop(1);
 ENDrunInput
 
 
@@ -3519,9 +3559,13 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
+    imtcpLifecycleLock(&endpointLifecycle);
     tcpsrv_etry_t *etry = endpoint_registry.head;
     tcpsrv_etry_t *del;
     while (etry != NULL) {
+        /* A forced cancellation can interrupt runInput's join. Complete it
+         * here before destroying a server still owned by its worker. */
+        stopSrvWrkr(etry);
         invalidateCommittedRuntime(etry);
         iRet = tcpsrv.Destruct(&etry->tcpsrv);
         del = etry;
@@ -3530,6 +3574,7 @@ BEGINafterRun
     }
     endpoint_registry.head = NULL;
     endpoint_registry.count = 0;
+    imtcpLifecycleUnlock(&endpointLifecycle);
     net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
