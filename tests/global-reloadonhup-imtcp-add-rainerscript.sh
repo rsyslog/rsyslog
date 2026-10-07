@@ -1,8 +1,10 @@
 #!/bin/bash
-# Deliberate existing-listener-only milestone: additions, removals and endpoint
-# replacements require restart until worker activation readiness is provable.
+# Dynamic port-0 additions, removals and endpoint replacements remain
+# restart-required; fixed numeric plain-ptcp additions are covered separately.
 # Completed HUP/status, unchanged generation, absent candidate port file and
-# old-session/new-old-listener messages prove rejection before resource prepare.
+# old-session/new-old-listener messages prove dynamic-add rejection before
+# resource prepare. The fixed-numeric bind conflict below must reach prepare
+# in on mode and fail without changing the baseline.
 # Restoring startup config proves the accepted baseline did not advance; a
 # retained-listener profile update must still reload. No sleep is an oracle.
 # Also run with RSYSLOG_RELOAD_ENDPOINT_MODE=validate: report-only mode must
@@ -28,6 +30,22 @@ exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
 exec 8<>"/dev/tcp/127.0.0.1/$SEED_PORT"
 cp "$CONF_FILE" "$CONF_FILE.startup"
 
+assert_old_state() {
+	local tag="$1"
+	printf '<167>Mar 10 01:00:00 host app: retained-first-%s\n' "$tag" >&9 || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: retained-seed-%s\n' "$tag" >&8 || error_exit 1
+	wait_content "retained-first-$tag" "$RSYSLOG_OUT_LOG"
+	wait_content "retained-seed-$tag" "$RSYSLOG_OUT_LOG"
+	exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT" || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: retained-accept-%s\n' "$tag" >&7 || error_exit 1
+	exec 7>&-
+	wait_content "retained-accept-$tag" "$RSYSLOG_OUT_LOG"
+	exec 7<>"/dev/tcp/127.0.0.1/$SEED_PORT" || error_exit 1
+	printf '<167>Mar 10 01:00:00 host app: seed-accept-%s\n' "$tag" >&7 || error_exit 1
+	exec 7>&-
+	wait_content "seed-accept-$tag" "$RSYSLOG_OUT_LOG"
+}
+
 assert_endpoint_rejected() {
 	issue_HUP
 	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -40,18 +58,7 @@ assert_endpoint_rejected() {
 		error_exit 1
 	fi
 	[[ ! -e "$RSYSLOG_DYNNAME.candidate_port" ]] || error_exit 1
-	printf '<167>Mar 10 01:00:00 host app: retained-first-%s\n' "$1" >&9 || error_exit 1
-	printf '<167>Mar 10 01:00:00 host app: retained-seed-%s\n' "$1" >&8 || error_exit 1
-	wait_content "retained-first-$1" "$RSYSLOG_OUT_LOG"
-	wait_content "retained-seed-$1" "$RSYSLOG_OUT_LOG"
-	exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
-	printf '<167>Mar 10 01:00:00 host app: retained-accept-%s\n' "$1" >&7 || error_exit 1
-	exec 7>&-
-	wait_content "retained-accept-$1" "$RSYSLOG_OUT_LOG"
-	exec 7<>"/dev/tcp/127.0.0.1/$SEED_PORT"
-	printf '<167>Mar 10 01:00:00 host app: seed-accept-%s\n' "$1" >&7 || error_exit 1
-	exec 7>&-
-	wait_content "seed-accept-$1" "$RSYSLOG_OUT_LOG"
+	assert_old_state "$1"
 }
 sed '/name="first"/a input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.candidate_port" name="added" ruleset="main")' \
 	"$CONF_FILE.startup" >"$CONF_FILE"
@@ -60,10 +67,23 @@ assert_endpoint_rejected addition
 sed '/name="seed"/d' "$CONF_FILE.startup" >"$CONF_FILE"
 assert_endpoint_rejected removal
 
-# Bind conflicts must be scope rejections, not failed live-resource prepares.
+# This fixed numeric plain-ptcp addition is structurally supported, so the
+# already-bound imdiag port must fail resource preparation in on mode. Validate
+# mode reports support only and does not attempt the conflicting bind.
 sed '/name="first"/a input(type="imtcp" address="127.0.0.1" port="'$IMDIAG_PORT'" name="conflict" ruleset="main")' \
 	"$CONF_FILE.startup" >"$CONF_FILE"
-assert_endpoint_rejected bind-conflict
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+expected_result=activation_failed
+[[ "$MODE" == validate ]] && expected_result=reported_only
+if [[ "$reload_status" != *"result=$expected_result active_generation=1"* ||
+      "$reload_status" != *"added=1 removed=0 modified=0 invalid=0"* ||
+      "$reload_status" != *"source_capability=new_sessions"* ||
+      "$reload_status" != *"retirement_pending=0"* ]]; then
+	echo "FAIL: numeric plain-ptcp bind conflict did not preserve the accepted generation: $reload_status"
+	error_exit 1
+fi
+assert_old_state bind-conflict
 
 cp "$CONF_FILE.startup" "$CONF_FILE"
 issue_HUP
