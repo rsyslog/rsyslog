@@ -1,7 +1,7 @@
 .. SPDX-License-Identifier: Apache-2.0
 
 .. meta::
-   :description: Stop rsyslog startup when an imtcp listener cannot bind.
+   :description: Make imtcp bind failures fatal when abortOnUncleanConfig is enabled.
    :keywords: rsyslog, imtcp, failOnBindError, listener, bind
 
 .. _param-imtcp-failonbinderror:
