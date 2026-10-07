@@ -7,17 +7,30 @@
 # listener messages prove no partial retirement. The fixed-numeric bind
 # conflict below must reach prepare in on mode and fail without changing the
 # baseline.
+# Each unsupported candidate must identify its offending second input in the
+# configured .started omfile: both an explicit name and the
+# default "imtcp" name are checked, including escaping of quote, backslash,
+# and newline bytes. The diagnostic assertions run after synchronized shutdown;
+# HUP status and old-listener delivery are checked before that.
 # Restoring startup config proves the accepted baseline did not advance; a
 # retained-listener profile update must still reload. No sleep is an oracle.
 # Also run with RSYSLOG_RELOAD_ENDPOINT_MODE=validate: report-only mode must
 # classify restart_required without activation.
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 MODE="${RSYSLOG_RELOAD_ENDPOINT_MODE:-on}"
 case "$MODE" in on|validate) ;; *) error_exit 1 ;; esac
 require_yaml_support
 generate_conf --yaml-only
-sed -i '/debug.abortOnProgramError:/a\  config.reloadOnHUP: "'$MODE'"' "$TESTCONF_NM.yaml"
+sed -i '/debug.abortOnProgramError:/a\  processInternalMessages: "on"\
+  config.reloadOnHUP: "'$MODE'"' "$TESTCONF_NM.yaml"
+printf 'action(type="omfile" name="diag_sink" file="%s")\n' \
+	"$RSYSLOG_DYNNAME.started" >"$RSYSLOG_DYNNAME.internal.conf"
+add_yaml_conf '
+include:
+  - path: "'$RSYSLOG_DYNNAME'.internal.conf"
+'
 add_yaml_conf '
 modules:
   - load: "../plugins/imtcp/.libs/imtcp"
@@ -75,11 +88,11 @@ assert_endpoint_rejected() {
 		echo "FAIL: candidate escaped existing-listener scope: $reload_status"
 		error_exit 1
 	fi
-	[[ ! -e "$RSYSLOG_DYNNAME.candidate_port" ]] || error_exit 1
+	[[ -z "$2" || ! -e "$2" ]] || error_exit 1
 	assert_old_state "$1"
 }
 awk -v candidate="$RSYSLOG_DYNNAME.candidate_port" '
-	/^rulesets:/ {
+	/^  # seed endpoint$/ {
 		print "  - type: imtcp"
 		print "    port: \"0\""
 		print "    listenPortFileName: \"" candidate "\""
@@ -88,7 +101,26 @@ awk -v candidate="$RSYSLOG_DYNNAME.candidate_port" '
 	}
 	{ print }
 	' "$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
-assert_endpoint_rejected addition
+assert_endpoint_rejected addition "$RSYSLOG_DYNNAME.candidate_port"
+
+# Removing the second input's configured name forces positional classification.
+# Its default imtcp identity must still be reported as candidate input #2.
+sed '/    name: seed/d' "$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
+assert_endpoint_rejected anonymous-second-input ""
+
+# YAML double-quoted escapes decode to a quote, backslash, and newline in the
+# configured name; the diagnostic must render those bytes as printable hex.
+awk -v candidate="$RSYSLOG_DYNNAME.malicious_port" '
+	/^  # seed endpoint$/ {
+		print "  - type: imtcp"
+		print "    port: \"0\""
+		print "    listenPortFileName: \"" candidate "\""
+		print "    name: \"bad\\\"\\\\\\nInjected\""
+		print "    ruleset: main"
+	}
+	{ print }
+	' "$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
+assert_endpoint_rejected malicious-name "$RSYSLOG_DYNNAME.malicious_port"
 
 awk -v candidate="$RSYSLOG_DYNNAME.candidate_port" '
 	/^  # seed endpoint$/ { skipping = 1 }
@@ -102,7 +134,7 @@ awk -v candidate="$RSYSLOG_DYNNAME.candidate_port" '
 	}
 	!skipping { print }
 	' "$CONF_FILE.startup" >"$CONF_FILE" || error_exit 1
-assert_endpoint_rejected removal-plus-unsupported-addition
+assert_endpoint_rejected removal-plus-unsupported-addition "$RSYSLOG_DYNNAME.candidate_port"
 
 # This fixed numeric plain-ptcp addition is structurally supported, so the
 # already-bound imdiag port must fail resource preparation in on mode. Validate
@@ -165,4 +197,10 @@ exec 8>&-
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
+content_count_check 'imtcp: reload requires restart for candidate input #2 name="added": unsupported addition' 2 \
+	"$RSYSLOG_DYNNAME.started"
+content_count_check 'imtcp: reload requires restart for candidate input #2 name="imtcp": unsupported change' 1 \
+	"$RSYSLOG_DYNNAME.started"
+content_count_check 'imtcp: reload requires restart for candidate input #2 name="bad\x22\x5c\x0aInjected": unsupported addition' 1 \
+	"$RSYSLOG_DYNNAME.started"
 exit_test
