@@ -43,8 +43,11 @@
  * snapshot under that mutex. An atomic load of iRefCount is not a
  * happens-before with that write, so a refcount-gated lock-free
  * getter races it. mmnormalize-turbo-shared-getter-tsan.sh covers
- * that topology. The mutex is not recursive: a caller that already
- * holds it must not call msgTurboGetStr() (today's callers do not).
+ * that topology. RainerScript expressions use msgGetJSONPropSVar(),
+ * which takes the same mutex around its own snapshot read and does not
+ * call msgTurboGetStr(). The mutex is not recursive: a caller that
+ * already holds it must not call msgTurboGetStr() (today's callers do
+ * not).
  *
  * Materialize is the one-way turbo -> legacy projection. It runs under
  * pMsg->mut, is idempotent (turbo_json_ready), and does not clear the
@@ -3391,6 +3394,11 @@ finalize_it:
  * JSON strings at their first embedded NUL, so retain that behavior here.
  * Non-string values remain deep-copied JSON objects because message mutation
  * may otherwise invalidate them after the lock is released.
+ *
+ * The turbo fast path does the same under pMsg->mut. get_str's pointer is
+ * only valid until a concurrent overwrite frees the snapshot, so the
+ * es_str_t copy finishes before MsgUnlock. This does not call
+ * msgTurboGetStr(): that helper locks the same non-recursive mutex.
  */
 rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct svar *out) {
     struct json_object **jroot;
@@ -3403,18 +3411,24 @@ rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct sv
     out->d.estr = NULL;
 
 #ifdef HAVE_LOGNORM_TURBO
-    /* Keep the existing snapshot precedence guard: once $! was mutated, the
-     * merge-aware path below must materialize and read the message JSON. */
-    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
-        pMsg->turbo_result_get_str != NULL) {
+    /* Once $! was mutated, json != NULL and the path below materializes.
+     * Read that flag under the mutex: the old unlocked check raced the
+     * writer that publishes and frees the snapshot. */
+    if (pProp->id == PROP_CEE) {
         const uchar *val;
         rs_size_t vlen;
-        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
+        int hit = 0;
+
+        MsgLock(pMsg);
+        if (pMsg->json == NULL && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL &&
+            pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
             const size_t len = strnlen((const char *)val, vlen);
             out->d.estr = es_newStrFromCStr((const char *)val, len);
-            if (out->d.estr != NULL) {
-                return RS_RET_OK;
-            }
+            hit = out->d.estr != NULL;
+        }
+        MsgUnlock(pMsg);
+        if (hit) {
+            return RS_RET_OK;
         }
     }
 #endif
