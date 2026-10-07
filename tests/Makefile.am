@@ -185,6 +185,7 @@ EXTRA_DIST += unit/module_reload_test.c
 EXTRA_DIST += unit/reload_report_test.c
 EXTRA_DIST += unit/reload_normalized_graph_test.c
 EXTRA_DIST += unit/wtp_quiesce_test.c
+EXTRA_DIST += unit/imtcp_lifecycle_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -2789,7 +2790,8 @@ CLEANFILES=\
 
 CLEANFILES+= \
 	runtime_unit_imbeats_seq \
-	runtime_unit_mmaitag_gemini_response
+	runtime_unit_mmaitag_gemini_response \
+	runtime_unit_imtcp_lifecycle
 # These unit binaries are conditional, but an outer build with their modules
 # enabled can leave them for an inner distcheck configured without them.
 
@@ -2810,6 +2812,13 @@ TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri r
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
+
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_imtcp_lifecycle
+TESTS += runtime_unit_imtcp_lifecycle
+runtime_unit_imtcp_lifecycle_SOURCES = \
+	unit/imtcp_lifecycle_test.c
+endif # ENABLE_IMTCP_TESTS
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -3024,6 +3033,9 @@ runtime_unit_tcpsrv_fence_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_tcpsrv_prepared_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imtcp_lifecycle_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-I$(top_srcdir)/plugins/imtcp
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3042,6 +3054,7 @@ runtime_unit_reload_syntax_clone_LDADD = $(LIBESTR_LIBS)
 runtime_unit_wtp_quiesce_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_tcpsrv_fence_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_tcpsrv_prepared_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_imtcp_lifecycle_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
