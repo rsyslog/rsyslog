@@ -2822,6 +2822,52 @@ runtime_unit_tcpsrv_fence_SOURCES = \
 runtime_unit_tcpsrv_prepared_SOURCES = \
 	unit/tcpsrv_prepared_test.c
 
+# This binary loads production tcpsrv/netstream modules rather than modeling
+# backend readiness. Both epoll and poll configurations execute the same test.
+if ENABLE_TESTBENCH
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_tcpsrv_prepared_backend
+TESTS += runtime_unit_tcpsrv_prepared_backend
+runtime_unit_tcpsrv_prepared_backend_SOURCES = \
+	unit/tcpsrv_prepared_backend_test.c \
+	helpers/tcpsrv_prepared_daemon_link.c \
+	../tools/syslogd.c \
+	../tools/shadow_reload.c \
+	../tools/omshell.c \
+	../tools/omusrmsg.c \
+	../tools/omfwd.c \
+	../tools/omfile.c \
+	../tools/ompipe.c \
+	../tools/omdiscard.c \
+	../tools/pmrfc5424.c \
+	../tools/pmrfc3164.c \
+	../tools/smtradfile.c \
+	../tools/smfile.c \
+	../tools/smfwd.c \
+	../tools/smtradfwd.c \
+	../tools/iminternal.c
+runtime_unit_tcpsrv_prepared_backend_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+# Match tools/rsyslogd's real daemon linkage: rsrtInit intentionally references
+# the full configuration/daemon surface, and loaded modules resolve its symbols.
+runtime_unit_tcpsrv_prepared_backend_LDADD = \
+	$(top_builddir)/grammar/libgrammar.la $(top_builddir)/runtime/librsyslog.la \
+	$(top_builddir)/compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) \
+	$(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) $(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
+runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -export-dynamic
+if ENABLE_LIBZSTD
+runtime_unit_tcpsrv_prepared_backend_CPPFLAGS += $(ZSTD_CFLAGS)
+runtime_unit_tcpsrv_prepared_backend_LDADD += $(ZSTD_LIBS)
+endif
+if ENABLE_LIBLOGGING_STDLOG
+runtime_unit_tcpsrv_prepared_backend_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_tcpsrv_prepared_backend_LDADD += $(LIBLOGGING_STDLOG_LIBS)
+endif
+if OS_AIX
+runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -brtl -bexpall -lsrc
+endif
+endif
+endif
+
 runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
 
