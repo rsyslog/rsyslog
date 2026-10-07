@@ -675,17 +675,29 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
     if (pThis->pSessions != NULL) {
-#if !defined(ENABLE_IMTCP_EPOLL)
-        /* close all TCP connections! */
-        i = TCPSessGetNxtSess(pThis, -1);
-        while (i != -1) {
+        /* Workers have joined before object destruction. A removed listener
+         * may still have live sessions when global shutdown interrupts drain;
+         * neither closing the epoll fd nor freeing the slot table owns those
+         * objects. Release sessions before their listener-owned metadata. */
+        for (i = 0; i < pThis->iSessMax; ++i) {
             tcps_sess_t *pSess = TCPSessTblLoad(pThis, i);
+            if (pSess == NULL) continue;
+#if defined(ENABLE_IMTCP_EPOLL)
+            tcpsrv_io_descr_t *const descriptor = pSess->pIODescr;
+            pSess->pIODescr = NULL;
+#endif
             tcps_sess.Destruct(&pSess);
             TCPSessTblStore(pThis, i, NULL);
-            /* now get next... */
-            i = TCPSessGetNxtSess(pThis, i);
-        }
+#if defined(ENABLE_IMTCP_EPOLL)
+            /* The backend is stopped, so no readiness batch or worker can
+             * still reference this heap-owned session descriptor. Poll uses
+             * stack workset descriptors and must not free them here. */
+            if (descriptor != NULL) {
+                DESTROY_ATOMIC_HELPER_MUT(descriptor->mut_isInError);
+                free(descriptor);
+            }
 #endif
+        }
 
         /* we are done with the session table - so get rid of it...  */
         free(pThis->pSessions);

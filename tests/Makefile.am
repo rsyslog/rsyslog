@@ -923,6 +923,10 @@ TESTS_IMTCP = \
 	imtcp-basic.sh \
 	global-reloadonhup-imtcp-add-plain-rainerscript.sh \
 	global-reloadonhup-imtcp-add-plain-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-retire-rainerscript.sh \
+	global-reloadonhup-imtcp-retire-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-plain-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-plain-validate-rainerscript.sh \
 	rscript_parsehostnameandtag_off.sh \
 	imtcp_framing_regex.sh \
 	imtcp_framing_regex_maxmsg_overflow.sh \
@@ -1785,6 +1789,10 @@ TESTS_LIBYAML_IMTCP = \
 	global-reloadonhup-imtcp-add-validate-yaml.sh \
 	global-reloadonhup-imtcp-add-plain-yaml.sh \
 	global-reloadonhup-imtcp-add-plain-validate-yaml.sh \
+	global-reloadonhup-imtcp-retire-yaml.sh \
+	global-reloadonhup-imtcp-retire-validate-yaml.sh \
+	global-reloadonhup-imtcp-replace-plain-yaml.sh \
+	global-reloadonhup-imtcp-replace-plain-validate-yaml.sh \
 	global-reloadonhup-on-yaml.sh \
 	global-reloadonhup-ruleset-constructs-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \

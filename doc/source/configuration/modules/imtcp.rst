@@ -177,7 +177,25 @@ numeric port from 1 through 65535. It cannot use ``listenPortFileName``, a
 network namespace, permitted-peer settings, ``gnutlsPriorityString``, or a
 named rate-limit profile. Retained listeners must have unambiguous identities;
 an existing named port-0 listener can be retained, but cannot be newly added.
-Removing a listener or changing its endpoint still requires a full restart.
+Uniquely identified plain-TCP listeners can also be removed. This includes
+existing named port-0 listeners; anonymous dynamic listeners cannot be matched
+safely and remain restart-required. Removal closes the listening sockets at
+commit, but established sessions keep their server generation and continue
+delivering messages until they disconnect. The runtime is reclaimed after its
+worker drains. There is no forced drain timeout.
+
+A replacement at a different endpoint is prepared as an addition plus removal.
+The added endpoint must satisfy the restrictions above. A bind conflict,
+including overlapping wildcard and specific addresses, rejects preparation
+without closing the old listener. Incompatible changes requiring a new server
+on the same occupied endpoint remain restart-required; supported profile
+updates use the existing server instead.
+
+While removed sessions are draining, reload status reports
+``retirement_pending=1``. Further reload requests cannot activate until that
+retirement completes; the main control loop retries reclamation automatically.
+Close long-lived clients if another reload is needed. Shutdown still joins and
+destroys the remaining input runtimes safely.
 
 The reload prepares and listens on private sockets before starting their gated
 backends. A TCP handshake can therefore complete and data can enter the kernel

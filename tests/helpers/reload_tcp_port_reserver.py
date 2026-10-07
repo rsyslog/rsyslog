@@ -18,12 +18,13 @@ def main():
 
         for command in sys.stdin:
             command = command.strip()
-            if command == "release 1":
-                if reservations[0] is None:
-                    raise RuntimeError("reservation 1 was already released")
-                reservations[0].close()
-                reservations[0] = None
-                print("RELEASED 1", flush=True)
+            if command in ("release 1", "release 2"):
+                index = int(command[-1]) - 1
+                if reservations[index] is None:
+                    raise RuntimeError(f"reservation {index + 1} was already released")
+                reservations[index].close()
+                reservations[index] = None
+                print(f"RELEASED {index + 1}", flush=True)
             elif command == "release all":
                 for index, listener in enumerate(reservations):
                     if listener is not None:

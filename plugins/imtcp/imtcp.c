@@ -107,7 +107,9 @@ typedef struct tcpsrv_etry_s {
  *
  * Runtime-owned endpoint registry. Prepare listens on private addition sockets
  * before proving gated backend readiness; commit publishes before authorizing
- * dispatch. Existing listeners and sessions retain their runtime generation.
+ * dispatch. Removed listeners close their accept sockets at the fence; their
+ * sessions retain the complete server generation until its worker has drained.
+ * Retiring entries do not participate in active endpoint identity matching.
  * Publication and shutdown are serialized by the main control lifecycle;
  * registry access is never on the message path. */
 static struct {
@@ -173,7 +175,8 @@ static rsRetVal endpointRegistryBuild(tcpsrv_t *const server,
     if (iRet != RS_RET_OK && iRet != RS_RET_NOT_IMPLEMENTED) ABORT_FINALIZE(iRet);
     if (entry->endpoint_key != NULL) {
         for (existing = endpoint_registry.head; existing != NULL; existing = existing->next) {
-            if (existing->endpoint_key != NULL && !strcmp(existing->endpoint_key, entry->endpoint_key))
+            if (existing->state == IMTCP_ENDPOINT_ACTIVE && existing->endpoint_key != NULL &&
+                !strcmp(existing->endpoint_key, entry->endpoint_key))
                 ABORT_FINALIZE(RS_RET_DUP_PARAM);
         }
     }
@@ -2269,6 +2272,15 @@ static rsRetVal reloadAdditionSupported(const instanceConf_t *const inst,
     return ret == RS_RET_NOT_IMPLEMENTED ? RS_RET_OK : ret;
 }
 
+/* Removal does not bind or rewrite a portfile. An identifiable plain TCP
+ * server, including a named dynamic endpoint, can retain all its existing
+ * listener/session-owned data while its accept sockets are closed. Unlike an
+ * addition it needs no restriction on namespace or candidate profile values. */
+static int reloadRemovalSupported(const instanceConf_t *const inst, const modConfData_t *const config) {
+    const uchar *const driver = getEffectiveInstanceStreamDriver(inst, config);
+    return driver != NULL && !ustrcmp(driver, UCHAR_CONSTANT("ptcp")) && inst->iStrmDrvrMode == 0;
+}
+
 static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
                                          const modConfData_t *const oldConfig,
                                          const instanceConf_t *const newInst,
@@ -2318,9 +2330,10 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
     for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
-    /* Additions never authorize removal/replacement. Classification is purely
-     * structural: validate mode must not bind, listen, or start a worker. */
-    if (oldCount > newCount) FINALIZE;
+    /* Classification is purely structural: validate mode must not bind,
+     * listen, or start a worker. A distinct endpoint replacement is a prepared
+     * addition plus removal. An incompatible same-socket change still requires
+     * restart: closing the old socket before fallible prepare is not atomic. */
     CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
     CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
     if (oldIdentitiesUsable && newIdentitiesUsable) {
@@ -2329,7 +2342,11 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
             CHKiRet(reloadFindInstanceByIdentity(newConfig, identity, &matchedInst));
             free(identity);
             identity = NULL;
-            if (matchedInst == NULL) FINALIZE;
+            if (matchedInst == NULL) {
+                if (!reloadRemovalSupported(oldInst, oldConfig)) FINALIZE;
+                mergeReloadCapability(&capability, 0, 0, 1);
+                continue;
+            }
             ++matchedCount;
             if (!mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability)) FINALIZE;
         }
@@ -2344,8 +2361,9 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
                 CHKiRet(reloadAdditionSupported(newInst, newConfig, &supported));
                 if (!supported) FINALIZE;
             }
-            /* Old users remain on their existing servers; only new accepts
-             * can use the added server. No old generation is drained/replaced. */
+            /* Bind/listen conflicts, including overlapping wildcard/specific
+             * addresses, are discovered by prepare before any old fence or
+             * socket is changed. Existing sessions keep their old server. */
             mergeReloadCapability(&capability, 0, 1, 0);
         }
         *pCapability = capability;
@@ -2420,9 +2438,33 @@ typedef struct imtcpReloadEntryV1_s {
 } imtcpReloadEntryV1_t;
 
 typedef struct imtcpReloadStateV1_s {
+    struct imtcpReloadStateV1_s *nextCommitted;
     size_t count;
     imtcpReloadEntryV1_t entries[];
 } imtcpReloadStateV1_t;
+
+/* Main control owns committed state until retire succeeds. Shutdown joins the
+ * input thread (including afterRun) before retrying retirement; afterRun must
+ * invalidate these borrowed runtime pointers before destroying registry nodes.
+ * No worker or message-processing path accesses this list. */
+static imtcpReloadStateV1_t *committedReloadStates;
+
+static void unlinkCommittedReloadState(imtcpReloadStateV1_t *const state) {
+    imtcpReloadStateV1_t **cursor = &committedReloadStates;
+    while (*cursor != NULL && *cursor != state) cursor = &(*cursor)->nextCommitted;
+    if (*cursor == state) *cursor = state->nextCommitted;
+    state->nextCommitted = NULL;
+}
+
+static void invalidateCommittedRuntime(tcpsrv_etry_t *const runtime) {
+    for (imtcpReloadStateV1_t *state = committedReloadStates; state != NULL; state = state->nextCommitted) {
+        for (size_t i = 0; i < state->count; ++i) {
+            if (state->entries[i].runtime != runtime) continue;
+            state->entries[i].runtime = NULL;
+            state->entries[i].fenceAcquired = 0;
+        }
+    }
+}
 
 static rsRetVal prepareReloadStartRegex(const uchar *const source, uchar **const prepared) {
     DEFiRet;
@@ -2582,7 +2624,8 @@ static tcpsrv_etry_t *findRuntimeEndpoint(const char *const key) {
     tcpsrv_etry_t *entry;
     if (key == NULL) return NULL;
     for (entry = endpoint_registry.head; entry != NULL; entry = entry->next)
-        if (entry->endpoint_key != NULL && !strcmp(entry->endpoint_key, key)) return entry;
+        if (entry->state == IMTCP_ENDPOINT_ACTIVE && entry->endpoint_key != NULL && !strcmp(entry->endpoint_key, key))
+            return entry;
     return NULL;
 }
 
@@ -2590,7 +2633,7 @@ static tcpsrv_etry_t *findRuntimeEndpointBySourceOrdinal(const size_t ordinal, c
     tcpsrv_etry_t *entry;
     if (endpoint_registry.count < 0 || (size_t)endpoint_registry.count != count || ordinal >= count) return NULL;
     for (entry = endpoint_registry.head; entry != NULL; entry = entry->next)
-        if (entry->source_ordinal == ordinal) return entry;
+        if (entry->state == IMTCP_ENDPOINT_ACTIVE && entry->source_ordinal == ordinal) return entry;
     return NULL;
 }
 
@@ -2602,7 +2645,7 @@ static tcpsrv_etry_t *findRuntimeEndpointByConfigName(const uchar *const name) {
         /* Only unkeyable endpoints use config-name identity. A fixed-port
          * listener with the same display name has its own endpoint key and
          * must not make a retained named dynamic listener ambiguous. */
-        if (entry->endpoint_key != NULL) continue;
+        if (entry->state != IMTCP_ENDPOINT_ACTIVE || entry->endpoint_key != NULL) continue;
         if (entry->config_name == NULL || strcmp(entry->config_name, (const char *)name)) continue;
         if (match != NULL) return NULL;
         match = entry;
@@ -2912,6 +2955,8 @@ static rsRetVal resumeReloadV1(void *const pReloadState) {
 
 static void commitReloadV1(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
+    state->nextCommitted = committedReloadStates;
+    committedReloadStates = state;
     for (size_t i = 0; i < state->count; ++i) {
         if (state->entries[i].removal) continue;
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
@@ -2988,6 +3033,7 @@ static void commitReloadV1(void *const pReloadState) {
 
 static void abortReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return;
+    unlinkCommittedReloadState(pReloadState);
     (void)resumeReloadV1(pReloadState);
     destructUnpublishedAdditions(pReloadState);
     freeReloadPreparedValues(pReloadState);
@@ -3000,23 +3046,28 @@ static rsRetVal retireReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
     ret = resumeReloadV1(pReloadState);
     if (ret != RS_RET_OK) return ret;
+    int draining = 0;
     for (size_t i = 0; i < state->count; ++i) {
         imtcpReloadEntryV1_t *const reloadEntry = &state->entries[i];
         if (!reloadEntry->removal || reloadEntry->runtime == NULL) continue;
         pthread_mutex_lock(&reloadEntry->runtime->activation.mut);
         const int finished = reloadEntry->runtime->activation.finished;
         pthread_mutex_unlock(&reloadEntry->runtime->activation.mut);
-        if (!finished) return RS_RET_RETRY;
-    }
-    for (size_t i = 0; i < state->count; ++i) {
-        imtcpReloadEntryV1_t *const reloadEntry = &state->entries[i];
-        if (!reloadEntry->removal || reloadEntry->runtime == NULL) continue;
+        if (!finished) {
+            draining = 1;
+            continue;
+        }
+        /* Reclaim each finished server independently: an unrelated long-lived
+         * session must not retain a drained endpoint's worker/runtime storage.
+         * The control lifecycle owns this list and joins before unlink/free. */
         stopSrvWrkr(reloadEntry->runtime);
         endpointRegistryUnlink(reloadEntry->runtime);
         tcpsrv.Destruct(&reloadEntry->runtime->tcpsrv);
         endpointRegistryRemove(reloadEntry->runtime);
         reloadEntry->runtime = NULL;
     }
+    if (draining) return RS_RET_RETRY;
+    unlinkCommittedReloadState(state);
     freeReloadPreparedValues(state);
     free(pReloadState);
     return RS_RET_OK;
@@ -3471,6 +3522,7 @@ BEGINafterRun
     tcpsrv_etry_t *etry = endpoint_registry.head;
     tcpsrv_etry_t *del;
     while (etry != NULL) {
+        invalidateCommittedRuntime(etry);
         iRet = tcpsrv.Destruct(&etry->tcpsrv);
         del = etry;
         etry = etry->next;
