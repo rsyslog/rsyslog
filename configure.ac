@@ -1809,10 +1809,12 @@ if test "x$enable_mmnormalize" = "xyes"; then
 		# header, so LOGNORM_TURBO_SUPPORTED does not imply it. Probe for it
 		# separately; mmnormalize only declines a truncated result when the
 		# installed liblognorm can report one.
+		lognorm_turbo_truncation_supported="no"
 		if test "x$lognorm_turbo_supported" = "xyes"; then
 			AC_CHECK_DECL([ln_fast_result_is_truncated],
 				[AC_DEFINE(HAVE_LN_FAST_RESULT_IS_TRUNCATED, 1,
-					[liblognorm exposes ln_fast_result_is_truncated()])],
+					[liblognorm exposes ln_fast_result_is_truncated()])
+				lognorm_turbo_truncation_supported="yes"],
 				[], [[#include <lognorm-turbo.h>]])
 		fi
 		if test "x$enable_turbo" = "xyes" -a "x$lognorm_turbo_supported" != "xyes"; then
@@ -1829,6 +1831,7 @@ if test "x$enable_mmnormalize" = "xyes"; then
 fi
 AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
 AM_CONDITIONAL(LOGNORM_TURBO_SUPPORTED, test x$lognorm_turbo_supported = xyes)
+AM_CONDITIONAL(LOGNORM_TURBO_TRUNCATION_SUPPORTED, test x$lognorm_turbo_truncation_supported = xyes)
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 if test "x$lognorm_turbo_supported" = "xyes"; then
 	AC_DEFINE(HAVE_LOGNORM_TURBO, 1, [liblognorm has turbo VM support])
