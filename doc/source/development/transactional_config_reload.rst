@@ -36,9 +36,21 @@ unclassified module or global changes remain unsupported.  Unsupported changes
 reject the candidate before live preparation rather than falling back to full
 reload.
 
-``imtcp`` endpoint addition, removal, and replacement are temporarily disabled
-for activation and rejected before preparation, including distinct fixed socket
-tuples.  Existing-listener live rate-limit, ACL, ruleset-binding, and compatible
+The supported script-body subset includes ``if``/``else``, ``set``, ``unset``,
+``stop``, ``foreach``, and priority/property selectors. Expressions may use
+numbers, strings, variables, string arrays, arithmetic, concatenation, boolean
+and comparison operators, and ``exists()``; general function calls are not
+supported by the private compiler. Unchanged explicitly named actions in a
+changed body reuse their active runtimes; this is not action lifecycle support.
+
+``imtcp`` supports bounded endpoint lifecycle changes: additions require a
+numeric fixed port (1 through 65535), effective plain ``ptcp`` mode ``0``, no
+network namespace or port file, and no permitted peers, GnuTLS priority string,
+or named rate-limit profile. Removal supports uniquely identifiable plain-TCP
+listeners, including named dynamic endpoints. A different-endpoint replacement
+is an eligible addition plus removal; same-occupied-endpoint replacement and
+TLS lifecycle changes remain restart-required. Existing-listener live
+rate-limit, ACL, ruleset-binding, and compatible
 capacity updates remain supported; framing, keepalive, and compression updates
 retain their new-session-only contract.  The lifecycle, tombstone, action, and
 endpoint-reconciliation sections below describe the broader ADR goals, not
@@ -223,7 +235,7 @@ session protocol behavior.  Endpoint reconciliation uses the complete endpoint
 tuple, not merely a port.  A ruleset or downstream action change alone must not
 close the listener or its active sessions.
 
-In the future endpoint-reconciliation lifecycle, when an endpoint is removed,
+In the current bounded endpoint lifecycle, when an eligible endpoint is removed,
 it stops accepting new sessions but its existing
 sessions remain alive.  For those sessions, TLS, framing, and compression are
 frozen for the lifetime of the session.  A compatible ruleset update changes a
@@ -238,15 +250,17 @@ hostnames are also eligible when the unchanged active base has
 resolution remains restart-required.  Removing a ruleset still bound to a
 preserved session rejects the candidate; no fallback rebinding is permitted.
 
-The future replacement lifecycle requires that an incompatible listener's
+The replacement lifecycle requires that an incompatible listener's
 candidate prepare the replacement
 without disturbing the active listener; inability to bind or prepare the
 replacement rejects the transaction before activation.  A deliberate handoff
 policy for the same endpoint must be explicit and tested, because it cannot be
 assumed from generic module reuse.
-The current existing-listener-only milestone rejects endpoint additions,
-removals, and replacements before preparation instead of exercising these
-lifecycle paths.
+The current milestone supports only the bounded plain-TCP additions, removals,
+and different-endpoint replacements described above. A removed listener's
+established sessions drain without a forced timeout. While they retain its
+runtime, ``retirement_pending=1`` blocks the next activation; the main control
+loop retries reclamation. Broader transport lifecycle support remains a goal.
 
 Tombstones and removed objects
 ------------------------------
@@ -408,15 +422,15 @@ restart-required.  TLS, endpoint-in-place replacement, and remaining
 listener-structure fields remain conservatively restart-required until
 their corresponding prepare, ownership, and reconciliation contracts are
 implemented.
-Endpoint addition, drain-removal, and replacement activation are temporarily
-disabled in the current milestone, including changes to distinct fixed socket
-tuples.  They are rejected before preparation.  The future endpoint lifecycle
-will reconcile a distinct fixed tuple as a prepared addition plus drain-removal:
-the old accept socket will close at commit, established sessions will retain
-the retired listener generation, and the replacement will begin accepting on
-the newly published tuple.  Dynamic or service-name replacements that cannot
-bind privately without publishing a port-file side effect remain
-restart-required.
+The current endpoint lifecycle reconciles an eligible distinct fixed tuple as
+a prepared addition plus drain-removal: the old accept sockets close at commit,
+established sessions retain the retired listener generation, and the replacement
+begins accepting on the newly published tuple. Additions obey the restrictions
+in the current capability boundary. Bind conflicts reject preparation without
+closing old listeners. Named dynamic plain-TCP endpoints may be removed, but
+dynamic or service-name additions and replacements remain restart-required.
+There is no forced session-drain timeout; pending retirement blocks subsequent
+activation until the removed workers finish.
 An effective ``maxSessions`` resize is live when the effective listen backlog
 stays unchanged: Prepare reserves the next session-slot table and the fenced
 commit swaps it without disturbing established session indices.  Growth is
@@ -439,9 +453,9 @@ Delivery plan and gates
 -----------------------
 
 The following roadmap describes target stages, not the current supported
-capability matrix.  In particular, calls, action/template/queue lifecycle
-changes, and endpoint addition/removal/replacement remain outside the current
-bounded milestone.  The program is staged so that invariants become testable
+capability matrix. In particular, calls, action/template/queue lifecycle changes,
+and endpoint lifecycle beyond the bounded plain-TCP subset remain outside the
+current milestone. The program is staged so that invariants become testable
 before broad module reuse is enabled.
 
 Release A

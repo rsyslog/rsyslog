@@ -33,6 +33,20 @@ are not recomputed.  Transactional HUP currently supports only a
 bounded set of changes, not full configuration reload; see
 :ref:`transactional-config-reload-adr` for its current capability boundary.
 
+With ``config.reloadOnHUP="on"``, the global-policy lane permits exactly one
+changed supported scalar per candidate, with all other global parameters
+unchanged. The supported set is ``config.reloadOnHUP``,
+``reportChildProcessExits``, ``oversizemsg.report``, ``compactJsonString``,
+``parser.dropTrailingLFOnReception``, ``parser.dropTrailingCROnReception``,
+``parser.escapeControlCharactersOnReceive``, ``parser.spaceLFOnReceive``,
+``parser.escape8BitCharactersOnReceive``, ``parser.escapeControlCharacterTab``,
+``parser.escapeControlCharactersCStyle``,
+``parser.controlCharacterEscapePrefix``, and
+``parser.permitSlashInProgramName``. Multiple changed global scalars or any
+other changed global parameter reject activation; ``validate`` remains
+report-only. This global restriction does not expand the supported ruleset or
+input changes described in the ADR and :ref:`imtcp-hup-listener-addition`.
+
 The following parameters can be set:
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
