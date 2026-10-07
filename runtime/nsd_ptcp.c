@@ -143,8 +143,12 @@ static void logBindFailure(const int bindErrno, const unsigned port) {
     }
 #endif
     if (bindErrno == EADDRINUSE) {
+#ifdef __linux__
         LogError(bindErrno, NO_ERRCODE,
                  "Error binding TCP port %u; listener owner unavailable (try ss -ltnp 'sport = :%u')", port, port);
+#else
+        LogError(bindErrno, NO_ERRCODE, "Error binding TCP port %u; listener owner unavailable", port);
+#endif
     } else {
         LogError(bindErrno, NO_ERRCODE, "Error binding TCP port %u", port);
     }

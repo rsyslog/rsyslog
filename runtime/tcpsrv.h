@@ -226,6 +226,7 @@ struct tcpsrv_s {
         /* work queue */
         workQueue_t workQueue;
         int currWrkrs;
+        int failOnBindError; /**< return a listener bind error after session setup */
 };
 
 

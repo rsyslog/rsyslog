@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # A held loopback port must reject startup only when both failOnBindError and
 # abortOnUncleanConfig are on. A ten-second exit limit catches startup hangs;
 # surviving a one-second wait proves the compatibility cases stayed running.

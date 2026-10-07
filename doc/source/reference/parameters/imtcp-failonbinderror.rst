@@ -29,11 +29,11 @@ activation fail. With ``global(abortOnUncleanConfig="on")``, rsyslog then
 stops during startup. By default, rsyslog reports the failed port and keeps
 working with any listeners that opened successfully.
 
-The bind diagnostic names one visible Linux process holding a listener on the
-port when procfs permissions permit it. That process may use a different local
-address, and socket ownership may change between the bind attempt and lookup.
-If no owner is visible, the diagnostic suggests an ``ss`` command to run with
-appropriate permissions.
+For address-in-use bind failures, the diagnostic names one visible Linux process
+holding a listener on the port when procfs permissions permit it. That process
+may use a different local address, and socket ownership may change between the
+bind attempt and lookup. If no owner is visible on Linux, the diagnostic
+suggests an ``ss`` command to run with appropriate permissions.
 
 .. code-block:: rsyslog
 

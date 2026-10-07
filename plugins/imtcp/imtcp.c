@@ -556,11 +556,10 @@ static int isPermittedHost(struct sockaddr *addr,
 
 
 static rsRetVal doOpenLstnSocks(tcpsrv_t *pSrv) {
-    rsRetVal ret;
     ISOBJ_TYPE_assert(pSrv, tcpsrv);
     dbgprintf("in imtcp doOpenLstnSocks\n");
-    ret = tcpsrv.create_tcp_socket(pSrv);
-    return runModConf->bFailOnBindError ? ret : RS_RET_OK;
+    pSrv->failOnBindError = runModConf->bFailOnBindError;
+    return tcpsrv.create_tcp_socket(pSrv);
 }
 
 

@@ -726,7 +726,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
                  "message reception.");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    iRet = firstFailure;
+    if (pThis->failOnBindError) iRet = firstFailure;
 
 finalize_it:
     RETiRet;
@@ -1826,6 +1826,7 @@ finalize_it:
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
     INIT_ATOMIC_HELPER_MUT(pThis->mut_sessions);
+    pThis->failOnBindError = 0;
     pThis->iSessMax = TCPSESS_MAX_DEFAULT;
     pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
     pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
