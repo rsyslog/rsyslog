@@ -2315,6 +2315,37 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     return 1;
 }
 
+/* Rejection diagnostics contain only an input identity, never configuration
+ * values such as credentials. Bound the name and escape non-ASCII bytes and
+ * delimiters so a configured name cannot inject another log record. */
+static void reloadLogRejectedInstance(const modConfData_t *const config,
+                                      const instanceConf_t *const inst,
+                                      const char *const side,
+                                      const char *const reason) {
+    const uchar *const name = inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName;
+    char escaped[64 * 4 + 4];
+    size_t used = 0;
+    size_t index = 0;
+    size_t ordinal = 1;
+    for (const instanceConf_t *entry = config->root; entry != NULL && entry != inst; entry = entry->next) ++ordinal;
+    for (; index < 64 && name[index] != '\0'; ++index) {
+        const unsigned char ch = name[index];
+        if (ch >= 0x20 && ch <= 0x7e && ch != '"' && ch != '\\') {
+            escaped[used++] = ch;
+        } else {
+            snprintf(escaped + used, sizeof(escaped) - used, "\\x%02x", ch);
+            used += 4;
+        }
+    }
+    if (name[index] != '\0') {
+        memcpy(escaped + used, "...", 3);
+        used += 3;
+    }
+    escaped[used] = '\0';
+    LogError(0, RS_RET_NOT_IMPLEMENTED, "imtcp: reload requires restart for %s input #%zu name=\"%s\": %s", side,
+             ordinal, escaped, reason);
+}
+
 static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
                                                 const void *const pNewCnf,
                                                 eModReloadCapability_t *const pCapability) {
@@ -2334,7 +2365,10 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
     *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
-    if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
+    if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) {
+        LogError(0, RS_RET_NOT_IMPLEMENTED, "imtcp: reload requires restart: module load identity changed");
+        return RS_RET_OK;
+    }
     for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
     /* Classification is purely structural: validate mode must not bind,
@@ -2350,12 +2384,18 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
             free(identity);
             identity = NULL;
             if (matchedInst == NULL) {
-                if (!reloadRemovalSupported(oldInst, oldConfig)) FINALIZE;
+                if (!reloadRemovalSupported(oldInst, oldConfig)) {
+                    reloadLogRejectedInstance(oldConfig, oldInst, "active", "unsupported removal");
+                    FINALIZE;
+                }
                 mergeReloadCapability(&capability, 0, 0, 1);
                 continue;
             }
             ++matchedCount;
-            if (!mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability)) FINALIZE;
+            if (!mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability)) {
+                reloadLogRejectedInstance(newConfig, matchedInst, "candidate", "unsupported change");
+                FINALIZE;
+            }
         }
         if (matchedCount != newCount) {
             for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) {
@@ -2366,7 +2406,10 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
                 identity = NULL;
                 if (matchedInst != NULL) continue;
                 CHKiRet(reloadAdditionSupported(newInst, newConfig, &supported));
-                if (!supported) FINALIZE;
+                if (!supported) {
+                    reloadLogRejectedInstance(newConfig, newInst, "candidate", "unsupported addition");
+                    FINALIZE;
+                }
             }
             /* Bind/listen conflicts, including overlapping wildcard/specific
              * addresses, are discovered by prepare before any old fence or
@@ -2376,11 +2419,24 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
         *pCapability = capability;
         FINALIZE;
     }
-    if (oldCount != newCount) FINALIZE;
+    if (oldCount != newCount) {
+        /* With ambiguous identities only positional matching is available.
+         * Identify the first excess input rather than guessing a pairing. */
+        const modConfData_t *const largerConfig = oldCount > newCount ? oldConfig : newConfig;
+        const instanceConf_t *excess = largerConfig->root;
+        const size_t commonCount = oldCount < newCount ? oldCount : newCount;
+        for (size_t index = 0; index < commonCount; ++index) excess = excess->next;
+        reloadLogRejectedInstance(largerConfig, excess, oldCount > newCount ? "active" : "candidate",
+                                  "input count changed with ambiguous identities");
+        FINALIZE;
+    }
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
-        if (!mergeReloadInstanceCapability(oldInst, oldConfig, newInst, newConfig, &capability)) FINALIZE;
+        if (!mergeReloadInstanceCapability(oldInst, oldConfig, newInst, newConfig, &capability)) {
+            reloadLogRejectedInstance(newConfig, newInst, "candidate", "unsupported change");
+            FINALIZE;
+        }
         oldInst = oldInst->next;
         newInst = newInst->next;
     }
