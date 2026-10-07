@@ -163,15 +163,13 @@ static rsRetVal endpointRegistryBuild(tcpsrv_t *const server,
                                       tcpsrv_etry_t **const result) {
     tcpsrv_etry_t *entry = NULL;
     const tcpsrv_etry_t *existing;
-    DEFiRet;
+    rsRetVal iRet;
 
     if (server == NULL || params == NULL || result == NULL || *result != NULL) return RS_RET_PARAM_ERROR;
     CHKmalloc(entry = calloc(1, sizeof(*entry)));
     iRet = endpointKeyBuild(params, networkNamespace, &entry->endpoint_key);
-    if (iRet == RS_RET_NOT_IMPLEMENTED)
-        iRet = RS_RET_OK; /* dynamic/service endpoints remain active but are not reload-keyable */
-    else if (iRet != RS_RET_OK)
-        ABORT_FINALIZE(iRet);
+    /* Dynamic/service endpoints remain active but are not reload-keyable. */
+    if (iRet != RS_RET_OK && iRet != RS_RET_NOT_IMPLEMENTED) ABORT_FINALIZE(iRet);
     if (entry->endpoint_key != NULL) {
         for (existing = endpoint_registry.head; existing != NULL; existing = existing->next) {
             if (existing->endpoint_key != NULL && !strcmp(existing->endpoint_key, entry->endpoint_key))

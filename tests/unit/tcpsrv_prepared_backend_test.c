@@ -361,9 +361,11 @@ static int trafficCase(int commit, unsigned workers) {
     CHECK(waitFor(&state, &state.ready));
     CHECK(state.workerTopologyReady);
     CHECK(backendRegistered(&state));
-    struct sockaddr_in address;
+    struct sockaddr_in address = {0};
     socklen_t addressLength = sizeof(address);
     CHECK(getsockname(listener, (struct sockaddr *)&address, &addressLength) == 0);
+    CHECK(addressLength == (socklen_t)sizeof(address));
+    CHECK(address.sin_family == AF_INET);
     CHECK(address.sin_port != 0);
     client = socket(AF_INET, SOCK_STREAM, 0);
     CHECK(client >= 0);
@@ -500,6 +502,11 @@ static int runSuite(unsigned commitWorkers) {
     initResult = rsrtInit(&errorObject, &obj);
     if (initResult != RS_RET_OK) goto cleanup;
     initialized = 1;
+    if (obj.UseObj == NULL || obj.ReleaseObj == NULL) {
+        stage = "rsrtInit object-loader callbacks";
+        initResult = RS_RET_ERR;
+        goto cleanup;
+    }
     stage = "objUse(glbl)";
     initResult = objUse(glbl, CORE_COMPONENT);
     if (initResult != RS_RET_OK) goto cleanup;
