@@ -2853,7 +2853,11 @@ runtime_unit_tcpsrv_prepared_backend_LDADD = \
 	$(top_builddir)/grammar/libgrammar.la $(top_builddir)/runtime/librsyslog.la \
 	$(top_builddir)/compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) \
 	$(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) $(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
+if OS_AIX
+runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -brtl -bexpall -lsrc
+else
 runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -export-dynamic
+endif
 if ENABLE_LIBZSTD
 runtime_unit_tcpsrv_prepared_backend_CPPFLAGS += $(ZSTD_CFLAGS)
 runtime_unit_tcpsrv_prepared_backend_LDADD += $(ZSTD_LIBS)
@@ -2861,9 +2865,6 @@ endif
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_tcpsrv_prepared_backend_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_tcpsrv_prepared_backend_LDADD += $(LIBLOGGING_STDLOG_LIBS)
-endif
-if OS_AIX
-runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -brtl -bexpall -lsrc
 endif
 endif
 endif
