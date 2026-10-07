@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Stop rsyslog startup when an imtcp listener cannot bind.
+   :keywords: rsyslog, imtcp, failOnBindError, listener, bind
+
 .. _param-imtcp-failonbinderror:
 
 failOnBindError
@@ -35,7 +39,7 @@ appropriate permissions.
 
    global(abortOnUncleanConfig="on")
    module(load="imtcp" failOnBindError="on")
-   input(type="imtcp" port="6514")
+   input(type="imtcp" address="127.0.0.1" port="6514")
 
 .. code-block:: yaml
 
@@ -47,4 +51,5 @@ appropriate permissions.
        failOnBindError: "on"
    inputs:
      - type: imtcp
+       address: "127.0.0.1"
        port: "6514"
