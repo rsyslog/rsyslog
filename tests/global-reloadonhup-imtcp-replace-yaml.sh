@@ -1,6 +1,6 @@
 #!/bin/bash
-# Deliberate existing-listener-only milestone: additions, removals and endpoint
-# replacements require restart until worker activation readiness is provable.
+# Endpoint replacements require restart until worker activation readiness is
+# provable; fixed numeric plain-ptcp additions are covered separately.
 # Completed HUP/status, unchanged generation, absent candidate port file and
 # old-session/new-old-listener messages prove rejection before resource prepare.
 # Restoring startup config proves the accepted baseline did not advance; a

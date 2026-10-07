@@ -162,6 +162,36 @@ Sender:
        queue.type="linkedList"
    )
 
+.. _imtcp-hup-listener-addition:
+
+Adding listeners during bounded HUP reload
+=========================================
+
+With ``global(config.reloadOnHUP="on")``, the bounded reload path can add a
+plain-TCP ``imtcp`` listener while retaining existing listeners and their TCP
+sessions. This is not a full configuration reload: other changed configuration
+objects must also satisfy their reload contracts.
+
+An added listener must use the effective ``ptcp`` driver, mode ``0``, and a
+numeric port from 1 through 65535. It cannot use ``listenPortFileName``, a
+network namespace, permitted-peer settings, ``gnutlsPriorityString``, or a
+named rate-limit profile. Retained listeners must have unambiguous identities;
+an existing named port-0 listener can be retained, but cannot be newly added.
+Removing a listener or changing its endpoint still requires a full restart.
+
+The reload prepares and listens on private sockets before starting their gated
+backends. A TCP handshake can therefore complete and data can enter the kernel
+backlog before commit, but the new input does not accept sessions or dispatch
+messages until commit. Preparation failure closes the private sockets and
+leaves the active generation, existing sessions and old accepts unchanged.
+Clients of an uncommitted listener must tolerate a connection being dropped if
+the candidate is rejected.
+
+``config.reloadOnHUP="validate"`` only reports the candidate's classification;
+it does not bind a socket or start an input worker. Unsupported changes report
+``restart_required``. Correct the candidate configuration or perform a full
+restart rather than assuming that an unsupported change was applied.
+
 Configuration Parameters
 ========================
 

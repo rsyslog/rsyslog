@@ -45,6 +45,7 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-escaped-sd \
 	fuzz/corpus/syslog-message/rfc5424-nil
 EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
+EXTRA_DIST += helpers/reload_tcp_port_reserver.py
 
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
@@ -920,6 +921,8 @@ TESTS_IMTCP = \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-ruleset-no-queue-warning.sh \
 	imtcp-basic.sh \
+	global-reloadonhup-imtcp-add-plain-rainerscript.sh \
+	global-reloadonhup-imtcp-add-plain-validate-rainerscript.sh \
 	rscript_parsehostnameandtag_off.sh \
 	imtcp_framing_regex.sh \
 	imtcp_framing_regex_maxmsg_overflow.sh \
@@ -1780,6 +1783,8 @@ TESTS_LIBYAML_IMTCP = \
 	global-reloadonhup-imtcp-replace-validate-yaml.sh \
 	global-reloadonhup-imtcp-add-yaml.sh \
 	global-reloadonhup-imtcp-add-validate-yaml.sh \
+	global-reloadonhup-imtcp-add-plain-yaml.sh \
+	global-reloadonhup-imtcp-add-plain-validate-yaml.sh \
 	global-reloadonhup-on-yaml.sh \
 	global-reloadonhup-ruleset-constructs-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \

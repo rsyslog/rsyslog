@@ -105,10 +105,11 @@ typedef struct tcpsrv_etry_s {
  * The registry state describes published endpoint operation, not readiness of
  * an unpublished candidate (which is tracked by activation.ready).
  *
- * Runtime-owned endpoint registry. Reload preparation builds entries privately;
- * commit publishes additions or disables accepts for removals while established
- * sessions retain their tcpsrv generation until retirement. Registry access is
- * confined to the serialized input/control lifecycle, never the message path. */
+ * Runtime-owned endpoint registry. Prepare listens on private addition sockets
+ * before proving gated backend readiness; commit publishes before authorizing
+ * dispatch. Existing listeners and sessions retain their runtime generation.
+ * Publication and shutdown are serialized by the main control lifecycle;
+ * registry access is never on the message path. */
 static struct {
     tcpsrv_etry_t *head;
     int count;
@@ -2250,6 +2251,24 @@ static int reloadEffectiveSynBacklog(const instanceConf_t *const inst) {
     return inst->iSynBacklog == 0 ? inst->iTCPSessMax / 10 + 5 : inst->iSynBacklog;
 }
 
+/* Addition is deliberately narrower than startup: plain TCP, a numeric fixed
+ * endpoint, and no candidate-owned peer/profile pointers or portfile effects.
+ * Existing named dynamic listeners remain matchable, but cannot be added. */
+static rsRetVal reloadAdditionSupported(const instanceConf_t *const inst,
+                                        const modConfData_t *const config,
+                                        int *const supported) {
+    char *key = NULL;
+    const uchar *const driver = getEffectiveInstanceStreamDriver(inst, config);
+    const char *const networkNamespace = reloadEffectiveNamespace(inst, config);
+    const rsRetVal ret = endpointKeyBuild(inst->cnf_params, reloadEffectiveNamespace(inst, config), &key);
+    *supported = ret == RS_RET_OK && driver != NULL && !ustrcmp(driver, UCHAR_CONSTANT("ptcp")) &&
+                 inst->iStrmDrvrMode == 0 && reloadEffectivePermittedPeers(inst, config) == NULL &&
+                 reloadEffectiveString(inst->gnutlsPriorityString, config->gnutlsPriorityString) == NULL &&
+                 inst->cnf_params->pszRatelimitName == NULL && (networkNamespace == NULL || *networkNamespace == '\0');
+    free(key);
+    return ret == RS_RET_NOT_IMPLEMENTED ? RS_RET_OK : ret;
+}
+
 static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
                                          const modConfData_t *const oldConfig,
                                          const instanceConf_t *const newInst,
@@ -2299,13 +2318,9 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
     for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
-    /* Existing-listener-only milestone: adding/removing/replacing accept
-     * endpoints must remain fail-closed until prepared workers can prove
-     * their event loop is activation-ready before old accepts are closed.
-     * Classify before Prepare allocates or binds any live resource; validate
-     * mode therefore reports the same restart requirement without activation.
-     * Keep the private lifecycle implementation for that future milestone. */
-    if (oldCount != newCount) FINALIZE;
+    /* Additions never authorize removal/replacement. Classification is purely
+     * structural: validate mode must not bind, listen, or start a worker. */
+    if (oldCount > newCount) FINALIZE;
     CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
     CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
     if (oldIdentitiesUsable && newIdentitiesUsable) {
@@ -2318,10 +2333,25 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
             ++matchedCount;
             if (!mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability)) FINALIZE;
         }
-        if (matchedCount != newCount) FINALIZE;
+        if (matchedCount != newCount) {
+            for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) {
+                int supported;
+                CHKiRet(reloadEndpointIdentity(newInst, newConfig, &identity));
+                CHKiRet(reloadFindInstanceByIdentity(oldConfig, identity, &matchedInst));
+                free(identity);
+                identity = NULL;
+                if (matchedInst != NULL) continue;
+                CHKiRet(reloadAdditionSupported(newInst, newConfig, &supported));
+                if (!supported) FINALIZE;
+            }
+            /* Old users remain on their existing servers; only new accepts
+             * can use the added server. No old generation is drained/replaced. */
+            mergeReloadCapability(&capability, 0, 1, 0);
+        }
         *pCapability = capability;
         FINALIZE;
     }
+    if (oldCount != newCount) FINALIZE;
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
@@ -2569,6 +2599,10 @@ static tcpsrv_etry_t *findRuntimeEndpointByConfigName(const uchar *const name) {
     tcpsrv_etry_t *match = NULL;
     if (name == NULL) return NULL;
     for (entry = endpoint_registry.head; entry != NULL; entry = entry->next) {
+        /* Only unkeyable endpoints use config-name identity. A fixed-port
+         * listener with the same display name has its own endpoint key and
+         * must not make a retained named dynamic listener ambiguous. */
+        if (entry->endpoint_key != NULL) continue;
         if (entry->config_name == NULL || strcmp(entry->config_name, (const char *)name)) continue;
         if (match != NULL) return NULL;
         match = entry;
@@ -2657,6 +2691,12 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             state->entries[index].addition = 1;
             state->count = index + 1;
             CHKiRet(tcpsrv.ConstructFinalizePrepared(state->entries[index].runtime->tcpsrv));
+            /* A bound non-listening socket is not an activation-ready backend
+             * registration on every platform. Listen before backend setup;
+             * the worker gate still forbids accept/dispatch until commit, and
+             * abort closes every private socket before returning. Old workers
+             * have not been fenced at this point. */
+            CHKiRet(tcpsrv.ActivatePreparedListeners(state->entries[index].runtime->tcpsrv));
             CHKiRet(startSrvWrkr(state->entries[index].runtime, 1));
         }
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)

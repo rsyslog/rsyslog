@@ -1,7 +1,7 @@
 #!/bin/bash
-# Validate-mode parity for the deliberate existing-listener-only milestone.
-# The base scenario asserts reported_only + restart_required for unsupported
-# endpoints, unchanged generation/baseline, absent candidate binding, and old
-# sessions/accepts remaining usable. Supported profile changes are report-only.
+# Validate-mode parity for dynamic port-0 additions and fixed-numeric bind
+# conflicts. The base scenario checks report-only classification, unchanged
+# generation/baseline, and existing sessions/accepts; fixed numeric additions
+# are supported but are never bound in validate mode.
 export RSYSLOG_RELOAD_ENDPOINT_MODE=validate
 . ${srcdir:-.}/global-reloadonhup-imtcp-add-rainerscript.sh
