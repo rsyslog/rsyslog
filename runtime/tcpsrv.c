@@ -689,6 +689,7 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
     DEFiRet;
     rsRetVal localRet;
+    rsRetVal firstFailure = RS_RET_OK;
     tcpLstnPortList_t *pEntry;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -698,6 +699,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
     while (pEntry != NULL) {
         localRet = initTCPListener(pThis, pEntry);
         if (localRet != RS_RET_OK) {
+            if (firstFailure == RS_RET_OK) firstFailure = localRet;
             char *ns = pEntry->cnf_params->pszNetworkNamespace;
 
             LogError(
@@ -724,6 +726,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
                  "message reception.");
         ABORT_FINALIZE(RS_RET_ERR);
     }
+    iRet = firstFailure;
 
 finalize_it:
     RETiRet;
@@ -1883,6 +1886,8 @@ static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
 
 finalize_it:
     if (iRet != RS_RET_OK) {
+        for (int i = 0; i < pThis->iLstnCurr; ++i) netstrm.Destruct(pThis->ppLstn + i);
+        pThis->iLstnCurr = 0;
         if (pThis->pNS != NULL) netstrms.Destruct(&pThis->pNS);
         free(pThis->ppLstn);
         pThis->ppLstn = NULL;

@@ -38,6 +38,10 @@
 #include <unistd.h>
 #include <netinet/tcp.h>
 #include <sys/time.h>
+#ifdef __linux__
+    #include <dirent.h>
+    #include <ctype.h>
+#endif
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -56,6 +60,95 @@
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP;
+
+#ifdef __linux__
+/* A bind failure is rare, so consult procfs only on this diagnostic path.
+ * A port can have several listeners on distinct addresses; report one visible
+ * owner as a clue, without claiming that it is necessarily the conflicting one.
+ */
+static unsigned long listenerInodeForPort(const char *path, unsigned port) {
+    FILE *fp = fopen(path, "r");
+    char line[512];
+    unsigned localPort, state;
+    unsigned long inode;
+
+    if (fp == NULL) return 0;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (sscanf(line, " %*u: %*32[0-9A-Fa-f]:%x %*s %x %*s %*s %*s %*s %*s %lu", &localPort, &state, &inode) == 3 &&
+            localPort == port && state == 0x0a) {
+            fclose(fp);
+            return inode;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+static int describeListenerOwner(unsigned long inode, char *out, size_t outSize) {
+    DIR *procs = opendir("/proc");
+    struct dirent *proc;
+    if (procs == NULL) return 0;
+    while ((proc = readdir(procs)) != NULL) {
+        char fdDirPath[80], commPath[80], expected[64], linkPath[160], target[80], comm[80];
+        DIR *fds;
+        struct dirent *fd;
+        FILE *fp;
+        ssize_t len;
+        if (!isdigit((unsigned char)proc->d_name[0])) continue;
+        snprintf(fdDirPath, sizeof(fdDirPath), "/proc/%s/fd", proc->d_name);
+        fds = opendir(fdDirPath);
+        if (fds == NULL) continue;
+        snprintf(expected, sizeof(expected), "socket:[%lu]", inode);
+        while ((fd = readdir(fds)) != NULL) {
+            if (!isdigit((unsigned char)fd->d_name[0])) continue;
+            snprintf(linkPath, sizeof(linkPath), "%s/%s", fdDirPath, fd->d_name);
+            len = readlink(linkPath, target, sizeof(target) - 1);
+            if (len < 0) continue;
+            target[len] = '\0';
+            if (strcmp(target, expected) != 0) continue;
+            snprintf(commPath, sizeof(commPath), "/proc/%s/comm", proc->d_name);
+            fp = fopen(commPath, "r");
+            if (fp != NULL && fgets(comm, sizeof(comm), fp) != NULL) {
+                comm[strcspn(comm, "\n")] = '\0';
+                for (size_t i = 0; comm[i] != '\0'; ++i) {
+                    if ((unsigned char)comm[i] < 32 || (unsigned char)comm[i] == 127) comm[i] = '?';
+                }
+                snprintf(out, outSize, "one visible listener is PID %s (%s)", proc->d_name, comm);
+            } else {
+                snprintf(out, outSize, "one visible listener is PID %s", proc->d_name);
+            }
+            if (fp != NULL) fclose(fp);
+            closedir(fds);
+            closedir(procs);
+            return 1;
+        }
+        closedir(fds);
+    }
+    closedir(procs);
+    return 0;
+}
+#endif
+
+static void logBindFailure(const int bindErrno, const unsigned port) {
+#ifdef __linux__
+    unsigned long inode = 0;
+    char owner[160];
+    if (bindErrno == EADDRINUSE) {
+        inode = listenerInodeForPort("/proc/net/tcp", port);
+        if (inode == 0) inode = listenerInodeForPort("/proc/net/tcp6", port);
+    }
+    if (inode != 0 && describeListenerOwner(inode, owner, sizeof(owner))) {
+        LogError(bindErrno, NO_ERRCODE, "Error binding TCP port %u: %s", port, owner);
+        return;
+    }
+#endif
+    if (bindErrno == EADDRINUSE) {
+        LogError(bindErrno, NO_ERRCODE,
+                 "Error binding TCP port %u; listener owner unavailable (try ss -ltnp 'sport = :%u')", port, port);
+    } else {
+        LogError(bindErrno, NO_ERRCODE, "Error binding TCP port %u", port);
+    }
+}
 
 /* static data */
 DEFobjStaticHelpers;
@@ -715,7 +808,11 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
 #endif
         ) {
             /* TODO: check if *we* bound the socket - else we *have* an error! */
-            LogError(errno, NO_ERRCODE, "Error while binding tcp socket");
+            const int bindErrno = errno;
+            savecast.sa = r->ai_addr;
+            const unsigned port =
+                (r->ai_family == AF_INET6) ? ntohs(savecast.ipv6->sin6_port) : ntohs(savecast.ipv4->sin_port);
+            logBindFailure(bindErrno, port);
             close(sock);
             sock = -1;
             continue;
