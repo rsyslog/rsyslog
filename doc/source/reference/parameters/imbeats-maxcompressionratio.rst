@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imbeats-maxcompressionratio:
 .. _imbeats.parameter.input.maxcompressionratio:
 

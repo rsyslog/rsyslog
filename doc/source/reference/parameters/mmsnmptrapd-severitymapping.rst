@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmsnmptrapd-severitymapping:
 .. _mmsnmptrapd.parameter.module.severitymapping:
 

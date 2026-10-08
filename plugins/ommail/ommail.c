@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ommail.c
  *
  * This is an implementation of a mail sending output module. It supports

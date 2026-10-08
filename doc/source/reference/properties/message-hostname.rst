@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-hostname:
 .. _properties.message.hostname:
 .. _properties.alias.source:

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Check canonical RainerScript emission for complex script statements.
 #
 # This is a cheap -N1 translation test for runtime/translate.c's script

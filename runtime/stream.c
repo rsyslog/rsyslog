@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* The serial stream class.
  *
  * A serial stream provides serial data access. In theory, serial streams

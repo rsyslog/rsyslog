@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The regexp object. It encapsulates the C regexp functionality. The primary
  * purpose of this wrapper class is to enable rsyslogd core to be build without
  * regexp libraries.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # this is a small helper script used to run testbench tests
 # repetitively. It is meant for manual use and not included
 # in any testbench functionality.

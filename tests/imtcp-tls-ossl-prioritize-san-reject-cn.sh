@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify strict OpenSSL x509/name behavior when StreamDriver.PrioritizeSAN is
 # enabled. The fixture certificate has CN=rsyslog-client and DNS SAN
 # testbench.rsyslog.com. Authorizing only the CN must fail when any SAN exists;

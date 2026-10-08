@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-statefile:
 .. _imfile.parameter.input.statefile:
 .. _imfile.parameter.statefile:

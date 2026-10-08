@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omstdout.c
  * send all output to stdout - this is primarily a test driver (but may
  * be used for weired use cases). Not tested for robustness!

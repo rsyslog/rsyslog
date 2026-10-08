@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the worker thread instance (wti) class.
  *
  * Copyright 2008-2017 Adiscon GmbH.

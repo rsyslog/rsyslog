@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omstdout-template:
 .. _omstdout.parameter.input.template:
 

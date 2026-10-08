@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the cfsysline (config file system line) object.
  *
  * Copyright 2007-2012 Adiscon GmbH.

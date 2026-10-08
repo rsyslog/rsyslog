@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check translation of a simple selector/action ruleset into YAML filter/actions.
 #
 # Part of the testbench for rsyslog.

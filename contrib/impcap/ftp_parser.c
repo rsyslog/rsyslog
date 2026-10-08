@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ftp_parser.c
  *
  * This file contains functions to parse FTP headers.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify an Elastic Agent Windows event preserves representative nested fields
 # and receives the expected cumulative ACK.
 . ${srcdir:=.}/diag.sh init

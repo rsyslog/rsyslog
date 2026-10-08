@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2022-06-21 by alorbach
 # Verify RELP forwarding while the receiver runs under valgrind. The receiver
 # binds an ephemeral IPv4 listener and the testbench discovers that bound port

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify issue #1324 through YAML config parsing: an imtcp input bound to a
 # YAML-defined ruleset without its own non-direct queue emits the same warning
 # as the RainerScript path, while a YAML ruleset with queue.type="LinkedList"

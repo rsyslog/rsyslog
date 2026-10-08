@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfifo-severity:
 .. _imfifo.parameter.input.severity:
 

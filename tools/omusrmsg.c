@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file omusrmsg.c
  * @brief Implementation of the built-in user message output module.

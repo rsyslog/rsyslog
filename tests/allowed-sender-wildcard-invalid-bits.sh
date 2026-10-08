@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for malformed $AllowedSender wildcard masks.
 #
 # A hostname wildcard is stored in the same NetAddr union as a numeric socket

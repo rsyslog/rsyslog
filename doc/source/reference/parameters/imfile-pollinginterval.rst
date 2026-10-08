@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-pollinginterval:
 .. _imfile.parameter.module.pollinginterval:
 .. _imfile.parameter.pollinginterval:

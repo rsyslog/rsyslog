@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML wiring and enforcement for all imbeats session deadlines. Three
 # listeners isolate the invariants: idleTimeout closes an entirely idle peer,
 # frameTimeout closes a partial body despite byte progress, and windowTimeout

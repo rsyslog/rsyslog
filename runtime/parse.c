@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* parsing routines for the counted string class. for generic
  * informaton see parse.h.
  *

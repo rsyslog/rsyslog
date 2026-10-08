@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omprog-confirmtimeout:
 .. _omprog.parameter.action.confirmtimeout:
 

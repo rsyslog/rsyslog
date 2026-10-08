@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test imptcp with large connection count
 # test many concurrent tcp connections
 # released under ASL 2.0

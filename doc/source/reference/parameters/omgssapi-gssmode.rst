@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omgssapi-gssmode:
 .. _omgssapi.parameter.module.gssmode:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that YAML config can opt one main queue into mutex contention
 # diagnostics. A multi-connection imtcp workload must fully drain and report
 # the metric keys, proving the YAML setting reaches the shared queue parameter

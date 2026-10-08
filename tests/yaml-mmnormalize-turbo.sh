@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that the YAML front end passes turbo to mmnormalize and exposes the
 # normalized CEE field. The output file is the observable success oracle.
 . ${srcdir:=.}/diag.sh init

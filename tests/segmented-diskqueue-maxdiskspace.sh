@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Fill a bounded segmentedDisk queue while the consumer is slowed, then drain
 # and enqueue a second wave. Complete delivery proves producer backpressure,
 # worker wakeup when a multi-submit blocks at the disk limit, and post-delete

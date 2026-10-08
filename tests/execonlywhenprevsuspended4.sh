@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # we test the execonly if previous is suspended directive.
 # This test checks if multiple backup actions can be defined.
 # rgerhards, 2010-06-24

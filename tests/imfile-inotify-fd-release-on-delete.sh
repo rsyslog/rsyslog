@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test that imfile in inotify mode releases FDs of deleted files
 # after FILE_DELETE_DELAY without requiring any additional inotify
 # events. When no new events arrive after a file is deleted, poll()

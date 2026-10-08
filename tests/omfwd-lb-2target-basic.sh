@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that native omfwd load balancing splits a single message burst evenly
 # across two healthy TCP targets. The oracle is exact: each minitcpsrv receiver
 # must persist half of the messages, and the combined output must contain the

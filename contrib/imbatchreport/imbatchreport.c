@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imbatchreport.c
  *
  * This is the input module for reading full text file data. A text file is a

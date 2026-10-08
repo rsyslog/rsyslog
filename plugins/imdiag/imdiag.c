@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imdiag.c
  * Diagnostic input module for the testbench and controlled diagnostics.
  * The module has no internal access control; limit exposure with external

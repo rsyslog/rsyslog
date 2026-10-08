@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omjournal.c
  * send messages to the Linux Journal. This is meant to be used
  * in cases where journal serves as the whole system log database.

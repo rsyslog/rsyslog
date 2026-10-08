@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # we test the execonly if previous is suspended directive.
 # This test checks if, within the same rule, one action can be set
 # to emit only if the previous was suspended while the next action

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 What is the difference between the main_queue and a queue with a ruleset tied to an input?
 ==========================================================================================
 

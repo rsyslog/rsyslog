@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test trailing LF handling in imuxsock
 # part of rsyslog, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

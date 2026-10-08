@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmsnareparse parsing with trailing extra-data section truncation using regex.
 # This test verifies regex support for dynamic numeric prefixes in trailing custom data.
 unset RSYSLOG_DYNNAME

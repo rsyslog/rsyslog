@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests that YAML config files can include both:
 #   - another .yaml file (YAML-from-YAML include)
 #   - a .conf (RainerScript) file (RainerScript-from-YAML include)

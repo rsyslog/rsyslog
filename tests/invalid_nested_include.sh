@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Note: this test tests if we die when recursively include the same
 # file ever again. This is a user error, but we should detect it.
 # This file is part of the rsyslog project, released  under ASL 2.0

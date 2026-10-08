@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* compatibility file for systems without strndup.
  *
  * Copyright 2015 Rainer Gerhards and Adiscon

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Very simple program to listen for a mutual-TLS connection, require a valid
  * client certificate, and capture application data to a file.
  * Used for the rsyslog testbench.

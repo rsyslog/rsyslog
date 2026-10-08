@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test named rate limits for imuxsock
 # Verifies that imuxsock accepts ratelimit.name and
 # syssock.ratelimit.name without error.

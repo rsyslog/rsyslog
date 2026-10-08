@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* The rsconf object. It models a complete rsyslog configuration.
  *
  * Copyright 2011-2026 Rainer Gerhards and Adiscon GmbH.

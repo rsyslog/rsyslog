@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # set $SCANBUILD_EXTRA_MODULES to specify extra configure options
 # this especially helps with buildbot slaves which do have some
 # exotic dependencies installed

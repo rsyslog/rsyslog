@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-07-20 by Codex, released under ASL 2.0
 # Validates the RainerScript secure-default policy for the aggregate zstd
 # decoder-window limit. Configuration-validation exit status and startup

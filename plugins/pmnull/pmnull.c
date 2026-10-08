@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmnull.c
  * This is a parser module for CISCO IOS "syslog" format.
  *

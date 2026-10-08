@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Verify that imptcp attaches the accepted peer's numeric source port to
 ## every message. The tcpflood port file is obtained with getsockname(), and
 ## exact comparison after synchronized shutdown proves property correctness.

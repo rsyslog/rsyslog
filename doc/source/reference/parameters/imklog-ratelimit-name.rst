@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! imklog; RateLimit.Name
 
 .. _param-imklog-ratelimit-name:

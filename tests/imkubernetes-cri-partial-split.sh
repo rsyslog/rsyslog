@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that CRI partial assembly honors oversizemsg.input.mode="split".
 # The partial accumulator must not truncate at maxMessageSize; instead the
 # completed logical record reaches the core submit path and is split there.

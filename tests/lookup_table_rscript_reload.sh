@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test lookup-table reload by the RainerScript reload_lookup_table statement.
 # The second reload uses uppercase hex escapes in procedure-call strings; the
 # output oracle proves those strings parsed to the intended table and stub

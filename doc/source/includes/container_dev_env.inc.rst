@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. note::
 
    The rsyslog project maintains multiple `rsyslog docker development

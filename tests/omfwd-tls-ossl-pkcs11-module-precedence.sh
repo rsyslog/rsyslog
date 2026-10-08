@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that action-level StreamDriver.CAExtraFiles overrides the
 # builtin:omfwd module default. The server certificate is signed by an
 # intermediate CA that the helper server does not send. The module provides a

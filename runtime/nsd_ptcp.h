@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* An implementation of the nsd interface for plain tcp sockets.
  *
  * Copyright 2007-2026 Adiscon GmbH.

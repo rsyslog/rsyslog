@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ompipe.c
  * This is the implementation of the build-in pipe output module.
  * Note that this module stems back to the "old" (4.4.2 and below)

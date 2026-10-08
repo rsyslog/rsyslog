@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify timeoutGuard writes the imdiag proper termination marker before aborting.
 export TEST_MAX_RUNTIME=2
 . ${srcdir:=.}/diag.sh init

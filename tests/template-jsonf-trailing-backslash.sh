@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-21 by AI agent; Released under ASL 2.0
 # Verifies that jsonf property rendering handles a counted message value that
 # ends with a backslash. The oracle is successful JSON parsing plus the exact

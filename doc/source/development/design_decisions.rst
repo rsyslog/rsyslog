@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Design decisions and architectural choices in rsyslog development.
    :keywords: rsyslog, design, architecture, libyaml, decisions

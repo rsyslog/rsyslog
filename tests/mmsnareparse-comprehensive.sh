@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Comprehensive test for mmsnareparse module field extraction capabilities
 # This test validates the module's ability to extract structured fields from
 # Windows Security Event Log description sections using dynamic test data from

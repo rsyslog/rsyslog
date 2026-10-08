@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that RainerScript object/action parameter strings and expression
 # strings accept the same documented byte escapes that the unescape layer
 # decodes. The oracle is the configured omfile output after synchronized

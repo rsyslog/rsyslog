@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* common header for syslogd
  * Copyright 2007-2012 Adiscon GmbH.
  *

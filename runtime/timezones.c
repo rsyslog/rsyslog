@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* timezones.c
  * Support for timezones in RainerScript.
  *

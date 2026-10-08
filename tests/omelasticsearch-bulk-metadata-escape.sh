@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for omelasticsearch bulk metadata JSON escaping. Dynamic
 # metadata templates can be derived from remote message content; the oracle is
 # the captured _bulk request body from a local HTTP endpoint. The first bulk

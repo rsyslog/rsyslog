@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2017-05-18 by alorbach
 #	This test only tests what happens when kafka cluster fails
 # This file is part of the rsyslog project, released under ASL 2.0

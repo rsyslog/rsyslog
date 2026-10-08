@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test trailing LF handling in imuxsock
 . ${srcdir:=.}/diag.sh init
 ./syslog_caller -fsyslog_inject-l -m0 > /dev/null 2>&1

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-22 by Codex, released under ASL 2.0
 # Regression coverage for issue #689: mmexternal must be able to merge a
 # returned $! tree after mmnormalize has already populated message variables.

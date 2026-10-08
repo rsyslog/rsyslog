@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock during processing (when the a stream was purged from the
 # dynafile cache).

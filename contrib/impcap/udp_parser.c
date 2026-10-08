@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* udp_parser.c
  *
  * This file contains functions to parse UDP headers.

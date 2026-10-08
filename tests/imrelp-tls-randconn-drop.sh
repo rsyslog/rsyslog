@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-28 by Codex, released under ASL 2.0
 #
 # Regression coverage for GitHub issue #4724. A RELP/TLS client using

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test checks the MsgDup() properly copies all properties.
 # added 2019-06-26 by Rgerhards. Released under ASL 2.0
 

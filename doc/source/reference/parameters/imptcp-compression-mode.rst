@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-compression-mode:
 .. _imptcp.parameter.input.compression-mode:
 

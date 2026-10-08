@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _containers-sample-imbeats:
 .. _container.sample.rsyslog-imbeats:
 

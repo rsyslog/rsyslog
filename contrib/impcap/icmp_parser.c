@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* icmp_parser.c
  *
  * This file contains functions to parse ICMP headers.

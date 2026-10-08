@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Verify the three exact port-based per-source key modes for a TCP input.
 ## The first tcpflood run uses two simultaneous connections and the second
 ## uses 32; both deterministically send two messages per connection. A limit

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-immark-use-syslogcall:
 .. _immark.parameter.module.use-syslogcall:
 

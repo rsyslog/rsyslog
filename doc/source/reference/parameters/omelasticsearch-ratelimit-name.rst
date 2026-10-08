@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! omelasticsearch; RateLimit.Name
 
 .. _param-omelasticsearch-ratelimit-name:

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definition of the queue support module.
  *
  * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.

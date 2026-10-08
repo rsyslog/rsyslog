@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmrfc5424addhmac-key:
 .. _mmrfc5424addhmac.parameter.action.key:
 

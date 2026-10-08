@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify imkubernetes can be configured through the YAML frontend. The test
 # tails a Kubernetes /var/log/containers-style Docker json-file record with API
 # enrichment disabled; output metadata proves the YAML module parameters reached

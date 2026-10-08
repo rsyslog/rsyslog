@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for lazy UDP source-address handling used by headerless
 # messages.  The fromhost-ip property resolves through the sockaddr stored at
 # receive time.  The oracle is that normal UDP loopback traffic produces stable

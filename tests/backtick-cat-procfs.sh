@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for backtick cat expansion from regular pseudo-files such
 # as /proc. The positive oracle is config validation success: /proc/self/comm
 # commonly reports st_size 0, so failure means read_file still treats

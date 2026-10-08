@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* smfile.h
  * These are the definitions for the traditional file format stringen module.
  *

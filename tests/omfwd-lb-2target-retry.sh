@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies that native omfwd load balancing can resume a target that was
 # unavailable during the first message batch. Phase 1 keeps target 2 bound but
 # not listening, so all initial messages must go to target 1. Phase 2 releases

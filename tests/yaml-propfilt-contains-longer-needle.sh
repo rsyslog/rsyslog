@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Exercise the YAML property-filter path with a contains-pattern that is longer
 # than the incoming message to ensure the backend returns "no match" cleanly.
 . ${srcdir:=.}/diag.sh init

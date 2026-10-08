@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test checks if more than one port file names work correctly for
 # imtcp. See also:
 # https://github.com/rsyslog/rsyslog/issues/3817

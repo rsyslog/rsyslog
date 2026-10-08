@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-pmrfc3164-permit-slashesinhostname:
 .. _pmrfc3164.parameter.module.permit-slashesinhostname:
 .. _pmrfc3164.parameter.module.permit.slashesInHostname:

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 export NUMMESSAGES=1
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* arp_parser.c
  *
  * This file contains functions to parse ARP and RARP headers.

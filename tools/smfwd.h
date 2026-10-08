@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* smfwd.h
  *
  * File begun on 2010-06-04 by RGerhards

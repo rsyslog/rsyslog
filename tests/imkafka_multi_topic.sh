@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test that a single imkafka input() can consume from multiple topics
 # specified as an array: topic=["topic1", "topic2"]
 # added 2026-05-29 by contributor

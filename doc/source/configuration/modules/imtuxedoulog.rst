@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 **************************************
 imtuxedoulog: Tuxedo ULOG input module
 **************************************

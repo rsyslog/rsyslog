@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmrfc5424addhmac.c
  * custom module: add hmac to RFC5424 messages
  *

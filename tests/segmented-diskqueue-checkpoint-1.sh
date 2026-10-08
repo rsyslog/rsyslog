@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify checkpointInterval=1 publishes each single-record frontier advance.
 export CHECKPOINT_INTERVAL=1
 export EXPECTED_PERIODIC_WRITES=12

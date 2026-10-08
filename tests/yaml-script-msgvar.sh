@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests a more complex inline RainerScript script: block in YAML:
 #   - set $!nbr message variable from a field() extraction
 #   - nested if expression using cnum() and arithmetic comparison

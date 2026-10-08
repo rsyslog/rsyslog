@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-timestamp:
 .. _properties.message.timestamp:
 

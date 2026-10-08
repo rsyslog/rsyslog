@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definitions for the stream-based netstrmworking class.
  *
  * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that ruleset is called synchronously when queue.type="direct" is
 # specified in ruleset.
 # added 2021-09-17 by rgerhards. Released under ASL 2.0

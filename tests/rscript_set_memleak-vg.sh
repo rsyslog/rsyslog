@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # A test that checks for memory leaks
 # created based on real world case:
 # https://github.com/rsyslog/rsyslog/issues/1376

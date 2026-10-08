@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imptcp compression.mode="stream:auto" after it classifies
 # a connection as a zlib stream. A decompressed message can legitimately begin
 # with literal "z"; once AUTO has selected the stream path via the zlib header,

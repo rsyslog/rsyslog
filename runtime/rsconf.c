@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* rsconf.c - the rsyslog configuration system.
  *
  * Module begun 2011-04-19 by Rainer Gerhards

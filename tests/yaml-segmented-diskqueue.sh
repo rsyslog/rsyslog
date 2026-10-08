@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML config accepts and instantiates queue.type="segmentedDisk" through
 # the shared queue parameter backend. The oracle is sequence correctness after
 # runtime enqueue/drain through a YAML-configured main queue.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The zstdw object.
  *
  * This is an rsyslog object wrapper around zstd.

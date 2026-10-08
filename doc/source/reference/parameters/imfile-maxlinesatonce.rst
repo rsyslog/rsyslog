@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-maxlinesatonce:
 .. _imfile.parameter.input.maxlinesatonce:
 .. _imfile.parameter.maxlinesatonce:

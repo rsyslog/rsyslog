@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmutf8fix replacementSequence for invalid UTF-8 in message, tag,
 # and structured data fields. The oracle is the configured omfile destination
 # after synchronized shutdown, proving the rewritten fields reached the normal

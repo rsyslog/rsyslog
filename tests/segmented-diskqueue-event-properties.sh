@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify segmentedDisk persists the complete event representation used by the
 # legacy MsgSerialize()/MsgDeserialize() path, plus receive port, post-PRI raw
 # message state, parse status, message JSON ($!), and local variables ($.).

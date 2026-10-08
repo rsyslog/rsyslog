@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # ensure mmjsonparse works correctly if passed unparsable message
 # add 2018-11-05 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate queue.onCorruption handling when bytes inside a persisted
 # disk-assisted queue segment are corrupted. The setup phase intentionally
 # creates a DA queue backlog and saves it to disk; the actual oracle is the

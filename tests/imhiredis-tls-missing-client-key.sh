@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2025-11-03 by Théo Bertin, released under ASL 2.0
 ## Uncomment for debugging
 #export RS_REDIR=-d

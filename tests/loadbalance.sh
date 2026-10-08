@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # a test to check load balancing via global variables
 # note: for simplicity, we use omfile output; in practice this will usually
 # be some kind of network output, e.g. omfwd or omrelp. From the method's

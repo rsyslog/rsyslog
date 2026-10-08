@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test checks imtcp functionality with multiple drivers running together. It is
 # a minimal test.
 # added 2021-04-27 by Rgerhards

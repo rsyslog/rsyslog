@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omsnmp-snmpv1dynsource:
 .. _omsnmp.parameter.module.snmpv1dynsource:
 

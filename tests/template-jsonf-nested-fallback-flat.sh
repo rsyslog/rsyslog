@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify jsonftree conflict fallback still emits valid flat JSON (ASL 2.0).
 . ${srcdir:=.}/diag.sh init
 

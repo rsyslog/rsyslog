@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* linkedlist.c
  * This file set implements a generic linked list object. It can be used
  * wherever a linke list is required.

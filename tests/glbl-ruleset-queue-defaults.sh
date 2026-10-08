@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that global ruleset queue defaults can be specified. However,
 # we do not tests that they actually work - that's quite hard to
 # do reliably.

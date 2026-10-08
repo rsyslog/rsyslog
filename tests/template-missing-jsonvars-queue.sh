@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-28 by AI agent; released under ASL 2.0
 # Reproduces the list-template shape from issue #3311: an action worker renders
 # several missing $! JSON fields after queueing. The oracle is exact output with

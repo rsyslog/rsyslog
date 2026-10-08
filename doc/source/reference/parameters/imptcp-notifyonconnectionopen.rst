@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-notifyonconnectionopen:
 .. _imptcp.parameter.input.notifyonconnectionopen:
 

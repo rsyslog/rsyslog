@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omfile.c
  * This is the implementation of the build-in file output module.
  *

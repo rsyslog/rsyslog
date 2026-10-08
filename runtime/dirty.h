@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This file is an aid to support non-modular object accesses
  * while we do not have fully modularized everything. Once this is
  * done, this file can (and should) be deleted. Presence of it

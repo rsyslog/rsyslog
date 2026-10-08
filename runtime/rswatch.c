@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* rswatch.c
  * generic watched-file support for runtime-managed reloaders
  *

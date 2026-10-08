@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 if [ "$(valgrind --version)" == "valgrind-3.11.0" ]; then
 	printf 'This test does NOT work with valgrind-3.11.0 - valgrind always reports\n'

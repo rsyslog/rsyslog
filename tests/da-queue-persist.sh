@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for classic DA queue data persisting at shutdown. This test deliberately
 # inspects the classic .qi file, so it pins diskQueueType="disk". A fast
 # shutdown must save the remaining messages and restart must drain them, with

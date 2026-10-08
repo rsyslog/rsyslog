@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imbeats-maxinflightbytes:
 .. _imbeats.parameter.input.maxinflightbytes:
 

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmsnmptrapd-tag:
 .. _mmsnmptrapd.parameter.module.tag:
 

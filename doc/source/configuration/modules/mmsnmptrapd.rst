@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 **************************************************
 mmsnmptrapd: snmptrapd message modification module
 **************************************************

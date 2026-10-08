@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This focused template/property test covers deterministic MsgGetProp
 # transformations without network timing: field extraction, substring bounds,
 # regex match/no-match handling, control-character modes, string modifiers,

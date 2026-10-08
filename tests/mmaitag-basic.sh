@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## basic test for mmaitag plugin
 . ${srcdir:=.}/diag.sh init
 export GEMINI_MOCK_RESPONSE="NOISE,NOISE,REGULAR"

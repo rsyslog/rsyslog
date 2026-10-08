@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Protect the imhttp health check endpoint with API key authentication.
    :keywords: rsyslog, imhttp, healthcheck, api key authentication

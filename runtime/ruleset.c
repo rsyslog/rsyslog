@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ruleset.c - rsyslog's ruleset object
  *
  * We have a two-way structure of linked lists: one config-specifc linked list

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-tag:
 .. _imfile.parameter.input.tag:
 .. _imfile.parameter.tag:

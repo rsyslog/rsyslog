@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* nsd_gtls.c
  *
  * An implementation of the nsd interface for GnuTLS.

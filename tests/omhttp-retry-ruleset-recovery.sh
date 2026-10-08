@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2026-05-31 by OpenAI Codex
 # This is a regression test for issue #5693.  It verifies that an omhttp
 # action using retry.ruleset can recover after a short HTTP outage instead of

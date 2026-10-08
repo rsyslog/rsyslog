@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definitions for tcpsrv class.
  *
  * Copyright 2008-2026 Adiscon GmbH.

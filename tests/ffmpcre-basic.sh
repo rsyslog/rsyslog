@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2025-06-07 by Codex, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 

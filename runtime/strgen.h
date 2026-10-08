@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* header for strgen.c
  *
  * Copyright 2010-2026 Rainer Gerhards and Adiscon GmbH.

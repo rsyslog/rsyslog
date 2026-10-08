@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2020-07-14 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 echo This test must be run as root with no other active syslogd

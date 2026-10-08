@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-pmrfc3164-remove-msgfirstspace:
 .. _pmrfc3164.parameter.module.remove-msgfirstspace:
 .. _pmrfc3164.parameter.module.remove.msgFirstSpace:

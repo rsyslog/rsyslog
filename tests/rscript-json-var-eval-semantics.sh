@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that RainerScript JSON-variable reads preserve scalar, native JSON,
 # missing/null, root, and NUL semantics while values flow through set. Exact
 # serialized output after synchronized shutdown is the oracle: it detects a

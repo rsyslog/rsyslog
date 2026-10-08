@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /**\file srUtils.c
  * \brief General utilties that fit nowhere else.
  *

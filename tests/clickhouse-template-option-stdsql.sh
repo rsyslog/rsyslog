@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omclickhouse accepts a custom INSERT template when the SQL
 # escaping requirement is expressed with the template-level option.stdsql
 # parameter. This covers the config-validation path from issue #6297 without

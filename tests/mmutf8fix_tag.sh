@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Validate mmutf8fix tag handling for invalid UTF-8.
 # add 2021-01 Jan Jeronym Zvanovec <jero@zvano.net>, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

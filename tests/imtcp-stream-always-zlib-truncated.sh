@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Sends a zlib stream that flushes one message but omits the end marker; imtcp
 # must preserve the decompressed message and log the truncated stream.

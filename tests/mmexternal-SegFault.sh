@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # a case that actually caused a segfault
 # add 2017-11-06 by PascalWithopf, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

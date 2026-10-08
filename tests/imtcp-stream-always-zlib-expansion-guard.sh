@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-19 by Codex, released under ASL 2.0
 # Sends a valid but highly expanding zlib stream; the oracle is that imtcp logs
 # an invalid compressed stream before submitting decompressed messages.

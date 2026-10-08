@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that explicit omelasticsearch searchType use emits a deprecation warning.
 . ${srcdir:=.}/diag.sh init
 require_plugin omelasticsearch

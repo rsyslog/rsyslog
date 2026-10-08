@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2017-12-01 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 rsyslog_testbench_test_url_access http://testbench.rsyslog.com/testbench/echo-get.php

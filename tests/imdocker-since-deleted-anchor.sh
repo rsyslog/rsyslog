@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imdocker container discovery after Docker rejects the
 # internal "since=<last container id>" anchor. The oracle is that rsyslog first
 # reads a short-lived container, then still discovers and reads a second

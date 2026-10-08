@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file omczmq.c
  * @brief Output module for sending messages over ZeroMQ.

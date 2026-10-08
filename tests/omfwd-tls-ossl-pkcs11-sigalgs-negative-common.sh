@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Common negative matrix for PKCS#11-backed omfwd mTLS signing algorithm tests.
 . ${srcdir:=.}/diag.sh init
 

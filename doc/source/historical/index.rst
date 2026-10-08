@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Historical Documents
 --------------------
 This part of the documentation set contains historical documents

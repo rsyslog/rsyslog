@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify that imfile's inotify mode follows rapid wildcard log rotations without
 # losing or duplicating records. The exact 10000-record sequence is the oracle;

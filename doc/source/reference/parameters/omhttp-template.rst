@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-template:
 .. _omhttp.parameter.input.template:
 

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* This program expands the input file several times. This
  * is done in order to obtain large (and maybe huge) files for
  * testing. Note that the input file is stored in memory. It's

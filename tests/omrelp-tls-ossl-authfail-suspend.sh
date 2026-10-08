@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-12 to guard issue #5636, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imrelp

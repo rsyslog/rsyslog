@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Checks if a file consists of line of strictly monotonically
  * increasing numbers. An expected start and end number may
  * be set.

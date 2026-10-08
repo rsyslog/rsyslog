@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* librsksi_read.c - rsyslog's guardtime support library
  * This includes functions used for reading signature (and
  * other related) files. Well, actually it also contains

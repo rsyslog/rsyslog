@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # Smoke-test the opt-in imtcp session fuzzer against framing and compression
 # seeds. A clean fixed iteration run is the oracle; any crash, sanitizer
 # report, timeout, or harness invariant failure makes libFuzzer return non-zero.

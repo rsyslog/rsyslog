@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-severity:
 .. _imfile.parameter.input.severity:
 .. _imfile.parameter.severity:

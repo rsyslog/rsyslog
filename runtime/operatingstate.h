@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* OperatingStateFile interface.
  *
  * Copyright 2018 Rainer Gerhards and Adiscon GmbH.

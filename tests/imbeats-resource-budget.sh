@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Exercise imbeats' listener-wide in-flight budget and compression-ratio cap.
 # One connection declares an incomplete 6144-byte JSON body under an 8192-byte
 # aggregate budget. Bounded retries wait until a second 4096-byte reservation is

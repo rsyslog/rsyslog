@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Keep the oldest one-message batch inside a confirmed omprog call while later
 # unequal batches retire and wrap a 128-slot FixedArray many times. The helper
 # announces receipt before blocking on a FIFO; only the test can release it.

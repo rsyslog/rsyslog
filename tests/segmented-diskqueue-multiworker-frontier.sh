@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Three one-record workers delay batch 1 while later batches finish. Later
 # output proves workers continue taking work; state inspection must keep the
 # durable frontier before batch 1, then advance across the completed suffix

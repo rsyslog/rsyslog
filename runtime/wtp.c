@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* wtp.c
  *
  * This file implements the worker thread pool (wtp) class.

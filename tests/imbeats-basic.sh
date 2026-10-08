@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify a basic JSON event is submitted with its Beats fields, reserved
 # metadata, and cumulative ACK intact.
 . ${srcdir:=.}/diag.sh init

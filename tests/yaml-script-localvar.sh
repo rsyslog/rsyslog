@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests local ($.var) variables inside a YAML script: block combined with
 # a complex if/elseif/else chain.
 # Sends 2000 messages starting at sequence 1; messages with sequence number

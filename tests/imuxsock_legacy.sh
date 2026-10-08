@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests legacy syntax.
 # Added 2019-08-13 by Rainer Gerhards; released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

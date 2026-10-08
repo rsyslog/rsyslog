@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-ommysql-mysqlconfig-file:
 .. _ommysql.parameter.input.mysqlconfig-file:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify cumulative sequence tracking and ACKs across two Lumberjack windows
 # on one connection.
 . ${srcdir:=.}/diag.sh init

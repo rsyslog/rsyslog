@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definitions for network-related stuff.
  *
  * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.

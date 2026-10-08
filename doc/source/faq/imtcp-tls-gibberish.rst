@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _faq-imtcp-tls-gibberish:
 .. _faq.tls.gibberish:
 

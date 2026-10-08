@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imfile.c
  *
  * This is the input module for reading text file data. A text file is a

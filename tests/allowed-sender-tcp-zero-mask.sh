@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a zero-length $AllowedSender TCP netmask cannot become an
 # allow-all ACL. runtime/net.c warns that /0 would match every sender and
 # clamps the entry to a host mask; this test uses an RFC5737 address with /0

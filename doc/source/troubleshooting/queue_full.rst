@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Troubleshoot rsyslog apparent hangs when queues fill because an output is slow or unavailable.
    :keywords: rsyslog, troubleshooting, queue full, timeoutEnqueue, disk-assisted queue, discardMark, impstats, flow control

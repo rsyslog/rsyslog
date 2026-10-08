@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify maxSessions rejects excess peers and releases admission capacity after
 # an established session closes.
 . ${srcdir:=.}/diag.sh init

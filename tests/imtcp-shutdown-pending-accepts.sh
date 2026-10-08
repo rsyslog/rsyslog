@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imtcp listener-descriptor teardown after concurrent TCP
 # connection acceptance on Linux's epoll worker path. The client marks ready
 # only after 128 sessions are established and holds those sessions open until

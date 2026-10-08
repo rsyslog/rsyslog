@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* A testing tool that just emits a number of
  * messages to the system log socket.
  *

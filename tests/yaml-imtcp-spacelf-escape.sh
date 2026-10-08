@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # YAML companion for imtcp-spacelf-escape.sh. The parser options are loaded
 # from a YAML include, while success is proven by the configured omfile output
 # after synchronized shutdown: LF is rewritten to a space, and the earlier tab,

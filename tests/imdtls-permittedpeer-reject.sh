@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that imdtls drops CA-authenticated peers that fail its permitted-peer check.
 . ${srcdir:=.}/diag.sh init
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=2
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines

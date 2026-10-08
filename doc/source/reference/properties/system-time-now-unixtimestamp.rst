@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-system-time-now-unixtimestamp:
 .. _properties.system-time.now-unixtimestamp:
 

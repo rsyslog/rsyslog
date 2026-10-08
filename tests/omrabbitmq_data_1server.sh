@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2019-09-03 by Philippe Duveau, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 cmd="./miniamqpsrvr -f $RSYSLOG_DYNNAME.amqp.log -d"

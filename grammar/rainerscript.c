@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* rainerscript.c - routines to support RainerScript config language
  *
  * Module begun 2011-07-01 by Rainer Gerhards

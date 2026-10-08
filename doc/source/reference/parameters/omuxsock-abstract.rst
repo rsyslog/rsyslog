@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omuxsock-abstract:
 .. _omuxsock.parameter.module.abstract:
 

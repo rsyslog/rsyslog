@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imbeats sequence-number helpers.
  *
  * Copyright 2026 Rainer Gerhards and Adiscon GmbH.

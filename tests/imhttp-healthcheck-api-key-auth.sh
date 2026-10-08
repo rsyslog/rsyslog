@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify the imhttp healthcheck endpoint while the HTTP listener uses an
 # OS-assigned port. The HTTP status or response body is the oracle.

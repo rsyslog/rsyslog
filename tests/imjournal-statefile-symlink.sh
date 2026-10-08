@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Ensure imjournal does not follow or reuse attacker-controlled temp state files.
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh require-journalctl

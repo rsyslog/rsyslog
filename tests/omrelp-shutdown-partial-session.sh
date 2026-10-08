@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-04-14 to guard issue #6547, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin omrelp

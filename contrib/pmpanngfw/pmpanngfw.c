@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmpanngfw.c
  *
  * this detects logs sent by Palo Alto Networks NGFW and transforms CSV into tab-separated fields

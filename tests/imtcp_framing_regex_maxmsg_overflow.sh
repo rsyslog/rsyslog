@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for regex framing with an oversized maxMessageSize.
 # This must fail cleanly when the first TCP session is constructed rather than
 # overflowing the regex framing buffer arithmetic.

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Generating the machine certificate
 ==================================
 

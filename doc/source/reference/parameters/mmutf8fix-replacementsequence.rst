@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmutf8fix-replacementsequence:
 .. _mmutf8fix.parameter.input.replacementsequence:
 

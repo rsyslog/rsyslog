@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* omgssapi.c
  * This is the implementation of the build-in forwarding output module.
  *

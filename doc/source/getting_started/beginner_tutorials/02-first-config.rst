@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _tut-02-first-config:
 
 Your First Configuration

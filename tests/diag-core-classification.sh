@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify core-dump helper classification stays conservative. Generic core files
 # must not be accepted unless ownership can be attributed, while test-specific
 # names remain a weak fallback for platforms where metadata extraction is not

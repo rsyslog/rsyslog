@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* glbl.c - this module holds global defintions and data items.
  * These are shared among the runtime library. Their use should be
  * limited to cases where it is actually needed. The main intension for

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify mmpstrucdata still ignores legacy messages without RFC5424 structured
 # data. The oracle is absence of configured omfile output after shutdown; if the
 # module created the no-SD JSON null for RFC3164 input, the output file would be

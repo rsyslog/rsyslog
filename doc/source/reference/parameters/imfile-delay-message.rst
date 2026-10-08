@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-delay-message:
 .. _imfile.parameter.input.delay-message:
 .. _imfile.parameter.delay-message:

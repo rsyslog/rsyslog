@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate RainerScript parity for secure dynafile template defaults.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp

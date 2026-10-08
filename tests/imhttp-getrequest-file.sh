@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify imhttp static file serving while the HTTP listener uses an
 # OS-assigned port. The fetched file content is the oracle.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for GitHub issue #4199. ommysql must suspend cleanly when
 # the database connection is unavailable while transaction support is active.
 # The oracle is synchronized shutdown plus the normal ommysql diagnostic in

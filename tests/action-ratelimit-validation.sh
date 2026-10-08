@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate generic output rate-limit configuration errors with rsyslogd -N1.
 # The oracle is that each invalid configuration fails before startup: actions
 # cannot reference input-scoped policies, output policies cannot use inline

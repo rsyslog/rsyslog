@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazureeventhubs-azure_key_name:
 .. _omazureeventhubs.parameter.input.azure_key_name:
 

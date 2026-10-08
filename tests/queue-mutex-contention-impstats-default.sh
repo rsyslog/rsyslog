@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that impstats alone does not enable queue mutex diagnostics. The main
 # queue drains a multi-connection imtcp workload, while the oracle requires
 # that the opt-in mutex metrics are absent from its statistics record.

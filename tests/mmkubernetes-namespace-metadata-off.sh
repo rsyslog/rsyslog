@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify includeNamespaceMetadata="off" skips the namespace API lookup while
 # retaining parsed namespace identity and pod metadata. The output fields and
 # absence of a namespace-only request in the test-server log are the oracle.

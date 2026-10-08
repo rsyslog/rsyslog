@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Overview of the RainerScript configuration language and its components.
    :keywords: rsyslog, rainerscript, configuration language, module functions

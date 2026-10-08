@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify HUP reloading of an external input rate-limit policy: an initial high
 # burst passes all messages, then HUP reloads a zero-burst policy that drops
 # every subsequent message.  The oracle waits for rsyslog's policy-specific
