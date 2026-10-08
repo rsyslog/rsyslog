@@ -6,6 +6,7 @@
 # A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
 # holder is listening before each conflicting rsyslogd starts.
+# A two-second termination grace is followed by SIGKILL if a daemon hangs.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
 # are read from process output because activation fails before input delivery.
 . ${srcdir:=.}/diag.sh init
@@ -50,6 +51,15 @@ run_bounded() {
 	done
 	if kill -0 "$pid" 2>/dev/null; then
 		kill "$pid" 2>/dev/null || :
+		for ((elapsed = 0; elapsed < 2; elapsed++)); do
+			if ! kill -0 "$pid" 2>/dev/null; then
+				break
+			fi
+			sleep 1
+		done
+		if kill -0 "$pid" 2>/dev/null; then
+			kill -KILL "$pid" 2>/dev/null || :
+		fi
 		wait "$pid" 2>/dev/null || :
 		return 124
 	fi
