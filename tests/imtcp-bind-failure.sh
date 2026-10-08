@@ -1,80 +1,105 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
-# A held loopback port must reject startup only when both failOnBindError and
-# abortOnUncleanConfig are on. A ten-second exit limit catches startup hangs;
-# surviving a one-second wait proves the compatibility cases stayed running.
-# Both RainerScript and YAML pass through the same module parameter backend.
-# Diagnostics are asserted from stderr because activation fails before an input
-# can deliver the message to a configured rsyslog output.
+# A live imtcp listener on a kernel-assigned loopback port must reject a second
+# listener. Only failOnBindError plus abortOnUncleanConfig may abort startup.
+# A ten-second timeout detects a strict-mode hang; surviving three seconds
+# proves the compatibility cases stayed running. The port file proves that the
+# holder is listening before each conflicting rsyslogd starts.
+# Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
+# are read from process output because activation fails before input delivery.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 
-python3 - <<'PY' || error_exit 1
-import os
-import itertools
-import pathlib
-import socket
-import subprocess
-import tempfile
+root=$(cd .. && pwd)
+testdir=$PWD
+daemon="$root/tools/rsyslogd"
+modules="$root/plugins/imtcp/.libs:$root/plugins/omfile/.libs:$root/runtime/.libs"
+portfile="$testdir/$RSYSLOG_DYNNAME.holder.port"
+holder_conf="$testdir/$RSYSLOG_DYNNAME.holder.conf"
+holder_log="$testdir/$RSYSLOG_DYNNAME.holder.log"
 
-root = pathlib.Path.cwd().parent
-daemon = root / "tools/rsyslogd"
-modules = ":".join(str(root / path) for path in
-                   ("plugins/imtcp/.libs", "plugins/omfile/.libs", "runtime/.libs"))
-holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-holder.bind(("127.0.0.1", 0))
-holder.listen(1)
-port = holder.getsockname()[1]
+cat > "$holder_conf" <<EOF
+module(load="imtcp")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="$portfile")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.holder.out")
+EOF
+"$daemon" -n -iNONE -f "$holder_conf" -M "$modules" > "$holder_log" 2>&1 &
+holder_pid=$!
+cleanup_holder() {
+	kill "$holder_pid" 2>/dev/null || :
+	wait "$holder_pid" 2>/dev/null || :
+}
+trap cleanup_holder EXIT
+wait_file_exists_for_process "$portfile" "$holder_pid" 10 "imtcp holder" "$holder_log"
+port=$(cat "$portfile")
+case "$port" in
+	''|*[!0-9]*) error_exit 1 "invalid holder port: $port" ;;
+esac
 
-with tempfile.TemporaryDirectory(prefix="imtcp-bind-") as tmp:
-    yaml_enabled = "#define HAVE_LIBYAML 1" in (root / "config.h").read_text(encoding="utf-8")
-    formats = ("rsyslog", "yaml") if yaml_enabled else ("rsyslog",)
-    cases = ((False, True, False), (True, False, False), (True, True, True))
-    for format_name, (fail_on_bind, abort_unclean, should_exit) in itertools.product(formats, cases):
-        config = pathlib.Path(tmp) / f"rsyslog.{format_name}"
-        abort_value = "on" if abort_unclean else "off"
-        fail_value = "on" if fail_on_bind else "off"
-        if format_name == "yaml":
-            contents = (f'version: 2\n'
-                        f'global:\n  abortOnUncleanConfig: "{abort_value}"\n'
-                        f'modules:\n  - load: imtcp\n    failOnBindError: "{fail_value}"\n'
-                        f'inputs:\n  - type: imtcp\n    address: "127.0.0.1"\n    port: "{port}"\n'
-                        f'rulesets:\n  - name: main\n    script: |\n'
-                        f'      action(type="omfile" file="{tmp}/out.log")\n')
-        else:
-            contents = (f'global(abortOnUncleanConfig="{abort_value}")\n'
-                        f'module(load="imtcp" failOnBindError="{fail_value}")\n'
-                        f'input(type="imtcp" address="127.0.0.1" port="{port}")\n'
-                        f'action(type="omfile" file="{tmp}/out.log")\n')
-        config.write_text(contents, encoding="utf-8")
-        process = subprocess.Popen((str(daemon), "-n", "-iNONE", "-f", str(config),
-                                    "-M", modules), stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, text=True)
-        try:
-            if should_exit:
-                status = process.wait(timeout=10)
-                assert status != 0, "strict listener failure exited successfully"
-            else:
-                try:
-                    process.wait(timeout=1)
-                    raise AssertionError("compatibility startup exited unexpectedly")
-                except subprocess.TimeoutExpired:
-                    process.terminate()
-                    process.wait(timeout=10)
-        finally:
-            if process.poll() is None:
-                process.kill()
-                process.wait()
-        output = process.stdout.read()
-        assert "Could not create tcp listener" in output, output
-        if should_exit:
-            assert "activation of module imtcp failed" in output, output
-        if "one visible listener is PID" in output:
-            assert f"PID {os.getpid()}" in output, output
-        else:
-            assert "listener owner unavailable" in output, output
+formats=rsyslog
+if grep -q '^#define HAVE_LIBYAML 1$' "$root/config.h"; then
+	formats='rsyslog yaml'
+fi
+for format in $formats; do
+	for case_name in default strict_no_abort strict_abort; do
+		case "$case_name" in
+			default) fail_on_bind=off; abort_unclean=on; should_exit=no ;;
+			strict_no_abort) fail_on_bind=on; abort_unclean=off; should_exit=no ;;
+			strict_abort) fail_on_bind=on; abort_unclean=on; should_exit=yes ;;
+		esac
+		log="$testdir/$RSYSLOG_DYNNAME.$format.$case_name.log"
+		if [ "$format" = yaml ]; then
+			config="$testdir/$RSYSLOG_DYNNAME.$case_name.yaml"
+			cat > "$config" <<EOF
+version: 2
+global:
+  abortOnUncleanConfig: "$abort_unclean"
+modules:
+  - load: imtcp
+    failOnBindError: "$fail_on_bind"
+inputs:
+  - type: imtcp
+    address: "127.0.0.1"
+    port: "$port"
+rulesets:
+  - name: main
+    script: |
+      action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+		else
+			config="$testdir/$RSYSLOG_DYNNAME.$case_name.conf"
+			cat > "$config" <<EOF
+global(abortOnUncleanConfig="$abort_unclean")
+module(load="imtcp" failOnBindError="$fail_on_bind")
+input(type="imtcp" address="127.0.0.1" port="$port")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+		fi
+		if [ "$should_exit" = yes ]; then
+			timeout -k 2s 10s "$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1
+			status=$?
+			if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+				cat "$log"
+				error_exit 1 "$format $case_name did not fail startup promptly (status $status)"
+			fi
+			grep -Fq 'activation of module imtcp failed' "$log" || error_exit 1 "$format $case_name missing activation error"
+		else
+			timeout -k 2s 3s "$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1
+			status=$?
+			if [ "$status" -ne 124 ]; then
+				cat "$log"
+				error_exit 1 "$format $case_name exited unexpectedly (status $status)"
+			fi
+		fi
+		grep -Fq 'Could not create tcp listener' "$log" || error_exit 1 "$format $case_name missing bind diagnostic"
+		grep -Fq "TCP port $port" "$log" || error_exit 1 "$format $case_name missing port diagnostic"
+		if grep -Fq 'one visible listener is PID' "$log"; then
+			grep -Fq "one visible listener is PID $holder_pid" "$log" || error_exit 1 "$format $case_name wrong owner PID"
+		else
+			grep -Fq 'listener owner unavailable' "$log" || error_exit 1 "$format $case_name missing owner fallback"
+		fi
+	done
+done
 
-holder.close()
-PY
 exit_test
