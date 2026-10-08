@@ -3,7 +3,7 @@
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # A live imtcp listener on a kernel-assigned loopback port must reject a second
 # listener. Only failOnBindError plus abortOnUncleanConfig may abort startup.
-# A ten-second timeout detects a strict-mode hang; surviving three seconds
+# A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
 # holder is listening before each conflicting rsyslogd starts.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
@@ -31,6 +31,33 @@ cleanup_holder() {
 	wait "$holder_pid" 2>/dev/null || :
 }
 trap cleanup_holder EXIT
+
+# Keep the startup bound portable to macOS, where GNU timeout is unavailable.
+# Return 124 when rsyslogd is still running at the deadline, after stopping it.
+run_bounded() {
+	local seconds=$1
+	local config=$2
+	local log=$3
+	local pid elapsed status
+	"$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1 &
+	pid=$!
+	for ((elapsed = 0; elapsed < seconds; elapsed++)); do
+		if ! kill -0 "$pid" 2>/dev/null; then
+			wait "$pid"
+			return $?
+		fi
+		sleep 1
+	done
+	if kill -0 "$pid" 2>/dev/null; then
+		kill "$pid" 2>/dev/null || :
+		wait "$pid" 2>/dev/null || :
+		return 124
+	fi
+	wait "$pid"
+	status=$?
+	return "$status"
+}
+
 wait_file_exists_for_process "$portfile" "$holder_pid" 10 "imtcp holder" "$holder_log"
 port=$(cat "$portfile")
 case "$port" in
@@ -77,7 +104,7 @@ action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
 EOF
 		fi
 		if [ "$should_exit" = yes ]; then
-			timeout -k 2s 10s "$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1
+			run_bounded 10 "$config" "$log"
 			status=$?
 			if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
 				cat "$log"
@@ -85,7 +112,7 @@ EOF
 			fi
 			grep -Fq 'activation of module imtcp failed' "$log" || error_exit 1 "$format $case_name missing activation error"
 		else
-			timeout -k 2s 3s "$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1
+			run_bounded 3 "$config" "$log"
 			status=$?
 			if [ "$status" -ne 124 ]; then
 				cat "$log"
