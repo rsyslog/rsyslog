@@ -1078,12 +1078,14 @@ static rsRetVal tellModulesActivateConfigPrePrivDrop(void) {
             if (localRet != RS_RET_OK) {
                 LogError(0, localRet, "activation of module %s failed", node->pMod->pszName);
                 node->canActivate = 0; /* in a sense, could not activate... */
+                if (runConf->globals.bAbortOnUncleanConfig) return localRet;
             }
         }
         node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
     }
 
-    return RS_RET_OK; /* intentional: we do not care about module errors */
+    /* Compatibility mode may continue after a module failed to activate. */
+    return RS_RET_OK;
 }
 
 
@@ -1265,7 +1267,7 @@ static rsRetVal activate(rsconf_t *cnf) {
      * Keep in mind. though, that the outputs already run if the queue was
      * persisted to disk. -- rgerhards
      */
-    tellModulesActivateConfigPrePrivDrop();
+    CHKiRet(tellModulesActivateConfigPrePrivDrop());
 
     CHKiRet(dropPrivileges(cnf));
 

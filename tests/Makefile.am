@@ -881,6 +881,7 @@ TESTS_IMTCP = \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-ruleset-no-queue-warning.sh \
 	imtcp-basic.sh \
+	imtcp-bind-failure.sh \
 	rscript_parsehostnameandtag_off.sh \
 	imtcp_framing_regex.sh \
 	imtcp_framing_regex_maxmsg_overflow.sh \
