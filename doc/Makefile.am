@@ -676,6 +676,7 @@ EXTRA_DIST = \
     source/reference/parameters/imptcp-compression-mode.rst \
     source/reference/parameters/imptcp-defaulttz.rst \
     source/reference/parameters/imptcp-discardtruncatedmsg.rst \
+    source/reference/parameters/imptcp-failonbinderror.rst \
     source/reference/parameters/imptcp-failonchownfailure.rst \
     source/reference/parameters/imptcp-filecreatemode.rst \
     source/reference/parameters/imptcp-filegroup.rst \

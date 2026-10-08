@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -186,6 +187,7 @@ struct modConfData_s {
     int wrkrMax;
     int bProcessOnPoller;
     int iTCPSessMax;
+    sbool failOnBindError;
     sbool configSetViaV2Method;
 };
 
@@ -193,8 +195,10 @@ static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current 
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current load process */
 
 /* module-global parameters */
-static struct cnfparamdescr modpdescr[] = {
-    {"threads", eCmdHdlrPositiveInt, 0}, {"maxsessions", eCmdHdlrInt, 0}, {"processOnPoller", eCmdHdlrBinary, 0}};
+static struct cnfparamdescr modpdescr[] = {{"threads", eCmdHdlrPositiveInt, 0},
+                                           {"maxsessions", eCmdHdlrInt, 0},
+                                           {"processOnPoller", eCmdHdlrBinary, 0},
+                                           {"failonbinderror", eCmdHdlrBinary, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* input instance parameters */
@@ -522,6 +526,89 @@ finalize_it:
     RETiRet;
 }
 
+/* Bind failures are rare; inspect procfs only to explain a failed port. A port
+ * may have several listeners, so a visible owner is a clue, not proof that it
+ * caused this bind failure. */
+static unsigned long listenerInodeForPort(const char *path, unsigned port) {
+    FILE *fp = fopen(path, "r");
+    char line[512];
+    unsigned localPort, state;
+    unsigned long inode;
+
+    if (fp == NULL) return 0;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (sscanf(line, " %*u: %*32[0-9A-Fa-f]:%x %*s %x %*s %*s %*s %*s %*s %lu", &localPort, &state, &inode) == 3 &&
+            localPort == port && state == 0x0a) {
+            fclose(fp);
+            return inode;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+static int describeListenerOwner(unsigned long inode, char *out, size_t outSize) {
+    DIR *procs = opendir("/proc");
+    struct dirent *proc;
+    if (procs == NULL) return 0;
+    while ((proc = readdir(procs)) != NULL) {
+        char fdDirPath[80], commPath[80], expected[64], linkPath[160], target[80], comm[80];
+        DIR *fds;
+        struct dirent *fd;
+        FILE *fp;
+        ssize_t len;
+        if (!isdigit((unsigned char)proc->d_name[0])) continue;
+        snprintf(fdDirPath, sizeof(fdDirPath), "/proc/%s/fd", proc->d_name);
+        fds = opendir(fdDirPath);
+        if (fds == NULL) continue;
+        snprintf(expected, sizeof(expected), "socket:[%lu]", inode);
+        while ((fd = readdir(fds)) != NULL) {
+            if (!isdigit((unsigned char)fd->d_name[0])) continue;
+            snprintf(linkPath, sizeof(linkPath), "%s/%s", fdDirPath, fd->d_name);
+            len = readlink(linkPath, target, sizeof(target) - 1);
+            if (len < 0) continue;
+            target[len] = '\0';
+            if (strcmp(target, expected) != 0) continue;
+            snprintf(commPath, sizeof(commPath), "/proc/%s/comm", proc->d_name);
+            fp = fopen(commPath, "r");
+            if (fp != NULL && fgets(comm, sizeof(comm), fp) != NULL) {
+                comm[strcspn(comm, "\n")] = '\0';
+                for (size_t i = 0; comm[i] != '\0'; ++i) {
+                    if ((unsigned char)comm[i] < 32 || (unsigned char)comm[i] == 127) comm[i] = '?';
+                }
+                snprintf(out, outSize, "one visible listener is PID %s (%s)", proc->d_name, comm);
+            } else {
+                snprintf(out, outSize, "one visible listener is PID %s", proc->d_name);
+            }
+            if (fp != NULL) fclose(fp);
+            closedir(fds);
+            closedir(procs);
+            return 1;
+        }
+        closedir(fds);
+    }
+    closedir(procs);
+    return 0;
+}
+
+static void logBindFailure(const int bindErrno, const unsigned port) {
+    unsigned long inode = 0;
+    char owner[160];
+    if (bindErrno == EADDRINUSE) {
+        inode = listenerInodeForPort("/proc/net/tcp", port);
+        if (inode == 0) inode = listenerInodeForPort("/proc/net/tcp6", port);
+    }
+    if (inode != 0 && describeListenerOwner(inode, owner, sizeof(owner))) {
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u: %s", port, owner);
+    } else if (bindErrno == EADDRINUSE) {
+        LogError(bindErrno, NO_ERRCODE,
+                 "imptcp: Error binding TCP port %u; listener owner unavailable (try ss -ltnp 'sport = :%u')", port,
+                 port);
+    } else {
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u", port);
+    }
+}
+
 /* Start up a server. That means all of its listeners are created.
  * Does NOT yet accept/process any incoming data (but binds ports). Hint: this
  * code is to be executed before dropping privileges.
@@ -537,6 +624,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
     uchar *lstnIP;
     int isIPv6 = 0;
     int port_override = 0; /* if dyn port (0): use this for actually bound port */
+    int bindFailed = 0;
     union {
         struct sockaddr *sa;
         struct sockaddr_in *ipv4;
@@ -646,7 +734,11 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
 #endif
         ) {
             /* TODO: check if *we* bound the socket - else we *have* an error! */
-            LogError(errno, NO_ERRCODE, "imptcp: Error while binding tcp socket");
+            const int bindErrno = errno;
+            savecast.sa = (struct sockaddr *)r->ai_addr;
+            const unsigned port = ntohs(r->ai_family == AF_INET6 ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port);
+            logBindFailure(bindErrno, port);
+            bindFailed = 1;
             close(sock);
             sock = -1;
             continue;
@@ -701,6 +793,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
          * create our listener object. -- rgerhards, 2010-08-10
          */
         CHKiRet(addLstn(pSrv, sock, isIPv6));
+        sock = -1; /* listener owns the socket */
         ++numSocks;
     }
 
@@ -711,8 +804,9 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             numSocks, maxs);
     }
 
-    if (numSocks == 0) {
-        DBGPRINTF("No TCP listen sockets could successfully be initialized");
+    if (numSocks == 0 || (runModConf->failOnBindError && bindFailed)) {
+        DBGPRINTF("imptcp: TCP listener activation failed (%d sockets opened, bind failed: %d)\n", numSocks,
+                  bindFailed);
         ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
     }
 
@@ -2083,6 +2177,7 @@ static void stopWorkerPool(void) {
 static rsRetVal startupServers(void) {
     DEFiRet;
     rsRetVal localRet, lastErr;
+    int bindFailed = 0;
     int iOK;
     int iAll;
     ptcpsrv_t *pSrv;
@@ -2095,15 +2190,19 @@ static rsRetVal startupServers(void) {
         localRet = startupSrv(pSrv);
         if (localRet == RS_RET_OK)
             iOK++;
-        else
+        else {
             lastErr = localRet;
+            if (localRet == RS_RET_COULD_NOT_BIND) bindFailed = 1;
+        }
         ++iAll;
         pSrv = pSrv->pNext;
     }
 
     DBGPRINTF("imptcp: %d out of %d servers started successfully\n", iOK, iAll);
-    if (iOK == 0) /* iff all fails, we report an error */
+    if (iOK == 0)
         iRet = lastErr;
+    else if (runModConf->failOnBindError && bindFailed)
+        iRet = RS_RET_COULD_NOT_BIND;
 
     RETiRet;
 }
@@ -2616,6 +2715,8 @@ BEGINsetModCnf
             loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "processOnPoller")) {
             loadModConf->bProcessOnPoller = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "failonbinderror")) {
+            loadModConf->failOnBindError = (sbool)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "imptcp: program error, non-handled "

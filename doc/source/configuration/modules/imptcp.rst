@@ -60,6 +60,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imptcp-processonpoller.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imptcp-failonbinderror`
+     - .. include:: ../../reference/parameters/imptcp-failonbinderror.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Input Parameters

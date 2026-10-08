@@ -1593,6 +1593,7 @@ TESTS_IMPSTATS_VALGRIND = \
 	dynstats-persist-vg.sh
 
 TESTS_IMPTCP = \
+	imptcp-bind-failure.sh \
 	manyptcp.sh \
 	imptcp-debug-recv-length.sh \
 	imptcp-epoll-add-failure.sh \
