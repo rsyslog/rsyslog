@@ -49,7 +49,13 @@ static inline rsRetVal std_checkRuleset(modConfData_t *modConf, instanceConf_t *
 
     localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
     if (localRet == RS_RET_NOT_FOUND) {
-        std_checkRuleset_genErrMsg(modConf, inst);
+        if (modConf->pConf->globals.bRequireAllInputs) {
+            LogError(0, RS_RET_NOT_FOUND, "input-bound ruleset '%s' not found; strict input startup will stop",
+                     inst->pszBindRuleset);
+            modConf->pConf->globals.bInputRulesetMissing = 1;
+        } else {
+            std_checkRuleset_genErrMsg(modConf, inst);
+        }
     }
     CHKiRet(localRet);
     inst->pBindRuleset = pRuleset;

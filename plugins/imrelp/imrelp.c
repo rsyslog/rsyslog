@@ -387,6 +387,7 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
             if (relpEngineSetTLSLibByName(pRelpEngine, modConf->tlslib) != RELP_RET_OK) {
                 LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
                        "imrelp: tlslib '%s' not accepted as valid by librelp - using default", modConf->tlslib);
+                if (runConf->globals.bRequireAllInputs) ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
             }
         }
 #endif
@@ -843,7 +844,8 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(pModConf, inst);
+        const rsRetVal localRet = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
     if (pRelpEngine == NULL) {
         LogError(0, RS_RET_NO_LSTN_DEFINED, "imrelp: no RELP listener defined, module can not run.");

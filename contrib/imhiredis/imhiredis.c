@@ -143,6 +143,7 @@ struct modConfData_s {
  */
 static struct imhiredisWrkrInfo_s {
     pthread_t tid; /* the worker's thread ID */
+    int started;
     instanceConf_t *inst; /* Pointer to imhiredis instance */
     rsRetVal (*fnConnectMaster)(instanceConf_t *inst);
     sbool (*fnIsConnected)(instanceConf_t *inst);
@@ -354,6 +355,7 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
         LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,
                "imhiredis: both 'server' and 'socketPath' are given, "
                "ignoring 'socketPath'.");
+        if (runConf->globals.bRequireAllInputs) ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         free(inst->redisNodesList->socketPath);
         inst->redisNodesList->socketPath = NULL;
     }
@@ -692,6 +694,7 @@ BEGINactivateCnf
     CODESTARTactivateCnf;
     for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
         iRet = checkInstance(inst);
+        if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) break;
         if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE) {
             if ((inst->evtBase = event_base_new()) == NULL) {
                 LogError(0, RS_RET_OUT_OF_MEMORY, "imhiredis: could not create libevent base");
@@ -773,7 +776,7 @@ static void shutdownImhiredisWorkers(void) {
 
     DBGPRINTF("imhiredis: waiting on imhiredis workerthread termination\n");
     for (i = 0; i < activeHiredisworkers; ++i) {
-        pthread_join(imhiredisWrkrInfo[i].tid, NULL);
+        if (imhiredisWrkrInfo[i].started) pthread_join(imhiredisWrkrInfo[i].tid, NULL);
         DBGPRINTF("imhiredis: Stopped worker %d\n", i);
     }
     free(imhiredisWrkrInfo);
@@ -816,7 +819,14 @@ BEGINrunInput
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         /* init worker info structure! */
         imhiredisWrkrInfo[i].inst = inst; /* Set reference pointer */
-        pthread_create(&imhiredisWrkrInfo[i].tid, &wrkrThrdAttr, imhirediswrkr, &(imhiredisWrkrInfo[i]));
+        const int err =
+            pthread_create(&imhiredisWrkrInfo[i].tid, &wrkrThrdAttr, imhirediswrkr, &(imhiredisWrkrInfo[i]));
+        if (err == 0) {
+            imhiredisWrkrInfo[i].started = 1;
+        } else {
+            LogError(err, RS_RET_SYS_ERR, "imhiredis: failed to start worker thread %d", i);
+            thrdReportFatalInputFailure();
+        }
         i++;
     }
 

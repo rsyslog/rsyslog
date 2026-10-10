@@ -713,7 +713,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
         pEntry = pEntry->pNext;
     }
 
-    if (pThis->failOnBindError && firstFailure != RS_RET_OK) ABORT_FINALIZE(firstFailure);
+    if (runConf->globals.bRequireAllInputs && firstFailure != RS_RET_OK) ABORT_FINALIZE(firstFailure);
 
     /* OK, we had success. Now it is also time to
      * initialize our connections
@@ -1827,7 +1827,6 @@ finalize_it:
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
     INIT_ATOMIC_HELPER_MUT(pThis->mut_sessions);
-    pThis->failOnBindError = 0;
     pThis->iSessMax = TCPSESS_MAX_DEFAULT;
     pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
     pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;

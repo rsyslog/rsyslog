@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <assert.h>
+#include <unistd.h>
 #ifdef HAVE_SYS_PRCTL_H
     #include <sys/prctl.h>
 #endif
@@ -47,6 +48,18 @@
 
 /* linked list of currently-known threads */
 static linkedList_t llThrds;
+static int bFatalInputFailure = 0;
+
+int thrdHadFatalInputFailure(void) {
+    return PREFER_LOAD_INT(&bFatalInputFailure);
+}
+
+void thrdReportFatalInputFailure(void) {
+    if (runConf != NULL && runConf->globals.bRequireAllInputs && !bTerminateInputsSigSafe) {
+        PREFER_STORE_1_TO_INT(&bFatalInputFailure);
+        kill(getpid(), SIGTERM);
+    }
+}
 
 /* methods */
 
@@ -247,6 +260,7 @@ static ATTR_NORETURN void *thrdStarter(void *const arg) {
                   (unsigned long)pThis->thrdID, iRet);
     } else {
         LogError(0, iRet, "main thread of %s terminated abnormally", pThis->name);
+        if (!thrdGetShallStop(pThis)) thrdReportFatalInputFailure();
     }
 
     /* signal master control that we exit (we do the mutex lock mostly to

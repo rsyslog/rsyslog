@@ -51,6 +51,8 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
+int thrdHadFatalInputFailure(void);
+void thrdReportFatalInputFailure(void);
 rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *), rsRetVal (*afterRun)(thrdInfo_t *), sbool, uchar *);
 
 /* macros (replace inline functions) */

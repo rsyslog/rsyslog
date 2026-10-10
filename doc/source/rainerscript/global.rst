@@ -614,6 +614,21 @@ The following parameters can be set:
   prevented if warnings are present. I consider this a good thing in being
   "strict", but I admit there also currently is no other way of doing it.
 
+- **inputStartupPolicy** [``best-effort`` or ``require-all``]
+
+  The default, ``best-effort``, keeps healthy inputs running if another
+  configured input cannot start. ``require-all`` makes rsyslog exit with an
+  error when an input cannot activate, a configured listener cannot open, or
+  an input-bound ruleset is missing. Invalid ``module()`` or ``input()``
+  declarations also stop startup, as does an imtcp port-0 request without a
+  port file (which would otherwise fall back to port 514). This setting acts
+  independently of ``abortOnUncleanConfig``. It does not make transient
+  runtime disconnections fatal, or require monitored files to exist before
+  startup.
+
+  Example: ``global(inputStartupPolicy="require-all")``. YAML uses
+  ``global: {inputStartupPolicy: require-all}``.
+
 - **abortOnFailedQueueStartup** [boolean (on/off)] available 8.2210.0+
 
   This parameter is similar to *abortOnUncleanConfig* but makes rsyslog
