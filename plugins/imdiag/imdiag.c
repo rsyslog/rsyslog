@@ -520,9 +520,9 @@ static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const i
     while (stats_reporting_blocked) {
         stats_reporting_waiting = 1;
         pthread_cond_broadcast(&stats_reporting_blocker_cond);
-        const int waitResult = pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut);
+        const int wait_result = pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut);
         stats_reporting_waiting = 0;
-        if (waitResult != 0) {
+        if (wait_result != 0) {
             pthread_mutex_unlock(&stats_reporting_blocker_mut);
             return;
         }
@@ -572,21 +572,27 @@ finalize_it:
 /* A block request alone does not prove that an in-flight collection has
  * finished. Tests can await the next callback parked before dynstats reads.
  * The ordinary imdiag timeout guard bounds a missing reporting cycle. */
-static rsRetVal awaitStatsReportingBlocked(tcps_sess_t *pSess) {
-    int lockHeld = 0;
+static rsRetVal await_stats_reporting_blocked(tcps_sess_t *pSess) {
+    int lock_held = 0;
     DEFiRet;
 
     CHKiConcCtrl(pthread_mutex_lock(&stats_reporting_blocker_mut));
-    lockHeld = 1;
+    lock_held = 1;
+    if (!stats_reporting_blocked) {
+        CHKiConcCtrl(pthread_mutex_unlock(&stats_reporting_blocker_mut));
+        lock_held = 0;
+        CHKiRet(sendResponse(pSess, "imdiag::error : stats reporting was not blocked\n"));
+        FINALIZE;
+    }
     while (!stats_reporting_waiting) {
         CHKiConcCtrl(pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut));
     }
     CHKiConcCtrl(pthread_mutex_unlock(&stats_reporting_blocker_mut));
-    lockHeld = 0;
+    lock_held = 0;
     CHKiRet(sendResponse(pSess, "stats reporting is blocked\n"));
 
 finalize_it:
-    if (lockHeld) pthread_mutex_unlock(&stats_reporting_blocker_mut);
+    if (lock_held) pthread_mutex_unlock(&stats_reporting_blocker_mut);
     RETiRet;
 }
 
@@ -1365,7 +1371,7 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("blockstatsreporting"))) {
         CHKiRet(blockStatsReporting(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreportingblocked"))) {
-        CHKiRet(awaitStatsReportingBlocked(pSess));
+        CHKiRet(await_stats_reporting_blocked(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
