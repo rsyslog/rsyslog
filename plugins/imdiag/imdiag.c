@@ -96,6 +96,9 @@ STATSCOUNTER_DEF(delayInvocationCount, mutDelayInvocationCount)
 static pthread_mutex_t stats_reporting_blocker_mut;
 static pthread_cond_t stats_reporting_blocker_cond;
 static int stats_reporting_blocked = 0;
+/* Protected by stats_reporting_blocker_mut; true only while the read callback
+ * is parked at the reporting gate, before subsequent objects are collected. */
+static int stats_reporting_waiting = 0;
 static long long statsReportingBlockStartTimeMs = 0;
 static int allowOnlyOnce = 0;
 DEF_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
@@ -505,7 +508,11 @@ static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const i
         return;
     }
     while (stats_reporting_blocked) {
-        if (pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut) != 0) {
+        stats_reporting_waiting = 1;
+        pthread_cond_broadcast(&stats_reporting_blocker_cond);
+        const int waitResult = pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut);
+        stats_reporting_waiting = 0;
+        if (waitResult != 0) {
             pthread_mutex_unlock(&stats_reporting_blocker_mut);
             return;
         }
@@ -549,6 +556,27 @@ finalize_it:
         LogError(0, iRet, "imdiag: block-stats-reporting wasn't successful");
         CHKiRet(sendResponse(pSess, "imdiag::error something went wrong\n"));
     }
+    RETiRet;
+}
+
+/* A block request alone does not prove that an in-flight collection has
+ * finished. Tests can await the next callback parked before dynstats reads.
+ * The ordinary imdiag timeout guard bounds a missing reporting cycle. */
+static rsRetVal awaitStatsReportingBlocked(tcps_sess_t *pSess) {
+    int lockHeld = 0;
+    DEFiRet;
+
+    CHKiConcCtrl(pthread_mutex_lock(&stats_reporting_blocker_mut));
+    lockHeld = 1;
+    while (!stats_reporting_waiting) {
+        CHKiConcCtrl(pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut));
+    }
+    CHKiConcCtrl(pthread_mutex_unlock(&stats_reporting_blocker_mut));
+    lockHeld = 0;
+    CHKiRet(sendResponse(pSess, "stats reporting is blocked\n"));
+
+finalize_it:
+    if (lockHeld) pthread_mutex_unlock(&stats_reporting_blocker_mut);
     RETiRet;
 }
 
@@ -703,6 +731,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(injectMsg(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("blockstatsreporting"))) {
         CHKiRet(blockStatsReporting(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreportingblocked"))) {
+        CHKiRet(awaitStatsReportingBlocked(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
@@ -1342,6 +1372,7 @@ BEGINmodInit()
     CHKiConcCtrl(pthread_mutex_init(&stats_reporting_blocker_mut, NULL));
     CHKiConcCtrl(pthread_cond_init(&stats_reporting_blocker_cond, NULL));
     stats_reporting_blocked = 0;
+    stats_reporting_waiting = 0;
     INIT_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
     CHKiConcCtrl(pthread_mutex_init(&mutStatsReporterWatch, NULL));
     CHKiConcCtrl(pthread_cond_init(&statsReporterWatch, NULL));
