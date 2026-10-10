@@ -157,7 +157,7 @@ EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
 	testsuites/pure-disk-queue-scope-driver.sh
 
-TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
+TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh imfifo-startup-failure.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
 TESTS_GSSAPI = \
@@ -446,6 +446,7 @@ TESTS_DEFAULT = \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
 	imudp-listenportfilename-secure.sh \
+	imudp-bind-failure.sh \
 	imudp-ratelimit-programname.sh \
 	imudp_ratelimit_name.sh \
 	omfwd_ratelimit_name.sh \
@@ -1400,6 +1401,7 @@ TESTS_IMDOCKER_VALGRIND = \
 	imdocker-multi-line-vg.sh
 
 TESTS_IMCZMQ = \
+	imczmq-startup-failure.sh \
 	imczmq-topic-too-long.sh
 
 TESTS_IMHTTP = \
@@ -1436,6 +1438,7 @@ TESTS_IMHTTP_VALGRIND = \
 	imhttp-getrequest-file-vg.sh
 
 TESTS_IMBEATS = \
+	imbeats-bind-failure.sh \
 	imbeats-basic.sh \
 	imbeats-compressed.sh \
 	imbeats-seq-cumulative-two-windows.sh \
@@ -1593,6 +1596,7 @@ TESTS_IMPSTATS_VALGRIND = \
 	dynstats-persist-vg.sh
 
 TESTS_IMPTCP = \
+	imptcp-bind-failure.sh \
 	manyptcp.sh \
 	imptcp-debug-recv-length.sh \
 	imptcp-epoll-add-failure.sh \
@@ -3125,6 +3129,7 @@ endif
 
 if ENABLE_IMFIFO
 TESTS += imfifo.sh
+TESTS += imfifo-startup-failure.sh
 if HAVE_VALGRIND
 TESTS += imfifo-vg.sh
 endif

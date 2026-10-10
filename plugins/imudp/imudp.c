@@ -499,8 +499,9 @@ static rsRetVal addListner(instanceConf_t *inst) {
     } else {
         LogError(0, NO_ERRCODE,
                  "imudp: Could not create udp listener,"
-                 " ignoring port %s bind-address %s.",
-                 port, bindAddr);
+                 " %s port %s bind-address %s.",
+                 runConf->globals.bRequireAllInputs ? "failing startup for" : "ignoring", port, bindAddr);
+        if (runConf->globals.bRequireAllInputs) iRet = RS_RET_COULD_NOT_BIND;
     }
 
 finalize_it:
@@ -1341,7 +1342,8 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(inst);
+        const rsRetVal localRet = addListner(inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
     /* if we could not set up any listeners, there is no point in running... */
     if (lcnfRoot == NULL) {
@@ -1467,6 +1469,7 @@ BEGINrunInput
             wrkrInfo[i].started = 1;
         } else {
             LogError(err, RS_RET_SYS_ERR, "imudp: failed to create worker thread %d", i);
+            thrdReportFatalInputFailure();
         }
     }
     pthread_attr_destroy(&wrkrThrdAttr);

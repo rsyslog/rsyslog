@@ -297,6 +297,7 @@ BEGINrunInput
     rsRetVal readRet;
     struct pollfd *pollfds = NULL;
     int iNumPipes = 0;
+    int startupFailed = 0;
     CODESTARTrunInput;
 
     iMaxLine = (size_t)glbl.GetMaxLine(runConf);
@@ -312,6 +313,7 @@ BEGINrunInput
         pInst->fd = open((char *)pInst->pszFileName, O_RDWR);
         if (pInst->fd == -1) {
             LogError(errno, RS_RET_FILE_NOT_FOUND, "imfifo: named pipe '%s' could not be opened", pInst->pszFileName);
+            startupFailed = 1;
             continue;
         }
 
@@ -321,12 +323,14 @@ BEGINrunInput
                 LogError(0, RS_RET_INVALID_VAR, "imfifo: '%s' is not a named pipe (FIFO)", pInst->pszFileName);
                 close(pInst->fd);
                 pInst->fd = -1;
+                startupFailed = 1;
                 continue;
             }
         } else {
             LogError(errno, RS_RET_SYS_ERR, "imfifo: fstat failed on '%s'", pInst->pszFileName);
             close(pInst->fd);
             pInst->fd = -1;
+            startupFailed = 1;
             continue;
         }
 
@@ -334,6 +338,7 @@ BEGINrunInput
         iNumPipes++;
     }
 
+    if (runConf->globals.bRequireAllInputs && startupFailed) ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
     if (iNumPipes == 0) {
         DBGPRINTF("imfifo: no active named pipes to monitor\n");
         FINALIZE;
@@ -442,6 +447,7 @@ BEGINcheckCnf
     for (pInst = pModConf->root; pInst != NULL; pInst = pInst->next) {
         std_checkRuleset(pModConf, pInst);
     }
+finalize_it:
 ENDcheckCnf
 
 BEGINactivateCnf
@@ -474,6 +480,7 @@ BEGINfreeCnf
     if (runModConf == pModConf) {
         runModConf = NULL;
     }
+finalize_it:
 ENDfreeCnf
 
 BEGINmodExit

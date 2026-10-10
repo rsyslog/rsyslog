@@ -1274,6 +1274,7 @@ finalize_it:
 /* activate current listeners */
 static rsRetVal activateListeners(void) {
     int actSocks;
+    int failedSocks;
     int i;
     DEFiRet;
 
@@ -1347,12 +1348,17 @@ static rsRetVal activateListeners(void) {
 
     /* initialize and return if will run or not */
     actSocks = 0;
+    failedSocks = 0;
     for (i = startIndexUxLocalSockets; i < nfd; i++) {
         if (openLogSocket(&(listeners[i])) == RS_RET_OK) {
             ++actSocks;
             DBGPRINTF("imuxsock: Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
+        } else {
+            ++failedSocks;
         }
     }
+
+    if (failedSocks != 0 && runConf->globals.bRequireAllInputs) ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 
     if (actSocks == 0) {
         LogError(0, RS_RET_ERR,
@@ -1658,7 +1664,8 @@ BEGINactivateCnfPrePrivDrop
             listeners[i].fd = -1;
         }
         for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-            addListner(inst);
+            const rsRetVal localRet = addListner(inst);
+            if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
         }
         CHKiRet(activateListeners());
     }

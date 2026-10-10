@@ -131,6 +131,11 @@ typedef struct instanceConf_s {
     imbeats_io_t *listener_descs;
     pthread_t listener_tid;
     int listener_running;
+    pthread_mutex_t mutStartup;
+    pthread_cond_t condStartup;
+    int startupReported;
+    int startupProceed;
+    rsRetVal startupResult;
     int shuttingDown;
     pthread_mutex_t mutSessions;
     pthread_mutex_t mutWork;
@@ -1540,12 +1545,23 @@ finalize_it:
 }
 #endif
 
+static void reportListenerStartup(instanceConf_t *const inst, const rsRetVal result) {
+    if (!runConf->globals.bRequireAllInputs) return;
+    pthread_mutex_lock(&inst->mutStartup);
+    inst->startupResult = result;
+    inst->startupReported = 1;
+    pthread_cond_broadcast(&inst->condStartup);
+    while (result == RS_RET_OK && !inst->startupProceed) pthread_cond_wait(&inst->condStartup, &inst->mutStartup);
+    pthread_mutex_unlock(&inst->mutStartup);
+}
+
 static void *listenerThread(void *arg) {
     instanceConf_t *const inst = (instanceConf_t *)arg;
     size_t i;
 
     assert(inst != NULL);
     if (startWorkerPool(inst) != RS_RET_OK) {
+        reportListenerStartup(inst, RS_RET_IO_ERROR);
         setInstanceShuttingDown(inst);
         stopWorkerPool(inst);
         return NULL;
@@ -1555,6 +1571,7 @@ static void *listenerThread(void *arg) {
     inst->epoll_fd = epoll_create(100);
     if (inst->epoll_fd < 0) {
         LogError(errno, RS_RET_EPOLL_CR_FAILED, "imbeats: epoll_create failed");
+        reportListenerStartup(inst, RS_RET_EPOLL_CR_FAILED);
         setInstanceShuttingDown(inst);
         stopWorkerPool(inst);
         return NULL;
@@ -1565,6 +1582,7 @@ static void *listenerThread(void *arg) {
             break;
         }
     }
+    reportListenerStartup(inst, instanceIsShuttingDown(inst) ? RS_RET_ERR_EPOLL_CTL : RS_RET_OK);
 
     while (glbl.GetGlobalInputTermState() == 0 && !instanceIsShuttingDown(inst)) {
         struct epoll_event events[64];
@@ -1613,6 +1631,7 @@ static void *listenerThread(void *arg) {
     close(inst->epoll_fd);
     inst->epoll_fd = -1;
 #else
+    reportListenerStartup(inst, RS_RET_OK);
     while (glbl.GetGlobalInputTermState() == 0 && !instanceIsShuttingDown(inst)) {
         struct pollfd *pfds = calloc(inst->listener_count, sizeof(struct pollfd));
         if (pfds == NULL) {
@@ -1643,6 +1662,10 @@ static rsRetVal destroyInstanceRuntime(instanceConf_t *inst) {
     size_t i;
 
     setInstanceShuttingDown(inst);
+    pthread_mutex_lock(&inst->mutStartup);
+    inst->startupProceed = 1;
+    pthread_cond_broadcast(&inst->condStartup);
+    pthread_mutex_unlock(&inst->mutStartup);
     shutdownAllSessionSockets(inst);
     if (inst->listener_running) {
         pthread_join(inst->listener_tid, NULL);
@@ -1677,6 +1700,8 @@ static rsRetVal createInstance(instanceConf_t **const pinst) {
     pthread_mutex_init(&inst->mutSessions, NULL);
     pthread_mutex_init(&inst->mutWork, NULL);
     pthread_cond_init(&inst->condWork, NULL);
+    pthread_mutex_init(&inst->mutStartup, NULL);
+    pthread_cond_init(&inst->condStartup, NULL);
     inst->iStrmDrvrMode = 0;
     inst->maxWindowSize = IMBEATS_DEFAULT_MAX_WINDOW_SIZE;
     inst->maxFrameSize = IMBEATS_DEFAULT_MAX_FRAME_SIZE;
@@ -1895,6 +1920,8 @@ BEGINfreeCnf
         pthread_mutex_destroy(&del->mutSessions);
         pthread_mutex_destroy(&del->mutWork);
         pthread_cond_destroy(&del->condWork);
+        pthread_mutex_destroy(&del->mutStartup);
+        pthread_cond_destroy(&del->condStartup);
         free(del);
     }
 ENDfreeCnf
@@ -1907,11 +1934,18 @@ BEGINrunInput
         pthread_mutex_lock(&inst->mutWork);
         inst->workShutdown = 0;
         pthread_mutex_unlock(&inst->mutWork);
-        CHKiRet(buildListeners(inst));
-        if (pthread_create(&inst->listener_tid, NULL, listenerThread, inst) != 0) {
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        if (!runConf->globals.bRequireAllInputs) CHKiRet(buildListeners(inst));
+        if (!runConf->globals.bRequireAllInputs) {
+            if (pthread_create(&inst->listener_tid, NULL, listenerThread, inst) != 0) {
+                ABORT_FINALIZE(RS_RET_IO_ERROR);
+            }
+            inst->listener_running = 1;
+        } else {
+            pthread_mutex_lock(&inst->mutStartup);
+            inst->startupProceed = 1;
+            pthread_cond_broadcast(&inst->condStartup);
+            pthread_mutex_unlock(&inst->mutStartup);
         }
-        inst->listener_running = 1;
     }
     while (glbl.GetGlobalInputTermState() == 0) {
         srSleep(0, 250000);
@@ -1923,7 +1957,24 @@ finalize_it:
 ENDrunInput
 
 BEGINwillRun
+    instanceConf_t *inst;
     CODESTARTwillRun;
+    if (runConf->globals.bRequireAllInputs) {
+        for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+            CHKiRet(buildListeners(inst));
+            if (inst->listener_count == 0) ABORT_FINALIZE(RS_RET_NO_LISTNERS);
+            if (pthread_create(&inst->listener_tid, NULL, listenerThread, inst) != 0) {
+                ABORT_FINALIZE(RS_RET_IO_ERROR);
+            }
+            inst->listener_running = 1;
+            pthread_mutex_lock(&inst->mutStartup);
+            while (!inst->startupReported) pthread_cond_wait(&inst->condStartup, &inst->mutStartup);
+            iRet = inst->startupResult;
+            pthread_mutex_unlock(&inst->mutStartup);
+            if (iRet != RS_RET_OK) FINALIZE;
+        }
+    }
+finalize_it:
 ENDwillRun
 
 BEGINafterRun

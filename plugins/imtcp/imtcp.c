@@ -205,7 +205,6 @@ struct modConfData_s {
     sbool bDisableLFDelim; /* disable standard LF delimiter */
     sbool discardTruncatedMsg;
     sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
-    sbool bFailOnBindError;
     sbool bKeepAlive;
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
@@ -241,7 +240,6 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current l
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
-                                           {"failonbinderror", eCmdHdlrBinary, 0},
                                            {"disablelfdelimiter", eCmdHdlrBinary, 0},
                                            {"discardtruncatedmsg", eCmdHdlrBinary, 0},
                                            {"octetcountedframing", eCmdHdlrBinary, 0},
@@ -558,7 +556,6 @@ static int isPermittedHost(struct sockaddr *addr,
 static rsRetVal doOpenLstnSocks(tcpsrv_t *pSrv) {
     ISOBJ_TYPE_assert(pSrv, tcpsrv);
     dbgprintf("in imtcp doOpenLstnSocks\n");
-    pSrv->failOnBindError = runModConf->bFailOnBindError;
     return tcpsrv.create_tcp_socket(pSrv);
 }
 
@@ -851,6 +848,10 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
          inst->cnf_params->pszLstnPortFileName == NULL) ||
         ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
         uchar *newPort = NULL;
+        if (runConf->globals.bRequireAllInputs) {
+            LogError(0, RS_RET_INVALID_PORT, "imtcp: port 0 needs listenPortFileName in require-all mode");
+            ABORT_FINALIZE(RS_RET_INVALID_PORT);
+        }
         LogMsg(0, RS_RET_OK, LOG_WARNING, "imtcp: port 0 and no port file set -> using port 514 instead");
         CHKmalloc(newPort = (uchar *)strdup("514"));
         free((void *)inst->cnf_params->pszPort);
@@ -1146,8 +1147,6 @@ BEGINsetModCnf
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
             loadModConf->bUseFlowControl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "failonbinderror")) {
-            loadModConf->bFailOnBindError = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
             loadModConf->bDisableLFDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
@@ -1357,7 +1356,8 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(runModConf, inst);
+        const rsRetVal localRet = addListner(runModConf, inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
     if (tcpsrv_root == NULL) ABORT_FINALIZE(RS_RET_NO_RUN);
     tcpsrv_etry_t *etry = tcpsrv_root;

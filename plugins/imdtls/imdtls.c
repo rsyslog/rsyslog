@@ -136,6 +136,7 @@ struct instanceConf_s {
     int id; /* Thread ID */
     thrdInfo_t *pThrd; /* Thread Instance Info */
     pthread_t tid; /* the instances thread ID */
+    int workerStarted;
 
     struct instanceConf_s *next;
     struct instanceConf_s *prev;
@@ -196,6 +197,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pInputName = NULL;
     inst->pBindRuleset = NULL;
     inst->bEnableLstn = 0;
+    inst->workerStarted = 0;
 
     inst->tlscfgcmd = NULL;
     inst->pPermPeersRoot = NULL;
@@ -355,9 +357,9 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
     if (bind(inst->sockfd, (struct sockaddr *)&inst->server_addr, sizeof(struct sockaddr_in)) < 0) {
         LogError(0, NO_ERRCODE,
                  "imdtls: Unable to create DTLS listener,"
-                 " unable to bind, "
-                 " ignoring port %d bind-address %s.",
-                 inst->port, inst->pszBindAddr);
+                 " unable to bind, %s port %d bind-address %s.",
+                 runConf->globals.bRequireAllInputs ? "failing startup for" : "ignoring", inst->port,
+                 inst->pszBindAddr);
         ABORT_FINALIZE(RS_RET_ERR);
     }
     CHKiRet(writeListenPortFile(inst));
@@ -1099,8 +1101,10 @@ BEGINactivateCnfPrePrivDrop
     runModConf = pModConf;
     DBGPRINTF("imdtls: activate addListners for dtls\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(pModConf, inst);
+        const rsRetVal localRet = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
+finalize_it:
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
@@ -1167,7 +1171,13 @@ BEGINrunInput
     DBGPRINTF("imdtls: create dtls handling threads\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->bEnableLstn) {
-            pthread_create(&inst->tid, &wrkrThrdAttr, startDtlsHandler, inst);
+            const int err = pthread_create(&inst->tid, &wrkrThrdAttr, startDtlsHandler, inst);
+            if (err == 0) {
+                inst->workerStarted = 1;
+            } else {
+                LogError(err, RS_RET_SYS_ERR, "imdtls: failed to start listener thread on port %d", inst->port);
+                thrdReportFatalInputFailure();
+            }
         }
     }
     pthread_attr_destroy(&wrkrThrdAttr);
@@ -1179,7 +1189,7 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: received close signal, signaling instance threads...\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bEnableLstn) {
+        if (inst->workerStarted) {
             pthread_kill(inst->tid, SIGTTIN);
             if (inst->sockfd >= 0) {
                 shutdown(inst->sockfd, SHUT_RDWR);
@@ -1189,10 +1199,11 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: threads signaled, waiting for join...");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bEnableLstn) {
+        if (inst->workerStarted) {
             pthread_join(inst->tid, NULL);
-            DTLSCloseSocket(inst);
+            inst->workerStarted = 0;
         }
+        DTLSCloseSocket(inst);
     }
 
     DBGPRINTF("imdtls: finished threads, stopping\n");
