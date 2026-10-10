@@ -446,6 +446,7 @@ finalize_it:
 
 /** Warn in secure warn mode when imtcp listener transport/auth settings reduce security. */
 static void warnIfInsecureListenerConfigured(const int streamDriverMode,
+                                             const sbool streamDriverModeSet,
                                              const uchar *const effectiveStreamDriverName,
                                              const uchar *const authMode) {
     if (streamDriverMode == 0) {
@@ -455,7 +456,11 @@ static void warnIfInsecureListenerConfigured(const int streamDriverMode,
                                       "imtcp has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
                                       "TCP so TLS is not active "
                                       "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
-        } else {
+        } else if (!streamDriverModeSet) {
+            /* explicit streamdriver.mode="0" is a deliberate admin choice, not an
+             * insecure default - strict mode treats it the same way (see
+             * applySecureDefaultsToStreamDriver()).
+             */
             glblWarnIfInsecureDefault(loadConf,
                                       "imtcp input uses streamdriver.mode=\"0\" (plain TCP without TLS); "
                                       "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
@@ -747,7 +752,8 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->compressionMaxTotalZstdWindowBytesSet = cs.compressionMaxTotalZstdWindowBytesSet;
     CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
     CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
-    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, inst->bStrmDrvrModeSet,
+                                     getEffectiveInstanceStreamDriver(inst, loadModConf),
                                      getEffectiveInstanceAuthMode(inst, loadModConf));
 
 finalize_it:
@@ -1063,7 +1069,8 @@ BEGINnewInpInst
     }
     CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
     CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
-    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, inst->bStrmDrvrModeSet,
+                                     getEffectiveInstanceStreamDriver(inst, loadModConf),
                                      getEffectiveInstanceAuthMode(inst, loadModConf));
 
 finalize_it:
@@ -1261,8 +1268,10 @@ BEGINsetModCnf
     bLegacyCnfModGlobalsPermitted = 0;
     loadModConf->configSetViaV2Method = 1;
     CHKiRet(applySecureDefaultsToModuleConfig(loadModConf));
-    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, getEffectiveModuleStreamDriver(loadModConf),
-                                     loadModConf->pszStrmDrvrAuthMode);
+    /* no module-level insecure-listener warning here: module parameters alone
+     * open no port, and every actual listener is checked with its effective
+     * (possibly inherited) values in addInstance()/newInpInst().
+     */
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
@@ -1317,8 +1326,9 @@ BEGINendCnfLoad
             loadModConf = NULL;
             return iRet;
         }
-        warnIfInsecureListenerConfigured(pModConf->iStrmDrvrMode, getEffectiveModuleStreamDriver(pModConf),
-                                         pModConf->pszStrmDrvrAuthMode);
+        /* no module-level insecure-listener warning here either: legacy
+         * listeners are checked individually in addInstance().
+         */
     }
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;
