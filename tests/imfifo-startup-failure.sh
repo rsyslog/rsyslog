@@ -21,15 +21,19 @@ EOF
 	"$root/tools/rsyslogd" -n -iNONE -f "$conf" -M "$modules" > "$log" 2>&1 &
 	pid=$!
 	status=0
+	reaped=0
 	for ((seconds = 0; seconds < 3; seconds++)); do
 		if ! kill -0 "$pid" 2>/dev/null; then
 			wait "$pid"
 			status=$?
+			reaped=1
 			break
 		fi
 		sleep 1
 	done
-	if ! kill -0 "$pid" 2>/dev/null; then
+	if [ "$reaped" -eq 1 ]; then
+		:
+	elif ! kill -0 "$pid" 2>/dev/null; then
 		wait "$pid"
 		status=$?
 	else

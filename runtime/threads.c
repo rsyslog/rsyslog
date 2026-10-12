@@ -55,7 +55,7 @@ int thrd_had_fatal_input_failure(void) {
 }
 
 void thrd_report_fatal_input_failure(void) {
-    if (runConf != NULL && runConf->globals.bRequireAllInputs && !bTerminateInputsSigSafe) {
+    if (runConf != NULL && runConf->globals.bRequireAllInputs && !PREFER_LOAD_INT(&bTerminateInputsSigSafe)) {
         PREFER_STORE_1_TO_INT(&bFatalInputFailure);
         kill(getpid(), SIGTERM);
     }
