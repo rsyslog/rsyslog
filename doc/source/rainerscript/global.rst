@@ -622,9 +622,10 @@ The following parameters can be set:
   an input-bound ruleset is missing. Invalid ``module()`` or ``input()``
   declarations also stop startup, as does an imtcp port-0 request without a
   port file (which would otherwise fall back to port 514). This setting acts
-  independently of ``abortOnUncleanConfig``. It does not make transient
-  runtime disconnections fatal, or require monitored files to exist before
-  startup.
+  independently of ``abortOnUncleanConfig``. A required input worker that
+  terminates abnormally after startup also stops rsyslog, since it can no
+  longer collect messages. Ordinary connection retries remain recoverable,
+  and monitored files need not exist before startup.
 
   Example: ``global(inputStartupPolicy="require-all")``. YAML uses
   ``global: {inputStartupPolicy: require-all}``.

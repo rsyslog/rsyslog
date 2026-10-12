@@ -118,6 +118,7 @@ struct instanceConf_s {
     /* OpenSSL properties */
     uchar *tlscfgcmd; /* OpenSSL Config Command used to override any OpenSSL Settings */
     permittedPeers_t *pPermPeersRoot; /* permitted peers */
+    rsRetVal permitted_peers_result;
     int CertVerifyDepth; /* Verify Depth for certificate chains */
     /* Instance Variables */
     char *pszRcvBuf;
@@ -201,6 +202,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
 
     inst->tlscfgcmd = NULL;
     inst->pPermPeersRoot = NULL;
+    inst->permitted_peers_result = RS_RET_OK;
     inst->CertVerifyDepth = 2;
     inst->pszRcvBuf = NULL;
     inst->lenRcvBuf = -1;
@@ -435,6 +437,12 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     if (!inst->bEnableLstn) {
         DBGPRINTF("imdtls: DTLS Listener not started because it is disabled by config error\n");
         FINALIZE;
+    }
+
+    if (runConf->globals.bRequireAllInputs && inst->permitted_peers_result != RS_RET_OK) {
+        LogError(0, inst->permitted_peers_result,
+                 "imdtls: tls.permittedpeer is not supported by the configured authentication mode; input rejected");
+        ABORT_FINALIZE(inst->permitted_peers_result);
     }
 
     inst->pszInputName = ustrdup((inst->pszInputName == NULL) ? UCHAR_CONSTANT("imdtls") : inst->pszInputName);
@@ -889,8 +897,7 @@ static rsRetVal SetPermPeers(instanceConf_t *inst, permittedPeers_t *pPermPeers)
 
     if (inst->pNetOssl->authMode != OSSL_AUTH_CERTFINGERPRINT && inst->pNetOssl->authMode != OSSL_AUTH_CERTNAME) {
         LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE,
-                 "authentication not supported by "
-                 "imdtls in the configured authentication mode - ignored");
+                 "authentication not supported by imdtls in the configured authentication mode");
         ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
     }
     inst->pNetOssl->pPermPeers = pPermPeers;
@@ -995,7 +1002,7 @@ BEGINnewInpInst
     }
 
     // Assign Loaded Peers to Netossl
-    SetPermPeers(inst, inst->pPermPeersRoot);
+    inst->permitted_peers_result = SetPermPeers(inst, inst->pPermPeersRoot);
 
     /* all ok, ready to start up */
     inst->bEnableLstn = -1;
@@ -1086,6 +1093,12 @@ BEGINcheckCnf
     instanceConf_t *inst;
     CODESTARTcheckCnf;
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
+        if (pModConf->pConf->globals.bRequireAllInputs && inst->permitted_peers_result != RS_RET_OK) {
+            LogError(
+                0, inst->permitted_peers_result,
+                "imdtls: tls.permittedpeer is not supported by the configured authentication mode; input rejected");
+            ABORT_FINALIZE(inst->permitted_peers_result);
+        }
         if (inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
             CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
         }
@@ -1101,10 +1114,13 @@ BEGINactivateCnfPrePrivDrop
     runModConf = pModConf;
     DBGPRINTF("imdtls: activate addListners for dtls\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        const rsRetVal localRet = addListner(pModConf, inst);
-        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
+        const rsRetVal local_ret = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && local_ret != RS_RET_OK) ABORT_FINALIZE(local_ret);
     }
 finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) {
+        for (inst = runModConf->root; inst != NULL; inst = inst->next) DTLSCloseSocket(inst);
+    }
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
@@ -1176,7 +1192,7 @@ BEGINrunInput
                 inst->workerStarted = 1;
             } else {
                 LogError(err, RS_RET_SYS_ERR, "imdtls: failed to start listener thread on port %d", inst->port);
-                thrdReportFatalInputFailure();
+                thrd_report_fatal_input_failure();
             }
         }
     }

@@ -31,6 +31,15 @@ EOF
 holder_pid=$!
 cleanup_holder() {
 	kill "$holder_pid" 2>/dev/null || :
+	for ((shutdown_wait = 0; shutdown_wait < 2; shutdown_wait++)); do
+		if ! kill -0 "$holder_pid" 2>/dev/null; then
+			break
+		fi
+		sleep 1
+	done
+	if kill -0 "$holder_pid" 2>/dev/null; then
+		kill -KILL "$holder_pid" 2>/dev/null || :
+	fi
 	wait "$holder_pid" 2>/dev/null || :
 }
 trap cleanup_holder EXIT
@@ -94,6 +103,7 @@ for format in $formats; do
 			strict) policy=require-all; should_exit=yes ;;
 		esac
 		log="$testdir/$RSYSLOG_DYNNAME.$format.$case_name.log"
+		ready_portfile="$testdir/$RSYSLOG_DYNNAME.$format.$case_name.ready.port"
 		if [ "$format" = yaml ]; then
 			config="$testdir/$RSYSLOG_DYNNAME.$case_name.yaml"
 			cat > "$config" <<EOF
@@ -109,6 +119,7 @@ inputs:
   - type: imptcp
     address: "127.0.0.1"
     port: "0"
+    listenPortFileName: "$ready_portfile"
 rulesets:
   - name: main
     script: |
@@ -120,7 +131,7 @@ EOF
 global(inputStartupPolicy="$policy")
 module(load="imptcp")
 input(type="imptcp" address="127.0.0.1" port="$port")
-input(type="imptcp" address="127.0.0.1" port="0")
+input(type="imptcp" address="127.0.0.1" port="0" listenPortFileName="$ready_portfile")
 action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
 EOF
 		fi
@@ -139,6 +150,7 @@ EOF
 				cat "$log"
 				error_exit 1 "$format $case_name exited unexpectedly (status $status)"
 			fi
+			[ -s "$ready_portfile" ] || error_exit 1 "$format $case_name did not activate the healthy listener"
 		fi
 		grep -Fq 'imptcp: Error binding TCP port' "$log" || error_exit 1 "$format $case_name missing bind diagnostic"
 		grep -Fq "TCP port $port" "$log" || error_exit 1 "$format $case_name missing port diagnostic"

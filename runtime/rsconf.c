@@ -1125,6 +1125,7 @@ static rsRetVal tellModulesActivateConfig(void) {
 static rsRetVal runInputModules(void) {
     cfgmodules_etry_t *node;
     int bNeedsCancel;
+    rsRetVal localRet;
 
     node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
     while (node != NULL) {
@@ -1133,8 +1134,9 @@ static rsRetVal runInputModules(void) {
                 (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ? 0 : 1;
             DBGPRINTF("running module %s with config %p, term mode: %s\n", node->pMod->pszName, node,
                       bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
-            thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
-                       (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
+            localRet = thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
+                                  (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
+            if (localRet != RS_RET_OK && runConf->globals.bRequireAllInputs) return localRet;
         }
         node = module.GetNxtCnfType(runConf, node, eMOD_IN);
     }
@@ -1288,7 +1290,7 @@ static rsRetVal activate(rsconf_t *cnf) {
     CHKiRet(activateRulesetQueues());
     CHKiRet(activateMainQueue());
     /* finally let the inputs run... */
-    runInputModules();
+    CHKiRet(runInputModules());
     qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
     dbgprintf("configuration %p activated\n", cnf);

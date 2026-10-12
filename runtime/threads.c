@@ -50,11 +50,11 @@
 static linkedList_t llThrds;
 static int bFatalInputFailure = 0;
 
-int thrdHadFatalInputFailure(void) {
+int thrd_had_fatal_input_failure(void) {
     return PREFER_LOAD_INT(&bFatalInputFailure);
 }
 
-void thrdReportFatalInputFailure(void) {
+void thrd_report_fatal_input_failure(void) {
     if (runConf != NULL && runConf->globals.bRequireAllInputs && !bTerminateInputsSigSafe) {
         PREFER_STORE_1_TO_INT(&bFatalInputFailure);
         kill(getpid(), SIGTERM);
@@ -260,7 +260,7 @@ static ATTR_NORETURN void *thrdStarter(void *const arg) {
                   (unsigned long)pThis->thrdID, iRet);
     } else {
         LogError(0, iRet, "main thread of %s terminated abnormally", pThis->name);
-        if (!thrdGetShallStop(pThis)) thrdReportFatalInputFailure();
+        if (!thrdGetShallStop(pThis)) thrd_report_fatal_input_failure();
     }
 
     /* signal master control that we exit (we do the mutex lock mostly to

@@ -6,8 +6,8 @@
 # A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
 # holder is listening before each conflicting rsyslogd starts.
-# A healthy strict listener must write its port file and stay running after
-# the startup handshake.
+# A healthy strict listener must write its port file and stay running. The
+# later imdiag port file proves activation passed the imbeats handshake.
 # A two-second termination grace is followed by SIGKILL if a daemon hangs.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
 # are read from process output because activation fails before input delivery.
@@ -17,7 +17,7 @@ require_plugin imbeats
 root=$(cd .. && pwd)
 testdir=$PWD
 daemon="$root/tools/rsyslogd"
-modules="$root/plugins/imbeats/.libs:$root/plugins/omfile/.libs:$root/runtime/.libs"
+modules="$root/plugins/imbeats/.libs:$root/plugins/imdiag/.libs:$root/plugins/omfile/.libs:$root/runtime/.libs"
 portfile="$testdir/$RSYSLOG_DYNNAME.holder.port"
 holder_conf="$testdir/$RSYSLOG_DYNNAME.holder.conf"
 holder_log="$testdir/$RSYSLOG_DYNNAME.holder.log"
@@ -31,6 +31,15 @@ EOF
 holder_pid=$!
 cleanup_holder() {
 	kill "$holder_pid" 2>/dev/null || :
+	for ((shutdown_wait = 0; shutdown_wait < 2; shutdown_wait++)); do
+		if ! kill -0 "$holder_pid" 2>/dev/null; then
+			break
+		fi
+		sleep 1
+	done
+	if kill -0 "$holder_pid" 2>/dev/null; then
+		kill -KILL "$holder_pid" 2>/dev/null || :
+	fi
 	wait "$holder_pid" 2>/dev/null || :
 }
 trap cleanup_holder EXIT
@@ -136,15 +145,17 @@ done
 config="$testdir/$RSYSLOG_DYNNAME.strict-healthy.conf"
 log="$testdir/$RSYSLOG_DYNNAME.strict-healthy.log"
 ready_portfile="$testdir/$RSYSLOG_DYNNAME.strict-healthy.port"
+startup_portfile="$testdir/$RSYSLOG_DYNNAME.strict-healthy.imdiag.port"
 cat > "$config" <<EOF
 global(inputStartupPolicy="require-all")
 module(load="imbeats")
+module(load="imdiag" listenPortFileName="$startup_portfile" serverRun="0")
 input(type="imbeats" address="127.0.0.1" port="0" listenPortFileName="$ready_portfile")
 action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
 EOF
 run_bounded 3 "$config" "$log"
 status=$?
-if [ "$status" -ne 124 ] || [ ! -s "$ready_portfile" ]; then
+if [ "$status" -ne 124 ] || [ ! -s "$ready_portfile" ] || [ ! -s "$startup_portfile" ]; then
 	cat "$log"
 	error_exit 1 "healthy strict imbeats did not remain ready (status $status)"
 fi

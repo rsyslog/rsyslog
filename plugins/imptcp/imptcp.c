@@ -527,7 +527,7 @@ finalize_it:
 /* Bind failures are rare; inspect procfs only to explain a failed port. A port
  * may have several listeners, so a visible owner is a clue, not proof that it
  * caused this bind failure. */
-static unsigned long listenerInodeForPort(const char *path, unsigned port) {
+static unsigned long listener_inode_for_port(const char *path, unsigned port) {
     FILE *fp = fopen(path, "r");
     char line[512];
     unsigned localPort, state;
@@ -545,7 +545,7 @@ static unsigned long listenerInodeForPort(const char *path, unsigned port) {
     return 0;
 }
 
-static int describeListenerOwner(unsigned long inode, char *out, size_t outSize) {
+static int describe_listener_owner(unsigned long inode, char *out, size_t outSize) {
     DIR *procs = opendir("/proc");
     struct dirent *proc;
     if (procs == NULL) return 0;
@@ -589,19 +589,23 @@ static int describeListenerOwner(unsigned long inode, char *out, size_t outSize)
     return 0;
 }
 
-static void logBindFailure(const int bindErrno, const unsigned port) {
+static void log_bind_failure(const int bindErrno, const unsigned port) {
     unsigned long inode = 0;
     char owner[160];
     if (bindErrno == EADDRINUSE) {
-        inode = listenerInodeForPort("/proc/net/tcp", port);
-        if (inode == 0) inode = listenerInodeForPort("/proc/net/tcp6", port);
+        inode = listener_inode_for_port("/proc/net/tcp", port);
+        if (inode == 0) inode = listener_inode_for_port("/proc/net/tcp6", port);
     }
-    if (inode != 0 && describeListenerOwner(inode, owner, sizeof(owner))) {
+    if (inode != 0 && describe_listener_owner(inode, owner, sizeof(owner))) {
         LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u: %s", port, owner);
     } else if (bindErrno == EADDRINUSE) {
+#ifdef __linux__
         LogError(bindErrno, NO_ERRCODE,
                  "imptcp: Error binding TCP port %u; listener owner unavailable (try ss -ltnp 'sport = :%u')", port,
                  port);
+#else
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u; listener owner unavailable", port);
+#endif
     } else {
         LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u", port);
     }
@@ -622,7 +626,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
     uchar *lstnIP;
     int isIPv6 = 0;
     int port_override = 0; /* if dyn port (0): use this for actually bound port */
-    int bindFailed = 0;
+    int any_failed = 0;
     union {
         struct sockaddr *sa;
         struct sockaddr_in *ipv4;
@@ -735,8 +739,8 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             const int bindErrno = errno;
             savecast.sa = (struct sockaddr *)r->ai_addr;
             const unsigned port = ntohs(r->ai_family == AF_INET6 ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port);
-            logBindFailure(bindErrno, port);
-            bindFailed = 1;
+            log_bind_failure(bindErrno, port);
+            any_failed = 1;
             close(sock);
             sock = -1;
             continue;
@@ -802,9 +806,9 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             numSocks, maxs);
     }
 
-    if (numSocks == 0 || (runConf->globals.bRequireAllInputs && bindFailed)) {
+    if (numSocks == 0 || (runConf->globals.bRequireAllInputs && any_failed)) {
         DBGPRINTF("imptcp: TCP listener activation failed (%d sockets opened, bind failed: %d)\n", numSocks,
-                  bindFailed);
+                  any_failed);
         ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
     }
 
@@ -2186,7 +2190,7 @@ static void stopWorkerPool(void) {
 static rsRetVal startupServers(void) {
     DEFiRet;
     rsRetVal localRet, lastErr;
-    int bindFailed = 0;
+    int any_failed = 0;
     int iOK;
     int iAll;
     ptcpsrv_t *pSrv;
@@ -2201,7 +2205,7 @@ static rsRetVal startupServers(void) {
             iOK++;
         else {
             lastErr = localRet;
-            if (localRet == RS_RET_COULD_NOT_BIND) bindFailed = 1;
+            any_failed = 1;
         }
         ++iAll;
         pSrv = pSrv->pNext;
@@ -2210,8 +2214,8 @@ static rsRetVal startupServers(void) {
     DBGPRINTF("imptcp: %d out of %d servers started successfully\n", iOK, iAll);
     if (iOK == 0)
         iRet = lastErr;
-    else if (runConf->globals.bRequireAllInputs && bindFailed)
-        iRet = RS_RET_COULD_NOT_BIND;
+    else if (runConf->globals.bRequireAllInputs && any_failed)
+        iRet = lastErr;
 
     RETiRet;
 }

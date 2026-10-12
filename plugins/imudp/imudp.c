@@ -525,6 +525,20 @@ finalize_it:
     RETiRet;
 }
 
+static void discardUdpListeners(void) {
+    struct lstn_s *lstn = lcnfRoot;
+    while (lstn != NULL) {
+        struct lstn_s *next = lstn->next;
+        statsobj.Destruct(&lstn->stats);
+        ratelimitDestruct(lstn->ratelimiter);
+        close(lstn->sock);
+        prop.Destruct(&lstn->pInputName);
+        free(lstn);
+        lstn = next;
+    }
+    lcnfRoot = lcnfLast = NULL;
+}
+
 
 static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
     LogError(0, NO_ERRCODE,
@@ -1342,8 +1356,8 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        const rsRetVal localRet = addListner(inst);
-        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
+        const rsRetVal local_ret = addListner(inst);
+        if (runConf->globals.bRequireAllInputs && local_ret != RS_RET_OK) ABORT_FINALIZE(local_ret);
     }
     /* if we could not set up any listeners, there is no point in running... */
     if (lcnfRoot == NULL) {
@@ -1354,6 +1368,7 @@ BEGINactivateCnfPrePrivDrop
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) discardUdpListeners();
 ENDactivateCnfPrePrivDrop
 
 
@@ -1469,7 +1484,7 @@ BEGINrunInput
             wrkrInfo[i].started = 1;
         } else {
             LogError(err, RS_RET_SYS_ERR, "imudp: failed to create worker thread %d", i);
-            thrdReportFatalInputFailure();
+            thrd_report_fatal_input_failure();
         }
     }
     pthread_attr_destroy(&wrkrThrdAttr);
@@ -1509,21 +1524,11 @@ ENDwillRun
 
 
 BEGINafterRun
-    struct lstn_s *lstn, *lstnDel;
     int i;
     CODESTARTafterRun;
     /* do cleanup here */
     net.clearAllowedSenders((uchar *)"UDP");
-    for (lstn = lcnfRoot; lstn != NULL;) {
-        statsobj.Destruct(&(lstn->stats));
-        ratelimitDestruct(lstn->ratelimiter);
-        close(lstn->sock);
-        prop.Destruct(&lstn->pInputName);
-        lstnDel = lstn;
-        lstn = lstn->next;
-        free(lstnDel);
-    }
-    lcnfRoot = lcnfLast = NULL;
+    discardUdpListeners();
     for (i = 0; i < runModConf->wrkrMax; ++i) {
         if (wrkrInfo[i].stats != NULL) {
             statsobj.Destruct(&(wrkrInfo[i].stats));

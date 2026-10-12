@@ -29,8 +29,20 @@ EOF
 		fi
 		sleep 1
 	done
-	if kill -0 "$pid" 2>/dev/null; then
+	if ! kill -0 "$pid" 2>/dev/null; then
+		wait "$pid"
+		status=$?
+	else
 		kill "$pid" 2>/dev/null || :
+		for ((shutdown_wait = 0; shutdown_wait < 2; shutdown_wait++)); do
+			if ! kill -0 "$pid" 2>/dev/null; then
+				break
+			fi
+			sleep 1
+		done
+		if kill -0 "$pid" 2>/dev/null; then
+			kill -KILL "$pid" 2>/dev/null || :
+		fi
 		wait "$pid" 2>/dev/null || :
 		status=124
 	fi

@@ -500,6 +500,7 @@ static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstn
         added = 1;
     } else {
         LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", cnf_params->pszPort);
+        iRet = RS_RET_INVALID_PORT;
     }
 
 finalize_it:

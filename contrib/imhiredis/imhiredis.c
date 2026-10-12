@@ -120,6 +120,7 @@ struct instanceConf_s {
     redisSSLContext *ssl_conn; /* redis ssl connection */
 #endif
     struct event_base *evtBase;
+    sbool bStartupValid;
 
     redisNode *currentNode; /* currently used redis node, can be any of the nodes in the redisNodesList list */
     /* the list of seen nodes
@@ -355,7 +356,6 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
         LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,
                "imhiredis: both 'server' and 'socketPath' are given, "
                "ignoring 'socketPath'.");
-        if (runConf->globals.bRequireAllInputs) ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         free(inst->redisNodesList->socketPath);
         inst->redisNodesList->socketPath = NULL;
     }
@@ -694,14 +694,22 @@ BEGINactivateCnf
     CODESTARTactivateCnf;
     for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
         iRet = checkInstance(inst);
-        if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) break;
+        if (iRet != RS_RET_OK) {
+            if (runConf->globals.bRequireAllInputs) break;
+            iRet = RS_RET_OK;
+            continue;
+        }
         if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE) {
             if ((inst->evtBase = event_base_new()) == NULL) {
                 LogError(0, RS_RET_OUT_OF_MEMORY, "imhiredis: could not create libevent base");
-                iRet = RS_RET_OUT_OF_MEMORY;
-                break;
+                if (runConf->globals.bRequireAllInputs) {
+                    iRet = RS_RET_OUT_OF_MEMORY;
+                    break;
+                }
+                continue;
             }
         }
+        inst->bStartupValid = 1;
     }
 ENDactivateCnf
 
@@ -794,7 +802,7 @@ BEGINrunInput
     DBGPRINTF("imhiredis: runInput loop started ...\n");
     activeHiredisworkers = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        ++activeHiredisworkers;
+        if (inst->bStartupValid) ++activeHiredisworkers;
     }
 
     if (activeHiredisworkers == 0) {
@@ -817,6 +825,7 @@ BEGINrunInput
      */
     i = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        if (!inst->bStartupValid) continue;
         /* init worker info structure! */
         imhiredisWrkrInfo[i].inst = inst; /* Set reference pointer */
         const int err =
@@ -825,7 +834,7 @@ BEGINrunInput
             imhiredisWrkrInfo[i].started = 1;
         } else {
             LogError(err, RS_RET_SYS_ERR, "imhiredis: failed to start worker thread %d", i);
-            thrdReportFatalInputFailure();
+            thrd_report_fatal_input_failure();
         }
         i++;
     }

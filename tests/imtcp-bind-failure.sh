@@ -3,7 +3,7 @@
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # A live imtcp listener on a kernel-assigned loopback port must reject a second
 # listener. Only inputStartupPolicy=require-all may abort startup. Also verify
-# that the policy rejects a missing input module, the port-0 fallback, and a
+# that the policy rejects a missing input module, an invalid port, the port-0 fallback, and a
 # missing ruleset that would otherwise route messages to the default ruleset.
 # A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
@@ -215,5 +215,22 @@ EOF
 		grep -Fq 'using default ruleset instead' "$log" || error_exit 1 "missing fallback diagnostic"
 	fi
 done
+
+# An invalid port must not silently leave a required input without a listener.
+config="$testdir/$RSYSLOG_DYNNAME.invalid-port.conf"
+log="$testdir/$RSYSLOG_DYNNAME.invalid-port.log"
+cat > "$config" <<EOF
+global(inputStartupPolicy="require-all")
+module(load="imtcp")
+input(type="imtcp" address="127.0.0.1" port="65536")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+run_bounded 10 "$config" "$log"
+status=$?
+if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+	cat "$log"
+	error_exit 1 "invalid TCP port did not fail strict startup (status $status)"
+fi
+grep -Fq 'Invalid TCP listen port 65536' "$log" || error_exit 1 "missing invalid port diagnostic"
 
 exit_test

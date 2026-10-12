@@ -1368,6 +1368,20 @@ static rsRetVal activateListeners(void) {
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs && listeners != NULL) {
+        for (i = startIndexUxLocalSockets; i < nfd; ++i) {
+            if (listeners[i].fd == -1) continue;
+            if (listeners[i].bUnlink && listeners[i].sockName != NULL &&
+                !(sd_fds > 0
+#ifdef HAVE_LIBSYSTEMD
+                  && listeners[i].fd >= SD_LISTEN_FDS_START && listeners[i].fd < SD_LISTEN_FDS_START + sd_fds
+#endif
+                  ))
+                unlink((char *)listeners[i].sockName);
+            close(listeners[i].fd);
+            listeners[i].fd = -1;
+        }
+    }
     RETiRet;
 }
 

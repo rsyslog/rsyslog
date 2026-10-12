@@ -2698,7 +2698,7 @@ int main(int argc, char **argv) {
     LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
     deinitAll();
     osf_close();
-    if (thrdHadFatalInputFailure()) {
+    if (thrd_had_fatal_input_failure()) {
         (void)rsyslogdWriteTerminationMarker("error", "input-failed", "main-return");
         return 1;
     }

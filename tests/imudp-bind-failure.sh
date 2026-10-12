@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # A helper-owned UDP socket on a kernel-assigned loopback port must reject an
-# imudp listener. Only inputStartupPolicy=require-all may abort startup.
+# imudp listener. Only inputStartupPolicy=require-all may abort startup. When
+# IPv6 is available, a successful IPv6 bind must not hide the failed IPv4 bind.
 # A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
 # holder is listening before each conflicting rsyslogd starts.
@@ -11,6 +12,7 @@
 # are read from process output because activation fails before input delivery.
 . ${srcdir:=.}/diag.sh init
 require_plugin imudp
+check_command_available python3
 
 root=$(cd .. && pwd)
 testdir=$PWD
@@ -34,6 +36,15 @@ while True:
 holder_pid=$!
 cleanup_holder() {
 	kill "$holder_pid" 2>/dev/null || :
+	for ((shutdown_wait = 0; shutdown_wait < 2; shutdown_wait++)); do
+		if ! kill -0 "$holder_pid" 2>/dev/null; then
+			break
+		fi
+		sleep 1
+	done
+	if kill -0 "$holder_pid" 2>/dev/null; then
+		kill -KILL "$holder_pid" 2>/dev/null || :
+	fi
 	wait "$holder_pid" 2>/dev/null || :
 }
 trap cleanup_holder EXIT
@@ -136,5 +147,37 @@ EOF
 
 	done
 done
+
+# When both wildcard address families are usable, one failed IPv4 bind and one
+# healthy IPv6 bind must still reject the whole required input. The probe
+# avoids assuming that every CI runner has IPv6 enabled.
+if python3 - <<'PY'
+import socket
+
+addresses = socket.getaddrinfo(None, "0", socket.AF_UNSPEC, socket.SOCK_DGRAM,
+                               0, socket.AI_PASSIVE | socket.AI_NUMERICSERV)
+if not {socket.AF_INET, socket.AF_INET6}.issubset({item[0] for item in addresses}):
+    raise SystemExit(1)
+with socket.socket(socket.AF_INET6, socket.SOCK_DGRAM) as sock:
+    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+    sock.bind(("::", 0))
+PY
+then
+	config="$testdir/$RSYSLOG_DYNNAME.partial-bind.conf"
+	log="$testdir/$RSYSLOG_DYNNAME.partial-bind.log"
+	cat > "$config" <<EOF
+global(inputStartupPolicy="require-all")
+module(load="imudp")
+input(type="imudp" address="*" port="$port")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+	run_bounded 10 "$config" "$log"
+	status=$?
+	if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+		cat "$log"
+		error_exit 1 "partial UDP bind did not fail strict startup (status $status)"
+	fi
+	grep -Fq 'UDP listener startup requires all resolved addresses' "$log" || error_exit 1 "missing partial-bind diagnostic"
+fi
 
 exit_test
