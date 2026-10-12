@@ -157,6 +157,7 @@ typedef struct lstn_s {
     sbool bDiscardOwnMsgs; /* discard messages that originated from ourselves */
     sbool bUseSysTimeStamp; /* use timestamp from system (instead of from message) */
     sbool bUnlink; /* unlink&re-create socket at start and end of processing */
+    sbool created_here; /* pathname bound during this activation */
     sbool bUseSpecialParser; /* use "canned" log socket parser instead of parser chain? */
     ruleset_t *pRuleset;
 } lstn_t;
@@ -519,6 +520,7 @@ static rsRetVal
     if (bind(pLstn->fd, (struct sockaddr *)&sunx, SUN_LEN(&sunx)) < 0) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
     }
+    pLstn->created_here = 1;
     if (chmod((char *)pLstn->sockName, 0666) < 0) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
     }
@@ -539,6 +541,10 @@ finalize_it:
             close(pLstn->fd);
             pLstn->fd = -1;
         }
+        if (pLstn->created_here) {
+            unlink((const char *)pLstn->sockName);
+            pLstn->created_here = 0;
+        }
     }
     RETiRet;
 }
@@ -550,6 +556,7 @@ static rsRetVal openLogSocket(lstn_t *pLstn) {
     int one;
 #endif /* HAVE_SCM_CREDENTIALS */
 
+    pLstn->created_here = 0;
     if (pLstn->sockName[0] == '\0') return -1;
 
     pLstn->fd = -1;
@@ -1371,13 +1378,10 @@ finalize_it:
     if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs && listeners != NULL) {
         for (i = startIndexUxLocalSockets; i < nfd; ++i) {
             if (listeners[i].fd == -1) continue;
-            if (listeners[i].bUnlink && listeners[i].sockName != NULL &&
-                !(sd_fds > 0
-#ifdef HAVE_LIBSYSTEMD
-                  && listeners[i].fd >= SD_LISTEN_FDS_START && listeners[i].fd < SD_LISTEN_FDS_START + sd_fds
-#endif
-                  ))
+            if (listeners[i].created_here && listeners[i].sockName != NULL) {
                 unlink((char *)listeners[i].sockName);
+                listeners[i].created_here = 0;
+            }
             close(listeners[i].fd);
             listeners[i].fd = -1;
         }

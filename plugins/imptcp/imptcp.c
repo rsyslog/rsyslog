@@ -626,7 +626,6 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
     uchar *lstnIP;
     int isIPv6 = 0;
     int port_override = 0; /* if dyn port (0): use this for actually bound port */
-    int any_failed = 0;
     union {
         struct sockaddr *sa;
         struct sockaddr_in *ipv4;
@@ -740,7 +739,6 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             savecast.sa = (struct sockaddr *)r->ai_addr;
             const unsigned port = ntohs(r->ai_family == AF_INET6 ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port);
             log_bind_failure(bindErrno, port);
-            any_failed = 1;
             close(sock);
             sock = -1;
             continue;
@@ -806,9 +804,8 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             numSocks, maxs);
     }
 
-    if (numSocks == 0 || (runConf->globals.bRequireAllInputs && any_failed)) {
-        DBGPRINTF("imptcp: TCP listener activation failed (%d sockets opened, bind failed: %d)\n", numSocks,
-                  any_failed);
+    if (numSocks == 0 || (runConf->globals.bRequireAllInputs && numSocks != maxs)) {
+        DBGPRINTF("imptcp: TCP listener activation failed (%d of %d sockets opened)\n", numSocks, maxs);
         ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
     }
 

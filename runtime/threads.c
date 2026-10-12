@@ -283,7 +283,9 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
                     sbool bNeedsCancel,
                     uchar *name) {
     DEFiRet;
-    thrdInfo_t *pThis;
+    thrdInfo_t *pThis = NULL;
+    int create_error;
+    sbool started = 0;
 #if defined(_AIX)
     pthread_attr_t aix_attr;
 #endif
@@ -295,17 +297,36 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
     pThis->pUsrThrdMain = thrdMain;
     pThis->pAfterRun = afterRun;
     pThis->bNeedsCancel = bNeedsCancel;
-    pThis->name = ustrdup(name);
+    CHKmalloc(pThis->name = ustrdup(name));
 #if defined(_AIX)
-    pthread_attr_init(&aix_attr);
+    create_error = pthread_attr_init(&aix_attr);
+    if (create_error != 0) ABORT_FINALIZE(RS_RET_ERR);
     pthread_attr_setstacksize(&aix_attr, 4096 * 512);
-    pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+    create_error = pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+    pthread_attr_destroy(&aix_attr);
 #else
-    pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
+    create_error = pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 #endif
+    if (create_error != 0) {
+        LogError(create_error, RS_RET_ERR, "could not create input thread %s", name);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    started = 1;
     CHKiRet(llAppend(&llThrds, NULL, pThis));
+    pThis = NULL;
 
 finalize_it:
+    if (pThis != NULL) {
+        if (started) {
+            thrdDestruct(pThis);
+        } else {
+            pthread_mutex_destroy(&pThis->mutThrd);
+            pthread_cond_destroy(&pThis->condThrdTerm);
+            DESTROY_ATOMIC_HELPER_MUT(pThis->mutShallStop);
+            free(pThis->name);
+            free(pThis);
+        }
+    }
     RETiRet;
 }
 

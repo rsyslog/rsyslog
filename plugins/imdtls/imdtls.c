@@ -106,6 +106,7 @@ struct instanceConf_s {
     uchar *pszBindAddr; /* Listening IP Address */
     uchar *pszBindPort; /* Port to bind socket to */
     uchar *pszLstnPortFileName; /* file receiving port selected by bind(0) */
+    sbool port_file_written;
     int timeout; /* Default timeout for DTLS Sessions */
     /* Common properties */
     uchar *pszBindRuleset; /* name of ruleset to bind to */
@@ -192,6 +193,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszBindAddr = NULL;
     inst->pszBindPort = NULL;
     inst->pszLstnPortFileName = NULL;
+    inst->port_file_written = 0;
     inst->timeout = 1800;
     inst->pszBindRuleset = loadModConf->pszBindRuleset;
     inst->pszInputName = NULL;
@@ -283,6 +285,7 @@ static rsRetVal writeListenPortFile(instanceConf_t *const inst) {
         LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to open file");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
+    inst->port_file_written = 1;
     for (int off = 0; off < len;) {
         wr = write(fd, portBuf + off, (size_t)(len - off));
         if (wr < 0) {
@@ -1119,7 +1122,13 @@ BEGINactivateCnfPrePrivDrop
     }
 finalize_it:
     if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) {
-        for (inst = runModConf->root; inst != NULL; inst = inst->next) DTLSCloseSocket(inst);
+        for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+            if (inst->port_file_written) {
+                unlink((const char *)inst->pszLstnPortFileName);
+                inst->port_file_written = 0;
+            }
+            DTLSCloseSocket(inst);
+        }
     }
 ENDactivateCnfPrePrivDrop
 

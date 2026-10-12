@@ -120,7 +120,7 @@ struct instanceConf_s {
     redisSSLContext *ssl_conn; /* redis ssl connection */
 #endif
     struct event_base *evtBase;
-    sbool bStartupValid;
+    sbool startup_valid;
 
     redisNode *currentNode; /* currently used redis node, can be any of the nodes in the redisNodesList list */
     /* the list of seen nodes
@@ -709,7 +709,7 @@ BEGINactivateCnf
                 continue;
             }
         }
-        inst->bStartupValid = 1;
+        inst->startup_valid = 1;
     }
 ENDactivateCnf
 
@@ -802,7 +802,7 @@ BEGINrunInput
     DBGPRINTF("imhiredis: runInput loop started ...\n");
     activeHiredisworkers = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bStartupValid) ++activeHiredisworkers;
+        if (inst->startup_valid) ++activeHiredisworkers;
     }
 
     if (activeHiredisworkers == 0) {
@@ -825,7 +825,7 @@ BEGINrunInput
      */
     i = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (!inst->bStartupValid) continue;
+        if (!inst->startup_valid) continue;
         /* init worker info structure! */
         imhiredisWrkrInfo[i].inst = inst; /* Set reference pointer */
         const int err =

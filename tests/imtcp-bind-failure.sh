@@ -216,21 +216,29 @@ EOF
 	fi
 done
 
-# An invalid port must not silently leave a required input without a listener.
-config="$testdir/$RSYSLOG_DYNNAME.invalid-port.conf"
-log="$testdir/$RSYSLOG_DYNNAME.invalid-port.log"
-cat > "$config" <<EOF
+# An out-of-range or malformed port must not silently create a required
+# listener on a different port. Each case must exit and name the bad value.
+for invalid_port in 65536 12abc abc; do
+	config="$testdir/$RSYSLOG_DYNNAME.invalid-$invalid_port.conf"
+	log="$testdir/$RSYSLOG_DYNNAME.invalid-$invalid_port.log"
+	cat > "$config" <<EOF
 global(inputStartupPolicy="require-all")
 module(load="imtcp")
-input(type="imtcp" address="127.0.0.1" port="65536")
+input(type="imtcp" address="127.0.0.1" port="$invalid_port")
 action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
 EOF
-run_bounded 10 "$config" "$log"
-status=$?
-if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
-	cat "$log"
-	error_exit 1 "invalid TCP port did not fail strict startup (status $status)"
-fi
-grep -Fq 'Invalid TCP listen port 65536' "$log" || error_exit 1 "missing invalid port diagnostic"
+	run_bounded 10 "$config" "$log"
+	status=$?
+	if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+		cat "$log"
+		error_exit 1 "invalid TCP port $invalid_port did not fail strict startup (status $status)"
+	fi
+	if [ "$invalid_port" = 65536 ]; then
+		grep -Fq "Invalid TCP listen port $invalid_port" "$log" || error_exit 1 "missing invalid port diagnostic"
+	else
+		grep -Fq "Could not create tcp listener for port $invalid_port" "$log" ||
+			error_exit 1 "missing malformed port diagnostic"
+	fi
+done
 
 exit_test

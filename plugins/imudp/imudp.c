@@ -525,7 +525,7 @@ finalize_it:
     RETiRet;
 }
 
-static void discardUdpListeners(void) {
+static void discard_udp_listeners(void) {
     struct lstn_s *lstn = lcnfRoot;
     while (lstn != NULL) {
         struct lstn_s *next = lstn->next;
@@ -1368,7 +1368,7 @@ BEGINactivateCnfPrePrivDrop
     }
 
 finalize_it:
-    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) discardUdpListeners();
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) discard_udp_listeners();
 ENDactivateCnfPrePrivDrop
 
 
@@ -1528,7 +1528,7 @@ BEGINafterRun
     CODESTARTafterRun;
     /* do cleanup here */
     net.clearAllowedSenders((uchar *)"UDP");
-    discardUdpListeners();
+    discard_udp_listeners();
     for (i = 0; i < runModConf->wrkrMax; ++i) {
         if (wrkrInfo[i].stats != NULL) {
             statsobj.Destruct(&(wrkrInfo[i].stats));

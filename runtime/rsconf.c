@@ -1136,7 +1136,10 @@ static rsRetVal runInputModules(void) {
                       bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
             localRet = thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
                                   (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
-            if (localRet != RS_RET_OK && runConf->globals.bRequireAllInputs) return localRet;
+            if (localRet != RS_RET_OK && runConf->globals.bRequireAllInputs) {
+                LogError(0, localRet, "input module %s could not start its worker thread", node->pMod->pszName);
+                return localRet;
+            }
         }
         node = module.GetNxtCnfType(runConf, node, eMOD_IN);
     }
