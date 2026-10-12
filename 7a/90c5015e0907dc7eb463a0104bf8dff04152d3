@@ -1,0 +1,23 @@
+tests/omrelp-debug-worker-stack.sh
+  s_e283ad3e3cb822::t_910c71a6d4c103 1-37
+tests/Makefile.am
+  s_e283ad3e3cb822::t_910c71a6d4c103 2097
+runtime/wtp.c
+  s_e283ad3e3cb822::t_910c71a6d4c103 129-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a90c5015e0907dc7eb463a0104bf8dff04152d3",
+  "prompts": {},
+  "sessions": {
+    "s_e283ad3e3cb822": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12baf-db0e-7d30-bd8c-9dfdea4c9ae2",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
