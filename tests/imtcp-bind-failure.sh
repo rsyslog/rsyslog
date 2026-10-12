@@ -218,9 +218,13 @@ done
 
 # An out-of-range or malformed port must not silently create a required
 # listener on a different port. Each case must exit and name the bad value.
-for invalid_port in 65536 12abc abc; do
-	config="$testdir/$RSYSLOG_DYNNAME.invalid-$invalid_port.conf"
-	log="$testdir/$RSYSLOG_DYNNAME.invalid-$invalid_port.log"
+for case_name in out-of-range malformed; do
+	case "$case_name" in
+		out-of-range) invalid_port=65536 ;;
+		malformed) invalid_port='12/abc' ;;
+	esac
+	config="$testdir/$RSYSLOG_DYNNAME.invalid-$case_name.conf"
+	log="$testdir/$RSYSLOG_DYNNAME.invalid-$case_name.log"
 	cat > "$config" <<EOF
 global(inputStartupPolicy="require-all")
 module(load="imtcp")

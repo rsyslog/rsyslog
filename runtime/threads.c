@@ -300,7 +300,10 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
     CHKmalloc(pThis->name = ustrdup(name));
 #if defined(_AIX)
     create_error = pthread_attr_init(&aix_attr);
-    if (create_error != 0) ABORT_FINALIZE(RS_RET_ERR);
+    if (create_error != 0) {
+        LogError(create_error, RS_RET_ERR, "could not initialize input thread attributes for %s", name);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     pthread_attr_setstacksize(&aix_attr, 4096 * 512);
     create_error = pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
     pthread_attr_destroy(&aix_attr);
@@ -318,8 +321,11 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
 finalize_it:
     if (pThis != NULL) {
         if (started) {
+            /* The worker may already be in runInput; use its normal bounded
+             * shutdown path before calling afterRun. */
             thrdDestruct(pThis);
         } else {
+            /* afterRun is unsafe before runInput initialized module state. */
             pthread_mutex_destroy(&pThis->mutThrd);
             pthread_cond_destroy(&pThis->condThrdTerm);
             DESTROY_ATOMIC_HELPER_MUT(pThis->mutShallStop);
