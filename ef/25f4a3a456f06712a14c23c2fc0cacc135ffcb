@@ -1,0 +1,25 @@
+tests/local-queue-s4-config.sh
+  s_de358a5d0a4803::t_0d09a3388d1b38 6-7
+doc/Makefile.am
+  s_de358a5d0a4803::t_0d09a3388d1b38 1414-1420
+tests/local-queue-common.sh
+  s_de358a5d0a4803::t_0d09a3388d1b38 152
+runtime/queue.c
+  s_de358a5d0a4803::t_0d09a3388d1b38 5066-5068
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef25f4a3a456f06712a14c23c2fc0cacc135ffcb",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
