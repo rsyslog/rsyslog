@@ -102,6 +102,9 @@ struct qqueueLocal_s {
     unsigned testHelpGateStage, testHelpGateUsed;
     int testHelpGateFd;
     char *testHelpGateMarker;
+    unsigned testSuccessGateSource, testSuccessGateUsed;
+    int testSuccessGateFd;
+    char *testSuccessGateMarker;
     #endif
 };
 
@@ -123,6 +126,9 @@ static unsigned producerKeyValid;
  * This compiler-TLS scalar is available on the same GCC/Clang local backend
  * that supplies the required always-lock-free atomics. */
 static __thread unsigned producerTrustedDepth;
+/* FE eligibility also covers input callbacks. This separate execution role
+ * identifies workers forwarding obligations already accepted by the graph. */
+static __thread unsigned workerProducerDepth;
 /* Startup sets this before inputs run. No reload is supported and the flag
  * never resets while threads can inspect it; global-only runs avoid TLS work. */
 static unsigned localEnabled;
@@ -324,6 +330,36 @@ void qqueueLocalTestNoteForceTerm(wti_t *const worker, const int currentIParams)
     testWritePhaseMarker(family->testForceTermMarker, "force_term=1 currIParam=0\n");
 }
 
+/* A one-shot cancellable boundary after the real callback and all Direct
+ * commits return. Select FE or dedicated BE at cold startup; only target ID0
+ * is eligible, so harness startup callbacks cannot accidentally take the gate.
+ * FIFO release observes cooperative stop; withholding it exercises cancellation. */
+void qqueueLocalTestAfterConsumer(wti_t *const worker) {
+    if (worker->callbackOutcome != WTI_CALLBACK_SUCCEEDED || worker->logical_owner == NULL) return;
+    qqueueLocal_t *const family = worker->logical_owner->local;
+    if (family == NULL || family->testSuccessGateSource == 0) return;
+    qqueue_t *const home = worker->pWtp->pUsr;
+    const unsigned source = home->localSource != NULL ? 1 : 2;
+    if (source != family->testSuccessGateSource || worker->source_queue != home) return;
+    int found = 0;
+    for (int i = 0; i < worker->batch.nElem; ++i) {
+        if (worker->batch.eltState[i] == BATCH_STATE_COMM &&
+            strstr((const char *)worker->batch.pElem[i].pMsg->pszRawMsg, "msgnum:00000000:") != NULL)
+            found = 1;
+    }
+    if (!found || __atomic_exchange_n(&family->testSuccessGateUsed, 1, __ATOMIC_RELAXED)) return;
+    /* Do not leave a stdio stream live if shutdown cancels at marker I/O.
+     * The immutable FIFO descriptor remains owned by the joined family. */
+    int oldCancel;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancel);
+    testWritePhaseMarker(family->testSuccessGateMarker,
+                         source == 1 ? "OK source=fe committed=1\n" : "OK source=be committed=1\n");
+    pthread_setcancelstate(oldCancel, NULL);
+    char token;
+    while (read(family->testSuccessGateFd, &token, 1) < 0 && errno == EINTR) {
+    }
+}
+
 static int testWorkerSettled(wti_t *const worker) {
     return wtiGetState(worker) == WRKTHRD_STOPPED && worker->source_queue == NULL && worker->logical_owner == NULL &&
            !qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) &&
@@ -442,6 +478,21 @@ void qqueueLocalProducerEnter(void) {
     }
 }
 
+void qqueueLocalWorkerEnter(void) {
+    ++workerProducerDepth;
+    qqueueLocalProducerEnter();
+}
+
+void qqueueLocalWorkerLeave(void) {
+    qqueueLocalProducerLeave();
+    assert(workerProducerDepth != 0);
+    --workerProducerDepth;
+}
+
+int qqueueLocalWorkerProducer(void) {
+    return workerProducerDepth != 0;
+}
+
 void qqueueLocalProducerLeave(void) {
     if (producerTrustedDepth != 0) --producerTrustedDepth;
 }
@@ -449,6 +500,7 @@ void qqueueLocalProducerLeave(void) {
 void qqueueLocalProducerExit(void *const unused) {
     (void)unused;
     producerTrustedDepth = 0;
+    workerProducerDepth = 0;
     #ifdef ENABLE_TESTBENCH
     testProducerRetire = 0;
     #endif
@@ -754,8 +806,16 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     #endif
     pthread_mutex_unlock(queue->mut);
     int oldCancel;
+    worker->callbackOutcome = WTI_CALLBACK_UNKNOWN;
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldCancel);
     ret = fe->owner->pConsumer(fe->owner->pAction, batch, worker);
+    /* No cancellation point may precede this return-outcome publication.
+     * COMM is final only if nested Direct commits also completed normally. */
+    if (worker->callbackOutcome != WTI_CALLBACK_FAILED)
+        worker->callbackOutcome = ret == RS_RET_OK ? WTI_CALLBACK_SUCCEEDED : WTI_CALLBACK_FAILED;
+    #ifdef ENABLE_TESTBENCH
+    qqueueLocalTestAfterConsumer(worker);
+    #endif
     if (fe->owner->iDeqSlowdown != 0) srSleep(fe->owner->iDeqSlowdown / 1000000, fe->owner->iDeqSlowdown % 1000000);
     pthread_setcancelstate(oldCancel, NULL);
     pthread_mutex_lock(queue->mut);
@@ -833,6 +893,7 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     owner->local = family; /* unpublished configuration startup */
     #ifdef ENABLE_TESTBENCH
     family->testHelpGateFd = -1;
+    family->testSuccessGateFd = -1;
     const char *const helpGate = getenv("RSYSLOG_LOCAL_QUEUE_TEST_HELP_GATE");
     if (helpGate != NULL) {
         const char *const marker = getenv("RSYSLOG_LOCAL_QUEUE_TEST_HELP_ENTRY");
@@ -847,6 +908,20 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
         CHKmalloc(family->testHelpGateMarker = strdup(marker));
         family->testHelpGateFd = open(release, O_RDWR | O_CLOEXEC);
         if (family->testHelpGateFd < 0 || fstat(family->testHelpGateFd, &st) != 0 || !S_ISFIFO(st.st_mode))
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    const char *const successGate = getenv("RSYSLOG_LOCAL_QUEUE_TEST_SUCCESS_GATE");
+    if (successGate != NULL) {
+        const char *const marker = getenv("RSYSLOG_LOCAL_QUEUE_TEST_SUCCESS_ENTRY");
+        const char *const release = getenv("RSYSLOG_LOCAL_QUEUE_TEST_SUCCESS_RELEASE");
+        struct stat st;
+        family->testSuccessGateSource = !strcmp(successGate, "fe") ? 1 : !strcmp(successGate, "be") ? 2 : 0;
+        if (!family->testSuccessGateSource || marker == NULL || marker[0] != '/' || release == NULL ||
+            release[0] != '/')
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        CHKmalloc(family->testSuccessGateMarker = strdup(marker));
+        family->testSuccessGateFd = open(release, O_RDWR | O_CLOEXEC);
+        if (family->testSuccessGateFd < 0 || fstat(family->testSuccessGateFd, &st) != 0 || !S_ISFIFO(st.st_mode))
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
     #endif
@@ -1104,7 +1179,7 @@ int qqueueLocalWorker(const wti_t *const worker) {
 }
 
 void qqueueLocalRetainAmbiguous(wti_t *const worker) {
-    if (!qqueueLocalWorker(worker)) return;
+    if (!qqueueLocalWorker(worker) || worker->callbackOutcome == WTI_CALLBACK_SUCCEEDED) return;
     qqueue_t *const home = worker->pWtp->pUsr;
     /* DA COMM acknowledges disk acceptance, not interrupted action execution. */
     if (worker->pWtp == home->pWtpDA) return;
@@ -1115,7 +1190,10 @@ void qqueueLocalRetainAmbiguous(wti_t *const worker) {
         pthread_mutex_lock(borrowed->mut);
     }
     /* ruleset completion marks COMM before committing Direct transactions.
-     * Neither cancellation nor cooperative immediate-stop proves delivery.
+     * Before an OK callback return without Direct commit errors, cancellation
+     * and cooperative immediate-stop cannot prove delivery. After that return,
+     * preserve COMM even when later slowdown is interrupted; any RDY suffix
+     * is still replayable. Rsyslog retains at-least-once delivery semantics.
      * Retrying this whole message may duplicate earlier successful actions
      * and repeat script mutations; preserve that uncertainty, never silently
      * retire it as a successful terminal result. */
@@ -1447,6 +1525,8 @@ void qqueueLocalDestruct(qqueue_t *const owner) {
     free(__atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE));
     free(family->testActionMarker);
     free(family->testForceTermMarker);
+    free(family->testSuccessGateMarker);
+    if (family->testSuccessGateFd >= 0) close(family->testSuccessGateFd);
     free(family->testHelpGateMarker);
     if (family->testHelpGateFd >= 0) close(family->testHelpGateFd);
     #endif
@@ -1665,6 +1745,9 @@ void qqueueLocalTestNoteForceTerm(wti_t *worker, int currentIParams) {
     (void)worker;
     (void)currentIParams;
 }
+void qqueueLocalTestAfterConsumer(wti_t *worker) {
+    (void)worker;
+}
     #endif
 /* Unsupported local targets preserve the global build and fail activation. */
 int qqueueLocalEnabled(void) {
@@ -1672,6 +1755,11 @@ int qqueueLocalEnabled(void) {
 }
 void qqueueLocalProducerEnter(void) {}
 void qqueueLocalProducerLeave(void) {}
+void qqueueLocalWorkerEnter(void) {}
+void qqueueLocalWorkerLeave(void) {}
+int qqueueLocalWorkerProducer(void) {
+    return 0;
+}
 void qqueueLocalProducerExit(void *unused) {
     (void)unused;
 }

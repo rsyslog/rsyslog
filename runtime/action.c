@@ -2056,7 +2056,13 @@ void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
             "actionCommitAllDirect: action %d, state %u, nbr to commit %d "
             "isTransactional %d\n",
             i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam, pAction->isTransactional);
-        if (pAction->pQueue->qType == QUEUETYPE_DIRECT && !actionIsDisabled(pAction)) actionCommit(pAction, pWti);
+        if (pAction->pQueue->qType == QUEUETYPE_DIRECT && !actionIsDisabled(pAction)) {
+            const rsRetVal ret = actionCommit(pAction, pWti);
+            /* Ruleset COMM is tentative until every Direct commit returns.
+             * Keep the existing commit order/error policy, but do not let an
+             * OK outer callback hide an interrupted or failed transaction. */
+            if (ret != RS_RET_OK && qqueueLocalWorker(pWti)) pWti->callbackOutcome = WTI_CALLBACK_FAILED;
+        }
     }
 }
 
@@ -2462,6 +2468,14 @@ DEFFUNC_llExecFunc(doActivateActions) {
     setSuspendMessageConfVars(pThis);
     localRet = qqueueStart(runConf, pThis->pQueue);
     if (localRet != RS_RET_OK) {
+        if (pThis->pQueue->localGraphConf != NULL) {
+            /* Every graph destination is required. The iterator ignores our
+             * return, so preserve failure before inputs can be released. */
+            *preparationResult = localRet;
+            LogError(0, localRet, "local queue graph: cannot start action queue '%s' before input startup",
+                     pThis->pszName);
+            return localRet;
+        }
         if (runConf->globals.bAbortOnFailedQueueStartup) {
             fprintf(stderr,
                     "rsyslogd: error %d starting up action queue, "

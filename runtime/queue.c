@@ -4253,12 +4253,23 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
                      obj.GetName((obj_t *)pThis), skippedMsgs);
     }
 
+    /* Reset before enabling cancellation for this new callback, so a prior
+     * successful batch cannot suppress retention of an interrupted lease. */
+    pWti->callbackOutcome = WTI_CALLBACK_UNKNOWN;
     /* at this spot, we may be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
     qqueueSetWtiShutdownImmediate(pWti->source_queue == NULL ? pThis : pWti->source_queue, pWti);
-    CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti));
+    iRet = pThis->pConsumer(pThis->pAction, &pWti->batch, pWti);
+    /* Publish before any cancellation point after return. A Direct commit
+     * error recorded inside a ruleset callback still makes COMM ambiguous. */
+    if (pWti->callbackOutcome != WTI_CALLBACK_FAILED)
+        pWti->callbackOutcome = iRet == RS_RET_OK ? WTI_CALLBACK_SUCCEEDED : WTI_CALLBACK_FAILED;
+    CHKiRet(iRet);
+#ifdef ENABLE_TESTBENCH
+    qqueueLocalTestAfterConsumer(pWti);
+#endif
 
     /* we now need to check if we should deliberately delay processing a bit
      * and, if so, do that. -- rgerhards, 2008-01-30
@@ -4586,9 +4597,11 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     pthread_cond_init(&pThis->notFull, NULL);
     pthread_cond_init(&pThis->belowFullDlyWtrMrk, NULL);
     pthread_cond_init(&pThis->belowLightDlyWtrMrk, NULL);
+    pThis->bQueueSyncInitialized = 1;
 
     /* call type-specific constructor */
     CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
+    pThis->bQueueConstructed = 1;
 
     /* re-adjust some params if required */
     if (pThis->bIsDA) {
@@ -4612,8 +4625,10 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
               pThis->iMinDeqBatchSize, pThis->iHighWtrMrk, pThis->iLowWtrMrk, pThis->iDiscardMrk,
               (int)pThis->iNumWorkerThreads, (int)pThis->iMinMsgsPerWrkr, pThis->takeFlowCtlFromMsg);
 
-    pThis->bQueueStarted = 1;
-    if (pThis->qType == QUEUETYPE_DIRECT) FINALIZE; /* with direct queues, we are already finished... */
+    if (pThis->qType == QUEUETYPE_DIRECT) {
+        pThis->bQueueStarted = 1;
+        FINALIZE; /* Direct queues need no worker pool. */
+    }
 
     /* create worker thread pools for regular and DA operation.
      */
@@ -4656,6 +4671,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     CHKiRet(wtpSetpUsr(pThis->pWtpReg, pThis));
     if (pThis->bLocalScope || pThis->localGraphConf != NULL) CHKiRet(wtpUseMonotonicTermination(pThis->pWtpReg));
     CHKiRet(wtpConstructFinalize(pThis->pWtpReg));
+    pThis->bQueueStarted = 1;
 
     /* Validate queue configuration before starting */
     if (pThis->qType == QUEUETYPE_DISK || pThis->qType == QUEUETYPE_SEGMENTED_DISK || pThis->bIsDA) {
@@ -4788,9 +4804,56 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        /* note: a child uses it's parent mutex, so do not delete it! */
-        if (pThis->pqParent == NULL && pThis->mut != NULL && !(pThis->bLocalScope && pThis->bQueueStarted))
+        if (pThis->localGraphConf != NULL && pThis->pqParent == NULL) {
+            /* DA child startup holds its parent's mutex. The child unwinds
+             * privately; its parent propagates the error after InitDA unlocks.
+             * Stop the graph while every node and its mutex are still live.
+             * A failed pool has no threads; constructed storage still needs
+             * disposal. Once stopped, later graph teardown cannot revisit a
+             * released mutex or resume a recovered obligation. */
+            (void)rulesetShutdownLocalGraph(pThis->localGraphConf);
+        } else if (pThis->bQueueStarted && pThis->qType != QUEUETYPE_DIRECT && pThis->pqParent == NULL) {
+            (void)qqueueShutdownWorkers(pThis);
+        }
+        qqueueLocalStatsDestruct(&pThis->localStats);
+        if (pThis->pWtpReg != NULL) wtpDestruct(&pThis->pWtpReg);
+        if (pThis->pWtpDA != NULL) wtpDestruct(&pThis->pWtpDA);
+        if (pThis->pqDA != NULL) qqueueDestruct(&pThis->pqDA);
+        if (pThis->localRetiredDA != NULL) qqueueDestruct(&pThis->localRetiredDA);
+        if (pThis->statsobj != NULL) statsobj.Destruct(&pThis->statsobj);
+        if (pThis->bQueueConstructed) {
+            /* A completed physical store can checkpoint without a worker pool.
+             * Preserve recovered records and keep the startup error primary. */
+            if (pThis->qType == QUEUETYPE_DISK || pThis->qType == QUEUETYPE_SEGMENTED_DISK) {
+                const rsRetVal persistRet = qqueuePersist(pThis, QUEUE_NO_CHECKPOINT);
+                if (persistRet != RS_RET_OK)
+                    LogError(0, persistRet, "%s: cannot persist disk queue during startup unwind",
+                             obj.GetName((obj_t *)pThis));
+            }
+            const rsRetVal destructRet = pThis->qDestruct(pThis);
+            if (destructRet != RS_RET_OK)
+                LogError(0, destructRet, "%s: cannot release queue storage during startup unwind",
+                         obj.GetName((obj_t *)pThis));
+            pThis->bQueueConstructed = 0;
+        }
+        qqueueLocalDestruct(pThis);
+        if (pThis->bQueueSyncInitialized) {
+            pthread_mutex_destroy(&pThis->mutThrdMgmt);
+            pthread_cond_destroy(&pThis->notFull);
+            pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
+            pthread_cond_destroy(&pThis->belowLightDlyWtrMrk);
+            pThis->bQueueSyncInitialized = 0;
+        }
+        if (pThis->pqParent == NULL && pThis->mut != NULL) {
+            pthread_mutex_destroy(pThis->mut);
             free(pThis->mut);
+        }
+        pThis->mut = NULL;
+        pThis->bQueueStarted = 0;
+#ifdef ENABLE_TESTBENCH
+        if (pThis->localGraphConf != NULL)
+            fprintf(stderr, "local queue test: startup unwind complete %s\n", obj.GetName((obj_t *)pThis));
+#endif
     } else {
         pThis->isRunning = 1;
     }
@@ -5020,13 +5083,14 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         pThis->iHighWtrMrk *= 2;
         pThis->iMaxQueueSize *= 2;
     }
-    if (pThis->bQueueStarted) {
+    if (pThis->bQueueConstructed) {
         /* shut down all workers
          * We do not need to shutdown workers when we are in enqueue-only mode or we are a
          * direct queue - because in both cases we have none... ;)
          * with a child! -- rgerhards, 2008-01-28
          */
-        if (pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL && pThis->pWtpReg != NULL)
+        if (pThis->bQueueStarted && pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL &&
+            pThis->pWtpReg != NULL)
             qqueueShutdownWorkers(pThis);
 
         /* Snapshot objects hold pointers into both BE and FE pools. Unlink
@@ -5099,15 +5163,15 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
         pthread_cond_destroy(&pThis->belowLightDlyWtrMrk);
 
-        DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
-        DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
-        DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
-        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexContention);
-        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexWaitNs);
-
         /* type-specific destructor */
         iRet = pThis->qDestruct(pThis);
     }
+
+    DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
+    DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+    DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+    DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexContention);
+    DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexWaitNs);
 
     free(pThis->pszFilePrefix);
     free(pThis->pszSpoolDir);
@@ -5209,6 +5273,10 @@ static rsRetVal doEnqSingleObjContext(qqueue_t *pThis, flowControl_t flowCtlType
     DEFiRet;
     int err;
     struct timespec t;
+    /* Snapshot execution provenance for this call, including all capacity waits.
+     * Source retry and worker handoff carry accepted obligations. New inputs
+     * must escape a full queue before input joins permit graph shutdown. */
+    const int acceptedHandoff = sourceRetry || (pThis->localGraphConf != NULL && qqueueLocalWorkerProducer());
 
     STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
     /* size.enqueued mirrors enqueued: counted on arrival, before discard checks,
@@ -5320,7 +5388,12 @@ static rsRetVal doEnqSingleObjContext(qqueue_t *pThis, flowControl_t flowCtlType
              * only after doEnqSingleObj() returns. If this call blocks first,
              * an already-idle worker would never be awakened to make room. */
             qqueueAdviseMaxWorkers(pThis);
-            if (pThis->localGraphConf == NULL && glbl.GetGlobalInputTermState()) {
+            /* FORCE_TERM retains this reference, as in global-only queues.
+             * The local FE/BE wrapper consumes it and the remaining batch;
+             * ordinary enqueue callers retain their existing ownership contract.
+             * Worker handoff keeps downstream admission open until upstream
+             * joins, with graphEnqueueTimeout bounding the shutdown wait. */
+            if (!acceptedHandoff && glbl.GetGlobalInputTermState()) {
                 DBGOPRINT((obj_t *)pThis,
                           "doEnqSingleObject: queue FULL, discard due to "
                           "FORCE_TERM.\n");

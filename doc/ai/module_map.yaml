@@ -65,9 +65,16 @@ runtime_queue:
       joins upstream workers before closing downstream admission, retains all
       queue objects until graph termination, and shares absolute graceful/action
       deadlines across nodes. Full downstream enqueue waits respect that budget.
+      Graph worker execution marks accepted handoffs independently of FE trust;
+      new input admission retains full-queue FORCE_TERM. Input termination wakes
+      blocked graph admissions before input joins without closing worker handoff.
       Asynchronous action copying still follows action.copyMsg; synchronous calls
       retain the caller's worker state. Graph activation releases recovery only after
-      all destinations are initialized. Callback pools stop in topological order
+      all destinations are initialized. Graph node startup failures propagate
+      before input release, and incomplete worker pools roll back constructed
+      slots before queue storage and synchronization are released. DA children
+      unwind under the parent mutex; their parent stops the graph after unlock.
+      Callback pools stop in topological order
       before a second pass consolidates remaining FE obligations and invokes the
       existing DA save/checkpoint machinery. The existing persistence phase may
       extend beyond shared callback deadlines; it has no new bounded-save promise.
@@ -111,6 +118,13 @@ runtime_queue:
       signaling, and normal or cancellation wait cleanup clears the
       reservation under that mutex. Both wtpAdviseMaxWorkers and
       wtpWakeupAllWrkr require callers to hold pmutUsr.
+    - >-
+      Local graph workers record each outer callback outcome before subsequent
+      cancellation points. Successful return preserves COMM through slowdown
+      and immediate stop, while RDY remains replayable. Non-OK Direct commits
+      make tentative ruleset COMM uncertain even when the outer callback returns
+      OK. Interrupted and non-OK callbacks retain at-least-once replay, which may
+      repeat earlier script mutations or successful action effects.
     - Completed message references move to a bounded worker buffer after store completion and are destroyed outside the queue mutex, before callbacks or waits; cancellation is disabled during this transfer and disposal.
     - RAM retirement releases completed counts independently of batch order; segmentedDisk retains its ordered persistent frontier.
     - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.

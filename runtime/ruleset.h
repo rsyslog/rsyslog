@@ -99,6 +99,7 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
  */
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 void rulesetActivateLocalGraph(rsconf_t *conf);
+void rulesetWakeLocalGraphInputs(rsconf_t *conf);
 rsRetVal rulesetShutdownLocalGraph(rsconf_t *conf);
 void rulesetFreeLocalGraph(rsconf_t *conf);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);

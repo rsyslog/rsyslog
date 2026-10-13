@@ -37,6 +37,16 @@ collection, and process orchestration).
   - Directly invoke the most relevant shell test under `tests/` (e.g. `./tests/queue-persist.sh`).
   - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
+- Local-graph full-queue input termination and accepted worker handoff have
+  deterministic coverage in `tests/local-queue-input-force-term.sh` and
+  `tests/local-queue-global-input-force-term.sh` (imdiag and impstats required).
+- Known-success FE/BE callback retirement through cooperative immediate stop
+  and cancellation has deterministic post-return gates in
+  `tests/local-queue-known-success.sh`; existing force-term action tests retain
+  interrupted transaction replay coverage.
+- Partial local-graph startup failure, worker-pool rollback, DA child unwind,
+  and legacy disabled-action cleanup are covered by
+  `tests/local-queue-startup-failure.sh` (imtcp and imdiag required).
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 ## Coding expectations

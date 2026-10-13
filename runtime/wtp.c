@@ -133,6 +133,17 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
 
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
         CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
+#ifdef ENABLE_TESTBENCH
+        /* Fail after one complete slot and one constructed slot, or inside
+         * a one-slot frontend pool after an earlier FE completed. Matching the
+         * named pool keeps unrelated earlier graph nodes fully initialized. */
+        const char *const fault = getenv("RSYSLOG_LOCAL_QUEUE_TEST_STARTUP_POOL");
+        if ((i == 1 || (i == 0 && pThis->iNumWorkerThreads == 1)) && fault != NULL &&
+            !strcmp(fault, (const char *)wtpGetDbgHdr(pThis))) {
+            fprintf(stderr, "local queue test fault: startup-pool %s\n", fault);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+#endif
         pWti = pThis->pWrkr[i];
         lenBuf = snprintf((char *)pszBuf, sizeof(pszBuf), "%.*s/w%d",
                           (int)(sizeof(pszBuf) - 6), /* leave 6 chars for \0, "/w" and number: */
@@ -151,8 +162,18 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
         CHKiRet(wtiConstructFinalize(pWti));
     }
 
+    pThis->bReady = 1;
 
 finalize_it:
+    if (iRet != RS_RET_OK && pThis->pWrkr != NULL) {
+        /* No worker can run before finalization succeeds. Dispose both fully
+         * finalized slots and the current partially constructed WTI exactly
+         * once; shutdown helpers must not inspect this incomplete array. */
+        for (i = 0; i < pThis->iNumWorkerThreads; ++i)
+            if (pThis->pWrkr[i] != NULL) wtiDestruct(&pThis->pWrkr[i]);
+        free(pThis->pWrkr);
+        pThis->pWrkr = NULL;
+    }
     RETiRet;
 }
 
@@ -265,6 +286,7 @@ PRAGMA_IGNORE_Wempty_body
     int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
+    if (!pThis->bReady) return RS_RET_OK;
 
     /* lock mutex to prevent races (may otherwise happen during idle processing and such...) */
     d_pthread_mutex_lock(pThis->pmutUsr);
@@ -321,6 +343,7 @@ rsRetVal ATTR_NONNULL() wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj)
     int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
+    if (!pThis->bReady) return RS_RET_OK;
 
     /* go through all workers and cancel those that are active */
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
@@ -357,6 +380,7 @@ rsRetVal wtpUseMonotonicTermination(wtp_t *const pThis) {
 }
 
 rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
+    if (!pThis->bReady) return RS_RET_OK;
     d_pthread_mutex_lock(pThis->pmutUsr);
     wtpSetState(pThis, command);
     wtpWakeupAllWrkr(pThis);
@@ -372,6 +396,7 @@ rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
  * terminal WAIT_JOIN publication use the same mutex. No logging, sleep or join
  * may reenter a queue or wait for worker cleanup while holding this mutex. */
 rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
+    if (!pThis->bReady) return RS_RET_OK;
     rsRetVal result = RS_RET_OK;
     if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
     d_pthread_mutex_lock(&pThis->mutWtp);
@@ -392,6 +417,7 @@ rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
 /* NULL deadline is reserved for joining after cancellation: resource lifetime
  * cannot be bounded by a policy deadline while a callback still executes. */
 rsRetVal wtpWaitShutdownUntil(wtp_t *const pThis, const struct timespec *const deadline) {
+    if (!pThis->bReady) return RS_RET_OK;
     int ret = 0;
     if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
     d_pthread_mutex_lock(&pThis->mutWtp);
@@ -703,6 +729,7 @@ finalize_it:
 
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
     if (pThis == NULL) return RS_RET_PARAM_ERROR;
+    if (!pThis->bReady) return RS_RET_OK;
     /* The caller holds pmutUsr, which is the mutex associated with pcondBusy.
      * Do not use mutWtp here: it cannot serialize condition predicates. */
     for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {

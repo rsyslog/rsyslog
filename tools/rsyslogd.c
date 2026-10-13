@@ -1013,6 +1013,14 @@ rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue) {
     CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
         /* no queue is fatal, we need to give up in that case... */
         LogError(0, iRet, "could not start (ruleset) main message queue");
+        if (pQueue->localGraphConf != NULL) {
+            /* A global boundary is required by the local graph too. Propagate
+             * its failure after qqueueStart has unwound; never fall back. */
+            fprintf(stderr,
+                    "rsyslogd: could not start (ruleset) main message queue, "
+                    "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
+            RETiRet;
+        }
         if (pQueue->bLocalScope || pQueue->bLocalConfigError || runConf->globals.bAbortOnFailedQueueStartup) {
             fprintf(stderr,
                     "rsyslogd: could not start (ruleset) main message queue, "
@@ -2544,6 +2552,9 @@ static void deinitAll(void) {
     /* close the inputs */
     DBGPRINTF("Terminating input threads...\n");
     glbl.SetGlobalInputTermination();
+    /* Wake graph inputs already waiting on capacity before joining them.
+     * This does not close graph admission or begin its drain deadlines. */
+    rulesetWakeLocalGraphInputs(runConf);
 
     thrdTerminateAll();
 

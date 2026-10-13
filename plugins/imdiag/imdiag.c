@@ -64,6 +64,9 @@
 #include "queue_local_stats.h"
 #ifdef ENABLE_TESTBENCH
     #include "queue_local.h"
+    #include "ruleset.h"
+    #include "glbl.h"
+    #include "wti.h"
 #endif
 #include "rsconf.h"
 #include "lookup.h"
@@ -76,8 +79,11 @@ MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imdiag")
 /* static data */
 DEF_IMOD_STATIC_DATA;
-DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(datetime)
-    DEFobjCurrIf(prop) DEFobjCurrIf(statsobj)
+#ifdef ENABLE_TESTBENCH
+DEFobjCurrIf(glbl)
+#endif
+    DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(datetime)
+        DEFobjCurrIf(prop) DEFobjCurrIf(statsobj)
 
     /* Module static data */
     static tcpsrv_t *pOurTcpsrv = NULL; /* our TCP server(listener) TODO: change for multiple instances */
@@ -967,6 +973,268 @@ finalize_it:
     if (iRet != RS_RET_OK) CHKiRet(sendResponse(pSess, "ERROR: local queue redirect fixture failed: %d\n", iRet));
     RETiRet;
 }
+
+/* Full-queue input shutdown fixture. All gates describe actual callback or
+ * enqueue state; the five-second deadline is only a failure watchdog. Every
+ * message retains an observer ref so accepted and rejected ownership can be
+ * checked after the real queue workers have disposed their references. */
+static pthread_mutex_t inputTermFixtureMut = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t inputTermFixtureCond = PTHREAD_COND_INITIALIZER;
+static qqueue_t *inputTermFixtureDestination, *inputTermFixtureSource;
+static unsigned inputTermFixtureEntered, inputTermFixtureRelease, inputTermFixtureDone;
+static rsRetVal inputTermFixtureHandoff, inputTermFixtureInput;
+static smsg_t *inputTermFixtureRefs[64];
+static size_t inputTermFixtureCount;
+
+static int inputTermFixtureAwait(unsigned *const value, const unsigned expected) {
+    struct timespec deadline;
+    clock_gettime(CLOCK_REALTIME, &deadline);
+    deadline.tv_sec += 5;
+    pthread_mutex_lock(&inputTermFixtureMut);
+    int ret = 0;
+    while (*value < expected && ret == 0)
+        ret = pthread_cond_timedwait(&inputTermFixtureCond, &inputTermFixtureMut, &deadline);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    return ret == 0;
+}
+
+static rsRetVal inputTermFixtureConsumer(void *unused, batch_t *const batch, wti_t *const worker) {
+    (void)unused;
+    rsRetVal result = RS_RET_OK;
+    if (worker->logical_owner == inputTermFixtureSource) {
+        /* This is a real WTI callback, so worker execution must preserve the
+         * accepted source obligation even after the global input flag is set. */
+        smsg_t *handoff = MsgAddRef(batch->pElem[0].pMsg);
+        result = qqueueEnqMsg(inputTermFixtureDestination, eFLOWCTL_NO_DELAY, handoff);
+        if (result != RS_RET_OK && result != RS_RET_QUEUE_FULL && inputTermFixtureDestination->local == NULL)
+            msgDestruct(&handoff);
+        pthread_mutex_lock(&inputTermFixtureMut);
+        inputTermFixtureHandoff = result;
+        pthread_cond_broadcast(&inputTermFixtureCond);
+        pthread_mutex_unlock(&inputTermFixtureMut);
+    } else {
+        pthread_mutex_lock(&inputTermFixtureMut);
+        ++inputTermFixtureEntered;
+        pthread_cond_broadcast(&inputTermFixtureCond);
+        while (!inputTermFixtureRelease) pthread_cond_wait(&inputTermFixtureCond, &inputTermFixtureMut);
+        pthread_mutex_unlock(&inputTermFixtureMut);
+    }
+    for (int i = 0; i < batch->nElem; ++i) batch->eltState[i] = BATCH_STATE_COMM;
+    return result;
+}
+
+static rsRetVal inputTermFixtureMessages(smsg_t **const messages, const size_t count) {
+    if (inputTermFixtureCount + count > sizeof(inputTermFixtureRefs) / sizeof(inputTermFixtureRefs[0]))
+        return RS_RET_PARAM_ERROR;
+    const rsRetVal ret = localQueueSubmitFixtureCreate(messages, count);
+    if (ret != RS_RET_OK) return ret;
+    for (size_t i = 0; i < count; ++i) inputTermFixtureRefs[inputTermFixtureCount++] = MsgAddRef(messages[i]);
+    return RS_RET_OK;
+}
+
+/* Observing ctrFull under the queue mutex after it increases proves the
+ * producer has reached the capacity wait and released that same mutex. */
+static int inputTermFixtureWaitFull(qqueue_t *const queue, const uint64_t before) {
+    struct timespec deadline, now;
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
+    deadline.tv_sec += 5;
+    do {
+        pthread_mutex_lock(queue->mut);
+        const int full = __atomic_load_n(&queue->ctrFull, __ATOMIC_RELAXED) > before;
+        pthread_mutex_unlock(queue->mut);
+        if (full) return 1;
+        srSleep(0, 1000);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+    } while (now.tv_sec < deadline.tv_sec || (now.tv_sec == deadline.tv_sec && now.tv_nsec < deadline.tv_nsec));
+    return 0;
+}
+
+static void *inputTermFixtureProducer(void *unused) {
+    (void)unused;
+    smsg_t *messages[4] = {0};
+    rsRetVal ret = RS_RET_OK;
+    qqueueLocalProducerEnter();
+    if (inputTermFixtureDestination->local != NULL) {
+        /* The BE is held full. The one trusted producer establishes an active
+         * FE singleton and then fills all four ring slots, forcing no-fit BE
+         * fallback for the following two-message submission. */
+        ret = inputTermFixtureMessages(messages, 1);
+        if (ret == RS_RET_OK) ret = qqueueEnqMsg(inputTermFixtureDestination, eFLOWCTL_NO_DELAY, messages[0]);
+        if (ret == RS_RET_OK && !inputTermFixtureAwait(&inputTermFixtureEntered, 2)) ret = RS_RET_TIMED_OUT;
+        if (ret == RS_RET_OK) ret = inputTermFixtureMessages(messages, 4);
+        multi_submit_t fill = {.ppMsgs = messages, .nElem = 4};
+        if (ret == RS_RET_OK) ret = inputTermFixtureDestination->MultiEnq(inputTermFixtureDestination, &fill);
+    }
+    if (ret == RS_RET_OK) ret = inputTermFixtureMessages(messages, 2);
+    multi_submit_t rejected = {.ppMsgs = messages, .nElem = 2};
+    if (ret == RS_RET_OK) ret = inputTermFixtureDestination->MultiEnq(inputTermFixtureDestination, &rejected);
+    /* Legacy global admission retains the current and unprocessed suffix on
+     * FORCE_TERM. Local FE/BE admission consumes that entire supplied array. */
+    if (ret == RS_RET_FORCE_TERM && inputTermFixtureDestination->local == NULL) {
+        for (size_t i = 0; i < 2; ++i) {
+            if (messages[i]->iRefCount != 2)
+                ret = RS_RET_INTERNAL_ERROR;
+            else
+                msgDestruct(&messages[i]);
+        }
+    }
+    qqueueLocalProducerLeave();
+    qqueueLocalProducerExit(NULL);
+    pthread_mutex_lock(&inputTermFixtureMut);
+    inputTermFixtureInput = ret;
+    inputTermFixtureDone = 1;
+    pthread_cond_broadcast(&inputTermFixtureCond);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    return NULL;
+}
+
+static rsRetVal inputTermFixtureQueue(qqueue_t **const queue, const char *const name, const int graph) {
+    rsRetVal ret = qqueueConstruct(queue, QUEUETYPE_FIXED_ARRAY, 1, 1, inputTermFixtureConsumer);
+    if (ret != RS_RET_OK) return ret;
+    qqueueSetDefaultsRulesetQueue(*queue);
+    (*queue)->iMaxQueueSize = (*queue)->iDeqBatchSize = (*queue)->iMinMsgsPerWrkr = 1;
+    (*queue)->toEnq = 60000;
+    (*queue)->toQShutdown = (*queue)->toActShutdown = 5000;
+    if (graph) (*queue)->localGraphConf = runConf;
+    (*queue)->localGraphReady = 1;
+    ret = obj.SetName((obj_t *)*queue, (uchar *)name);
+    return ret == RS_RET_OK ? qqueueStart(runConf, *queue) : ret;
+}
+
+static int inputTermFixtureConserved(void) {
+    struct timespec deadline, now;
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
+    deadline.tv_sec += 5;
+    do {
+        int conserved = 1;
+        for (size_t i = 0; i < inputTermFixtureCount; ++i)
+            if (__atomic_load_n(&inputTermFixtureRefs[i]->iRefCount, __ATOMIC_RELAXED) != 1) conserved = 0;
+        if (conserved) return 1;
+        srSleep(0, 1000);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+    } while (now.tv_sec < deadline.tv_sec || (now.tv_sec == deadline.tv_sec && now.tv_nsec < deadline.tv_nsec));
+    return 0;
+}
+
+/* This command is terminal for the input server: it publishes the real one-way
+ * global termination flag. The shell subsequently uses signal-based shutdown
+ * and the daemon's proper-termination file, without another imdiag command. */
+static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
+    qqueue_t *const destination = runConf->pMsgQueue;
+    qqueue_t *global = NULL;
+    smsg_t *messages[16] = {0};
+    pthread_t producer;
+    int started = 0;
+    rsRetVal (*consumer)(void *, batch_t *, wti_t *) = destination->pConsumer;
+    qqueueLocalSnapshot_t snapshot;
+    DEFiRet;
+    if (destination->localGraphConf == NULL || destination->iMaxQueueSize != 16 || destination->iDeqBatchSize != 1 ||
+        (destination->local != NULL && (destination->localFrontendSize != 4 || destination->localMaxFrontends != 1)))
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    inputTermFixtureDestination = destination;
+    inputTermFixtureEntered = inputTermFixtureRelease = inputTermFixtureDone = 0;
+    inputTermFixtureCount = 0;
+    inputTermFixtureHandoff = inputTermFixtureInput = RS_RET_ERR;
+    pthread_mutex_lock(destination->mut);
+    const int empty = destination->iQueueSize == 0 && destination->nLogDeq == 0;
+    if (empty) destination->pConsumer = inputTermFixtureConsumer;
+    pthread_mutex_unlock(destination->mut);
+    if (!empty) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    CHKiRet(inputTermFixtureQueue(&inputTermFixtureSource, "input-term-source", 1));
+    CHKiRet(inputTermFixtureQueue(&global, "input-term-global", 0));
+    CHKiRet(inputTermFixtureMessages(messages, 16));
+    /* Untrusted caller fills the real BE and holds its dedicated callback. */
+    for (size_t i = 0; i < 16; ++i) CHKiRet(qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[i]));
+    if (!inputTermFixtureAwait(&inputTermFixtureEntered, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    const uint64_t fullBefore = __atomic_load_n(&destination->ctrFull, __ATOMIC_RELAXED);
+    if (pthread_create(&producer, NULL, inputTermFixtureProducer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    started = 1;
+    if (!inputTermFixtureWaitFull(destination, fullBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    /* Real shutdown ordering: publish flag, wake admissions, then join input.
+     * Downstream callbacks are still gated and cannot make capacity available. */
+    glbl.SetGlobalInputTermination();
+    rulesetWakeLocalGraphInputs(runConf);
+    if (!inputTermFixtureAwait(&inputTermFixtureDone, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    pthread_join(producer, NULL);
+    started = 0;
+    if (inputTermFixtureInput != RS_RET_FORCE_TERM) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    /* Test direct BE single-message fallback with the same full destination. */
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    const rsRetVal backend = qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[0]);
+    if (backend == RS_RET_FORCE_TERM && destination->local == NULL) {
+        if (messages[0]->iRefCount != 2) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        msgDestruct(&messages[0]);
+    }
+    if (backend != RS_RET_FORCE_TERM) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    /* Non-graph global queues preserve the legacy retained-ref outcome. */
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    CHKiRet(qqueueEnqMsg(global, eFLOWCTL_NO_DELAY, messages[0]));
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    const rsRetVal legacy = qqueueEnqMsg(global, eFLOWCTL_NO_DELAY, messages[0]);
+    if (legacy != RS_RET_FORCE_TERM || messages[0]->iRefCount != 2) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    msgDestruct(&messages[0]);
+    /* A real graph worker must wait, and later successfully hand off its lease. */
+    const uint64_t handoffBefore = __atomic_load_n(&destination->ctrFull, __ATOMIC_RELAXED);
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    CHKiRet(qqueueEnqMsg(inputTermFixtureSource, eFLOWCTL_NO_DELAY, messages[0]));
+    if (!inputTermFixtureWaitFull(destination, handoffBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    pthread_mutex_lock(&inputTermFixtureMut);
+    const int stillWaiting = inputTermFixtureHandoff == RS_RET_ERR;
+    inputTermFixtureRelease = 1;
+    pthread_cond_broadcast(&inputTermFixtureCond);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    const int conserved = inputTermFixtureConserved();
+    pthread_mutex_lock(&inputTermFixtureMut);
+    const rsRetVal handoff = inputTermFixtureHandoff;
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    if (!stillWaiting || !conserved || handoff != RS_RET_OK) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    if (destination->local != NULL) {
+        qqueueLocalGetSnapshot(destination, &snapshot);
+        if (snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected || snapshot.outstanding != 0 ||
+            snapshot.preadmission_rejected != 3 || snapshot.be_nofit != 2 || snapshot.be_capacity_exhausted != 1)
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+finalize_it:
+    /* An early failed gate must not strand the input's 60-second capacity
+     * wait. Publish termination and wake it before releasing held consumers. */
+    if (started) {
+        glbl.SetGlobalInputTermination();
+        rulesetWakeLocalGraphInputs(runConf);
+    }
+    pthread_mutex_lock(&inputTermFixtureMut);
+    inputTermFixtureRelease = 1;
+    pthread_cond_broadcast(&inputTermFixtureCond);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    if (started) {
+        pthread_mutex_lock(destination->mut);
+        pthread_cond_broadcast(&destination->notFull);
+        pthread_mutex_unlock(destination->mut);
+        pthread_join(producer, NULL);
+    }
+    if (inputTermFixtureSource != NULL) {
+        inputTermFixtureSource->localGraphConf = NULL;
+        qqueueDestruct(&inputTermFixtureSource);
+    }
+    if (global != NULL) qqueueDestruct(&global);
+    const int cleanupConserved = inputTermFixtureConserved();
+    if (!cleanupConserved && iRet == RS_RET_OK) iRet = RS_RET_INTERNAL_ERROR;
+    pthread_mutex_lock(destination->mut);
+    destination->pConsumer = consumer;
+    pthread_mutex_unlock(destination->mut);
+    /* On a failed conservation oracle, retain observers until process exit;
+     * destination work may still own a reference. Never free test ownership
+     * while reporting an unresolved queue/reference lifetime failure. */
+    if (cleanupConserved) {
+        for (size_t i = 0; i < inputTermFixtureCount; ++i) msgDestruct(&inputTermFixtureRefs[i]);
+    }
+    if (iRet == RS_RET_OK)
+        iRet = sendResponse(session,
+                            "OK input=FORCE_TERM backend=FORCE_TERM global=FORCE_TERM handoff=OK refs=conserved\n");
+    else
+        sendResponse(session, "ERROR: input termination fixture failed: %d\n", iRet);
+    RETiRet;
+}
+
 #endif
 
 /* Function to handle received messages. This is our core function!
@@ -1024,6 +1292,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(local_queue_stop_check(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuesubmittest"))) {
         CHKiRet(local_queue_submit_test(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueueinputtermtest"))) {
+        CHKiRet(local_queue_input_term_test(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueueredirecttest"))) {
         CHKiRet(local_queue_redirect_test(pSess));
 #endif
@@ -1560,6 +1830,9 @@ BEGINmodExit
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
     objRelease(statsobj, CORE_COMPONENT);
+#ifdef ENABLE_TESTBENCH
+    objRelease(glbl, CORE_COMPONENT);
+#endif
 ENDmodExit
 
 
@@ -1608,6 +1881,9 @@ BEGINmodInit()
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+#ifdef ENABLE_TESTBENCH
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+#endif
 
     const char *ci_max_empty_checks = getenv("CI_SHUTDOWN_QUEUE_EMPTY_CHECKS");
     if (ci_max_empty_checks != NULL) {

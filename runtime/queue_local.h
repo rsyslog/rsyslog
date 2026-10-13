@@ -46,13 +46,20 @@ typedef struct qqueueLocalSnapshot_s {
     uint64_t help_completed, help_returned, wake_fe, wake_shutdown;
 } qqueueLocalSnapshot_t;
 
-/* Called only by actual tcpsrv execution, never inferred from message inputname.
+/* Called by actual tcpsrv or graph-worker execution, never inferred from message inputname.
  * Exit runs before input-thread joins permit queue destruction. The TLS key's
  * fallback destructor frees cache nodes without dereferencing queue storage. */
 int qqueueLocalEnabled(void);
 void qqueueLocalProducerEnter(void);
 void qqueueLocalProducerLeave(void);
 void qqueueLocalProducerExit(void *unused);
+/* Bracket graph worker callbacks, including synchronous Direct actions and
+ * queued action/ruleset/retry handoffs. FE/BE routing does not alter this role.
+ * New input admission must remain interruptible after input termination;
+ * forwarding an accepted obligation may instead use the graph drain budget. */
+void qqueueLocalWorkerEnter(void);
+void qqueueLocalWorkerLeave(void);
+int qqueueLocalWorkerProducer(void);
 #ifdef ENABLE_TESTBENCH
 /* Deterministic test controls; absent from production builds. */
 int qqueueLocalTestFailNode(const qqueue_t *owner, int retry);
@@ -62,6 +69,7 @@ void qqueueLocalTestRedirectArm(void);
 int qqueueLocalTestRedirectWaitPublisher(unsigned timeout_ms);
 void qqueueLocalTestRedirectRelease(void);
 void qqueueLocalTestNoteForceTerm(wti_t *worker, int currentIParams);
+void qqueueLocalTestAfterConsumer(wti_t *worker);
 #endif
 
 
@@ -73,8 +81,9 @@ rsRetVal qqueueLocalShutdownUntil(qqueue_t *owner, const struct timespec *gracef
 void qqueueLocalDestruct(qqueue_t *owner);
 int qqueueLocalIsClosed(const qqueue_t *owner);
 int qqueueLocalWorker(const wti_t *worker);
-/* Caller owns the worker home mutex. Borrowed sources are locked internally. Preserve DISC; COMM is ambiguous
- * on interrupted callbacks and must remain an accepted obligation. */
+/* Caller owns the worker home mutex. Borrowed sources are locked internally.
+ * Preserve DISC and known-success COMM; interrupted/non-OK callbacks retain
+ * ambiguous COMM as accepted obligations. RDY entries remain replayable. */
 void qqueueLocalRetainAmbiguous(wti_t *worker);
 void qqueueLocalNoteActionPhase(qqueue_t *owner);
 void qqueueLocalRefreshLegacy(qqueue_t *owner);

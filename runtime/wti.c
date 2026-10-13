@@ -294,6 +294,7 @@ BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! 
     INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
     pthread_cond_init(&pThis->pcondBusy, NULL);
     pThis->bExiting = 0;
+    pThis->callbackOutcome = WTI_CALLBACK_UNKNOWN;
     pThis->source_queue = NULL;
     pThis->logical_owner = NULL;
 ENDobjConstruct(wti)
@@ -393,6 +394,8 @@ static void wtiWorkerCancelCleanup(void *arg) {
     d_pthread_mutex_lock(pWtp->pmutUsr);
     wtiMarkExiting(pThis);
     if (qqueueLocalWorker(pThis)) {
+        /* A cancellation after successful return (for example slowdown)
+         * preserves COMM; an interrupted callback remains replayable. */
         qqueueLocalRetainAmbiguous(pThis);
         /* Cancelled callbacks can still have parameter caches referring to
          * their messages. Dispose those caches before source completion can
@@ -535,9 +538,14 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
 
         /* try to execute and process whatever we have */
         const int graphProducer = ((qqueue_t *)pWtp->pUsr)->localGraphConf != NULL;
-        if (graphProducer) qqueueLocalProducerEnter();
+        /* These callbacks own accepted source leases. Inputs also qualify for
+         * FE publication, so FE trust alone cannot exempt them from FORCE_TERM.
+         * Direct actions and synchronous rulesets inherit this worker role;
+         * a Direct main input's dummy WTI has no queued lease and keeps its
+         * input role at downstream capacity waits. */
+        if (graphProducer) qqueueLocalWorkerEnter();
         localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
-        if (graphProducer) qqueueLocalProducerLeave();
+        if (graphProducer) qqueueLocalWorkerLeave();
 
         if (localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
             break; /* end of loop */

@@ -161,7 +161,7 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues) {
     dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n", pThis->pQueue, pThis->pszName);
     if (pThis->pQueue != NULL) {
         const rsRetVal ret = startMainQueue(runConf, pThis->pQueue);
-        if (pThis->pQueue->bLocalScope) CHKiRet(ret);
+        if (pThis->pQueue->localGraphConf != NULL || pThis->pQueue->bLocalScope) CHKiRet(ret);
     }
 finalize_it:
     RETiRet;
@@ -1035,6 +1035,8 @@ static rsRetVal localGraphOrder(rsconf_t *const conf) {
         for (localQueueEdge_t *edge = node->edges; edge != NULL; edge = edge->next) --edge->target->indegree;
     }
     for (size_t i = 0; i < graph->count; ++i) {
+        /* Graph membership covers global boundaries too. Producer role comes
+         * from execution context, never from a queue's scope or graph position. */
         graph->order[i]->localGraphConf = conf;
         if (graph->order[i]->bLocalScope) graph->order[i]->bLocalConfigValidated = 1;
     }
@@ -1049,6 +1051,25 @@ static struct timespec localGraphAddMs(struct timespec deadline, const unsigned 
         deadline.tv_nsec -= 1000000000L;
     }
     return deadline;
+}
+
+/* Input termination is published before this wake and before input joins.
+ * A queue mutex serializes the admission predicate and condvar wait with the
+ * broadcast, so an already-blocked input cannot miss the termination wake.
+ * Keep worker handoff admission open: drain deadlines begin only after inputs
+ * join, and upstream accepted obligations still need downstream consumers. */
+void rulesetWakeLocalGraphInputs(rsconf_t *const conf) {
+    struct localQueueGraph_s *const graph = conf->localQueueGraph;
+    if (graph == NULL) return;
+    for (size_t i = 0; i < graph->count; ++i) {
+        qqueue_t *const queue = graph->order[i];
+        if (!queue->bQueueStarted || queue->qType == QUEUETYPE_DIRECT || queue->mut == NULL) continue;
+        pthread_mutex_lock(queue->mut);
+        pthread_cond_broadcast(&queue->notFull);
+        pthread_cond_broadcast(&queue->belowFullDlyWtrMrk);
+        pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
+        pthread_mutex_unlock(queue->mut);
+    }
 }
 
 rsRetVal rulesetShutdownLocalGraph(rsconf_t *const conf) {

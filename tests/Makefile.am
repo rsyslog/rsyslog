@@ -180,6 +180,7 @@ TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh local-queue-s4-config
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 
 TESTS_LOCAL_QUEUE = \
+	local-queue-known-success.sh \
 	local-queue-s6-linkedlist-oom.sh \
 	local-queue-s6-linkedlist-retry-oom.sh \
 	local-queue-s6-schedule.sh \
@@ -233,7 +234,9 @@ TESTS_LOCAL_QUEUE_ELASTICSEARCH = \
 TESTS_LOCAL_QUEUE_IMDIAG = \
 	local-queue-redirect-publication.sh \
 	local-queue-stats-lifetime.sh
-TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS = local-queue-be-force-term-actions.sh
+TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS = local-queue-be-force-term-actions.sh \
+    local-queue-input-force-term.sh \
+    local-queue-global-input-force-term.sh
 TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS_OMTESTING = \
 	local-queue-stats-reconciliation.sh \
 	local-queue-submit-batches.sh
@@ -3026,7 +3029,9 @@ TESTS += $(TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS_OMTESTING)
 endif
 endif
 if ENABLE_IMTCP_TESTS
+if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
+endif
 if ENABLE_IMPSTATS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE)
