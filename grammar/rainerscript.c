@@ -1839,7 +1839,7 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
     uint i, j;
     /* A shorter replacement can bring an oversized source below the limit. */
     for (i = j = 0; i <= lSrc; i++, lDst++) {
-        if (lReplaceWith > lfind && lDst > maxResult) goto oversize;
+        if (lReplaceWith >= lfind && lDst > maxResult) goto oversize;
         if (j == lfind) {
             if (lReplaceWith > lfind && (lDst - lfind > maxResult || lReplaceWith > maxResult - (lDst - lfind)))
                 goto oversize;
