@@ -326,6 +326,20 @@ Group: System Environment/Daemons
 Requires: %name = %version-%release
 BuildRequires: libcurl-devel
 
+%if 0%{?rhel} >= 9
+%package omkinesis
+Summary: Amazon Kinesis Data Streams output module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+BuildRequires: libcurl-devel
+%endif
+
+%package imhttp
+Summary: imhttp input module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+BuildRequires: civetweb-devel apr-util-devel
+
 %package omotel
 Summary: omotel output module for rsyslog
 Group: System Environment/Daemons
@@ -541,6 +555,14 @@ Function module for rainerscript function hash.
 %description omhttp
 HTTP output module for sending syslog messages to HTTP endpoints.
 
+%if 0%{?rhel} >= 9
+%description omkinesis
+Output module for sending syslog messages to Amazon Kinesis Data Streams.
+%endif
+
+%description imhttp
+This module provides support for HTTP server.
+
 %description omotel
 OTEL output module for sending syslog messages to OpenTelemetry endpoints.
 
@@ -716,6 +738,10 @@ export HIREDIS_LIBS=-L%{_libdir}
 	--enable-pmciscoios \
 	--enable-mmkubernetes \
 	--enable-omhttp \
+%if 0%{?rhel} >= 9
+	--enable-omkinesis \
+%endif
+	--enable-imhttp \
 	--enable-omotel \
 	--enable-omazuredce \
 	--enable-omsendertrack \
@@ -1011,6 +1037,16 @@ done
 %files omhttp
 %defattr(-,root,root)
 %{_libdir}/rsyslog/omhttp.so
+
+%if 0%{?rhel} >= 9
+%files omkinesis
+%defattr(-,root,root)
+%{_libdir}/rsyslog/omkinesis.so
+%endif
+
+%files imhttp
+%defattr(-,root,root)
+%{_libdir}/rsyslog/imhttp.so
 
 %files omotel
 %defattr(-,root,root)

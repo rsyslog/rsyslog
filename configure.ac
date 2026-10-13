@@ -1805,6 +1805,18 @@ if test "x$enable_mmnormalize" = "xyes"; then
 			AC_CHECK_HEADER([lognorm-turbo.h],[],
 				[lognorm_turbo_supported="no"; lognorm_turbo_header_missing="yes"])
 		fi
+		# ln_fast_result_is_truncated() post-dates the first public turbo
+		# header, so LOGNORM_TURBO_SUPPORTED does not imply it. Probe for it
+		# separately; mmnormalize only declines a truncated result when the
+		# installed liblognorm can report one.
+		lognorm_turbo_truncation_supported="no"
+		if test "x$lognorm_turbo_supported" = "xyes"; then
+			AC_CHECK_DECL([ln_fast_result_is_truncated],
+				[AC_DEFINE(HAVE_LN_FAST_RESULT_IS_TRUNCATED, 1,
+					[liblognorm exposes ln_fast_result_is_truncated()])
+				lognorm_turbo_truncation_supported="yes"],
+				[], [[#include <lognorm-turbo.h>]])
+		fi
 		if test "x$enable_turbo" = "xyes" -a "x$lognorm_turbo_supported" != "xyes"; then
 			if test "x$lognorm_turbo_header_missing" = "xyes"; then
 				AC_MSG_ERROR([--enable-turbo was requested but the public header lognorm-turbo.h is missing. Upgrade liblognorm to >= 2.1.0 (built with --enable-turbo).])
@@ -1819,6 +1831,7 @@ if test "x$enable_mmnormalize" = "xyes"; then
 fi
 AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
 AM_CONDITIONAL(LOGNORM_TURBO_SUPPORTED, test x$lognorm_turbo_supported = xyes)
+AM_CONDITIONAL(LOGNORM_TURBO_TRUNCATION_SUPPORTED, test x$lognorm_turbo_truncation_supported = xyes)
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 if test "x$lognorm_turbo_supported" = "xyes"; then
 	AC_DEFINE(HAVE_LOGNORM_TURBO, 1, [liblognorm has turbo VM support])
@@ -3159,6 +3172,44 @@ if test "x$enable_omawslogshlc" = "xyes" -o "x$enable_omawslogshlc" = "xoptional
 fi
 AM_CONDITIONAL(ENABLE_OMAWSLOGSHLC, test x$enable_omawslogshlc = xyes -o x$enable_omawslogshlc = xoptional)
 
+# Amazon Kinesis Data Streams PutRecord output, signed by libcurl.
+AC_ARG_ENABLE(omkinesis,
+        [AS_HELP_STRING([--enable-omkinesis],[Compiles omkinesis output module (requires libcurl >= 7.75.0) @<:@default=optional@:>@])],
+        [case "${enableval}" in
+         yes|no|optional) enable_omkinesis="${enableval}" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omkinesis) ;;
+         esac],
+        [enable_omkinesis=optional])
+AS_IF([test "x$enable_omkinesis" = "xyes" -o "x$enable_omkinesis" = "xoptional"], [
+        PKG_CHECK_MODULES([OMKINESIS_CURL], [libcurl >= 7.75.0], [], [
+                AS_IF([test "x$enable_omkinesis" = "xyes"],
+                      [AC_MSG_FAILURE([omkinesis requires libcurl >= 7.75.0])],
+                      [enable_omkinesis=no])
+        ])
+        AS_IF([test "x$enable_omkinesis" != "xno"], [
+                rsyslog_saved_CPPFLAGS="$CPPFLAGS"
+                rsyslog_saved_LIBS="$LIBS"
+                CPPFLAGS="$CPPFLAGS $OMKINESIS_CURL_CFLAGS"
+                LIBS="$OMKINESIS_CURL_LIBS $LIBS"
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <curl/curl.h>]],
+                        [[CURLoption option = CURLOPT_AWS_SIGV4;
+                          CURLU *url = curl_url();
+                          char *host = 0;
+                          curl_url_set(url, CURLUPART_URL, "https://example.com", 0);
+                          curl_url_get(url, CURLUPART_HOST, &host, 0);
+                          curl_free(host);
+                          curl_url_cleanup(url);
+                          return option == 0;]])], [], [
+                        AS_IF([test "x$enable_omkinesis" = "xyes"],
+                              [AC_MSG_FAILURE([omkinesis requires libcurl AWS SigV4 and URL API support])],
+                              [enable_omkinesis=no])
+                ])
+                CPPFLAGS="$rsyslog_saved_CPPFLAGS"
+                LIBS="$rsyslog_saved_LIBS"
+        ])
+])
+AM_CONDITIONAL(ENABLE_OMKINESIS, test "x$enable_omkinesis" = "xyes" -o "x$enable_omkinesis" = "xoptional")
+
 # omazureeventhubs support for output module
 AC_ARG_ENABLE(omazureeventhubs,
         [AS_HELP_STRING([--enable-omazureeventhubs],[Compiles AzureEventHubs output module @<:@default=no@:>@])],
@@ -3748,6 +3799,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omazureeventhubs/Makefile \
 		plugins/omazuredce/Makefile \
 		plugins/omawslogshlc/Makefile \
+		plugins/omkinesis/Makefile \
 		plugins/imdtls/Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
@@ -3869,6 +3921,7 @@ echo "    omhiredis module will be compiled:        $enable_omhiredis"
 echo "    omazureeventhubs module will be compiled: $enable_omazureeventhubs"
 echo "    omazuredce module will be compiled:       $enable_omazuredce"
 echo "    omawslogshlc module will be compiled:     $enable_omawslogshlc"
+echo "    omkinesis module will be compiled:        $enable_omkinesis"
 echo "    omdtls module will be compiled:           $enable_omdtls"
 echo
 echo "---{ parser modules }---"

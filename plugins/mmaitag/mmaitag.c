@@ -30,7 +30,9 @@
 #include "module-template.h"
 #include "msg.h"
 #include "cfsysline.h"
+#include "parserif.h"
 #include "ai_provider.h"
+#include "ai_provider_gemini_response.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -38,11 +40,18 @@ MODULE_CNFNAME("mmaitag")
 
 DEF_OMOD_STATIC_DATA
 
-static struct cnfparamdescr actpdescr[] = {
-    {"provider", eCmdHdlrString, 0},      {"tag", eCmdHdlrString, 0},
-    {"model", eCmdHdlrString, 0},         {"expert.initial_prompt", eCmdHdlrString, 0},
-    {"inputproperty", eCmdHdlrString, 0}, {"apikey", eCmdHdlrString, 0},
-    {"apikey_file", eCmdHdlrString, 0}};
+static struct cnfparamdescr actpdescr[] = {{"provider", eCmdHdlrString, 0},
+                                           {"tag", eCmdHdlrString, 0},
+                                           {"model", eCmdHdlrString, 0},
+                                           {"expert.initial_prompt", eCmdHdlrString, 0},
+                                           {"inputproperty", eCmdHdlrString, 0},
+                                           {"apikey", eCmdHdlrString, 0},
+                                           {"apikey_file", eCmdHdlrString, 0},
+                                           {"response.maxbytes", eCmdHdlrPositiveInt, 0},
+                                           {"request.timeoutms", eCmdHdlrPositiveInt, 0},
+                                           {"request.connecttimeoutms", eCmdHdlrPositiveInt, 0},
+                                           {"request.lowspeedlimit", eCmdHdlrPositiveInt, 0},
+                                           {"request.lowspeedtime", eCmdHdlrPositiveInt, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 typedef struct _instanceData {
@@ -54,6 +63,7 @@ typedef struct _instanceData {
     char *apikey;
     char *apikey_file;
     ai_provider_t *provider;
+    ai_provider_transfer_limits_t transfer_limits;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -115,6 +125,11 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->apikey = NULL;
     pData->apikey_file = NULL;
     pData->provider = NULL;
+    pData->transfer_limits.max_response_bytes = MMAITAG_GEMINI_MAX_RESPONSE_BYTES;
+    pData->transfer_limits.total_timeout_ms = MMAITAG_GEMINI_TOTAL_TIMEOUT_MS;
+    pData->transfer_limits.connect_timeout_ms = MMAITAG_GEMINI_CONNECT_TIMEOUT_MS;
+    pData->transfer_limits.low_speed_limit = MMAITAG_GEMINI_LOW_SPEED_LIMIT;
+    pData->transfer_limits.low_speed_time = MMAITAG_GEMINI_LOW_SPEED_TIME;
 }
 
 BEGINdoAction_NoStrings
@@ -183,7 +198,46 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "apikey_file")) {
             free(pData->apikey_file);
             CHKmalloc(pData->apikey_file = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "response.maxbytes")) {
+            if (pvals[i].val.d.n > (number_t)MMAITAG_GEMINI_MAX_CONFIG_RESPONSE_BYTES) {
+                parser_errmsg("mmaitag: response.maxBytes must not exceed %zu",
+                              MMAITAG_GEMINI_MAX_CONFIG_RESPONSE_BYTES);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pData->transfer_limits.max_response_bytes = (size_t)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "request.timeoutms")) {
+            if (pvals[i].val.d.n > MMAITAG_GEMINI_MAX_CONFIG_TIMEOUT_MS) {
+                parser_errmsg("mmaitag: request.timeoutMs must not exceed %ld", MMAITAG_GEMINI_MAX_CONFIG_TIMEOUT_MS);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pData->transfer_limits.total_timeout_ms = (long)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "request.connecttimeoutms")) {
+            if (pvals[i].val.d.n > MMAITAG_GEMINI_MAX_CONFIG_TIMEOUT_MS) {
+                parser_errmsg("mmaitag: request.connectTimeoutMs must not exceed %ld",
+                              MMAITAG_GEMINI_MAX_CONFIG_TIMEOUT_MS);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pData->transfer_limits.connect_timeout_ms = (long)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "request.lowspeedlimit")) {
+            if (pvals[i].val.d.n > MMAITAG_GEMINI_MAX_CONFIG_LOW_SPEED_LIMIT) {
+                parser_errmsg("mmaitag: request.lowSpeedLimit must not exceed %ld",
+                              MMAITAG_GEMINI_MAX_CONFIG_LOW_SPEED_LIMIT);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pData->transfer_limits.low_speed_limit = (long)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "request.lowspeedtime")) {
+            if (pvals[i].val.d.n > MMAITAG_GEMINI_MAX_CONFIG_LOW_SPEED_TIME) {
+                parser_errmsg("mmaitag: request.lowSpeedTime must not exceed %ld",
+                              MMAITAG_GEMINI_MAX_CONFIG_LOW_SPEED_TIME);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pData->transfer_limits.low_speed_time = (long)pvals[i].val.d.n;
         }
+    }
+
+    if (pData->transfer_limits.connect_timeout_ms > pData->transfer_limits.total_timeout_ms) {
+        parser_errmsg("mmaitag: request.connectTimeoutMs must not exceed request.timeoutMs");
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
     }
 
     // ✅ --- Robust API Key File Reading ---
@@ -212,6 +266,7 @@ BEGINnewActInst
             LogError(0, RS_RET_ERR, "mmaitag: could not initialize provider '%s'", pData->provider_name);
             ABORT_FINALIZE(RS_RET_ERR);
         }
+        pData->provider->transfer_limits = pData->transfer_limits;
         if (pData->provider->init)
             CHKiRet(pData->provider->init(pData->provider, pData->model, pData->apikey, pData->prompt));
     }

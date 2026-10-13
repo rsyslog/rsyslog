@@ -3,7 +3,8 @@
 # a gtls omfwd action. The action relies on valid global file-backed TLS
 # defaults, while the module deliberately supplies incompatible pkcs11: URIs.
 # The oracle is that mutual TLS still succeeds and the OpenSSL helper captures
-# exactly one forwarded payload line.
+# exactly one forwarded payload line. Readiness allows 20 seconds (200 polls
+# at 100 ms) so a busy CI runner can schedule the helper after certificate setup.
 . ${srcdir:=.}/diag.sh init
 
 check_command_available openssl
@@ -79,7 +80,7 @@ openssl x509 -req -in "$workdir/client.csr" -CA "$workdir/ca.pem" -CAkey "$workd
 ./openssl_mtls_server 0 "$workdir/server.pem" "$workdir/server.key" "$workdir/ca.pem" \
 	"$port_file" "$server_capture" 2>"$server_stderr" &
 server_pid=$!
-wait_file_exists_for_process "$port_file" "$server_pid" 10 "OpenSSL MTLS helper" "$server_stderr"
+wait_file_exists_for_process "$port_file" "$server_pid" 200 "OpenSSL MTLS helper" "$server_stderr"
 server_port=$(cat "$port_file")
 
 generate_conf

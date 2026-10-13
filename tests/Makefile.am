@@ -46,6 +46,9 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-nil
 EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
 
+TESTS_MERMAID_OFFLINE = mermaid-offline.sh
+EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
+
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
@@ -69,6 +72,9 @@ TESTS_QUEUE_DEFERRED_IDLE_WAKEUP = queue-deferred-idle-wakeup.sh queue-deferred-
 EXTRA_DIST += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP) override_queue_disposal.c
 TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh
 EXTRA_DIST += $(TESTS_WTP_TARGETED_WAKEUP) unit/wtp_wakeup_test.c
+TESTS_OMPIPE_LEGACY_PATH = ompipe-legacy-path-length.sh
+TESTS_OMPIPE_LEGACY_PATH_VALGRIND = ompipe-legacy-path-length-vg.sh
+EXTRA_DIST += $(TESTS_OMPIPE_LEGACY_PATH) $(TESTS_OMPIPE_LEGACY_PATH_VALGRIND)
 
 TESTS_SEGQUEUE_TOOL = rsyslog-segqueue-tool.py rsyslog-segqueue-runtime.sh
 EXTRA_DIST += $(TESTS_SEGQUEUE_TOOL)
@@ -169,6 +175,7 @@ EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
+EXTRA_DIST += unit/mmaitag_gemini_response_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -224,6 +231,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	record-container-validation.sh \
 	codex-pre-push-container-gate.sh \
 	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
@@ -356,6 +364,7 @@ TESTS_DEFAULT = \
 	template-const-jsonf.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS) \
 	template-topos-neg.sh \
+	template-topos-neg-underflow.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -375,6 +384,7 @@ TESTS_DEFAULT = \
 	rfc5424parser.sh \
 	pmrfc3164-msgFirstSpace.sh \
 	pmrfc3164-AtSignsInHostname.sh \
+	pmrfc3164-SquareBracketsInHostname-oversize.sh \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-parsehostnameandtag-off.sh \
@@ -874,11 +884,13 @@ TESTS_IMTCP = \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-ruleset-no-queue-warning.sh \
 	imtcp-basic.sh \
+	imtcp-bind-failure.sh \
 	rscript_parsehostnameandtag_off.sh \
 	imtcp_framing_regex.sh \
 	imtcp_framing_regex_maxmsg_overflow.sh \
 	imtcp-multiline.sh \
 	imtcp-spacelf-escape.sh \
+	legacy-zlib-empty-output.sh \
 	imtcp-basic-hup.sh \
 	imtcp-shutdown-pending-accepts.sh \
 	imtcp-impstats-single-thread.sh \
@@ -1020,7 +1032,8 @@ TESTS_MMUTF8FIX_SD = \
 
 TESTS_MMAITAG = \
         mmaitag-basic.sh \
-        mmaitag-invalid-key.sh
+		mmaitag-invalid-key.sh \
+		mmaitag-transfer-limits-invalid.sh
 
 TESTS_MAIL = \
 	ommail_errmsg_no_params.sh \
@@ -1366,6 +1379,13 @@ TESTS_OMAWSLOGSHLC = \
 TESTS_OMAWSLOGSHLC_IMTCP = \
 	omawslogshlc-event-too-large.sh
 
+# The mock is local and needs no AWS account or external service.
+TESTS_OMKINESIS = \
+	omkinesis-mock.sh \
+	omkinesis-endpoint-validation.sh
+TESTS_OMKINESIS_YAML = \
+	yaml-omkinesis-mock.sh
+
 TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
@@ -1577,6 +1597,7 @@ TESTS_IMPSTATS_VALGRIND = \
 
 TESTS_IMPTCP = \
 	manyptcp.sh \
+	imptcp-debug-recv-length.sh \
 	imptcp-epoll-add-failure.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
@@ -1773,7 +1794,12 @@ TESTS_MMNORMALIZE_YAML = \
 
 TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-message-lifecycle.sh \
+	mmnormalize-turbo-json-discard.sh \
+	mmnormalize-turbo-json-nested.sh \
 	mmnormalize-turbo-hup-tsan.sh
+
+TESTS_MMNORMALIZE_TURBO_IMPSTATS = \
+	mmnormalize-turbo-truncated-stat.sh
 
 TESTS_MMNORMALIZE_TURBO_YAML = \
 	yaml-mmnormalize-turbo.sh
@@ -2076,6 +2102,7 @@ TESTS_RELP = \
 	 imrelp-basic-hup.sh \
 	 imrelp-manyconn.sh \
 	 imrelp-maxDataSize-error.sh \
+	 imrelp-maxDataSize-range.sh \
 	 imrelp-long-msg.sh \
 	 imrelp-oversizeMode-truncate.sh \
 	 imrelp-oversizeMode-accept.sh \
@@ -2089,7 +2116,8 @@ TESTS_RELP = \
 	 glbl-oversizeMsg-split.sh
 
 TESTS_RELP_YAML = \
-	imrelp-persource-ratelimit-policy.sh
+	imrelp-persource-ratelimit-policy.sh \
+	 yaml-imrelp-maxDataSize-range.sh
 
 TESTS_RELP_OPENSSL = \
 	 omrelp-tls-ossl-authfail-no-cacert.sh \
@@ -2125,6 +2153,7 @@ TESTS_IMDTLS = \
 	imdtls-basic-tlscommands.sh \
 	imdtls-basic-timeout.sh \
 	imdtls-error-cert.sh \
+	imdtls-permittedpeer-reject.sh \
 	imdtls-sessionbreak.sh
 
 TESTS_IMDTLS_VALGRIND = \
@@ -2546,6 +2575,7 @@ EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC)
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC_IMTCP)
+EXTRA_DIST += $(TESTS_OMKINESIS) $(TESTS_OMKINESIS_YAML) omkinesis-mock-common.sh omkinesis-mock-server.py
 EXTRA_DIST += omawslogshlc-env.sh
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
@@ -2590,6 +2620,7 @@ EXTRA_DIST += $(TESTS_MMNORMALIZE)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_DEBUG)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO)
+EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_IMPSTATS)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_VALGRIND)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_IMPTCP)
@@ -2674,11 +2705,12 @@ CLEANFILES=\
 
 CLEANFILES+= \
 	IN_AUTO_DEBUG \
-	runtime_unit_imbeats_seq
+	runtime_unit_imbeats_seq \
+	runtime_unit_mmaitag_gemini_response
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
-# runtime_unit_imbeats_seq is conditional, but an outer build with imbeats
-# enabled can leave it for an inner distcheck configured without imbeats.
+# These unit binaries are conditional, but an outer build with their modules
+# enabled can leave them for an inner distcheck configured without them.
 
 
 check_LTLIBRARIES =
@@ -2686,10 +2718,13 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup
+	runtime_unit_wtp_wakeup runtime_unit_perctile_ringbuf
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup
+	runtime_unit_wtp_wakeup runtime_unit_perctile_ringbuf
+
+runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
+runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2768,6 +2803,17 @@ runtime_unit_imbeats_parser_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	$(ZLIB_CFLAGS)
 runtime_unit_imbeats_parser_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+endif
+
+if ENABLE_MMAITAG
+check_PROGRAMS += runtime_unit_mmaitag_gemini_response
+TESTS += runtime_unit_mmaitag_gemini_response
+
+runtime_unit_mmaitag_gemini_response_SOURCES = \
+	unit/mmaitag_gemini_response_test.c
+
+runtime_unit_mmaitag_gemini_response_CPPFLAGS = \
+	-I$(top_srcdir)/plugins/mmaitag
 endif
 
 runtime_unit_linkedlist_CPPFLAGS = \
@@ -2849,6 +2895,12 @@ liboverride_epoll_ctl_la_SOURCES = override_epoll_ctl.c
 liboverride_epoll_ctl_la_CFLAGS =
 liboverride_epoll_ctl_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_epoll_ctl_la_LIBADD = $(DL_LIBS)
+
+check_LTLIBRARIES += liboverride_recv_imptcp.la
+liboverride_recv_imptcp_la_SOURCES = override_recv_imptcp.c
+liboverride_recv_imptcp_la_CFLAGS =
+liboverride_recv_imptcp_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_recv_imptcp_la_LIBADD = $(DL_LIBS)
 endif
 
 if ENABLE_OMUDPSPOOF
@@ -2982,8 +3034,10 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
+TESTS += $(TESTS_MERMAID_OFFLINE)
 TESTS += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP)
 TESTS += $(TESTS_WTP_TARGETED_WAKEUP)
+TESTS += $(TESTS_OMPIPE_LEGACY_PATH)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
 if ENABLE_SEGQUEUE_TOOL
@@ -3032,6 +3086,7 @@ if ENABLE_OSSL
 TESTS += $(TESTS_OSSL_WRONG_OPT)
 endif # ENABLE_OSSL
 TESTS += $(TESTS_DEFAULT_VALGRIND)
+TESTS += $(TESTS_OMPIPE_LEGACY_PATH_VALGRIND)
 if ENABLE_LIBGCRYPT
 TESTS += $(TESTS_LIBGCRYPT_VALGRIND)
 endif # ENABLE_LIBGCRYPT
@@ -3464,6 +3519,13 @@ endif
 endif
 endif
 
+if ENABLE_OMKINESIS
+TESTS += $(TESTS_OMKINESIS)
+if HAVE_LIBYAML
+TESTS += $(TESTS_OMKINESIS_YAML)
+endif
+endif
+
 
 
 if ENABLE_IMDOCKER
@@ -3663,6 +3725,11 @@ endif
 
 if LOGNORM_TURBO_SUPPORTED
 TESTS += $(TESTS_MMNORMALIZE_TURBO)
+if LOGNORM_TURBO_TRUNCATION_SUPPORTED
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_MMNORMALIZE_TURBO_IMPSTATS)
+endif
+endif
 if HAVE_LIBYAML
 TESTS += $(TESTS_MMNORMALIZE_TURBO_YAML)
 endif

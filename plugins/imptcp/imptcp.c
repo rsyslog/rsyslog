@@ -2175,7 +2175,7 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
 
         if (lenRcv > 0) {
             /* have data, process it */
-            DBGPRINTF("imptcp: data(%d) on socket %d: %s\n", lenBuf, pSess->sock, rcvBuf);
+            DBGPRINTF("imptcp: data(%d) on socket %d: %.*s\n", lenRcv, pSess->sock, lenRcv, rcvBuf);
             iRet = DataRcvd(pSess, rcvBuf, lenRcv);
             if (iRet != RS_RET_OK) {
                 *continue_polling = 0;

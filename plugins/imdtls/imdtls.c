@@ -592,6 +592,7 @@ static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
             status = imdtls_verify_callback(status, ssl);
             if (status == 0) {
                 LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: Cert Verify FAILED for DTLS client idx (%d)", idx);
+                DTLScleanupSession(inst, idx);
             } else {
                 DBGPRINTF("imdtls: Cert Verify SUCCESS for DTLS client idx (%d)\n", idx);
             }

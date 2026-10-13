@@ -364,7 +364,7 @@ static rsRetVal perctile_observe(perctile_bucket_t *bkt, uchar *key, int64_t val
     PERCTILE_STATS_LOG("perctile_observe - appended value: %lld to ringbuffer\n", value);
     PERCTILE_STATS_LOG("ringbuffer contents... \n");
     for (size_t i = 0; i < pstat->rb_observed_stats->size; ++i) {
-        PERCTILE_STATS_LOG("%lld ", pstat->rb_observed_stats->cb.buf[i]);
+        PERCTILE_STATS_LOG("%lld ", pstat->rb_observed_stats->items[i]);
     }
     PERCTILE_STATS_LOG("\n");
     print_perctiles(bkt);
@@ -408,7 +408,7 @@ static rsRetVal report_perctile_stats(perctile_bucket_t *pbkt) {
 #ifdef PERCTILE_STATS_DEBUG
             PERCTILE_STATS_LOG("ringbuffer contents... \n");
             for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
-                PERCTILE_STATS_LOG("%lld ", perc_stat->rb_observed_stats->cb.buf[i]);
+                PERCTILE_STATS_LOG("%lld ", perc_stat->rb_observed_stats->items[i]);
             }
             PERCTILE_STATS_LOG("\n");
 
