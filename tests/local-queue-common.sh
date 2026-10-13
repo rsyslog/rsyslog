@@ -149,7 +149,7 @@ localq_make_startup_marker_absolute() {
 	local config="${TESTCONF_NM}.conf"
 	local relative="./${RSYSLOG_DYNNAME}.started"
 	local absolute="$PWD/${RSYSLOG_DYNNAME}.started"
-	local temporary="${config}.localq"
+	local temporary="${config}.localq.tmp"
 	case "$RSYSLOG_OUT_LOG" in
 		/*) ;;
 		*) export RSYSLOG_OUT_LOG="$PWD/$RSYSLOG_OUT_LOG" ;;

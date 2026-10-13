@@ -5063,7 +5063,9 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
      * never see a freed node after partial activation or validation cleanup. */
     if (pThis->localSource == NULL && pThis->pqParent == NULL && pThis->localGraphConf != NULL) {
         const rsRetVal graph_ret = rulesetShutdownLocalGraph(pThis->localGraphConf);
-        if (graph_ret != RS_RET_OK) LogError(0, graph_ret, "local queue graph shutdown failed during queue teardown");
+        if (graph_ret != RS_RET_OK)
+            LogError(0, graph_ret, "%s: local queue graph shutdown failed during queue teardown",
+                     objGetName((obj_t *)pThis));
     }
     if (pThis->localSource != NULL) {
         assert(pThis->pWtpReg == NULL);

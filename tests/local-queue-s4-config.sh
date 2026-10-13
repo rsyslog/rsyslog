@@ -3,6 +3,8 @@
 # objects. An acyclic graph must pass; a cycle and a dynamic call must fail
 # before activation. -N1 status plus the dedicated local-config diagnostic is
 # the oracle; timeout is only a hang guard. No listener or output is started.
+# Python 3 and GNU-compatible timeout/gtimeout are required; the test skips
+# with status 77 when either prerequisite is missing.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3
