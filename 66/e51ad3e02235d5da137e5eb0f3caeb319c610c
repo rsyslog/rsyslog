@@ -1,0 +1,57 @@
+doc/ai/module_map.yaml
+  s_de358a5d0a4803::t_38003ecf0481f1 68-70,73-77,121-127
+plugins/imdiag/imdiag.c
+  s_de358a5d0a4803::t_cb64180a82b65d 67-69,82-86,976-1237,1295-1296,1833-1835,1884-1886
+runtime/AGENTS.md
+  s_de358a5d0a4803::t_83e0e72210f0d4 40-49
+runtime/action.c
+  s_de358a5d0a4803::t_c8bb33f2f8fe34 2059-2065,2471-2478
+runtime/queue.c
+  s_de358a5d0a4803::t_c6812e6fb642c1 4256-4258,4264-4272,4600,4604,4628-4631,4674,4807-4848,4850-4856,5086,5092-5093,5170-5175,5276-5279,5391-5396
+runtime/queue.h
+  s_de358a5d0a4803::t_8c4f2a7cc24514 125-127
+runtime/queue_local.c
+  s_de358a5d0a4803::t_5dcb0c53d0b067 105-107,129-131,333-362,481-495,503,809,812-818,896,913-926,1182,1193-1196,1528-1529,1747-1749,1758-1762
+runtime/queue_local.h
+  s_de358a5d0a4803::t_046bb968142513 49,56-62,72,84-86
+runtime/ruleset.c
+  s_de358a5d0a4803::t_788614597604e7 164,1038-1039,1056-1074
+runtime/ruleset.h
+  s_de358a5d0a4803::t_fa1a11a7b995a6 102
+runtime/wti.c
+  s_de358a5d0a4803::t_80609fe4ef9011 297,397-398,541-546,548
+runtime/wti.h
+  s_de358a5d0a4803::t_8d21f4595668d1 35-36,86-91
+runtime/wtp.c
+  s_de358a5d0a4803::t_d76b8f34776a1f 136-146,165,168-176,289,346,383,399,420,732
+runtime/wtp.h
+  s_de358a5d0a4803::t_ab167f92751350 54
+tests/Makefile.am
+  s_de358a5d0a4803::t_0438eeac62ce69 183,237-239,3032,3034
+tests/local-queue-global-input-force-term.sh
+  s_de358a5d0a4803::t_bfa8d34553c3e0 1-7
+tests/local-queue-input-force-term.sh
+  s_de358a5d0a4803::t_d54b6494774ba9 1-41
+tests/local-queue-known-success.sh
+  s_de358a5d0a4803::t_c92f2c9d645153 1-109
+tests/local-queue-startup-failure.sh
+  s_de358a5d0a4803::t_8bddcc689f2d1a 2-10,20-26,28,31-32,35-36,38,40-49,51-57,59,62,66-89,91-93,96-97,102-107,110-133
+tools/rsyslogd.c
+  s_de358a5d0a4803::t_f7f48e5668376b 1016-1023,2555-2557
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66e51ad3e02235d5da137e5eb0f3caeb319c610c",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
