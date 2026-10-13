@@ -162,7 +162,7 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
         CHKiRet(wtiConstructFinalize(pWti));
     }
 
-    pThis->bReady = 1;
+    pThis->workers_ready = 1;
 
 finalize_it:
     if (iRet != RS_RET_OK && pThis->pWrkr != NULL) {
@@ -286,7 +286,7 @@ PRAGMA_IGNORE_Wempty_body
     int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
-    if (!pThis->bReady) return RS_RET_OK;
+    if (!pThis->workers_ready) return RS_RET_OK;
 
     /* lock mutex to prevent races (may otherwise happen during idle processing and such...) */
     d_pthread_mutex_lock(pThis->pmutUsr);
@@ -343,7 +343,7 @@ rsRetVal ATTR_NONNULL() wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj)
     int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
-    if (!pThis->bReady) return RS_RET_OK;
+    if (!pThis->workers_ready) return RS_RET_OK;
 
     /* go through all workers and cancel those that are active */
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
@@ -380,7 +380,7 @@ rsRetVal wtpUseMonotonicTermination(wtp_t *const pThis) {
 }
 
 rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
-    if (!pThis->bReady) return RS_RET_OK;
+    if (!pThis->workers_ready) return RS_RET_OK;
     d_pthread_mutex_lock(pThis->pmutUsr);
     wtpSetState(pThis, command);
     wtpWakeupAllWrkr(pThis);
@@ -396,7 +396,7 @@ rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
  * terminal WAIT_JOIN publication use the same mutex. No logging, sleep or join
  * may reenter a queue or wait for worker cleanup while holding this mutex. */
 rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
-    if (!pThis->bReady) return RS_RET_OK;
+    if (!pThis->workers_ready) return RS_RET_OK;
     rsRetVal result = RS_RET_OK;
     if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
     d_pthread_mutex_lock(&pThis->mutWtp);
@@ -417,7 +417,7 @@ rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
 /* NULL deadline is reserved for joining after cancellation: resource lifetime
  * cannot be bounded by a policy deadline while a callback still executes. */
 rsRetVal wtpWaitShutdownUntil(wtp_t *const pThis, const struct timespec *const deadline) {
-    if (!pThis->bReady) return RS_RET_OK;
+    if (!pThis->workers_ready) return RS_RET_OK;
     int ret = 0;
     if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
     d_pthread_mutex_lock(&pThis->mutWtp);
@@ -729,7 +729,7 @@ finalize_it:
 
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
     if (pThis == NULL) return RS_RET_PARAM_ERROR;
-    if (!pThis->bReady) return RS_RET_OK;
+    if (!pThis->workers_ready) return RS_RET_OK;
     /* The caller holds pmutUsr, which is the mutex associated with pcondBusy.
      * Do not use mutWtp here: it cannot serialize condition predicates. */
     for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {

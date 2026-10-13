@@ -335,7 +335,7 @@ void qqueueLocalTestNoteForceTerm(wti_t *const worker, const int currentIParams)
  * is eligible, so harness startup callbacks cannot accidentally take the gate.
  * FIFO release observes cooperative stop; withholding it exercises cancellation. */
 void qqueueLocalTestAfterConsumer(wti_t *const worker) {
-    if (worker->callbackOutcome != WTI_CALLBACK_SUCCEEDED || worker->logical_owner == NULL) return;
+    if (worker->callback_outcome != WTI_CALLBACK_SUCCEEDED || worker->logical_owner == NULL) return;
     qqueueLocal_t *const family = worker->logical_owner->local;
     if (family == NULL || family->testSuccessGateSource == 0) return;
     qqueue_t *const home = worker->pWtp->pUsr;
@@ -806,13 +806,13 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     #endif
     pthread_mutex_unlock(queue->mut);
     int oldCancel;
-    worker->callbackOutcome = WTI_CALLBACK_UNKNOWN;
+    worker->callback_outcome = WTI_CALLBACK_UNKNOWN;
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldCancel);
     ret = fe->owner->pConsumer(fe->owner->pAction, batch, worker);
     /* No cancellation point may precede this return-outcome publication.
      * COMM is final only if nested Direct commits also completed normally. */
-    if (worker->callbackOutcome != WTI_CALLBACK_FAILED)
-        worker->callbackOutcome = ret == RS_RET_OK ? WTI_CALLBACK_SUCCEEDED : WTI_CALLBACK_FAILED;
+    if (worker->callback_outcome != WTI_CALLBACK_FAILED)
+        worker->callback_outcome = ret == RS_RET_OK ? WTI_CALLBACK_SUCCEEDED : WTI_CALLBACK_FAILED;
     #ifdef ENABLE_TESTBENCH
     qqueueLocalTestAfterConsumer(worker);
     #endif
@@ -1179,7 +1179,7 @@ int qqueueLocalWorker(const wti_t *const worker) {
 }
 
 void qqueueLocalRetainAmbiguous(wti_t *const worker) {
-    if (!qqueueLocalWorker(worker) || worker->callbackOutcome == WTI_CALLBACK_SUCCEEDED) return;
+    if (!qqueueLocalWorker(worker) || worker->callback_outcome == WTI_CALLBACK_SUCCEEDED) return;
     qqueue_t *const home = worker->pWtp->pUsr;
     /* DA COMM acknowledges disk acceptance, not interrupted action execution. */
     if (worker->pWtp == home->pWtpDA) return;

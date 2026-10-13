@@ -979,16 +979,26 @@ finalize_it:
  * message retains an observer ref so accepted and rejected ownership can be
  * checked after the real queue workers have disposed their references. */
 static pthread_mutex_t inputTermFixtureMut = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t inputTermFixtureCond = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t inputTermFixtureCond;
+static pthread_once_t inputTermFixtureCondOnce = PTHREAD_ONCE_INIT;
+static int inputTermFixtureCondReady;
 static qqueue_t *inputTermFixtureDestination, *inputTermFixtureSource;
 static unsigned inputTermFixtureEntered, inputTermFixtureRelease, inputTermFixtureDone;
 static rsRetVal inputTermFixtureHandoff, inputTermFixtureInput;
 static smsg_t *inputTermFixtureRefs[64];
 static size_t inputTermFixtureCount;
 
+static void inputTermFixtureInitCond(void) {
+    pthread_condattr_t attr;
+    if (pthread_condattr_init(&attr) != 0) return;
+    if (pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) == 0 && pthread_cond_init(&inputTermFixtureCond, &attr) == 0)
+        inputTermFixtureCondReady = 1;
+    pthread_condattr_destroy(&attr);
+}
+
 static int inputTermFixtureAwait(unsigned *const value, const unsigned expected) {
     struct timespec deadline;
-    clock_gettime(CLOCK_REALTIME, &deadline);
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
     deadline.tv_sec += 5;
     pthread_mutex_lock(&inputTermFixtureMut);
     int ret = 0;
@@ -1128,6 +1138,8 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     rsRetVal (*consumer)(void *, batch_t *, wti_t *) = destination->pConsumer;
     qqueueLocalSnapshot_t snapshot;
     DEFiRet;
+    if (pthread_once(&inputTermFixtureCondOnce, inputTermFixtureInitCond) != 0 || !inputTermFixtureCondReady)
+        return RS_RET_ERR;
     if (destination->localGraphConf == NULL || destination->iMaxQueueSize != 16 || destination->iDeqBatchSize != 1 ||
         (destination->local != NULL && (destination->localFrontendSize != 4 || destination->localMaxFrontends != 1)))
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);

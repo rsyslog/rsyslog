@@ -51,7 +51,7 @@ struct wtp_s {
         wtpState_t wtpState;
         int iNumWorkerThreads; /* number of worker threads to use */
         int iCurNumWrkThrd; /* current number of active worker threads */
-        sbool bReady; /* all worker slots finalized; immutable before any worker starts */
+        sbool workers_ready; /* all worker slots finalized; immutable before any worker starts */
         struct wti_s **pWrkr; /* array with control structure for the worker thread(s) associated with this wtp */
         int toWrkShutdown; /* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
         int toFirstWrkShutdown; /* slot-zero override, -2 means use toWrkShutdown */

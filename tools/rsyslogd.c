@@ -1015,10 +1015,14 @@ rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue) {
         LogError(0, iRet, "could not start (ruleset) main message queue");
         if (pQueue->localGraphConf != NULL) {
             /* A global boundary is required by the local graph too. Propagate
-             * its failure after qqueueStart has unwound; never fall back. */
+             * its failure after qqueueStart has unwound; never fall back.
+             * Remove the early PID file before returning the error to initAll,
+             * which still emits the final startup diagnostic. */
             fprintf(stderr,
                     "rsyslogd: could not start (ruleset) main message queue, "
                     "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
+            fflush(stderr);
+            clearPidFile();
             RETiRet;
         }
         if (pQueue->bLocalScope || pQueue->bLocalConfigError || runConf->globals.bAbortOnFailedQueueStartup) {

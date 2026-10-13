@@ -4255,7 +4255,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
 
     /* Reset before enabling cancellation for this new callback, so a prior
      * successful batch cannot suppress retention of an interrupted lease. */
-    pWti->callbackOutcome = WTI_CALLBACK_UNKNOWN;
+    pWti->callback_outcome = WTI_CALLBACK_UNKNOWN;
     /* at this spot, we may be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
@@ -4264,8 +4264,8 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     iRet = pThis->pConsumer(pThis->pAction, &pWti->batch, pWti);
     /* Publish before any cancellation point after return. A Direct commit
      * error recorded inside a ruleset callback still makes COMM ambiguous. */
-    if (pWti->callbackOutcome != WTI_CALLBACK_FAILED)
-        pWti->callbackOutcome = iRet == RS_RET_OK ? WTI_CALLBACK_SUCCEEDED : WTI_CALLBACK_FAILED;
+    if (pWti->callback_outcome != WTI_CALLBACK_FAILED)
+        pWti->callback_outcome = iRet == RS_RET_OK ? WTI_CALLBACK_SUCCEEDED : WTI_CALLBACK_FAILED;
     CHKiRet(iRet);
 #ifdef ENABLE_TESTBENCH
     qqueueLocalTestAfterConsumer(pWti);
@@ -4597,11 +4597,11 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     pthread_cond_init(&pThis->notFull, NULL);
     pthread_cond_init(&pThis->belowFullDlyWtrMrk, NULL);
     pthread_cond_init(&pThis->belowLightDlyWtrMrk, NULL);
-    pThis->bQueueSyncInitialized = 1;
+    pThis->queue_sync_initialized = 1;
 
     /* call type-specific constructor */
     CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
-    pThis->bQueueConstructed = 1;
+    pThis->queue_constructed = 1;
 
     /* re-adjust some params if required */
     if (pThis->bIsDA) {
@@ -4821,7 +4821,7 @@ finalize_it:
         if (pThis->pqDA != NULL) qqueueDestruct(&pThis->pqDA);
         if (pThis->localRetiredDA != NULL) qqueueDestruct(&pThis->localRetiredDA);
         if (pThis->statsobj != NULL) statsobj.Destruct(&pThis->statsobj);
-        if (pThis->bQueueConstructed) {
+        if (pThis->queue_constructed) {
             /* A completed physical store can checkpoint without a worker pool.
              * Preserve recovered records and keep the startup error primary. */
             if (pThis->qType == QUEUETYPE_DISK || pThis->qType == QUEUETYPE_SEGMENTED_DISK) {
@@ -4834,15 +4834,15 @@ finalize_it:
             if (destructRet != RS_RET_OK)
                 LogError(0, destructRet, "%s: cannot release queue storage during startup unwind",
                          obj.GetName((obj_t *)pThis));
-            pThis->bQueueConstructed = 0;
+            pThis->queue_constructed = 0;
         }
         qqueueLocalDestruct(pThis);
-        if (pThis->bQueueSyncInitialized) {
+        if (pThis->queue_sync_initialized) {
             pthread_mutex_destroy(&pThis->mutThrdMgmt);
             pthread_cond_destroy(&pThis->notFull);
             pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
             pthread_cond_destroy(&pThis->belowLightDlyWtrMrk);
-            pThis->bQueueSyncInitialized = 0;
+            pThis->queue_sync_initialized = 0;
         }
         if (pThis->pqParent == NULL && pThis->mut != NULL) {
             pthread_mutex_destroy(pThis->mut);
@@ -5083,7 +5083,7 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         pThis->iHighWtrMrk *= 2;
         pThis->iMaxQueueSize *= 2;
     }
-    if (pThis->bQueueConstructed) {
+    if (pThis->queue_constructed) {
         /* shut down all workers
          * We do not need to shutdown workers when we are in enqueue-only mode or we are a
          * direct queue - because in both cases we have none... ;)

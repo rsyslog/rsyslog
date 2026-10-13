@@ -123,8 +123,8 @@ struct queue_s {
         sbool bEnqOnly; /* does queue run in enqueue-only mode (1) or not (0)? */
         sbool bSaveOnShutdown; /* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
         sbool bQueueStarted; /* storage and regular pool are usable; workers may exist */
-        sbool bQueueConstructed; /* type-specific storage constructor succeeded */
-        sbool bQueueSyncInitialized; /* queueStart mutex and conditions exist */
+        sbool queue_constructed; /* type-specific storage constructor succeeded */
+        sbool queue_sync_initialized; /* queueStart mutex and conditions exist */
         sbool takeFlowCtlFromMsg; /* override enq flow ctl by message property? */
         int iQueueSize; /* Current number of elements in the queue */
         int iMaxQueueSize; /* how large can the queue grow? */

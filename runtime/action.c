@@ -2061,7 +2061,7 @@ void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
             /* Ruleset COMM is tentative until every Direct commit returns.
              * Keep the existing commit order/error policy, but do not let an
              * OK outer callback hide an interrupted or failed transaction. */
-            if (ret != RS_RET_OK && qqueueLocalWorker(pWti)) pWti->callbackOutcome = WTI_CALLBACK_FAILED;
+            if (ret != RS_RET_OK && qqueueLocalWorker(pWti)) pWti->callback_outcome = WTI_CALLBACK_FAILED;
         }
     }
 }

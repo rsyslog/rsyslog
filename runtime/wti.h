@@ -88,7 +88,7 @@ struct wti_s {
          * set FAILED. Only SUCCEEDED proves that existing COMM entries need
          * no replay after a later slowdown or shutdown cancellation. Cleanup
          * reads this on the same thread, or maintenance only after join. */
-        uint8_t callbackOutcome;
+        uint8_t callback_outcome;
         batch_t batch; /* pointer to an object array meaningful for current user
                   pointer (e.g. queue pUsr data elemt) */
         /* Queue batch source and its logical owner. Both are protected by

@@ -8,6 +8,8 @@
 # can publish messages/references because its imdiag runInput port file must
 # remain absent (imtcp binds during module activation before queues start).
 # Startup errors cannot use normal output routing, so stderr is the oracle.
+# A fatal graph-boundary startup also must remove the PID file created before
+# queue activation; absence after exit proves the cleanup path ran.
 # The timeout is only a hang guard; only an ordinary exit status of one passes.
 . ${srcdir:=.}/diag.sh init
 timeout_cmd=${timeout_cmd:-timeout}
@@ -19,6 +21,7 @@ timeout_cmd=${timeout_cmd:-timeout}
 require_plugin imtcp
 require_plugin imdiag
 startup_checker=()
+pidfile="$PWD/${RSYSLOG_DYNNAME}.pid"
 if [ "$USE_VALGRIND" = YES ]; then
     startup_checker=(valgrind --leak-check=full --show-leak-kinds=definite
         --errors-for-leak-kinds=definite --error-exitcode=10
@@ -89,10 +92,10 @@ for topology in main ruleset action global-action global-ruleset global-main da-
         fi
         log="${RSYSLOG_DYNNAME}.${topology}.${fault}.log"
         RSYSLOG_LOCAL_QUEUE_TEST_FAULT="$faultenv" RSYSLOG_LOCAL_QUEUE_TEST_STARTUP_POOL="$poolenv" "$timeout_cmd" -k 2 "$TB_TEST_TIMEOUT" \
-            "${startup_checker[@]}" ../tools/rsyslogd -n -f "$conf" -i "$PWD/${RSYSLOG_DYNNAME}.pid" \
+            "${startup_checker[@]}" ../tools/rsyslogd -n -f "$conf" -i "$pidfile" \
             -M"$PWD/../runtime/.libs:$PWD/../.libs" > "$log" 2>&1
         result=$?
-        if [ "$result" -ne 1 ] || [ -e "$portfile" ] ||
+        if [ "$result" -ne 1 ] || [ -e "$portfile" ] || [ -e "$pidfile" ] ||
             ! grep -F "local queue test fault: ${faultenv:-startup-pool $poolenv}" "$log" > /dev/null ||
             ! grep -F 'local queue test: startup unwind complete' "$log" > /dev/null; then
             echo "FAIL: $topology/$fault did not fail before input activation (status $result)"
