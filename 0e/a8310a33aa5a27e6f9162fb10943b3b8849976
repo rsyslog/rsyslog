@@ -1,0 +1,23 @@
+plugins/imdiag/imdiag.c
+  s_de358a5d0a4803::t_19b3be5b3df0cc 1013,1021,1023-1032,1038
+runtime/action.c
+  s_de358a5d0a4803::t_e6dd2164158aa1 86
+runtime/queue.c
+  s_de358a5d0a4803::t_643fb48a7b55f3 1023-1025
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ea8310a33aa5a27e6f9162fb10943b3b8849976",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
