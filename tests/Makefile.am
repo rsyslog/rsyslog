@@ -578,7 +578,6 @@ TESTS_DEFAULT = \
 	rscript_unaffected_reset.sh \
 	rscript_replace_complex.sh \
 	$(TESTS_RSCRIPT_REPLACE_OVERLAP) \
-	$(TESTS_RSCRIPT_REPLACE_LIMIT) \
 	rscript_wrap2.sh \
 	rscript_wrap3.sh \
 	rscript_re_extract_i.sh \
@@ -3187,6 +3186,7 @@ endif # ENABLE_IMFILE_TESTS
 
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_IMTCP)
+TESTS += $(TESTS_RSCRIPT_REPLACE_LIMIT)
 TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB)
 if ENABLE_LIBZSTD
 TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD)
