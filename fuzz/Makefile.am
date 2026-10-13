@@ -88,9 +88,8 @@ fuzz_driver_regression_CFLAGS = $(fuzz_rsyslog_parsers_CFLAGS)
 fuzz_driver_regression_LDFLAGS = $(FUZZ_COMMON_LDFLAGS)
 
 fuzz_state_regression_SOURCES = \
-	fuzz.c \
 	fuzzstate_regression.c \
-	$(fuzz_runtime_files)
+	$(fuzz_rsyslog_parsers_SOURCES)
 fuzz_state_regression_CPPFLAGS = $(fuzz_rsyslog_parsers_CPPFLAGS) -DRSYSLOG_FUZZ_NO_MAIN
 fuzz_state_regression_CFLAGS = $(fuzz_rsyslog_parsers_CFLAGS)
 fuzz_state_regression_LDFLAGS = $(fuzz_rsyslog_parsers_LDFLAGS)
