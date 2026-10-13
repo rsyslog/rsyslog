@@ -83,9 +83,7 @@
 #include "errmsg.h"
 #include "batch.h"
 #include "wti.h"
-#ifdef ENABLE_TESTBENCH
-    #include "queue_local.h"
-#endif
+#include "queue_local.h"
 #include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"

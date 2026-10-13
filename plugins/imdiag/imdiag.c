@@ -1010,6 +1010,7 @@ static pthread_mutex_t inputTermFixtureMut = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t inputTermFixtureCond;
 static pthread_once_t inputTermFixtureCondOnce = PTHREAD_ONCE_INIT;
 static int inputTermFixtureCondReady;
+static clockid_t inputTermFixtureCondClock = CLOCK_REALTIME;
 static qqueue_t *inputTermFixtureDestination, *inputTermFixtureSource;
 static unsigned inputTermFixtureEntered, inputTermFixtureRelease, inputTermFixtureDone;
 static rsRetVal inputTermFixtureHandoff, inputTermFixtureInput;
@@ -1017,16 +1018,24 @@ static smsg_t *inputTermFixtureRefs[64];
 static size_t inputTermFixtureCount;
 
 static void inputTermFixtureInitCond(void) {
+    #if defined(_POSIX_CLOCK_SELECTION) && _POSIX_CLOCK_SELECTION >= 0
     pthread_condattr_t attr;
-    if (pthread_condattr_init(&attr) != 0) return;
-    if (pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) == 0 && pthread_cond_init(&inputTermFixtureCond, &attr) == 0)
+    if (pthread_condattr_init(&attr) == 0) {
+        if (pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) == 0 &&
+            pthread_cond_init(&inputTermFixtureCond, &attr) == 0) {
+            inputTermFixtureCondClock = CLOCK_MONOTONIC;
+            inputTermFixtureCondReady = 1;
+        }
+        pthread_condattr_destroy(&attr);
+    }
+    #endif
+    if (!inputTermFixtureCondReady && pthread_cond_init(&inputTermFixtureCond, NULL) == 0)
         inputTermFixtureCondReady = 1;
-    pthread_condattr_destroy(&attr);
 }
 
 static int inputTermFixtureAwait(unsigned *const value, const unsigned expected) {
     struct timespec deadline;
-    clock_gettime(CLOCK_MONOTONIC, &deadline);
+    clock_gettime(inputTermFixtureCondClock, &deadline);
     deadline.tv_sec += 5;
     pthread_mutex_lock(&inputTermFixtureMut);
     int ret = 0;

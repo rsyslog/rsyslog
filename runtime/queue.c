@@ -1020,8 +1020,9 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis) {
 
     assert(pThis != NULL);
 
-    if (pThis->bLocalScope) {
-        /* Local family shutdown already reconciled every retained reference. */
+    if (pThis->bLocalScope && pThis->local != NULL) {
+        /* A started local family reconciles every retained reference. Startup
+         * can fail before the family exists; drain that physical store below. */
         assert(pThis->iQueueSize == 0);
     } else {
         queueDrain(pThis); /* discard any remaining queue entries */
