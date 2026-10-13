@@ -62,6 +62,9 @@ EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
+TESTS_RSCRIPT_REPLACE_LIMIT = rscript-replace-result-limit.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_LIMIT)
+
 TESTS_PRIFILT_TRAILING_SEPARATOR = prifilt-trailing-separator.sh prifilt-trailing-separator-vg.sh
 EXTRA_DIST += $(TESTS_PRIFILT_TRAILING_SEPARATOR)
 
@@ -575,6 +578,7 @@ TESTS_DEFAULT = \
 	rscript_unaffected_reset.sh \
 	rscript_replace_complex.sh \
 	$(TESTS_RSCRIPT_REPLACE_OVERLAP) \
+	$(TESTS_RSCRIPT_REPLACE_LIMIT) \
 	rscript_wrap2.sh \
 	rscript_wrap3.sh \
 	rscript_re_extract_i.sh \
