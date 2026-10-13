@@ -271,6 +271,7 @@ EXTRA_DIST = \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omawslogshlc.rst \
+    source/configuration/modules/omkinesis.rst \
     source/configuration/modules/omazureeventhubs.rst \
     source/configuration/modules/omclickhouse.rst \
     source/configuration/modules/omczmq.rst \
@@ -743,6 +744,7 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-disablelfdelimiter.rst \
     source/reference/parameters/imtcp-discardtruncatedmsg.rst \
     source/reference/parameters/imtcp-flowcontrol.rst \
+    source/reference/parameters/imtcp-failonbinderror.rst \
     source/reference/parameters/imtcp-gnutlsprioritystring.rst \
     source/reference/parameters/imtcp-keepalive-interval.rst \
     source/reference/parameters/imtcp-keepalive-probes.rst \
@@ -839,6 +841,11 @@ EXTRA_DIST = \
     source/reference/parameters/mmaitag-inputproperty.rst \
     source/reference/parameters/mmaitag-model.rst \
     source/reference/parameters/mmaitag-provider.rst \
+    source/reference/parameters/mmaitag-request-connecttimeoutms.rst \
+    source/reference/parameters/mmaitag-request-lowspeedlimit.rst \
+    source/reference/parameters/mmaitag-request-lowspeedtime.rst \
+    source/reference/parameters/mmaitag-request-timeoutms.rst \
+    source/reference/parameters/mmaitag-response-maxbytes.rst \
     source/reference/parameters/mmaitag-tag.rst \
     source/reference/parameters/mmanon-embeddedipv4-anonmode.rst \
     source/reference/parameters/mmanon-embeddedipv4-bits.rst \
@@ -967,6 +974,17 @@ EXTRA_DIST = \
     source/reference/parameters/omawslogshlc-max_batch_size.rst \
     source/reference/parameters/omawslogshlc-region.rst \
     source/reference/parameters/omawslogshlc-template.rst \
+    source/reference/parameters/omkinesis-stream.rst \
+    source/reference/parameters/omkinesis-region.rst \
+    source/reference/parameters/omkinesis-partition_key.rst \
+    source/reference/parameters/omkinesis-partition_key_template.rst \
+    source/reference/parameters/omkinesis-template.rst \
+    source/reference/parameters/omkinesis-access_key.rst \
+    source/reference/parameters/omkinesis-secret_key.rst \
+    source/reference/parameters/omkinesis-session_token.rst \
+    source/reference/parameters/omkinesis-endpoint.rst \
+    source/reference/parameters/omkinesis-timeout.rst \
+    source/reference/parameters/omkinesis-max_record_size.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \

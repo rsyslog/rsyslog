@@ -893,7 +893,7 @@ static const unsigned char *ossl_asn1_string_data(const ASN1_STRING *const str) 
 #endif
 }
 
-static rsRetVal ossl_asn1_string_to_cstr(ASN1_STRING *const str, uchar **const ppszOut) {
+static rsRetVal ossl_asn1_string_to_cstr(const ASN1_STRING *const str, uchar **const ppszOut) {
     uchar *pszOut = NULL;
     int len;
     const unsigned char *data = NULL;
@@ -908,13 +908,24 @@ static rsRetVal ossl_asn1_string_to_cstr(ASN1_STRING *const str, uchar **const p
     }
 
 #ifndef ENABLE_WOLFSSL
+    /* OpenSSL 1.0.2 declared this input mutable; newer versions do not. */
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    len = ASN1_STRING_to_UTF8(&utf8, (ASN1_STRING *)str);
+    #else
     len = ASN1_STRING_to_UTF8(&utf8, str);
+    #endif
     if (len < 0 || utf8 == NULL) {
         FINALIZE;
     }
     data = utf8;
 #else
+    /* wolfSSL and OpenSSL before 1.1.0 declare this read-only accessor's
+     * argument mutable. Keep the conversion helper const-correct. */
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    len = ASN1_STRING_length((ASN1_STRING *)str);
+    #else
     len = ASN1_STRING_length(str);
+    #endif
     data = ossl_asn1_string_data(str);
 #endif
     if (len < 0 || data == NULL) {
@@ -1118,9 +1129,9 @@ finalize_it:
 }
 
 static rsRetVal net_ossl_match_cn(net_ossl_t *pThis, X509 *certpeer, cstr_t *pStr, int *bFoundPositiveMatch) {
-    X509_NAME *subject;
-    X509_NAME_ENTRY *entry;
-    ASN1_STRING *cn;
+    const X509_NAME *subject;
+    const X509_NAME_ENTRY *entry;
+    const ASN1_STRING *cn;
     uchar *cnName = NULL;
     int idx;
     DEFiRet;
@@ -1129,15 +1140,30 @@ static rsRetVal net_ossl_match_cn(net_ossl_t *pThis, X509 *certpeer, cstr_t *pSt
     if (subject == NULL) {
         FINALIZE;
     }
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(ENABLE_WOLFSSL)
+    idx = X509_NAME_get_index_by_NID((X509_NAME *)subject, NID_commonName, -1);
+#else
     idx = X509_NAME_get_index_by_NID(subject, NID_commonName, -1);
+#endif
     if (idx < 0) {
         FINALIZE;
     }
+    /* OpenSSL before 1.1.0 and wolfSSL expose these read-only accessors
+     * without const-qualified arguments. Keep the local API const-correct,
+     * and cast only at the compatibility boundary. */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    entry = X509_NAME_get_entry((X509_NAME *)subject, idx);
+#else
     entry = X509_NAME_get_entry(subject, idx);
+#endif
     if (entry == NULL) {
         FINALIZE;
     }
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    cn = X509_NAME_ENTRY_get_data((X509_NAME_ENTRY *)entry);
+#else
     cn = X509_NAME_ENTRY_get_data(entry);
+#endif
     CHKiRet(ossl_asn1_string_to_cstr(cn, &cnName));
     if (cnName == NULL) {
         FINALIZE;
@@ -1417,7 +1443,7 @@ static char *ocsp_make_cache_key(X509 *cert, X509 *issuer) {
     if (!serial || !issuer) ABORT_FINALIZE(RS_RET_ERR);
 
     /* Hash issuer name for compact key */
-    X509_NAME *issuer_name = X509_get_subject_name(issuer);
+    const X509_NAME *issuer_name = X509_get_subject_name(issuer);
     if (!X509_NAME_digest(issuer_name, EVP_sha256(), md, &md_len)) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
@@ -1653,17 +1679,33 @@ static int crl_check(X509 *current_cert, int *is_revoked) {
  * The resulting issuer certificate might be an untrusted certificate,
  * which should be used to generate OCSP requests.
  */
-static X509 *ocsp_find_issuer(X509 *target_cert,
-                              const char *cert_name,
-                              SSL_CTX *ctx,
-                              STACK_OF(X509) * untrusted_peer_certs) {
+static X509 *ocsp_find_issuer(
+    X509 *target_cert, const char *cert_name, SSL_CTX *ctx, STACK_OF(X509) * untrusted_peer_certs, int *issuer_owned) {
     X509 *issuer = NULL;
     X509_STORE *store = SSL_CTX_get_cert_store(ctx);
     STACK_OF(X509_OBJECT) * objs;
 
+    *issuer_owned = 0;
+
     /* find issuer among local trusted issuers */
     if (store != NULL) {
-    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #if OPENSSL_VERSION_NUMBER >= 0x30300000L && !defined(LIBRESSL_VERSION_NUMBER)
+        /* OpenSSL 3.3+ provides an owned snapshot; get0_objects() is deprecated
+         * in OpenSSL 4 and is unsafe when the store is shared between threads.
+         */
+        objs = X509_STORE_get1_objects(store);
+        for (int i = 0; objs != NULL && i < sk_X509_OBJECT_num(objs); i++) {
+            X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
+            if (cert && X509_check_issued(cert, target_cert) == X509_V_OK) {
+                if (X509_up_ref(cert) == 1) {
+                    issuer = cert;
+                    *issuer_owned = 1;
+                }
+                break;
+            }
+        }
+        sk_X509_OBJECT_pop_free(objs, X509_OBJECT_free);
+    #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
         objs = X509_STORE_get0_objects(store);
         for (int i = 0; i < sk_X509_OBJECT_num(objs); i++) {
             X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
@@ -2179,6 +2221,7 @@ static int ocsp_check(
     int at_least_one_responder = 0;
     char *cache_key = NULL;
     int cached_status;
+    int issuer_owned;
 
     X509_NAME_oneline(X509_get_subject_name(current_cert), cert_name, sizeof(cert_name));
 
@@ -2188,7 +2231,7 @@ static int ocsp_check(
     /*
      * 1. Lookup the issuer cert of the current certificate, required to marshal a OCSP request.
      */
-    if (!(issuer = ocsp_find_issuer(current_cert, cert_name, ctx, untrusted_peer_certs))) goto err;
+    if (!(issuer = ocsp_find_issuer(current_cert, cert_name, ctx, untrusted_peer_certs, &issuer_owned))) goto err;
 
     /*
      * 2. Check cache first to avoid network I/O
@@ -2262,6 +2305,7 @@ static int ocsp_check(
 err:
     if (ocsp_responders) X509_email_free(ocsp_responders);
     if (cache_key) free(cache_key);
+    if (issuer_owned) X509_free(issuer);
 
     return ret;
 }

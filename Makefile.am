@@ -4,6 +4,7 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
+	devtools/record-container-validation.py \
 	README.md \
 	platform/README \
 	platform/freebsd/rsyslogd \
@@ -246,6 +247,10 @@ endif
 
 if ENABLE_OMAWSLOGSHLC
 SUBDIRS += plugins/omawslogshlc
+endif
+
+if ENABLE_OMKINESIS
+SUBDIRS += plugins/omkinesis
 endif
 
 if ENABLE_IMDTLS
@@ -609,6 +614,10 @@ endif
 
 if ENABLE_OMAWSLOGSHLC
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omawslogshlc
+endif
+
+if ENABLE_OMKINESIS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omkinesis
 endif
 
 if ENABLE_IMDTLS

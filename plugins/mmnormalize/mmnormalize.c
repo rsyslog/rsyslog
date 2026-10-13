@@ -49,6 +49,14 @@
 #ifdef HAVE_LOGNORM_TURBO
     #include <lognorm-features.h>
     #include <lognorm-turbo.h>
+/* Compat shim: older liblognorm public headers keep LN_FFIELD_RAW_JSON
+ * internal.  Fall back to 0 so the %name:json% reparse in fast_result_to_json
+ * degrades to the plain-string path and mmnormalize builds against them
+ * without a hard liblognorm version dependency (remove once the exposed flag
+ * is guaranteed). */
+    #ifndef LN_FFIELD_RAW_JSON
+        #define LN_FFIELD_RAW_JSON 0u
+    #endif
 #endif
 #include "conf.h"
 #include "syslogd-types.h"
@@ -59,6 +67,7 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "statsobj.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -79,6 +88,15 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
+#ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+DEFobjCurrIf(statsobj)
+    /* Module-level impstats. turbo.truncated counts messages for which the
+     * TurboVM result hit a per-result capacity and was therefore declined: the
+     * standard parser produced the fields instead. It is a cost signal, not a
+     * loss signal -- a non-zero value means those messages were parsed twice. */
+    static statsobj_t *mmnormalizeStats;
+STATSCOUNTER_DEF(ctrTurboTruncated, mutCtrTurboTruncated)
+#endif
 
 static struct cnfparamdescr modpdescr[] = {{"allowregex", eCmdHdlrBinary, 0}};
 
@@ -524,17 +542,38 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
         int64_t ival = 0;
         double dval = 0;
         struct json_object *jval = NULL;
+        unsigned fflags = 0;
+        int is_null = 0;
 
-        /* flags out-param is NULL: nesting is detected via memchr below,
-         * which does not rely on the LN_FFIELD_NESTED flag being set. */
-        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len, &ftype, NULL, &sval, &slen, &ival, &dval) !=
-            0)
+        /* Request field flags.  LN_FFIELD_RAW_JSON marks a string value that a
+         * json-typed parser (%name:json%) already captured as well-formed JSON;
+         * it must be parsed into a nested json_object, not stored as a quoted
+         * string, or {"kc":{...}} degrades to {"kc":"{...}"} and downstream
+         * $!kc!field lookups resolve to nothing.  Dotted (nested) names are
+         * still detected via memchr below, so LN_FFIELD_NESTED is not needed
+         * here. */
+        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len, &ftype, &fflags, &sval, &slen, &ival,
+                                           &dval) != 0)
             continue;
 
         switch (ftype) {
             case LN_FTYPE_STRING:
             case LN_FTYPE_STRING_INLINE:
-                jval = json_object_new_string_len(sval, (int)slen);
+                if ((fflags & LN_FFIELD_RAW_JSON) && sval != NULL) {
+                    /* Length-bounded parse: the flat-store value is not
+                     * guaranteed NUL-terminated, so json_tokener_parse() could
+                     * over-read.  parse_ex() with slen stays in bounds. */
+                    struct json_tokener *jtok = json_tokener_new();
+                    if (jtok != NULL) {
+                        jval = json_tokener_parse_ex(jtok, sval, (int)slen);
+                        json_tokener_free(jtok);
+                    }
+                    /* Fall back to the raw string if it is not valid JSON after
+                     * all, so the field is never silently dropped. */
+                    if (jval == NULL) jval = json_object_new_string_len(sval, (int)slen);
+                } else {
+                    jval = json_object_new_string_len(sval, (int)slen);
+                }
                 break;
             case LN_FTYPE_INT:
                 jval = json_object_new_int64(ival);
@@ -545,11 +584,18 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
             case LN_FTYPE_BOOL:
                 jval = json_object_new_boolean((json_bool)ival);
                 break;
+            case LN_FTYPE_NULL:
+                /* A JSON null is stored by adding the key with a NULL value,
+                 * so jval stays NULL here and the guard below must let it
+                 * through.  Dropping it would make the field absent rather
+                 * than null, which is not what the standard parser yields. */
+                is_null = 1;
+                break;
             default:
                 continue;
         }
 
-        if (jval == NULL) continue;
+        if (jval == NULL && !is_null) continue;
 
         /* Field name: stack buffer for common short names, heap
          * fallback for names >= MMNORM_MAX_FIELDNAME.  Silently
@@ -581,10 +627,10 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
         /* Handle nested fields (dotted names).
          * Detect dots directly -- LN_FFIELD_NESTED flag is not
          * always set by liblognorm rule compilation. */
-        if (memchr(fname, '.', fname_len) != NULL) {
+        char *saveptr = NULL;
+        char *tok = (memchr(fname, '.', fname_len) != NULL) ? strtok_r(name_ptr, ".", &saveptr) : NULL;
+        if (tok != NULL) {
             struct json_object *parent = root;
-            char *saveptr = NULL;
-            char *tok = strtok_r(name_ptr, ".", &saveptr);
             char *next = strtok_r(NULL, ".", &saveptr);
 
             while (next != NULL) {
@@ -599,6 +645,10 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
             }
             json_object_object_add(parent, tok, jval);
         } else {
+            /* Flat name, or a degenerate all-dot name (".", "..") produced by a
+             * discard match such as %.:json%: strtok_r() returns NULL there and
+             * json_object_object_add(key=NULL) does strdup(NULL) -> SIGSEGV.
+             * Add under the literal (possibly empty) name instead. */
             json_object_object_add(root, name_ptr, jval);
         }
 
@@ -675,7 +725,22 @@ BEGINdoAction_NoStrings
                                 pWrkrData->pData->pszPath[2] == '\0';
         const ln_fast_result_t *result = NULL;
         r = ln_turbo_normalize_raw(pWrkrData->ctxlnTurbo, (char *)buf, len, &result);
-        if (r == 0 && result != NULL) {
+        sbool turboTruncated = 0;
+    #ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+        /* A truncated result is missing fields the rulebase did match. Decline
+         * it and let the standard parser below produce the complete set, the
+         * way ln_normalize_to_str() does. Counting it here, at the point the
+         * fast path is abandoned, keeps the counter exact: it can never report
+         * a message the standard parser went on to parse in full anyway. */
+        if (r == 0 && result != NULL && ln_fast_result_is_truncated(result)) {
+            STATSCOUNTER_INC(ctrTurboTruncated, mutCtrTurboTruncated);
+            DBGPRINTF(
+                "mmnormalize: turbo result truncated, "
+                "falling back to standard normalization\n");
+            turboTruncated = 1;
+        }
+    #endif
+        if (r == 0 && result != NULL && !turboTruncated) {
             /* SNAPSHOT PATH: when path is "$!" (CEE root).
              * Create a deep-copy snapshot of the turbo result.
              * The snapshot is a single allocation (~6KB) that owns
@@ -1031,6 +1096,10 @@ ENDdoHUP
 
 BEGINmodExit
     CODESTARTmodExit;
+#ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+    if (mmnormalizeStats != NULL) statsobj.Destruct(&mmnormalizeStats);
+    objRelease(statsobj, CORE_COMPONENT);
+#endif
 ENDmodExit
 
 
@@ -1098,6 +1167,16 @@ BEGINmodInit()
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
                                STD_LOADABLE_MODULE_ID));
+#ifdef HAVE_LN_FAST_RESULT_IS_TRUNCATED
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(statsobj.Construct(&mmnormalizeStats));
+    CHKiRet(statsobj.SetName(mmnormalizeStats, (uchar *)"mmnormalize"));
+    CHKiRet(statsobj.SetOrigin(mmnormalizeStats, (uchar *)"mmnormalize"));
+    STATSCOUNTER_INIT(ctrTurboTruncated, mutCtrTurboTruncated);
+    CHKiRet(statsobj.AddCounter(mmnormalizeStats, UCHAR_CONSTANT("turbo.truncated"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &ctrTurboTruncated));
+    CHKiRet(statsobj.ConstructFinalize(mmnormalizeStats));
+#endif
 ENDmodInit
 
 /* vi:set ai:

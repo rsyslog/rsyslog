@@ -9,6 +9,7 @@
  */
 #include "config.h"
 #include "ai_provider.h"
+#include "ai_provider_gemini_response.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -31,14 +32,6 @@ typedef struct gemini_data_s {
 } gemini_data_t;
 
 /**
- * @brief A simple buffer to accumulate the HTTP response from libcurl.
- */
-struct curl_resp {
-    char *buf;
-    size_t len;
-};
-
-/**
  * @brief Strips trailing whitespace from a string in-place.
  *
  * @note This is a critical step because LLMs often add trailing
@@ -57,25 +50,6 @@ static void strip_trailing_whitespace(char *str) {
     }
 }
 
-
-/**
- * @brief libcurl callback function for writing received data.
- * @see CURLOPT_WRITEFUNCTION
- *
- * This function is called by libcurl whenever new data is received from
- * the server. It appends the new data chunk to our curl_resp buffer.
- */
-static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *data) {
-    struct curl_resp *r = (struct curl_resp *)data;
-    size_t tot = size * nmemb;
-    char *tmp = realloc(r->buf, r->len + tot + 1);
-    if (tmp == NULL) return 0;
-    r->buf = tmp;
-    memcpy(r->buf + r->len, ptr, tot);
-    r->len += tot;
-    r->buf[r->len] = '\0';
-    return tot;
-}
 
 /**
  * @brief Implements the ai_provider_cleanup_t interface function.
@@ -115,6 +89,20 @@ finalize_it:
     RETiRet;
 }
 
+static CURLcode gemini_configure_transfer_limits(CURL *curl, const ai_provider_transfer_limits_t *limits) {
+    CURLcode result;
+
+    if ((result = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, mmaitag_gemini_response_write)) != CURLE_OK)
+        return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L)) != CURLE_OK) return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, limits->total_timeout_ms)) != CURLE_OK) return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, limits->connect_timeout_ms)) != CURLE_OK)
+        return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, limits->low_speed_limit)) != CURLE_OK) return result;
+    if ((result = curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, limits->low_speed_time)) != CURLE_OK) return result;
+    return curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, (curl_off_t)limits->max_response_bytes);
+}
+
 /**
  * @brief Implements the ai_provider_classify_t interface function for Gemini.
  *
@@ -139,6 +127,7 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
     DEFiRet;
     char *url = NULL;
     CURL *curl = NULL;
+    CURLcode curl_result;
 
     if (d == NULL || d->apikey == NULL) ABORT_FINALIZE(RS_RET_ERR);
 
@@ -146,6 +135,12 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
 
     curl = curl_easy_init();
     if (curl == NULL) ABORT_FINALIZE(RS_RET_ERR);
+    curl_result = gemini_configure_transfer_limits(curl, &prov->transfer_limits);
+    if (curl_result != CURLE_OK) {
+        LogError(0, RS_RET_ERR, "mmaitag: could not configure Gemini transfer limits: %s",
+                 curl_easy_strerror(curl_result));
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
     if (asprintf(&url, "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
                  d->model ? d->model : "gemini-2.0-flash") == -1) {
@@ -154,7 +149,7 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
 
     for (size_t i = 0; i < n; ++i) {
         struct curl_slist *headers = NULL;
-        struct curl_resp resp = {0};
+        struct mmaitag_gemini_response resp = {.max_bytes = prov->transfer_limits.max_response_bytes};
         struct json_object *req = NULL;
         char *full_prompt = NULL;
         char *api_key_header = NULL;
@@ -193,16 +188,14 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
         headers = curl_slist_append(headers, api_key_header);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
         long http_code = 0;
         CURLcode cc = curl_easy_perform(curl);
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
         if (cc == CURLE_OK && http_code == 200) {
-            struct json_object *parsed = json_tokener_parse(resp.buf);
+            struct json_object *parsed = resp.buf ? json_tokener_parse(resp.buf) : NULL;
             struct json_object *candidates = NULL;
             struct json_object *first_candidate = NULL;
             struct json_object *content = NULL;
@@ -234,10 +227,15 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, si
             }
         } else {
             (*tags)[i] = strdup("REGULAR");
-            char err_details[1024];
-            snprintf(err_details, sizeof(err_details), "HTTP %ld - %s", http_code,
-                     resp.buf ? resp.buf : curl_easy_strerror(cc));
-            LogError(0, RS_RET_ERR, "mmaitag: gemini request for a message failed: %s", err_details);
+            if (resp.limit_exceeded || cc == CURLE_FILESIZE_EXCEEDED) {
+                LogError(0, RS_RET_ERR,
+                         "mmaitag: gemini request for a message failed: response exceeded the %zu-byte limit",
+                         prov->transfer_limits.max_response_bytes);
+            } else if (cc != CURLE_OK) {
+                LogError(0, RS_RET_ERR, "mmaitag: gemini request for a message failed: %s", curl_easy_strerror(cc));
+            } else {
+                LogError(0, RS_RET_ERR, "mmaitag: gemini request for a message failed: HTTP %ld", http_code);
+            }
         }
 
         // Cleanup for this loop iteration

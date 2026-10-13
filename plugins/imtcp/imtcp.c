@@ -205,6 +205,7 @@ struct modConfData_s {
     sbool bDisableLFDelim; /* disable standard LF delimiter */
     sbool discardTruncatedMsg;
     sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
+    sbool bFailOnBindError;
     sbool bKeepAlive;
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
@@ -240,6 +241,7 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current l
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
+                                           {"failonbinderror", eCmdHdlrBinary, 0},
                                            {"disablelfdelimiter", eCmdHdlrBinary, 0},
                                            {"discardtruncatedmsg", eCmdHdlrBinary, 0},
                                            {"octetcountedframing", eCmdHdlrBinary, 0},
@@ -556,6 +558,7 @@ static int isPermittedHost(struct sockaddr *addr,
 static rsRetVal doOpenLstnSocks(tcpsrv_t *pSrv) {
     ISOBJ_TYPE_assert(pSrv, tcpsrv);
     dbgprintf("in imtcp doOpenLstnSocks\n");
+    pSrv->failOnBindError = runModConf->bFailOnBindError;
     return tcpsrv.create_tcp_socket(pSrv);
 }
 
@@ -1143,6 +1146,8 @@ BEGINsetModCnf
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
             loadModConf->bUseFlowControl = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "failonbinderror")) {
+            loadModConf->bFailOnBindError = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
             loadModConf->bDisableLFDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {

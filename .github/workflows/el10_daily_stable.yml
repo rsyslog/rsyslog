@@ -280,7 +280,7 @@ jobs:
 
       - name: Upload package-build failure evidence
         if: failure() && steps.package_build.outcome == 'failure'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: EL10 daily stable package build
 
@@ -679,7 +679,7 @@ jobs:
             (steps.published_metadata.outcome == 'failure' ||
              steps.published_install.outcome == 'failure')
           }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: ${{ matrix.distro.name }} EL10 daily stable verification
 

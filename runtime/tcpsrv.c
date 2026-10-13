@@ -690,6 +690,7 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
     DEFiRet;
     rsRetVal localRet;
+    rsRetVal firstFailure = RS_RET_OK;
     tcpLstnPortList_t *pEntry;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -699,11 +700,12 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
     while (pEntry != NULL) {
         localRet = initTCPListener(pThis, pEntry);
         if (localRet != RS_RET_OK) {
+            if (firstFailure == RS_RET_OK) firstFailure = localRet;
             char *ns = pEntry->cnf_params->pszNetworkNamespace;
 
             LogError(
                 0, localRet,
-                "Could not create tcp listener, ignoring port "
+                "Could not create tcp listener for port "
                 "%s bind-address %s%s%s.",
                 (pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszPort,
                 (pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszAddr,
@@ -711,6 +713,8 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
         }
         pEntry = pEntry->pNext;
     }
+
+    if (pThis->failOnBindError && firstFailure != RS_RET_OK) ABORT_FINALIZE(firstFailure);
 
     /* OK, we had success. Now it is also time to
      * initialize our connections
@@ -1909,6 +1913,7 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
     INIT_ATOMIC_HELPER_MUT(pThis->mut_sessions);
+    pThis->failOnBindError = 0;
     pThis->iSessMax = TCPSESS_MAX_DEFAULT;
     pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
     pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
@@ -1969,6 +1974,8 @@ static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
 
 finalize_it:
     if (iRet != RS_RET_OK) {
+        for (int i = 0; i < pThis->iLstnCurr; ++i) netstrm.Destruct(pThis->ppLstn + i);
+        pThis->iLstnCurr = 0;
         if (pThis->pNS != NULL) netstrms.Destruct(&pThis->pNS);
         free(pThis->ppLstn);
         pThis->ppLstn = NULL;
