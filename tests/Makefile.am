@@ -28,6 +28,8 @@ FUZZING_CORPUS = \
 	fuzz/corpus/imtcp-session/oversized.hex \
 	fuzz/corpus/imtcp-session/plain-lf.hex \
 	fuzz/corpus/imtcp-session/regex-framing.hex \
+	fuzz/corpus/imtcp-session/regex-framing-zstd-no-newline-oct10.hex \
+	fuzz/corpus/imtcp-session/regex-framing-zstd-no-newline-oct13.hex \
 	fuzz/corpus/imtcp-session/zlib-octet.hex \
 	fuzz/corpus/imtcp-session/zlib-trailer.hex \
 	fuzz/corpus/imtcp-session/zlib-truncated.hex \

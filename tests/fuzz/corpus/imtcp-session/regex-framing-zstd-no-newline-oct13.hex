@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: Apache-2.0
+# Recovered timeout testcase from scheduled imtcp fuzz run 38365710284.
+# Zstd yields 4,063,232 bytes without LF before rejecting the truncated stream.
+
+06 3f c6 f8 28 b5 2f fd 00 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c
+0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c
+0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 58 7a 3c 0a 3c 0a 38
+0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c
+0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c
+0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c
+0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c f7 08 c7 0a 3c 0a 3c 0a 3c 0a 38 0a
+3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 66 0a 3c 0a 3c f8 28
+b5 2f fd 00 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 0a 3c 0a 3c 0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 0a 3c
+0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c
+0a 3c 0a 3c 0a 3c f7 08 c7 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 66 66 66 66 66 66 66 66 66 66 66
+66 66 66 66 66 66 66 66 66 66 66 66 0a 3c 0a 3c f8 28 b5 2f 03 ff a7 81 f7 08 c7 0a 3c 0a 3c 0a
+3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 58 7a f7 08 c7 0a
+3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 0a 3c 0a 58 7a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 37 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a
+3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c f7 08 c7 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c
+0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 0a 58 7a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 37 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a
+3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 58 7a f7 08 c7 0a 3c 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a
+3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c f7
+08 c7 0a 3c 0a 3c 0a 3c 0a 38 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 9f 9f 9f 9f 9f 9f
+0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 66 66 66 66 66 66 66 66 66 66 66 66
+66 66 66 66 66 66 66 66 66 66 66 0a 3c 0a 3c 0a 0a 3c 0a 3c 0a 3c 0a 3c 0a 3c 0a 19
