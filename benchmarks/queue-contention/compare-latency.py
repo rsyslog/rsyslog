@@ -10,6 +10,8 @@ import statistics
 import subprocess
 import time
 
+from docker_image import inspect_or_pull_image
+
 p = argparse.ArgumentParser(description=__doc__)
 for side in ('before', 'after'):
     p.add_argument('--' + side, required=True, type=Path)
@@ -72,17 +74,10 @@ def image_setup_timeout(deadline):
 
 def resolve_image():
     deadline = time.monotonic() + a.trial_timeout
-    command = ['docker', 'image', 'inspect', '--format', '{{.Id}}', a.image]
     try:
-        inspected = subprocess.run(command, capture_output=True, text=True, check=False,
-                                   timeout=image_setup_timeout(deadline))
-        if inspected.returncode != 0:
-            subprocess.run(['docker', 'pull', a.image], check=True, timeout=image_setup_timeout(deadline))
-            inspected = subprocess.run(command, capture_output=True, text=True, check=True,
-                                       timeout=image_setup_timeout(deadline))
+        image_id = inspect_or_pull_image(a.image, lambda: image_setup_timeout(deadline))
     except subprocess.TimeoutExpired as error:
         raise TimeoutError('image setup exceeded --trial-timeout of %g seconds' % a.trial_timeout) from error
-    image_id = inspected.stdout.strip()
     if not image_id:
         raise ValueError('image ID is empty')
     return image_id

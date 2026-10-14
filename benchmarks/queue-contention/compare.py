@@ -12,6 +12,8 @@ from pathlib import Path
 import statistics
 import subprocess
 
+from docker_image import inspect_or_pull_image
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--before', required=True, type=Path)
 parser.add_argument('--after', required=True, type=Path)
@@ -105,14 +107,7 @@ def checkout_state(path):
 
 
 def resolve_image():
-    command = ['docker', 'image', 'inspect', '--format', '{{.Id}}', args.image]
-    inspected = subprocess.run(command, capture_output=True, check=False, text=True,
-                               timeout=args.trial_timeout)
-    if inspected.returncode != 0:
-        subprocess.run(['docker', 'pull', args.image], check=True, timeout=args.trial_timeout)
-        inspected = subprocess.run(command, capture_output=True, check=True, text=True,
-                                   timeout=args.trial_timeout)
-    image_id = inspected.stdout.strip()
+    image_id = inspect_or_pull_image(args.image, lambda: args.trial_timeout)
     if not image_id:
         raise ValueError('docker image inspect returned an empty image ID')
     return image_id
