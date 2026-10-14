@@ -206,6 +206,7 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-s6-linkedlist-persistence.sh \
 	local-queue-s6-linkedlist-segmented-persistence.sh \
 	local-queue-s5-store-failure.sh \
+	local-queue-s5-da-emergency-lease.sh \
 	local-queue-s5-segmented-store-failure.sh \
 	local-queue-s5-save-disabled.sh \
 	local-queue-s5-segmented-save-disabled.sh \
@@ -245,10 +246,13 @@ TESTS_LOCAL_QUEUE_IMDIAG = \
 	local-queue-stats-lifetime.sh
 TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS = local-queue-be-force-term-actions.sh \
     local-queue-input-force-term.sh \
-    local-queue-global-input-force-term.sh
+    local-queue-global-input-force-term.sh \
+    local-queue-shutdown-loss-report.sh
 TESTS_LOCAL_QUEUE_IMDIAG_IMPSTATS_OMTESTING = \
 	local-queue-stats-reconciliation.sh \
-	local-queue-submit-batches.sh
+	local-queue-submit-batches.sh \
+	local-queue-global-shutdown-loss-report.sh \
+	local-queue-global-shutdown-loss-report-linkedlist.sh
 TESTS_LOCAL_QUEUE_EPOLL = \
 	local-queue-imtcp-registration.sh \
 	local-queue-imtcp-shutdown-multi-fe.sh

@@ -65,7 +65,11 @@ void qqueue_local_stats_destruct(qqueue_local_stats_t **stats);
 /** @brief Test-only callback invoked inside the actual stats pre-read callback. */
 typedef void (*qqueue_local_stats_test_pre_read_hook_t)(void *context);
 /**
- * @brief Install a test-only pre-read hook and its opaque context.
+ * @brief Install or clear a test-only pre-read hook and its opaque context.
+ *
+ * Clearing the hook waits for stats-object readers which may already have
+ * loaded its context. Call outside a stats callback and before adapter
+ * destruction.
  * @param stats Adapter to instrument; NULL is ignored.
  * @param hook Hook to invoke during a stats pre-read, or NULL to clear it.
  * @param context Context passed to the hook; clear before its lifetime ends.

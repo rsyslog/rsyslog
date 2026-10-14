@@ -41,6 +41,7 @@
 #ifndef QUEUE_H_INCLUDED
 #define QUEUE_H_INCLUDED
 
+#include <stdint.h>
 #include <pthread.h>
 #include "obj.h"
 #include "wtp.h"
@@ -321,7 +322,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
 void qqueue_activate_graph_node(qqueue_t *queue);
-rsRetVal qqueue_finalize_graph_node(qqueue_t *queue);
+rsRetVal qqueue_finalize_graph_node(qqueue_t *queue, uint64_t *global_memory_residual);
 rsRetVal qqueue_shutdown_graph_node(qqueue_t *queue, const struct timespec *graceful, const struct timespec *action);
 void qqueueDoneLoadCnf(void);
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);

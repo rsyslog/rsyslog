@@ -8,9 +8,11 @@
  * @brief Snapshot-backed impstats for experimental local queue frontends.
  *
  * Concurrency & Locking:
- * - A pre-read callback runs with the stats-object-list lock held.  It calls
+ * - A pre-read callback runs with the stats-object-list lock held. It calls
  *   only the lock-free qqueueLocal*Snapshot accessors and relaxed atomic
- *   stores to this adapter's counter storage.
+ *   stores to this adapter's counter storage. The testbench-only hook is
+ *   published atomically; clearing it is followed by a stats walk that waits
+ *   for any callback which already loaded its context to finish.
  * - No enqueue, dequeue, completion, registration, or shutdown path takes a
  *   stats lock or calls this adapter.
  * - Destruction unlinks all objects before the local family is released.  The
@@ -23,6 +25,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "rsyslog.h"
 #include "queue.h"
@@ -314,7 +317,8 @@ static void local_stats_store(intctr_t *const counter, const uint64_t value) {
 
 static void local_stats_run_test_pre_read_hook(qqueue_local_stats_t *const stats) {
 #ifdef ENABLE_TESTBENCH
-    if (stats->test_pre_read_hook != NULL) stats->test_pre_read_hook(stats->test_pre_read_context);
+    const qqueue_local_stats_test_pre_read_hook_t hook = __atomic_load_n(&stats->test_pre_read_hook, __ATOMIC_ACQUIRE);
+    if (hook != NULL) hook(__atomic_load_n(&stats->test_pre_read_context, __ATOMIC_RELAXED));
 #else
     (void)stats;
 #endif
@@ -502,12 +506,30 @@ void qqueue_local_stats_destruct(qqueue_local_stats_t **const stats_ptr) {
 }
 
 #ifdef ENABLE_TESTBENCH
+static rsRetVal local_stats_test_pre_read_barrier(void *const context __attribute__((unused)),
+                                                  const uchar *const object_name __attribute__((unused)),
+                                                  const uchar *const object_origin __attribute__((unused)),
+                                                  const uchar *const counter_name __attribute__((unused)),
+                                                  const statsCtrType_t counter_type __attribute__((unused)),
+                                                  const uint64_t value __attribute__((unused)),
+                                                  const int8_t flags __attribute__((unused))) {
+    return RS_RET_OK;
+}
+
 void qqueue_local_stats_set_test_pre_read_hook(qqueue_local_stats_t *const stats,
                                                qqueue_local_stats_test_pre_read_hook_t const hook,
                                                void *const context) {
+    qqueue_local_stats_test_pre_read_hook_t previous;
+
     if (stats == NULL) return;
-    stats->test_pre_read_hook = hook;
-    stats->test_pre_read_context = context;
+    /* Pre-read callbacks hold statsobj's list lock. Unpublish first, then a
+     * native walk waits for callbacks which already loaded the prior context.
+     * Do not call this from a stats callback or while destroying the adapter;
+     * the fixture calls it outside both lifetimes. */
+    previous = __atomic_exchange_n(&stats->test_pre_read_hook, NULL, __ATOMIC_ACQ_REL);
+    if (previous != NULL) (void)statsobj.GetAllCounters(local_stats_test_pre_read_barrier, NULL);
+    __atomic_store_n(&stats->test_pre_read_context, context, __ATOMIC_RELAXED);
+    __atomic_store_n(&stats->test_pre_read_hook, hook, __ATOMIC_RELEASE);
 }
 
 /* The test runs through imdiag after the daemon constructed a real local
@@ -585,46 +607,68 @@ static rsRetVal local_stats_lifetime_wait(local_stats_lifetime_phase_t *const ph
     return err == 0 ? RS_RET_OK : RS_RET_CONC_CTRL_ERR;
 }
 
-rsRetVal qqueue_local_stats_test_lifetime(qqueue_t *const owner) {
+/* Observe whether destruction returns while the callback remains blocked.
+ * The 250 ms bound gives a scheduled destructor thread time to report an early
+ * return without making elapsed time the success oracle. Timeout alone does
+ * not prove it reached statsobj's list mutex. The joined destruction after
+ * releasing the callback is the completion oracle. */
+static rsRetVal local_stats_lifetime_check_blocked(local_stats_lifetime_phase_t *const phase) {
+    struct timespec deadline;
+    const long blocked_observation_ns = 250L * 1000L * 1000L;
+    int err;
+    int destroy_returned;
+
+    if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) return RS_RET_CONC_CTRL_ERR;
+    deadline.tv_nsec += blocked_observation_ns;
+    if (deadline.tv_nsec >= 1000L * 1000L * 1000L) {
+        ++deadline.tv_sec;
+        deadline.tv_nsec -= 1000L * 1000L * 1000L;
+    }
+    if ((err = pthread_mutex_lock(&phase->mutex)) != 0) return RS_RET_CONC_CTRL_ERR;
+    while (!phase->destroy_returned && err == 0)
+        err = pthread_cond_timedwait(&phase->condition, &phase->mutex, &deadline);
+    destroy_returned = phase->destroy_returned;
+    if (pthread_mutex_unlock(&phase->mutex) != 0) return RS_RET_CONC_CTRL_ERR;
+    if (destroy_returned) return RS_RET_INTERNAL_ERROR;
+    if (err != ETIMEDOUT) return RS_RET_CONC_CTRL_ERR;
+    return RS_RET_OK;
+}
+
+static rsRetVal local_stats_lifetime_case(qqueue_t *const owner, const int inject_setup_failure) {
     local_stats_lifetime_context_t fixture = {.owner = owner};
-    qqueue_local_stats_t *stats;
     pthread_t reader;
     pthread_t destructor;
     int mutex_initialized = 0;
     int condition_initialized = 0;
+    int hook_installed = 0;
     int reader_started = 0;
     int destructor_started = 0;
+    int setup_failure_injected = 0;
     unsigned local_objects = 0;
     DEFiRet;
 
     if (owner == NULL || owner->local_stats == NULL) return RS_RET_PARAM_ERROR;
-    stats = owner->local_stats;
-    if (pthread_mutex_init(&fixture.phase.mutex, NULL) != 0) return RS_RET_CONC_CTRL_ERR;
+    CHKiConcCtrl(pthread_mutex_init(&fixture.phase.mutex, NULL));
     mutex_initialized = 1;
-    if (pthread_cond_init(&fixture.phase.condition, NULL) != 0) {
-        pthread_mutex_destroy(&fixture.phase.mutex);
-        return RS_RET_CONC_CTRL_ERR;
-    }
+    CHKiConcCtrl(pthread_cond_init(&fixture.phase.condition, NULL));
     condition_initialized = 1;
-    qqueue_local_stats_set_test_pre_read_hook(stats, local_stats_lifetime_pre_read, &fixture);
+    qqueue_local_stats_set_test_pre_read_hook(owner->local_stats, local_stats_lifetime_pre_read, &fixture);
+    hook_installed = 1;
+    if (inject_setup_failure) {
+        /* Exercise cleanup after publishing a pointer to this stack fixture. */
+        setup_failure_injected = 1;
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     CHKiConcCtrl(pthread_create(&reader, NULL, local_stats_lifetime_read, &fixture));
     reader_started = 1;
     CHKiRet(local_stats_lifetime_wait(&fixture.phase, &fixture.phase.pre_read_entered));
     CHKiConcCtrl(pthread_create(&destructor, NULL, local_stats_lifetime_destruct, &fixture));
     destructor_started = 1;
     CHKiRet(local_stats_lifetime_wait(&fixture.phase, &fixture.phase.destroy_started));
-
-    CHKiConcCtrl(pthread_mutex_lock(&fixture.phase.mutex));
-    if (fixture.phase.destroy_returned) {
-        pthread_mutex_unlock(&fixture.phase.mutex);
-        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-    }
-    fixture.phase.release_pre_read = 1;
-    CHKiConcCtrl(pthread_cond_broadcast(&fixture.phase.condition));
-    CHKiConcCtrl(pthread_mutex_unlock(&fixture.phase.mutex));
+    CHKiRet(local_stats_lifetime_check_blocked(&fixture.phase));
 
 finalize_it:
-    if (reader_started || destructor_started) {
+    if (hook_installed || reader_started || destructor_started) {
         if (pthread_mutex_lock(&fixture.phase.mutex) == 0) {
             fixture.phase.release_pre_read = 1;
             pthread_cond_broadcast(&fixture.phase.condition);
@@ -634,16 +678,36 @@ finalize_it:
     if (reader_started && pthread_join(reader, NULL) != 0 && iRet == RS_RET_OK) iRet = RS_RET_CONC_CTRL_ERR;
     if (destructor_started && pthread_join(destructor, NULL) != 0 && iRet == RS_RET_OK) iRet = RS_RET_CONC_CTRL_ERR;
     if (fixture.phase.reader_status != RS_RET_OK && iRet == RS_RET_OK) iRet = fixture.phase.reader_status;
-    if (owner->local_stats != NULL && iRet == RS_RET_OK) {
+    if (owner->local_stats != NULL) {
         qqueue_local_stats_set_test_pre_read_hook(owner->local_stats, NULL, NULL);
-        iRet = RS_RET_INTERNAL_ERROR;
+        if (__atomic_load_n(&owner->local_stats->test_pre_read_hook, __ATOMIC_ACQUIRE) != NULL ||
+            __atomic_load_n(&owner->local_stats->test_pre_read_context, __ATOMIC_RELAXED) != NULL) {
+            if (iRet == RS_RET_OK) iRet = RS_RET_INTERNAL_ERROR;
+        } else if (setup_failure_injected && iRet == RS_RET_OUT_OF_MEMORY) {
+            iRet = RS_RET_OK;
+        } else if (!setup_failure_injected && iRet == RS_RET_OK) {
+            iRet = RS_RET_INTERNAL_ERROR;
+        }
     }
-    if (iRet == RS_RET_OK) {
-        CHKiRet(statsobj.GetAllCounters(local_stats_lifetime_count_local, &local_objects));
-        if (local_objects != 0) iRet = RS_RET_INTERNAL_ERROR;
+    if (!setup_failure_injected && iRet == RS_RET_OK) {
+        const rsRetVal ret = statsobj.GetAllCounters(local_stats_lifetime_count_local, &local_objects);
+        if (ret != RS_RET_OK)
+            iRet = ret;
+        else if (local_objects != 0)
+            iRet = RS_RET_INTERNAL_ERROR;
     }
     if (condition_initialized) pthread_cond_destroy(&fixture.phase.condition);
     if (mutex_initialized) pthread_mutex_destroy(&fixture.phase.mutex);
+    RETiRet;
+}
+
+rsRetVal qqueue_local_stats_test_lifetime(qqueue_t *const owner) {
+    DEFiRet;
+
+    if (owner == NULL || owner->local_stats == NULL) return RS_RET_PARAM_ERROR;
+    CHKiRet(local_stats_lifetime_case(owner, 1));
+    CHKiRet(local_stats_lifetime_case(owner, 0));
+finalize_it:
     RETiRet;
 }
 #endif

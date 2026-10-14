@@ -8,6 +8,8 @@
 # snapshot baselines after the blocked singleton establishes FE startup, then
 # proves all 12 supplied references reached one terminal action exactly once.
 # Explicit helperBatchSize=0 preserves the same-binary S2 control.
+# A snapshot request before the fixture baseline is ready is rejected through
+# the command's error finalizer; its response must preserve that original error.
 # Disable internal-message ingress: debug builds can emit BE-worker startup
 # diagnostics after the fixture baseline, polluting its exact batch counters.
 # File and counter waits establish ordering; no elapsed delay is a success
@@ -41,6 +43,12 @@ if ($msg contains "msgnum:") then
 		asyncWriting="off" flushOnTXEnd="on")
 '
 startup
+
+response=$(printf "localqueuesubmittest snapshot\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
+case "$response" in
+    *"ERROR: local queue submit fixture failed:"*) ;;
+    *) echo "FAIL: unexpected rejected snapshot response: $response"; error_exit 1 ;;
+esac
 
 response=$(printf "localqueuesubmittest prime\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
 case "$response" in

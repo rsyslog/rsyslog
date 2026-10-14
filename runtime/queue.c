@@ -729,6 +729,25 @@ static void queueDrain(qqueue_t *pThis) {
     }
 }
 
+/* A local graph finalizer calls this only after all graph workers have joined
+ * and admission is closed. Unlike legacy queueDrain(), it destroys every
+ * physical residual instead of leaving the last entry after the counter
+ * reaches zero. Standalone global queues retain the legacy drain behavior. */
+static void queue_drain_graph_finalizer(qqueue_t *queue) {
+    smsg_t *msg = NULL;
+    assert(queue != NULL);
+
+    const int initial_size = PREFER_FETCH_32BIT(queue->iQueueSize);
+    DBGOPRINT((obj_t *)queue, "graph finalizer will discard %d residual messages\n", initial_size);
+    while (PREFER_FETCH_32BIT(queue->iQueueSize) > 0) {
+        msg = NULL;
+        (void)ATOMIC_DEC_AND_FETCH(&queue->iQueueSize, &queue->mutQueueSize);
+        queue->qDeq(queue, &msg);
+        if (msg != NULL) msgDestruct(&msg);
+        queue->qDel(queue);
+    }
+}
+
 
 /* --------------- code for disk-assisted (DA) queue modes -------------------- */
 
@@ -1024,7 +1043,7 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis) {
         /* A started local family reconciles every retained reference. Startup
          * can fail before the family exists; drain that physical store below. */
         assert(pThis->iQueueSize == 0);
-    } else {
+    } else if (!pThis->local_graph_stopped || pThis->iQueueSize != 0) {
         queueDrain(pThis); /* discard any remaining queue entries */
     }
     free(pThis->tVars.farray.pBuf);
@@ -1091,7 +1110,7 @@ static rsRetVal qConstructLinkedList(qqueue_t *pThis) {
 static rsRetVal qDestructLinkedList(qqueue_t __attribute__((unused)) * pThis) {
     DEFiRet;
 
-    queueDrain(pThis); /* discard any remaining queue entries */
+    if (!pThis->local_graph_stopped || pThis->iQueueSize != 0) queueDrain(pThis); /* discard any remaining entries */
 
     /* with the linked list type, there is nothing left to do here. The
      * reason is that there are no dynamic elements for the list itself.
@@ -1944,6 +1963,16 @@ static rsRetVal queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingE
         pThis->pqParent->bIsDA = 0;
         if (pThis->local_graph_conf != NULL) pThis->pqParent->local_retired_da = pThis;
         __atomic_store_n(&pThis->pqParent->pqDA, NULL, __ATOMIC_RELEASE);
+        if (graphMember && pThis->pqParent->local != NULL) {
+            /* A DA child shares this locked mutex with its parent. The
+             * transfer pool may hold a parent batch or be parked. Once
+             * its destination is detached, regular BE workers and helpers
+             * must be allowed to drain the remaining parent inventory. */
+            assert(pThis->mut == pThis->pqParent->mut);
+            pThis->pqParent->local_da_active = 0;
+            qqueueAdviseMaxWorkers(pThis->pqParent);
+            qqueueLocalWakeBackendHelpers(pThis->pqParent);
+        }
         /* This may have undesired side effects, not sure if I really evaluated
          * all. So you know where to look at if you come to this point during
          * troubleshooting ;) -- rgerhards, 2011-05-03
@@ -2750,7 +2779,8 @@ rsRetVal qqueue_shutdown_graph_node(qqueue_t *const queue,
     return ret;
 }
 
-rsRetVal qqueue_finalize_graph_node(qqueue_t *const queue) {
+rsRetVal qqueue_finalize_graph_node(qqueue_t *const queue, uint64_t *const global_memory_residual) {
+    *global_memory_residual = 0;
     if (queue->local_graph_stopped) return RS_RET_OK;
     rsRetVal ret;
     if (queue->local != NULL) {
@@ -2761,7 +2791,11 @@ rsRetVal qqueue_finalize_graph_node(qqueue_t *const queue) {
         if (ret == RS_RET_OK) ret = diskRet;
         /* Pure disk boundaries keep their store. Existing memory queues
          * discard only what their configured save phase did not preserve. */
-        if (queue->qType == QUEUETYPE_FIXED_ARRAY || queue->qType == QUEUETYPE_LINKEDLIST) queueDrain(queue);
+        if (queue->qType == QUEUETYPE_FIXED_ARRAY || queue->qType == QUEUETYPE_LINKEDLIST) {
+            const int residual = PREFER_FETCH_32BIT(queue->iQueueSize);
+            if (residual > 0) *global_memory_residual = (uint64_t)residual;
+            queue_drain_graph_finalizer(queue);
+        }
     }
     queue->local_graph_stopped = 1;
     return ret;
@@ -4339,8 +4373,35 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     }
 
     CHKiRet(DequeueForConsumer(pThis, pWti, &skippedMsgs));
-    qqueue_t *const diskDestination = pThis->pqDA;
-    if (diskDestination == NULL) ABORT_FINALIZE(RS_RET_IDLE);
+#ifdef ENABLE_TESTBENCH
+    /* Force the same child-detach transition that a fatal child read makes
+     * while the transfer worker owns a parent batch. The real emergency path
+     * takes this shared mutex, so release and reacquire it as that path does. */
+    /* The opt-in fixture has one DA target per daemon; fire only once. */
+    static int test_detach_fired;
+    const char *const detach_fault = getenv("RSYSLOG_LOCAL_QUEUE_TEST_DA_DETACH_AFTER_DEQUEUE");
+    if (pThis->local != NULL && pThis->pqDA != NULL && getPhysicalQueueSize(pThis->pqDA) == 0 &&
+        pWti->batch.nElem != 0 && detach_fault != NULL && *detach_fault != '\0' &&
+        !__atomic_exchange_n(&test_detach_fired, 1, __ATOMIC_RELAXED)) {
+        qqueue_t *const child = pThis->pqDA;
+        d_pthread_mutex_unlock(pThis->mut);
+        (void)queueSwitchToEmergencyMode(child, RS_RET_FILE_NOT_FOUND);
+        qqueueLock(pThis);
+    }
+#endif
+    qqueue_t *const disk_destination = pThis->pqDA;
+    if (disk_destination == NULL) {
+        if (pThis->local == NULL) ABORT_FINALIZE(RS_RET_IDLE);
+        /* A detached child cannot accept this batch. We still own the parent
+         * source lease under its mutex: normal completion reinserts RDY/SUB
+         * messages, releases nLogDeq and their worker references, and wakes
+         * regular consumers. Do not park with an outstanding lease. */
+        pThis->local_da_active = 0;
+        iRet = batchProcessed(pThis, pWti);
+        if (iRet != RS_RET_OK) return iRet;
+        DBGOPRINT((obj_t *)pThis, "ConsumerDA: detached disk child; parent lease retired\n");
+        return RS_RET_IDLE;
+    }
 
     /* we now have a non-idle batch of work, so we can release the queue mutex and process it */
     d_pthread_mutex_unlock(pThis->mut);
@@ -4356,7 +4417,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     if (pThis->local_graph_conf != NULL) pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     /* iterate over returned results and enqueue them in DA queue */
     for (i = 0; i < pWti->batch.nElem && !qqueueIsShutdownImmediate(pThis); i++) {
-        iRet = qqueueEnqMsg(diskDestination, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
+        iRet = qqueueEnqMsg(disk_destination, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
         if (iRet != RS_RET_OK) {
             if (iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
                 /* Queue emergency error occurred */
@@ -4369,7 +4430,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
                           "ConsumerDA:qqueueEnqMsg item (%d) returned "
                           "with error state: '%d'\n",
                           i, iRet);
-                if (diskDestination->qType == QUEUETYPE_SEGMENTED_DISK) {
+                if (disk_destination->qType == QUEUETYPE_SEGMENTED_DISK) {
                     /* The segmented child may fail before the event becomes
                      * durable (for example while publishing its engine marker
                      * or materializing the store). Leave this and the

@@ -52,11 +52,13 @@
 #include "modules.h"
 #include "wti.h"
 #include "dirty.h" /* for main ruleset queue creation */
+#include "glbl.h"
+#include "queue_local.h"
 
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(parser)
+DEFobjCurrIf(parser) DEFobjCurrIf(glbl)
 
     /* tables for interfacing with the v6 config system (as far as we need to) */
     static struct cnfparamdescr rspdescr[] = {{"name", eCmdHdlrString, CNFPARAM_REQUIRED},
@@ -1117,12 +1119,32 @@ rsRetVal ruleset_shutdown_local_graph(rsconf_t *const conf) {
     }
     /* Existing DA save may outlive callback deadlines. Only enter it after
      * every graph execution source has joined; all queue objects remain live. */
+    uint64_t global_memory_residual = 0;
     for (size_t i = 0; i < graph->count; ++i) {
-        const rsRetVal ret = qqueue_finalize_graph_node(graph->order[i]);
+        uint64_t queue_residual = 0;
+        const rsRetVal ret = qqueue_finalize_graph_node(graph->order[i], &queue_residual);
+        global_memory_residual += queue_residual;
         if (result == RS_RET_OK && ret != RS_RET_OK) result = ret;
+    }
+    uint64_t local_shutdown_discarded = 0;
+    for (size_t i = 0; i < graph->count; ++i) {
+        const qqueue_t *const queue = graph->order[i];
+        if (queue->local == NULL) continue;
+        qqueueLocalSnapshot_t snapshot;
+        qqueueLocalGetSnapshot(queue, &snapshot);
+        local_shutdown_discarded += snapshot.shutdown_discarded;
     }
     graph->stopped = 1;
     graph->stopping = 0;
+    if (glbl.GetGlobalInputTermState() == 1 && (local_shutdown_discarded > 0 || global_memory_residual > 0)) {
+        /* Emit only during process termination: before global input
+         * termination, LogMsg can re-enter the live graph. Startup unwind has
+         * no accepted graph traffic to report. All finalizers have completed,
+         * so this report cannot become another shutdown queue obligation. */
+        LogMsg(0, NO_ERRCODE, LOG_ERR,
+               "shutdown queue loss: local.shutdown_discarded=%llu global.memory_queue_residual=%llu",
+               (unsigned long long)local_shutdown_discarded, (unsigned long long)global_memory_residual);
+    }
     return result;
 }
 
@@ -1507,6 +1529,7 @@ ENDobjQueryInterface(ruleset)
  */
 BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
     objRelease(parser, CORE_COMPONENT);
+    objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
 
@@ -1516,6 +1539,7 @@ ENDObjClassExit(ruleset)
  */
 BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
     /* request objects we use */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);

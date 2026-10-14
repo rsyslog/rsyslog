@@ -820,6 +820,8 @@ static rsRetVal localQueueSubmitFixtureCreate(smsg_t **const messages, const siz
     struct syslogTime stTime;
     time_t ttGenTime;
     size_t i;
+    size_t constructed = 0;
+    size_t j;
     DEFiRet;
 
     datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
@@ -827,6 +829,7 @@ static rsRetVal localQueueSubmitFixtureCreate(smsg_t **const messages, const siz
         char raw[128];
 
         CHKiRet(msgConstructWithTime(&messages[i], &stTime, ttGenTime));
+        ++constructed;
         snprintf(raw, sizeof(raw), "<167>Mar  1 01:00:00 192.0.2.8 tag msgnum:%8.8u:", localQueueSubmitFixtureNextId++);
         MsgSetRawMsg(messages[i], raw, strlen(raw));
         MsgSetInputName(messages[i], pInputName);
@@ -836,6 +839,11 @@ static rsRetVal localQueueSubmitFixtureCreate(smsg_t **const messages, const siz
         CHKiRet(MsgSetRcvFromIP(messages[i], pRcvIPDummy));
     }
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        for (j = 0; j < constructed; ++j) {
+            if (messages[j] != NULL) msgDestruct(&messages[j]);
+        }
+    }
     RETiRet;
 }
 
@@ -867,7 +875,9 @@ static rsRetVal localQueueSubmitFixtureBatch(const size_t count) {
 
 finalize_it:
     if (!submitted) {
-        for (i = 0; i < count; ++i) msgDestruct(&messages[i]);
+        for (i = 0; i < count; ++i) {
+            if (messages[i] != NULL) msgDestruct(&messages[i]);
+        }
     }
     RETiRet;
 }
@@ -876,15 +886,18 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
     qqueueLocalSnapshot_t before;
     qqueueLocalSnapshot_t snapshot;
     uchar mode[32] = {0};
+    int response_attempted = 0;
     DEFiRet;
 
     getFirstWord(&argument, mode, sizeof(mode), TO_LOWERCASE);
     if (runConf->pMsgQueue == NULL || runConf->pMsgQueue->local == NULL) {
+        response_attempted = 1;
         CHKiRet(sendResponse(pSess, "ERROR: local main queue is not initialized\n"));
         FINALIZE;
     }
     if (!ustrcmp(mode, UCHAR_CONSTANT("prime"))) {
         if (localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_IDLE) {
+            response_attempted = 1;
             CHKiRet(sendResponse(pSess, "ERROR: fixture is already primed\n"));
             FINALIZE;
         }
@@ -894,9 +907,11 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         if (memcmp(&before, &snapshot, sizeof(snapshot)) != 0) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
         CHKiRet(localQueueSubmitFixtureBatch(1));
         localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_PRIMED;
+        response_attempted = 1;
         CHKiRet(sendResponse(pSess, "OK expected.messages=12\n"));
     } else if (!ustrcmp(mode, UCHAR_CONSTANT("batches"))) {
         if (localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_PRIMED) {
+            response_attempted = 1;
             CHKiRet(sendResponse(pSess, "ERROR: fixture needs prime\n"));
             FINALIZE;
         }
@@ -908,6 +923,7 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         CHKiRet(localQueueSubmitFixtureBatch(2));
         CHKiRet(localQueueSubmitFixtureBatch(5));
         localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_BATCHED;
+        response_attempted = 1;
         CHKiRet(sendResponse(pSess, "OK expected.messages=12 fe.messages=5 be.messages=7\n"));
     } else if (!ustrcmp(mode, UCHAR_CONSTANT("snapshot"))) {
         if (!localQueueSubmitFixtureBaselineValid) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -919,6 +935,7 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         ++snapshot.admitted;
         ++snapshot.route_fe_messages;
         snapshot.outstanding = snapshot.admitted >= snapshot.terminal ? snapshot.admitted - snapshot.terminal : 0;
+        response_attempted = 1;
         CHKiRet(sendResponse(pSess,
                              "OK attempts=%" PRIu64 " admitted=%" PRIu64 " terminal=%" PRIu64 " outstanding=%" PRIu64
                              " fe=%" PRIu64 " be=%" PRIu64 " be_nofit=%" PRIu64 " be_oversized=%" PRIu64 "\n",
@@ -926,11 +943,13 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
                              snapshot.route_fe_messages, snapshot.route_be_messages, snapshot.be_nofit,
                              snapshot.be_oversized));
     } else {
+        response_attempted = 1;
         CHKiRet(sendResponse(pSess, "ERROR: expected prime, batches, or snapshot\n"));
     }
 
 finalize_it:
-    if (iRet != RS_RET_OK) CHKiRet(sendResponse(pSess, "ERROR: local queue submit fixture failed: %d\n", iRet));
+    if (iRet != RS_RET_OK && !response_attempted)
+        (void)sendResponse(pSess, "ERROR: local queue submit fixture failed: %d\n", iRet);
     RETiRet;
 }
 
@@ -997,8 +1016,8 @@ static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
     CHKiRet(sendResponse(pSess, "OK redirect.messages=1 outcome=%s\n", outcome));
 
 finalize_it:
-    if (!producer_created) msgDestruct(&submit_result.message);
-    if (iRet != RS_RET_OK) CHKiRet(sendResponse(pSess, "ERROR: local queue redirect fixture failed: %d\n", iRet));
+    if (!producer_created && submit_result.message != NULL) msgDestruct(&submit_result.message);
+    if (iRet != RS_RET_OK) (void)sendResponse(pSess, "ERROR: local queue redirect fixture failed: %d\n", iRet);
     RETiRet;
 }
 

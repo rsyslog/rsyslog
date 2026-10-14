@@ -30,8 +30,12 @@
 require_plugin imdiag
 require_plugin impstats
 borrowed=${LOCAL_QUEUE_BORROWED_FORCE_TERM:-0}
+report_shutdown_loss=${LOCAL_QUEUE_REPORT_SHUTDOWN_LOSS:-0}
 backend_type=FixedArray
 internal_config=''
+if [ "$report_shutdown_loss" -eq 1 ]; then
+	internal_config="global(processInternalMessages=\"off\" operatingStateFile=\"$PWD/$RSYSLOG_DYNNAME.osf\")"
+fi
 if [ "${LOCAL_QUEUE_S6_RETRY_OOM:-0}" = 1 ]; then
     backend_type=LinkedList
     internal_config='global(processInternalMessages="off")'
@@ -140,6 +144,18 @@ if [ "${LOCAL_QUEUE_BORROWED_CANCEL:-0}" -eq 0 ]; then
 fi
 wait_shutdown
 wait_file_lines "$STOP_BASE" 1
+if [ "$report_shutdown_loss" -eq 1 ]; then
+	if ! grep -Eq '^OK fe.joined=0 fe.registered=0 shutdown.discarded=1 outstanding=0 ' "$STOP_BASE"; then
+		error_exit 1 'report fixture did not discard exactly one local obligation'
+	fi
+	if [ "$(grep -Fc 'shutdown queue loss: local.shutdown_discarded=1 global.memory_queue_residual=0' \
+		"$PWD/$RSYSLOG_DYNNAME.osf")" -ne 1 ]; then
+		error_exit 1 'operating state file did not contain exactly one matching shutdown loss report'
+	fi
+	if grep -Fq 'shutdown queue loss:' "$ACTION_A" "$ACTION_B"; then
+		error_exit 1 'shutdown loss report was enqueued into the stopped message graph'
+	fi
+fi
 if [ "$borrowed" -eq 1 ]; then
     exec {dedicated_hold_fd}>&-
     # Match a complete counter value while allowing appended S5 outcome fields.

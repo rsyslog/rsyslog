@@ -3,7 +3,10 @@
 # statsobj reader in an initialized local-queue daemon. The testbench-only
 # imdiag command blocks the adapter's pre-read callback under statsobj's global
 # list mutex, starts qqueueLocalStatsDestruct concurrently, and releases it
-# only after observing destruction start. Its OK reply proves the reader and
+# after a 250 ms bounded observation for premature destruction; timeout alone
+# does not prove the destructor reached statsobj's list mutex. The fixture also
+# injects a setup failure immediately after publishing its stack context and
+# verifies cleanup clears the hook. Its OK reply proves the reader and
 # destructor joined and a second native walk found no core.queue.local objects;
 # clean shutdown proves the queue tolerates its already-unlinked adapter.
 . ${srcdir:=.}/diag.sh init
