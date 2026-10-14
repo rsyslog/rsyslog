@@ -107,6 +107,9 @@ struct globals_s {
     int maxErrMsgToStderr; /* how many messages to forward at most to stderr? */
     int bAbortOnUncleanConfig; /* abort run (rather than starting with partial
                       config) if there was any issue in conf */
+    int bRequireAllInputs; /* fail startup if a configured input cannot start */
+    int bInputRulesetMissing; /* an input would be routed to the default ruleset */
+    int bInputDeclarationFailed; /* an input() or module() object could not be loaded */
     int bAbortOnFailedQueueStartup; /* similar to bAbortOnUncleanConfig, but abort if a queue
                        startup fails. This is not exactly an unclan config. */
     int compatConfigFormatLegacy; /* policy for legacy $-directives */

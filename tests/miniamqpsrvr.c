@@ -490,7 +490,7 @@ static void amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite) 
 }
 
 int main(int argc, char *argv[]) {
-    int port[2], fds[2], i, opt, nb_port = 1;
+    int port[2], fds[2] = {-1, -1}, i, opt, nb_port = 1;
     int pipeS1toS2[2] = {-1, -1};
     int pipeS2toS1[2] = {-1, -1};
     int pipeRead[2], pipeWrite[2];
@@ -591,7 +591,10 @@ int main(int argc, char *argv[]) {
         }
         if (pid[i] == 0) {
             /* this is the child */
-            if (fds[1 - i] > 0) close(fds[1 - i]);
+            /* In single-server mode the other slot has no socket. Closing an
+             * uninitialized slot can close stderr, which accept() then reuses
+             * and debug output corrupts the AMQP connection. */
+            if (fds[1 - i] >= 0) close(fds[1 - i]);
             amqp_srvr(port[i], i + 1, fds[i], pipeRead[i], pipeWrite[i]);
 
             if (fpout && fpout != stdout) fclose(fpout);

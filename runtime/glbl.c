@@ -175,6 +175,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"compatibility.defaults.secure", eCmdHdlrGetWord, 0},
     {"systemd.notifyreadydelay", eCmdHdlrBinary, 0},
     {"abortonuncleanconfig", eCmdHdlrBinary, 0},
+    {"inputstartuppolicy", eCmdHdlrGetWord, 0},
     {"abortonfailedqueuestartup", eCmdHdlrBinary, 0},
     {"variables.casesensitive", eCmdHdlrBinary, 0},
     {"environment", eCmdHdlrArray, 0},
@@ -1559,6 +1560,18 @@ rsRetVal glblDoneLoadCnf(void) {
             loadConf->globals.systemdNotifyReadyDelay = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
             loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
+        } else if (!strcmp(paramblk.descr[i].name, "inputstartuppolicy")) {
+            char *const policy = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+            CHKmalloc(policy);
+            if (!strcmp(policy, "require-all")) {
+                loadConf->globals.bRequireAllInputs = 1;
+            } else if (!strcmp(policy, "best-effort")) {
+                loadConf->globals.bRequireAllInputs = 0;
+            } else {
+                parser_errmsg("invalid inputStartupPolicy '%s'; expected 'best-effort' or 'require-all'", policy);
+                iRet = RS_RET_CONF_PARAM_INVLD;
+            }
+            free(policy);
         } else if (!strcmp(paramblk.descr[i].name, "abortonfailedqueuestartup")) {
             loadConf->globals.bAbortOnFailedQueueStartup = cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {

@@ -1892,6 +1892,12 @@ static void initAll(int argc, char **argv) {
 
     glbl.GenerateLocalHostNameProperty();
 
+    /* Strict input policy must not continue with a partly loaded config.
+     * In particular, an early load error can leave the main queue unset. */
+    if (loadConf != NULL && loadConf->globals.bRequireAllInputs && localRet != RS_RET_OK &&
+        localRet != RS_RET_VALIDATION_RUN)
+        ABORT_FINALIZE(localRet);
+
     if (hadErrMsgs()) {
         if (loadConf->globals.bAbortOnUncleanConfig) {
             fprintf(stderr,
@@ -2713,5 +2719,9 @@ int main(int argc, char **argv) {
     LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
     deinitAll();
     osf_close();
+    if (thrd_had_fatal_input_failure()) {
+        (void)rsyslogdWriteTerminationMarker("error", "input-failed", "main-return");
+        return 1;
+    }
     return rsyslogdWriteTerminationMarker("ok", "normal", "main-return");
 }

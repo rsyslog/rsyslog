@@ -1111,6 +1111,7 @@ BEGINactivateCnf
     CODESTARTactivateCnf;
     for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
         iRet = checkInstance(inst);
+        if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) break;
         /* Create per-instance stats after successful instance setup */
         if (iRet == RS_RET_OK && inst->stats == NULL) {
             char namebuf[256];
