@@ -112,8 +112,7 @@ cross-host correlation method.
 
 ## Completed sustained contention screen (S7)
 
-This method was discovered in session `01a0a5dd-878e-7791-93de-adc60b44b359`
-and applied to immutable baseline/S3/S6 builds on 2026-09-15. Unlike the earlier
+This method was applied to immutable baseline/S3/S6 builds on 2026-09-15. Unlike the earlier
 short omfile/omfwd screens, it establishes substantial shared-queue contention.
 It complements those delivery-checked tests; it does not replace them.
 
@@ -235,7 +234,6 @@ All completion counter checks passed. Baseline is the original common ancestor,
 newly measured, not current upstream main or a final-S6 global regression test.
 
 Raw configs, commands, counters, samples, binary/build identities and scripts
-are retained at `/home/rger/rsyslog-local-queue-artifacts/contention-comparison/`:
-`final-first-set/` holds the matched 10K comparison and `fe100k/` the follow-up.
-The table, stimulus and oracle above are the portable record; the local raw
-artifact directory is not part of the source distribution.
+were retained outside the source distribution. The `final-first-set` artifact
+holds the matched 10K comparison and `fe100k` the follow-up. The table,
+stimulus and oracle above are the portable record.

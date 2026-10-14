@@ -4,13 +4,14 @@
    :keywords: rsyslog, local queue, S0, S1, S2, validation, performance
 -->
 
-# Local queue implementation execution ledger
+# Local queue implementation execution record
 
 <!-- .. summary-start -->
-The maintainer authorized autonomous S0 through S2 implementation on 2026-09-14,
-with this session coordinating bounded subagents and independent stage reviews.
-Stage acceptance requires the gates in the implementation plan. A build, review,
-or favorable isolated timing does not alone establish acceptance.
+This historical record summarizes the S0–S7 implementation and validation
+campaign of September 2026. Stage acceptance required the gates in the
+implementation plan. A build, review, or favorable isolated timing alone did not
+establish acceptance. Its checkpoint statements describe their recorded dates,
+not the current PR head or current validation state.
 <!-- .. summary-end -->
 
 ## Authority and immutable baselines
@@ -19,8 +20,8 @@ or favorable isolated timing does not alone establish acceptance.
   and [related work](local-queue-related-work.md): commit `8debb0a69`.
 - Runtime baseline: `b0d9f971f007f06db3f734543cef5dfb312c5090`, verified against
   freshly fetched upstream/main on 2026-09-14.
-- Work is confined to sibling worktrees; the coordination checkout is unchanged.
-- No push or PR publication is part of the current execution step.
+- The campaign used sibling worktrees. Later source revisions and hosted status
+  are recorded in the S7 section; earlier checkpoint states are historical.
 
 ## Stage status
 
@@ -397,11 +398,8 @@ counter-array indices, preserving exported fields and their storage. The owner
 reported the corrected compile passed; broader portability and sanitizer
 results are recorded when complete.
 
-Raw session evidence includes `/tmp/localq-failure-validation.md`,
-`/tmp/rsyslog-s2-production-validation.md`,
-`/tmp/local-queue-omfile-dist-real-tests.log`, and the owners' focused test logs.
-These are local-session paths, not durable packaged artifacts. No hosted PR
-review has run because no PR has been published. Final acceptance remains
+The original session used external focused logs that are not packaged with the
+source. At this checkpoint, no PR had been published. Final acceptance remained
 pending the broad container check, analyzer, applicable specialist lanes,
 current security receipt and late memory/concurrency/test-plumbing audits.
 
@@ -504,11 +502,10 @@ ShellCheck, Python style, metadata, relative links and whitespace checks passed.
 Advisory test-pattern matches were documented watchdogs, marker-synchronized
 background senders that are waited, and diagnostic configuration assertions.
 
-Detailed command/environment/source records and raw results are retained under
-`/home/rger/rsyslog-local-queue-artifacts/s2-validation/`, including
-`rsyslog-s2-sanitizer-evidence.md`, `rsyslog-s2-portability-evidence.md`, and
-`rsyslog-s2-be-force-term-validation.md`. These are local session artifacts;
-this ledger supplies the durable qualification summary. All use the Ubuntu
+The S2 campaign recorded command, environment, source, sanitizer, portability,
+and force-termination evidence outside the source distribution. Those session
+artifacts are not portable validation inputs. This record supplies the durable
+qualification summary. All use the Ubuntu
 26.04 image ID above, with ten-way specialist builds/checks. No performance
 campaign or hosted PR review was run during this qualification work.
 
@@ -720,11 +717,10 @@ ASan/UBSan and TSan each passed all nine new runtime scenarios (the two
 configuration-only wrappers are covered separately), without a new suppression.
 Mock distcheck passed. Clang first rejected a declaration immediately after an
 omfwd label in the older C dialect; moving the declaration to function scope
-fixed that build error without changing behavior. Final container results and
-exact commands are recorded in
-`/home/rger/rsyslog-local-queue-artifacts/s4-campaign/`; the coordinator's focused
-logs and late audit are in the sibling `s4/` directory. No additional performance campaign
-has been performed for S4; production contention/performance qualification remains
+fixed that build error without changing behavior. The S4 campaign recorded final
+container results, exact commands, focused logs and the late audit outside the
+source distribution. No additional performance campaign was performed for S4;
+production contention/performance qualification remains
 open. The previous single-run omfwd screen and baseline lock diagnostic remain
 in `omfwd-campaign/quick-three`, separate from stage correctness evidence.
 
@@ -743,9 +739,8 @@ The analyzer reported only the known baseline `tools/rsyslogd.c:1871` warning.
 Final validation used `rsyslog/rsyslog_dev_base_ubuntu:26.04`, image ID
 `sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`,
 broad build/check concurrency 60 and analyzer/sanitizer build concurrency 20.
-Exact commands, source provenance, sanitizer results, lane restrictions and
-failure history are retained in
-`/home/rger/rsyslog-local-queue-artifacts/s4-campaign/final-validation/s4-final-validation-evidence.md`.
+The S4 campaign recorded exact commands, source provenance, sanitizer results,
+lane restrictions and failure history outside the source distribution.
 Real Elasticsearch-node qualification was not run; the actual output module
 was exercised against controlled HTTP fixtures, following its module guide.
 The prior forced-cancellation TSan tooling limitation remains as recorded in
@@ -810,14 +805,13 @@ Fresh independent lifecycle review identified unbounded save delaying downstream
 callback shutdown and missing corruption/lazy-discovery accounting. The two-pass
 shutdown and outcome hooks address those findings; the reviewer verified the
 corrections without reporting another blocker in the bounded review. Exact
-review hashes and evidence are in
-`/home/rger/rsyslog-local-queue-artifacts/s5/lifecycle-review.md`.
+review hashes and evidence were recorded in the external S5 campaign.
 Formatting afterward changed layout only. No generic disk-engine redesign or
 unrelated inherited-error cleanup was added.
 
-Focused run logs, corrected-profile builds, configuration checks and validation
-artifacts are in `/home/rger/rsyslog-local-queue-artifacts/s5/`. Sanitizer and final
-container results are recorded separately when complete. No new S5 throughput
+Focused run logs, corrected-profile builds and configuration checks were kept
+outside the source distribution. Sanitizer and final container results were
+recorded separately. No new S5 throughput
 qualification is implied by the functional tests; production performance and
 real Elasticsearch-node qualification remain open. Hosted checks/reviews still
 refer to the published PR head; this local work has not been pushed.
@@ -896,8 +890,8 @@ were non-passing. No broad retry campaign or unrelated repair was performed.
 Container image: `rsyslog/rsyslog_dev_base_ubuntu:26.04`, ID
 `sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`.
 Broad build/check concurrency was 60; sanitizer/analyzer concurrency was 20.
-Exact commands, configured service lanes, logs and limitations are consolidated
-in `/home/rger/rsyslog-local-queue-artifacts/s5/final-validation-evidence.md`.
+The S5 campaign recorded exact commands, configured service lanes, logs and
+limitations outside the source distribution.
 Real Elasticsearch-node qualification and production performance remain open;
 no S5 throughput claim follows from these tests.
 
@@ -951,8 +945,8 @@ All fifteen normal-build S6 runtime fixtures passed on the final draft, includin
 LinkedList spill/helping/stats and classic/segmented persistence; once-only
 sampling through retry and both disk engines; parsed severity under FE-only
 pressure; minimum-batch timeout/clamping; schedule shutdown/recovery; slowdown;
-and injected initial/retry list-node allocation failures. Logs are in
-`/home/rger/rsyslog-local-queue-artifacts/s6/focused-final.log`.
+and injected initial/retry list-node allocation failures. Focused logs were
+retained outside the source distribution.
 
 The first discard fixture incorrectly expected wire priority before main-queue
 parsing. It now routes through a parsed local ruleset using Direct main;
@@ -1021,8 +1015,10 @@ Corrected mock distcheck passed (exit 0). Native/YAML configuration and existing
 registration-cap/producer-exit checks also passed. The final source and
 subsequent test-only corrections passed bounded lifecycle/security review;
 the security receipt is bound after this final evidence update. No source
-changes followed the final schedule invariant check. S6 remains uncommitted and
-unpushed; hosted PR reviews/checks do not cover these local changes.
+changes followed the final schedule invariant check. At this S6 checkpoint,
+source revision `31796c8e1` had not yet been published. The S7 record below
+documents its subsequent commit and reported push; the checkpoint's hosted
+reviews/checks did not cover these local changes.
 
 The exploratory screen used the existing `trial-multi.sh` with 4M messages,
 8 imtcp workers, 16 connections, 512-byte payloads, 1M BE slots, batch ceiling
@@ -1051,10 +1047,8 @@ different total reservations and are not equal-memory comparisons to each other.
 No production speedup, contention diagnosis, or final S7 performance qualification
 is inferred from this small, unoptimized, single-sample screen.
 
-Raw commands, compiler/binary/source identities, JSON and logs are under
-`/home/rger/rsyslog-local-queue-artifacts/s6/perf/omfwd-4m-16/`.
-Consolidated validation evidence is
-`/home/rger/rsyslog-local-queue-artifacts/s6/final-validation-evidence.md`.
+The S6 campaign recorded raw commands, compiler/binary/source identities, JSON,
+logs and consolidated validation evidence outside the source distribution.
 The pinned image is `rsyslog/rsyslog_dev_base_ubuntu:26.04`, ID
 `sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`;
 broad build/check concurrency was 60, analyzer/sanitizers 20. Exact lane
@@ -1117,11 +1111,11 @@ recorded in S4–S6. No runtime change since S6 invalidates that evidence.
 
 The final requested run used the Ubuntu26.04 development image ID
 `sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`,
-`CI_MAKE_OPT=-j60 CI_MAKE_CHECK_OPT=-j60`, service force/relevance bypass as in
-`/home/rger/rsyslog-local-queue-artifacts/s6/full-testbench-request/provenance.txt`.
-Full commands/logs, source-content/mode comparison and isolated reruns are in
-that directory. Source comparison is needed because the disposable test tree's
-Git HEAD was S3 with the S6 changes applied; HEAD alone is not the tested version.
+`CI_MAKE_OPT=-j60 CI_MAKE_CHECK_OPT=-j60`, with service force/relevance bypass.
+The campaign recorded full commands/logs, source-content/mode comparison and
+isolated reruns outside the source distribution. Source comparison was needed
+because the disposable test tree's Git HEAD was S3 with the S6 changes applied;
+HEAD alone is not the tested version.
 Analyzer/sanitizer concurrency was 20; broad checks/builds used 60.
 
 The existing S6 local security receipt reports `passed`, no candidates, digest
@@ -1149,12 +1143,8 @@ Final validation:
   on the final rendered content. Existing pages remain distributed; no extended
   distribution check is needed for content-only edits.
 - The loopback/null example extracted from the operator page passed `-N1` on
-  the immutable S6 optimized binary in the pinned Ubuntu26.04 image. Command:
-  `docker run --rm -u 1000:1000 -v /home/rger/rsyslog-contention-s6-31796:/rsyslog
-  -v /home/rger/rsyslog-local-queue-artifacts/s7:/artifacts -w /rsyslog
-  rsyslog/rsyslog_dev_base_ubuntu@sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09
-  ./tools/rsyslogd -N1 -f /artifacts/example.conf
-  -M/rsyslog/plugins/imtcp/.libs:/rsyslog/runtime/.libs:/rsyslog/tools`.
+  the immutable S6 optimized binary in the pinned Ubuntu26.04 image, with the
+  example configuration mounted from external S7 campaign artifacts.
   Expected plain-loopback-TCP and queue-size warnings remain. The initial draft
   omitted an explicit ordinary template and was rejected; the corrected example
   includes that template and explicit synchronous/flush settings.
@@ -1172,7 +1162,7 @@ a clean unconditional broad/TSan run, repeated/equal-resource production benchma
 and fresh full-candidate/hosted review are deferred qualification, not hidden
 unfinished S7 tasks. No commit or push is performed by this documentation step.
 
-Artifacts: `/home/rger/rsyslog-local-queue-artifacts/s7/`.
+S7 campaign artifacts were retained outside the source distribution.
 
 
 ## Post-S7 authorized validation campaign (2026-09-15)
@@ -1201,7 +1191,8 @@ there is no automatic broad-suite retry or source-fix campaign.
   cancellation report. This remains a sanitizer coverage gap, not proof of safe
   execution of every cancellation path.
 
-Artifacts and exact commands: `/home/rger/rsyslog-local-queue-artifacts/s7-campaign/`.
+The S7 campaign retained artifacts and exact commands outside the source
+distribution.
 Normal and TSan runs use the same pinned Ubuntu26.04 image as S6. Broad build/check
 concurrency remains 60; focused repetitions run sequentially within each lane.
 No production code or test logic is changed by this campaign.
@@ -1215,9 +1206,9 @@ the recurring broad-run failure is harmless or fixed. No local-queue test failed
 in this broad run. No source patch, issue creation or additional broad run was
 performed.
 
-The broad tree `/home/rger/rsyslog-local-queue-final-container-s7-normal` is an
-isolated copy of the prior cached validation tree with exact relevant S6
-source/mode comparisons retained. The optimized benchmark tree was preserved.
+The broad run used an isolated copy of the prior cached validation tree with
+exact relevant S6 source/mode comparisons retained. The optimized benchmark
+tree was preserved.
 The command follows `devtools/run-ci.sh`, `CI_MAKE_OPT=-j60` and
 `CI_MAKE_CHECK_OPT=-j60`, forced service relevance, and the pinned Ubuntu26.04
 image already recorded above. Elasticsearch and imdocker tests remained

@@ -12,7 +12,6 @@
 | Created / reviewed | 2026-09-14 / 2026-09-15 |
 | Design authority | [Local queue front ends with shared overflow](local-queue-frontends.md) |
 | Source baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090`; immutable implementation baseline recorded in the execution ledger |
-| Reviewer | Existing Astra / medium architecture reviewer; findings and revision status in Section 16 |
 | Completion target | Full initial design, reached through gated stages beginning with an experimental MVP |
 
 <!-- .. summary-start -->
@@ -33,7 +32,7 @@ already exist. The maintainer subsequently authorized autonomous S0–S2
 implementation. The [execution ledger](local-queue-execution-ledger.md) records
 actual progress and the later decision to continue correctness work while
 deferring representative performance data. Original performance classifications
-remain unchanged; later stages below remain upcoming.
+remain unchanged; the stage requirements below are historical acceptance criteria.
 
 The full initial target includes:
 
@@ -728,143 +727,3 @@ final qualification. Reuse an informed reviewer where possible but provide the
 exact patch/document baseline and fresh test evidence. Request targeted review of
 AR1–AR5 at S2/S3/S5. An AI reviewer evaluates evidence; it does not substitute for
 interleaving tests or sanitizer execution.
-
-## 15. Subagent execution and handoff protocol
-
-This session remains the coordinator and the user's discussion partner. The user
-may interleave other tasks; preserve the implementation ledger and baseline rather
-than treating each new discussion as cancellation. Before resuming runtime work,
-check worktree/agent state, pending findings and evidence freshness. Do not run
-unrelated resource-heavy tasks concurrently with accepted benchmark sessions.
-
-The user permits subagents for implementation stages. Delegation is optional, not
-an instruction to launch all stages concurrently. A coordinating agent owns the
-stage ledger, final integration, conflict resolution and acceptance decision.
-
-### 15.1 Model and reasoning allocation
-
-Functionality and correctness take priority over cost. Use the following starting
-allocation, adjusted to demonstrated task difficulty and current availability:
-
-| Task | Starting model / reasoning | Escalation or limit |
-|---|---|---|
-| Coordinator/integration | Current session/model | Own decisions, integrated evidence and user communication |
-| Informed architecture/stage reviewer | Existing Astra agent, medium | Reuse context; fresh diff and evidence required every time |
-| Bounded runtime implementation or test harness | `gpt-5.6-terra`, high | Escalate to Astra/high for ambiguous ownership or coupled lifecycle changes |
-| Fresh concurrency/lifecycle review at S3 and S5 | `gpt-6-astra`, high | Independent review of exact candidate, not just the informed reviewer's conclusions |
-| Final independent review at S7 | `gpt-6-astra`, high | Full supported contract and final evidence |
-| Mechanical documentation/link/inventory work | `gpt-5.6-luna`, medium, or coordinator | Do not delegate semantic concurrency decisions to a cheaper model merely to save cost |
-
-Avoid redundant full-context agents for simple work. Give bounded task packets,
-reuse informed reviewers, and escalate promptly when evidence exposes uncertainty.
-Do not run a cheaper first pass on a critical lock/lifetime design merely to add
-another review layer. Model labels are allocation guidance, not evidence that code
-is correct. If a selected model is unavailable, record the replacement and preserve
-the task's reasoning requirements.
-
-### 15.2 Useful bounded assignments
-
-| Assignment | Independent deliverable | Constraint |
-|---|---|---|
-| Contract/code inventory | Source-backed ownership, option or submission map | Read-only until coordinator accepts contracts |
-| Ring primitive | Bounded implementation plus reference/interleaving tests | Interface and memory model agreed first |
-| Test oracle/harness | Deterministic helper and tests for a fixed contract | Do not encode an unreviewed implementation as the oracle |
-| Independent concurrency review | Counterexamples and path-sensitive findings | Read-only review of exact candidate revision |
-| Benchmark execution | Reproducible stage report and raw artifacts | One measurement owner; no overlapping load from other agents |
-| Documentation/option matrix | Operator and compatibility updates | Describe only supported validated behavior |
-
-Separate mutable work into dedicated worktrees/branches and assign file ownership.
-Do not have multiple agents edit `queue.c`, `wti.*` or the same test manifest
-concurrently without explicit integration sequencing. All agents follow repository
-and local worktree instructions. Shared machine CPU, Docker and memory capacity
-remain shared even when worktrees are separate.
-
-### 15.3 Required task packet
-
-Each delegated task receives the design and this plan, exact baseline and stage,
-accepted O-decisions, relevant invariants/AR findings, supported combinations,
-allowed file scope, API contracts, resource budget and required test oracles.
-State what the agent must not change and which downstream stages depend on it.
-The agent returns commit/diff identity, changed files, commands and outcomes,
-remaining gaps, and any proposed contract deviation. No agent may silently weaken
-an invariant to pass tests or revise performance thresholds after seeing results.
-
-### 15.4 Integration and acceptance
-
-Integrate dependencies sequentially into the stage candidate. Re-run affected
-functional/concurrency checks on the integrated revision; results on disjoint
-branches do not prove their combination. Freeze the final candidate before paired
-performance sessions and stop all competing agent workloads while measuring.
-If a reviewer triggers a code change, invalidate affected evidence and repeat the
-appropriate checks before acceptance.
-
-The coordinator records each stage as not started, active, blocked, rejected,
-inconclusive, or accepted. Accepted means the documented gates passed, not merely
-that a subagent returned success. Handoffs must include unresolved findings and
-exact baseline identities so work can safely continue in another session.
-
-### 15.5 Stage review cadence
-
-The coordinator integrates implementation; the informed Astra reviewer challenges
-the stabilized exact stage diff after deterministic checks and before acceptance.
-Use fresh independent concurrency reviews at S3 (helping/wakeups), S5
-(shutdown/DA/recovery), and S7 final qualification. If either review changes code,
-repeat affected validation before measuring or accepting the frozen candidate.
-Review approval alone never satisfies a stage gate.
-
-## 16. Review record
-
-### 16.1 Initial review, 2026-09-14
-
-The existing independent `gpt-6-astra` reviewer at medium reasoning effort reviewed
-the initial plan and supporting source read-only. No code was edited and no runtime
-tests were run. Its verdict was **sound staged plan, with three revisions needed**,
-with no architectural feasibility blocker. Original line references in the table
-refer to the pre-revision plan and are retained only as review provenance.
-
-| Finding | Evidence / priority | Revision |
-|---|---|---|
-| IP1 | High; S4 lines 267–285 enables graphs before S5 lines 305–309 implements graph shutdown. Existing ruleset destruction is not topological. | S4 now implements dependency-order memory shutdown before graph activation; S5 extends it to DA/recovery. Added full-downstream reverse-declaration-order shutdown oracle. |
-| IP2 | High; S2 lines 182–213 lacks an explicit activation validator while broader validation appears in S4/S6. imtcp-rooted execution can still reach unsupported statements. | Added S2 pre-activation reachability whitelist, both-frontend rejection tests, runtime treatment of unclassified producers and tested internal BE fallback. |
-| IP3 | Medium; lines 374–378 allow cached-full routing to BE without refresh, potentially hiding newly available FE space indefinitely. | Require fresh acquire observation before declaring no-fit; added cached-full then consumer-release FE-reuse test. |
-
-The reviewer also endorsed the ownership/lifecycle safety floor, per-stage
-performance testing, equal-resource attribution, sanitizer limitations, and
-subagent protocol. Its nonblocking suggestions were incorporated: S0 assigns
-stage-specific primary comparisons/guardrails, and concurrency validation includes
-stress with test synchronization disabled plus architecture/atomic details.
-
-These are plan-readiness priorities, not security severities or proven runtime
-defects. AR1–AR5 from the design remain applicable. The revisions above were verified by the same reviewer; the outcome follows.
-
-
-### 16.2 Revision verification, 2026-09-14
-
-The same Astra / medium reviewer verified IP1–IP3 and both nonblocking suggestions
-as addressed. It found **no remaining blocking plan inconsistency** and concluded
-that the revised plan is ready to guide S0 and subsequent gated implementation.
-
-Verified requirements: S2 whitelist/frontend/runtime producer handling; S4 graph
-shutdown before activation; S5 extension to DA/recovery; fresh capacity observation
-before no-fit; deterministic FE-reuse test; uninstrumented stress; and predeclared
-stage-specific performance comparisons. This is review of the planning requirements,
-not verification of runtime correctness, performance, or implemented behavior.
-
-### 16.3 Batching, prior art and observability revision
-
-A further revision incorporates mutation-sensitive submission, target-preferred
-batching, [prior-art synthesis](local-queue-related-work.md), per-FE impstats and
-logical reconciliation requirements, and the agreed coordinator/model allocation.
-The same Astra / medium reviewer reviewed the additions and relevant batching
-source paths. It endorsed the statistics contract, batching distinctions,
-calibrated prior-art claims, and delegation plan, subject to two revisions:
-
-| Finding | Priority | Disposition |
-|---|---|---|
-| BR1 | Medium | Design Section 8.2 and this plan now state that accumulation does not relax empty-FE/reusable-state helper eligibility. Serving BE while a nonempty FE accumulates would require an explicit policy revision with ownership and priority tests. |
-| BR2 | Minor sequencing correction | Ordinary partial FE/BE dequeue tests begin in S2; borrowed-helper partial-dequeue tests begin in S3 when helping is introduced. |
-
-The reviewer verified both revisions on 2026-09-14 and found no remaining blocking
-inconsistency in these additions. The positive planning verdict stands. This review
-does not establish runtime correctness or measured performance; those remain
-subject to implementation-stage validation.

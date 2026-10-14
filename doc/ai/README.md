@@ -22,9 +22,10 @@
 | `module_map.yaml` | Module paths and locking hints |
 | `templates/` | RST templates for concept, tutorial, and module pages |
 
-## Upcoming designs
+## Local queue design and implementation records
 
-These documents describe proposed work, not current runtime behavior.
+These documents record the design, implementation plan, and measurement method.
+Check the operator manual and current source for supported runtime behavior.
 
 - [Local queue front ends with shared overflow](designs/local-queue-frontends.md):
   private SPSC fast paths, shared MPMC overflow, BE helping, and existing disk
@@ -51,10 +52,4 @@ See [chunking_and_embeddings.md](chunking_and_embeddings.md) for schema details.
 - **Log pipeline** (internally also called *message pipeline*).
 - Use `getting_started/beginner_tutorials/` (no `learning_path/`).
 
-_Last reviewed: 2025-12-23_
-
-The local-queue execution records are the
-[S0 contracts](designs/local-queue-s0-contracts.md),
-[source ownership inventory](designs/local-queue-s0-ownership.md), and
-[stage ledger](designs/local-queue-execution-ledger.md). They distinguish reviewed
-contracts from completed runtime validation and measured stage acceptance.
+_Last reviewed: 2026-10-14_
