@@ -7,6 +7,11 @@ import base64
 import random
 import time
 
+try:
+    from urllib.parse import parse_qs, urlsplit
+except ImportError:
+    from urlparse import parse_qs, urlsplit  # Python 2
+
 now = getattr(time, 'monotonic', time.time)
 
 try:
@@ -129,6 +134,19 @@ class MyHandler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self):
+        # Opt-in fixture for fmhttp: mirror echo-get.php's decoded content
+        # response without requiring the shared public testbench endpoint.
+        if metadata.get('echo_get') and self.path.split('?', 1)[0] == '/testbench/echo-get.php':
+            path = urlsplit(self.path)
+            content = parse_qs(path.query, keep_blank_values=True).get('content', [''])[-1]
+            res = content.encode('utf8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain; charset=utf-8')
+            self.send_header('Content-Length', len(res))
+            self.end_headers()
+            self.wfile.write(res)
+            return
+
         if self.path in data:
             result = data[self.path]
         else:
@@ -149,6 +167,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Archive and delete core app log files')
     parser.add_argument('-p', '--port', action='store', type=int, default=8080, help='port')
     parser.add_argument('--port-file', action='store', type=str, default='', help='file to store listen port number')
+    parser.add_argument('--echo-get', action='store_true', help='echo the content query parameter for fmhttp tests')
     parser.add_argument('-i', '--interface', action='store', type=str, default='localhost', help='port')
     parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
     parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
@@ -167,6 +186,7 @@ if __name__ == '__main__':
     parser.add_argument('--decompress', action='store_true', default=False, help='decompress posted data')
     parser.add_argument('--userpwd', action='store', default='', help='only accept this user:password combination')
     args = parser.parse_args()
+    metadata['echo_get'] = args.echo_get
     metadata['fail_after'] = args.fail_after
     metadata['fail_every'] = args.fail_every
     metadata['fail_with'] = args.fail_with
