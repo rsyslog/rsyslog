@@ -1,4 +1,11 @@
-/* Snapshot-backed impstats for experimental local queue frontends.
+/* SPDX-License-Identifier: Apache-2.0
+ * Copyright 2026 Adiscon GmbH.
+ * Licensed under the Apache License, Version 2.0.
+ */
+
+/**
+ * @file queue_local_stats.c
+ * @brief Snapshot-backed impstats for experimental local queue frontends.
  *
  * Concurrency & Locking:
  * - A pre-read callback runs with the stats-object-list lock held.  It calls
