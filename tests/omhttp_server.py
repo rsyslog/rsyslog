@@ -139,7 +139,7 @@ class MyHandler(BaseHTTPRequestHandler):
         if metadata.get('echo_get') and self.path.split('?', 1)[0] == '/testbench/echo-get.php':
             path = urlsplit(self.path)
             content = parse_qs(path.query, keep_blank_values=True).get('content', [''])[-1]
-            res = content.encode('utf8')
+            res = content if isinstance(content, bytes) else content.encode('utf8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain; charset=utf-8')
             self.send_header('Content-Length', len(res))
