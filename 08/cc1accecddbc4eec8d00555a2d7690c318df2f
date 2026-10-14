@@ -1,0 +1,25 @@
+runtime/queue_local_stats.c
+  s_de358a5d0a4803::t_5b1bb42f95e568 1-8
+tests/local-queue-s5-graph-shutdown.sh
+  s_de358a5d0a4803::t_5b1bb42f95e568 9-10
+  s_de358a5d0a4803::t_ff0fd581721858 11
+runtime/queue_local_stats.h
+  s_de358a5d0a4803::t_5b1bb42f95e568 1-8,21,23,26-29,32-34,41-46,54-57,60,65,67-72,77-83
+  s_de358a5d0a4803::t_8fbef51e1acc4f 35-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08cc1accecddbc4eec8d00555a2d7690c318df2f",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
