@@ -537,15 +537,15 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         }
 
         /* try to execute and process whatever we have */
-        const int graphProducer = ((qqueue_t *)pWtp->pUsr)->localGraphConf != NULL;
+        const int graph_producer = ((qqueue_t *)pWtp->pUsr)->local_graph_conf != NULL;
         /* These callbacks own accepted source leases. Inputs also qualify for
          * FE publication, so FE trust alone cannot exempt them from FORCE_TERM.
          * Direct actions and synchronous rulesets inherit this worker role;
          * a Direct main input's dummy WTI has no queued lease and keeps its
          * input role at downstream capacity waits. */
-        if (graphProducer) qqueueLocalWorkerEnter();
+        if (graph_producer) qqueueLocalWorkerEnter();
         localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
-        if (graphProducer) qqueueLocalWorkerLeave();
+        if (graph_producer) qqueueLocalWorkerLeave();
 
         if (localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
             break; /* end of loop */

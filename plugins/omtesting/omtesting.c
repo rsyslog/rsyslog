@@ -609,7 +609,7 @@ ENDmodExit
 
 
 /* Only a testbench build may qualify controlled blocking/error injection. */
-static rsRetVal localQueueCheckAction(void *const instance) {
+static rsRetVal local_queue_check_action(void *const instance) {
 #ifdef ENABLE_IMDIAG
     const instanceData *const pData = instance;
     if (pData != NULL && pData->iWaitSeconds >= 0 && pData->iWaitUSeconds >= 0) {
@@ -648,7 +648,7 @@ static rsRetVal localQueueCheckAction(void *const instance) {
 
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
-    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())local_queue_check_action;
     CODEqueryEtryPt_STD_OMOD_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;

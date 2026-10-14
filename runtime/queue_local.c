@@ -209,7 +209,7 @@ static int hitTestFault(const enum localTestFault fault) {
 }
 
 int qqueueLocalTestFailNode(const qqueue_t *owner, const int retry) {
-    return owner->bLocalScope && owner->qType == QUEUETYPE_LINKEDLIST &&
+    return owner->local_scope && owner->qType == QUEUETYPE_LINKEDLIST &&
            hitTestFault(retry ? TEST_FAULT_RETRY_NODE : TEST_FAULT_BACKEND_NODE);
 }
 
@@ -339,7 +339,7 @@ void qqueueLocalTestAfterConsumer(wti_t *const worker) {
     qqueueLocal_t *const family = worker->logical_owner->local;
     if (family == NULL || family->testSuccessGateSource == 0) return;
     qqueue_t *const home = worker->pWtp->pUsr;
-    const unsigned source = home->localSource != NULL ? 1 : 2;
+    const unsigned source = home->local_source != NULL ? 1 : 2;
     if (source != family->testSuccessGateSource || worker->source_queue != home) return;
     int found = 0;
     for (int i = 0; i < worker->batch.nElem; ++i) {
@@ -539,13 +539,13 @@ static struct timespec deadlineAfter(const int milliseconds) {
 }
 
 static rsRetVal feBatchSize(void *const source, int *const size) {
-    *size = (int)((qqueue_t *)source)->localSource->batchSize;
+    *size = (int)((qqueue_t *)source)->local_source->batchSize;
     return RS_RET_OK;
 }
 
 static rsRetVal feCheckStop(void *const source, const int lock) {
     (void)lock;
-    qqueueLocalFrontend_t *const fe = ((qqueue_t *)source)->localSource;
+    qqueueLocalFrontend_t *const fe = ((qqueue_t *)source)->local_source;
     return stateRead(&fe->owner->local->state) == LOCAL_RUNNING ? RS_RET_OK : RS_RET_TERMINATE_NOW;
 }
 
@@ -573,7 +573,7 @@ static void unlinkHelper(qqueueLocalFrontend_t *const fe) {
 
 void qqueueLocalWakeBackendHelpers(qqueue_t *const owner) {
     qqueueLocal_t *const family = owner->local;
-    if (family == NULL || stateRead(&family->state) != LOCAL_RUNNING || owner->localDAActive ||
+    if (family == NULL || stateRead(&family->state) != LOCAL_RUNNING || owner->local_da_active ||
         owner->iQueueSize <= owner->nLogDeq || family->idleHelpers == NULL)
         return;
     qqueueLocalFrontend_t *const fe = family->idleHelpers;
@@ -587,8 +587,8 @@ void qqueueLocalWakeBackendHelpers(qqueue_t *const owner) {
 
 int qqueueLocalBorrowWorker(const qqueue_t *const owner, const wti_t *const worker) {
     const qqueue_t *const home = worker->pWtp == NULL ? NULL : worker->pWtp->pUsr;
-    return owner->local != NULL && home != NULL && home->localSource != NULL && home->localSource->owner == owner &&
-           home->localSource->source == home && home->localSource->pool == worker->pWtp &&
+    return owner->local != NULL && home != NULL && home->local_source != NULL && home->local_source->owner == owner &&
+           home->local_source->source == home && home->local_source->pool == worker->pWtp &&
            worker->pWtp->pmutUsr == home->mut;
 }
 
@@ -690,7 +690,7 @@ static rsRetVal completeBorrow(qqueueLocalFrontend_t *const fe, wti_t *const wor
 
 static rsRetVal feComplete(void *const source, wti_t *const worker) {
     qqueue_t *const queue = source;
-    qqueueLocalFrontend_t *const fe = queue->localSource;
+    qqueueLocalFrontend_t *const fe = queue->local_source;
     batch_t *const batch = &worker->batch;
     if (worker->source_queue == NULL) return RS_RET_OK;
     if (worker->source_queue == fe->owner) return completeBorrow(fe, worker, 0);
@@ -731,7 +731,7 @@ static rsRetVal feComplete(void *const source, wti_t *const worker) {
 
 static rsRetVal feDoWork(void *const source, void *const workerArg) {
     qqueue_t *const queue = source;
-    qqueueLocalFrontend_t *const fe = queue->localSource;
+    qqueueLocalFrontend_t *const fe = queue->local_source;
     wti_t *const worker = workerArg;
     batch_t *const batch = &worker->batch;
     #ifdef ENABLE_TESTBENCH
@@ -835,7 +835,7 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     fe->index = index;
     fe->capacity = capacity;
     fe->batchSize = batchSize;
-    fe->helperLimit = owner->localHelperBatchSizeSet ? (unsigned)owner->localHelperBatchSize : batchSize;
+    fe->helperLimit = owner->local_helper_batch_size_set ? (unsigned)owner->local_helper_batch_size : batchSize;
     if (pthread_mutex_init(&fe->mutex, NULL) != 0) return RS_RET_ERR;
     fe->mutexInitialized = 1;
     if (initMonotonicCond(&fe->publisherDone) != 0) return RS_RET_ERR;
@@ -849,8 +849,8 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     CHKmalloc(fe->consumerScratch = calloc(batchSize, sizeof(void *)));
     if (!rsSpscQueueInit(&fe->ring, fe->slots, capacity)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     CHKiRet(qqueueConstruct(&fe->source, QUEUETYPE_FIXED_ARRAY, 1, 0, owner->pConsumer));
-    fe->source->localSource = fe;
-    fe->source->localGraphConf = owner->localGraphConf;
+    fe->source->local_source = fe;
+    fe->source->local_graph_conf = owner->local_graph_conf;
     fe->source->mut = &fe->mutex;
     fe->source->iDeqBatchSize = (int)batchSize;
     fe->source->iMinDeqBatchSize = owner->iMinDeqBatchSize < (int)batchSize ? owner->iMinDeqBatchSize : (int)batchSize;
@@ -882,7 +882,7 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     DEFiRet;
     if (owner->local != NULL) return RS_RET_OK;
     if ((owner->qType != QUEUETYPE_FIXED_ARRAY && owner->qType != QUEUETYPE_LINKEDLIST) ||
-        owner->localFrontendSize <= 0 || owner->localMaxFrontends <= 0 || owner->iDeqBatchSize <= 0)
+        owner->local_frontend_size <= 0 || owner->local_max_frontends <= 0 || owner->iDeqBatchSize <= 0)
         return RS_RET_PARAM_ERROR;
     #ifdef ENABLE_TESTBENCH
     pthread_once(&testFaultOnce, readTestFault);
@@ -926,8 +926,8 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     }
     #endif
     family->owner = owner;
-    family->count = (unsigned)owner->localMaxFrontends;
-    const uint32_t capacity = (uint32_t)owner->localFrontendSize;
+    family->count = (unsigned)owner->local_max_frontends;
+    const uint32_t capacity = (uint32_t)owner->local_frontend_size;
     const uint32_t batchSize = capacity < (uint32_t)owner->iDeqBatchSize ? capacity : (uint32_t)owner->iDeqBatchSize;
     if (capacity > UINT32_MAX / 2 || sizeof(void *) > SIZE_MAX / capacity ||
         sizeof(*family->fronts) > SIZE_MAX / family->count)
@@ -1124,8 +1124,8 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
     for (size_t i = 0; i < count; ++i) {
         smsg_t *message = messages[i];
         int drop = 0;
-        if (survivors == NULL || qqueueLocalIsClosed(owner) || owner->localGraphClosed) {
-            closed = qqueueLocalIsClosed(owner) || owner->localGraphClosed;
+        if (survivors == NULL || qqueueLocalIsClosed(owner) || owner->local_graph_closed) {
+            closed = qqueueLocalIsClosed(owner) || owner->local_graph_closed;
             counterAdd(&family->policyRejected, 1);
             drop = 1;
         } else if (owner->iSmpInterval > 0 &&
@@ -1175,7 +1175,8 @@ int qqueueLocalIsClosed(const qqueue_t *const owner) {
 
 int qqueueLocalWorker(const wti_t *const worker) {
     const qqueue_t *const source = worker->pWtp == NULL ? NULL : worker->pWtp->pUsr;
-    return source != NULL && (source->local != NULL || source->localSource != NULL || source->localGraphConf != NULL);
+    return source != NULL &&
+           (source->local != NULL || source->local_source != NULL || source->local_graph_conf != NULL);
 }
 
 void qqueueLocalRetainAmbiguous(wti_t *const worker) {
@@ -1184,7 +1185,7 @@ void qqueueLocalRetainAmbiguous(wti_t *const worker) {
     /* DA COMM acknowledges disk acceptance, not interrupted action execution. */
     if (worker->pWtp == home->pWtpDA) return;
     qqueue_t *const borrowed =
-        home->localSource != NULL && worker->source_queue == home->localSource->owner ? worker->source_queue : NULL;
+        home->local_source != NULL && worker->source_queue == home->local_source->owner ? worker->source_queue : NULL;
     if (borrowed != NULL) {
         pthread_mutex_unlock(home->mut);
         pthread_mutex_lock(borrowed->mut);
@@ -1474,14 +1475,14 @@ rsRetVal qqueueLocalFinishShutdown(qqueue_t *const owner) {
      * an expired action deadline, for the remaining accepted FE obligations. */
     rsRetVal saveResult = RS_RET_OK;
     if (owner->bIsDA && owner->bSaveOnShutdown) {
-        owner->localDASaving = 1;
+        owner->local_da_saving = 1;
         for (unsigned i = 0; i < family->count; ++i) {
             qqueueLocalFrontend_t *const fe = &family->fronts[i];
             if (stateRead(&fe->state) == FE_JOINED) drainFrontend(fe, NULL, 0);
         }
         saveResult = qqueueSaveLocalBackend(owner);
         if (saveResult != RS_RET_OK) LogError(0, saveResult, "local queue: disk save did not drain the backend");
-        owner->localDASaving = 0;
+        owner->local_da_saving = 0;
     }
     const rsRetVal diskResult = qqueueFinishLocalDisk(owner);
     /* All module state is disposed and threads joined. Every failed transfer

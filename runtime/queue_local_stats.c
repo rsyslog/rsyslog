@@ -27,149 +27,149 @@
 DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj);
 
-enum localLogicalCounter {
-    localLogicalSampledOut,
-    localLogicalSeverityDiscarded,
-    localLogicalRetryFailed,
-    localLogicalReserved,
-    localLogicalBeCapacity,
-    localLogicalFeCapacity,
-    localLogicalFeActiveCapacity,
+enum local_logical_counter {
+    local_logical_sampled_out,
+    local_logical_severity_discarded,
+    local_logical_retry_failed,
+    local_logical_reserved,
+    local_logical_be_capacity,
+    local_logical_fe_capacity,
+    local_logical_fe_active_capacity,
 
-    localLogicalIngressMessages,
-    localLogicalAcceptedMessages,
-    localLogicalRejectedPreadmissionMessages,
-    localLogicalTerminalMessages,
-    localLogicalRestored,
-    localLogicalPersisted,
-    localLogicalExecuted,
-    localLogicalDiscarded,
-    localLogicalDiskTransferred,
-    localLogicalDiskTerminal,
-    localLogicalDiskPhysical,
-    localLogicalDiskActive,
+    local_logical_ingress_messages,
+    local_logical_accepted_messages,
+    local_logical_rejected_preadmission_messages,
+    local_logical_terminal_messages,
+    local_logical_restored,
+    local_logical_persisted,
+    local_logical_executed,
+    local_logical_discarded,
+    local_logical_disk_transferred,
+    local_logical_disk_terminal,
+    local_logical_disk_physical,
+    local_logical_disk_active,
 
-    localLogicalTerminalShutdownDiscardedMessages,
-    localLogicalOutstandingMessages,
-    localLogicalRouteFeMessages,
-    localLogicalRouteFeBatches,
-    localLogicalRouteBeMessages,
-    localLogicalRouteBeBatches,
-    localLogicalRouteBeAcceptedMessages,
-    localLogicalBeTerminalMessages,
-    localLogicalRouteBeNoFitMessages,
-    localLogicalRouteBeOversizedMessages,
-    localLogicalRouteBeRegistrationFallbackMessages,
-    localLogicalRouteBeShutdownRedirectMessages,
-    localLogicalRouteBeUnclassifiedMessages,
-    localLogicalRouteBeInternalMessages,
-    localLogicalRouteBeCapacityExhaustedMessages,
-    localLogicalBePhysicalMessages,
-    localLogicalBeActiveMessages,
-    localLogicalFeQueuedMessages,
-    localLogicalFeActiveMessages,
-    localLogicalFeRetryMessages,
-    localLogicalFeRegistered,
-    localLogicalFeStarted,
-    localLogicalFeProducerless,
-    localLogicalFeRegistrationFailures,
-    localLogicalWorkersFe,
-    localLogicalWorkersBe,
-    localLogicalConfiguredFrontends,
-    localLogicalTransferFeToBeMessages,
-    localLogicalAllocationBytes,
-    localLogicalBeDequeueBatches,
-    localLogicalBeDequeueMessages,
-    localLogicalBeDequeueMax,
-    localLogicalHelpAttempts,
-    localLogicalHelpEmpty,
-    localLogicalHelpBatches,
-    localLogicalHelpMessages,
-    localLogicalHelpMax,
-    localLogicalHelpActive,
-    localLogicalHelpRetry,
-    localLogicalHelpTerminal,
-    localLogicalHelpWaits,
-    localLogicalHelpWakes,
-    localLogicalHelpLimit,
-    localLogicalHelpCompleted,
-    localLogicalHelpReturned,
-    localLogicalHelpWakeFe,
-    localLogicalHelpWakeShutdown,
-    localLogicalCounterCount
+    local_logical_terminal_shutdown_discarded_messages,
+    local_logical_outstanding_messages,
+    local_logical_route_fe_messages,
+    local_logical_route_fe_batches,
+    local_logical_route_be_messages,
+    local_logical_route_be_batches,
+    local_logical_route_be_accepted_messages,
+    local_logical_be_terminal_messages,
+    local_logical_route_be_no_fit_messages,
+    local_logical_route_be_oversized_messages,
+    local_logical_route_be_registration_fallback_messages,
+    local_logical_route_be_shutdown_redirect_messages,
+    local_logical_route_be_unclassified_messages,
+    local_logical_route_be_internal_messages,
+    local_logical_route_be_capacity_exhausted_messages,
+    local_logical_be_physical_messages,
+    local_logical_be_active_messages,
+    local_logical_fe_queued_messages,
+    local_logical_fe_active_messages,
+    local_logical_fe_retry_messages,
+    local_logical_fe_registered,
+    local_logical_fe_started,
+    local_logical_fe_producerless,
+    local_logical_fe_registration_failures,
+    local_logical_workers_fe,
+    local_logical_workers_be,
+    local_logical_configured_frontends,
+    local_logical_transfer_fe_to_be_messages,
+    local_logical_allocation_bytes,
+    local_logical_be_dequeue_batches,
+    local_logical_be_dequeue_messages,
+    local_logical_be_dequeue_max,
+    local_logical_help_attempts,
+    local_logical_help_empty,
+    local_logical_help_batches,
+    local_logical_help_messages,
+    local_logical_help_max,
+    local_logical_help_active,
+    local_logical_help_retry,
+    local_logical_help_terminal,
+    local_logical_help_waits,
+    local_logical_help_wakes,
+    local_logical_help_limit,
+    local_logical_help_completed,
+    local_logical_help_returned,
+    local_logical_help_wake_fe,
+    local_logical_help_wake_shutdown,
+    local_logical_counter_count
 };
 
-enum localFrontendCounter {
-    localFrontendRegistrationId,
-    localFrontendGeneration,
-    localFrontendLifecycleState,
-    localFrontendCapacity,
-    localFrontendQueued,
-    localFrontendFree,
-    localFrontendInflight,
-    localFrontendRetry,
-    localFrontendIngressMessages,
-    localFrontendAdmittedMessages,
-    localFrontendAdmittedBatches,
-    localFrontendSubmittedBatches,
-    localFrontendSubmittedMessages,
-    localFrontendSubmittedMax,
-    localFrontendTerminalMessages,
-    localFrontendOverflowMessages,
-    localFrontendOverflowNoFitMessages,
-    localFrontendOverflowOversizedMessages,
-    localFrontendOverflowBatches,
-    localFrontendOversizedBatches,
-    localFrontendTransferToBeMessages,
-    localFrontendShutdownDiscardedMessages,
-    localFrontendProducerExited,
-    localFrontendDequeueBatches,
-    localFrontendDequeueMessages,
-    localFrontendDequeueMax,
-    localFrontendBytes,
-    localFrontendHelpAttempts,
-    localFrontendHelpEmpty,
-    localFrontendHelpBatches,
-    localFrontendHelpMessages,
-    localFrontendHelpMax,
-    localFrontendHelpActive,
-    localFrontendHelpRetry,
-    localFrontendHelpTerminal,
-    localFrontendHelpWaits,
-    localFrontendHelpWakes,
-    localFrontendHelpLimit,
-    localFrontendHelpCompleted,
-    localFrontendHelpReturned,
-    localFrontendHelpWakeFe,
-    localFrontendHelpWakeShutdown,
-    localFrontendCounterCount
+enum local_frontend_counter {
+    local_frontend_registration_id,
+    local_frontend_generation,
+    local_frontend_lifecycle_state,
+    local_frontend_capacity,
+    local_frontend_queued,
+    local_frontend_free,
+    local_frontend_inflight,
+    local_frontend_retry,
+    local_frontend_ingress_messages,
+    local_frontend_admitted_messages,
+    local_frontend_admitted_batches,
+    local_frontend_submitted_batches,
+    local_frontend_submitted_messages,
+    local_frontend_submitted_max,
+    local_frontend_terminal_messages,
+    local_frontend_overflow_messages,
+    local_frontend_overflow_no_fit_messages,
+    local_frontend_overflow_oversized_messages,
+    local_frontend_overflow_batches,
+    local_frontend_oversized_batches,
+    local_frontend_transfer_to_be_messages,
+    local_frontend_shutdown_discarded_messages,
+    local_frontend_producer_exited,
+    local_frontend_dequeue_batches,
+    local_frontend_dequeue_messages,
+    local_frontend_dequeue_max,
+    local_frontend_bytes,
+    local_frontend_help_attempts,
+    local_frontend_help_empty,
+    local_frontend_help_batches,
+    local_frontend_help_messages,
+    local_frontend_help_max,
+    local_frontend_help_active,
+    local_frontend_help_retry,
+    local_frontend_help_terminal,
+    local_frontend_help_waits,
+    local_frontend_help_wakes,
+    local_frontend_help_limit,
+    local_frontend_help_completed,
+    local_frontend_help_returned,
+    local_frontend_help_wake_fe,
+    local_frontend_help_wake_shutdown,
+    local_frontend_counter_count
 };
 
-typedef struct localFrontendStats_s {
-    struct qqueueLocalStats_s *adapter;
+typedef struct local_frontend_stats_s {
+    struct qqueue_local_stats_s *adapter;
     uint32_t index;
     statsobj_t *object;
-    intctr_t counters[localFrontendCounterCount];
-} localFrontendStats_t;
+    intctr_t counters[local_frontend_counter_count];
+} local_frontend_stats_t;
 
-struct qqueueLocalStats_s {
+struct qqueue_local_stats_s {
     qqueue_t *owner;
     statsobj_t *logical;
-    intctr_t logical_counters[localLogicalCounterCount];
+    intctr_t logical_counters[local_logical_counter_count];
     uint32_t frontend_limit;
-    localFrontendStats_t *frontends;
+    local_frontend_stats_t *frontends;
 #ifdef ENABLE_TESTBENCH
-    qqueueLocalStatsTestPreReadHook_t test_pre_read_hook;
+    qqueue_local_stats_test_pre_read_hook_t test_pre_read_hook;
     void *test_pre_read_context;
 #endif
 };
 
-typedef struct localCounterDescriptor_s {
+typedef struct local_counter_descriptor_s {
     const char *name;
     size_t index;
-} localCounterDescriptor_t;
+} local_counter_descriptor_t;
 
-rsRetVal qqueueLocalStatsClassInit(void) {
+rsRetVal qqueue_local_stats_class_init(void) {
     DEFiRet;
     CHKiRet(objGetObjInterface(&obj));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
@@ -179,132 +179,133 @@ finalize_it:
 
 #define LOCAL_COUNTER(name, member) \
     { name, member }
-static const localCounterDescriptor_t logicalCounters[] = {
-    LOCAL_COUNTER("policy.sampled_out.messages", localLogicalSampledOut),
-    LOCAL_COUNTER("policy.severity_discarded.messages", localLogicalSeverityDiscarded),
-    LOCAL_COUNTER("retry.enqueue_failed.messages", localLogicalRetryFailed),
-    LOCAL_COUNTER("resource.reserved.messages", localLogicalReserved),
-    LOCAL_COUNTER("resource.be.capacity.messages", localLogicalBeCapacity),
-    LOCAL_COUNTER("resource.fe.capacity.messages", localLogicalFeCapacity),
-    LOCAL_COUNTER("resource.fe.active.capacity.messages", localLogicalFeActiveCapacity),
+static const local_counter_descriptor_t logical_counters[] = {
+    LOCAL_COUNTER("policy.sampled_out.messages", local_logical_sampled_out),
+    LOCAL_COUNTER("policy.severity_discarded.messages", local_logical_severity_discarded),
+    LOCAL_COUNTER("retry.enqueue_failed.messages", local_logical_retry_failed),
+    LOCAL_COUNTER("resource.reserved.messages", local_logical_reserved),
+    LOCAL_COUNTER("resource.be.capacity.messages", local_logical_be_capacity),
+    LOCAL_COUNTER("resource.fe.capacity.messages", local_logical_fe_capacity),
+    LOCAL_COUNTER("resource.fe.active.capacity.messages", local_logical_fe_active_capacity),
 
-    LOCAL_COUNTER("ingress.messages", localLogicalIngressMessages),
-    LOCAL_COUNTER("accepted.messages", localLogicalAcceptedMessages),
-    LOCAL_COUNTER("rejected.preadmission.messages", localLogicalRejectedPreadmissionMessages),
-    LOCAL_COUNTER("terminal.messages", localLogicalTerminalMessages),
-    LOCAL_COUNTER("restored.messages", localLogicalRestored),
-    LOCAL_COUNTER("terminal.persisted.messages", localLogicalPersisted),
-    LOCAL_COUNTER("terminal.executed.messages", localLogicalExecuted),
-    LOCAL_COUNTER("terminal.discarded.messages", localLogicalDiscarded),
-    LOCAL_COUNTER("transfer.be_to_disk.messages", localLogicalDiskTransferred),
-    LOCAL_COUNTER("disk.terminal.messages", localLogicalDiskTerminal),
-    LOCAL_COUNTER("disk.physical.messages", localLogicalDiskPhysical),
-    LOCAL_COUNTER("disk.active.messages", localLogicalDiskActive),
+    LOCAL_COUNTER("ingress.messages", local_logical_ingress_messages),
+    LOCAL_COUNTER("accepted.messages", local_logical_accepted_messages),
+    LOCAL_COUNTER("rejected.preadmission.messages", local_logical_rejected_preadmission_messages),
+    LOCAL_COUNTER("terminal.messages", local_logical_terminal_messages),
+    LOCAL_COUNTER("restored.messages", local_logical_restored),
+    LOCAL_COUNTER("terminal.persisted.messages", local_logical_persisted),
+    LOCAL_COUNTER("terminal.executed.messages", local_logical_executed),
+    LOCAL_COUNTER("terminal.discarded.messages", local_logical_discarded),
+    LOCAL_COUNTER("transfer.be_to_disk.messages", local_logical_disk_transferred),
+    LOCAL_COUNTER("disk.terminal.messages", local_logical_disk_terminal),
+    LOCAL_COUNTER("disk.physical.messages", local_logical_disk_physical),
+    LOCAL_COUNTER("disk.active.messages", local_logical_disk_active),
 
-    LOCAL_COUNTER("terminal.shutdown_discarded.messages", localLogicalTerminalShutdownDiscardedMessages),
-    LOCAL_COUNTER("outstanding.messages", localLogicalOutstandingMessages),
-    LOCAL_COUNTER("route.fe.messages", localLogicalRouteFeMessages),
-    LOCAL_COUNTER("route.fe.batches", localLogicalRouteFeBatches),
-    LOCAL_COUNTER("route.be.messages", localLogicalRouteBeMessages),
-    LOCAL_COUNTER("route.be.batches", localLogicalRouteBeBatches),
-    LOCAL_COUNTER("route.be.accepted.messages", localLogicalRouteBeAcceptedMessages),
+    LOCAL_COUNTER("terminal.shutdown_discarded.messages", local_logical_terminal_shutdown_discarded_messages),
+    LOCAL_COUNTER("outstanding.messages", local_logical_outstanding_messages),
+    LOCAL_COUNTER("route.fe.messages", local_logical_route_fe_messages),
+    LOCAL_COUNTER("route.fe.batches", local_logical_route_fe_batches),
+    LOCAL_COUNTER("route.be.messages", local_logical_route_be_messages),
+    LOCAL_COUNTER("route.be.batches", local_logical_route_be_batches),
+    LOCAL_COUNTER("route.be.accepted.messages", local_logical_route_be_accepted_messages),
     /* Physical backend terminal completions include FE-to-BE transfers. */
-    LOCAL_COUNTER("be.terminal.messages", localLogicalBeTerminalMessages),
-    LOCAL_COUNTER("route.be.reason.nofit.messages", localLogicalRouteBeNoFitMessages),
-    LOCAL_COUNTER("route.be.reason.oversized.messages", localLogicalRouteBeOversizedMessages),
-    LOCAL_COUNTER("route.be.reason.registration_fallback.messages", localLogicalRouteBeRegistrationFallbackMessages),
-    LOCAL_COUNTER("route.be.reason.shutdown_redirect.messages", localLogicalRouteBeShutdownRedirectMessages),
-    LOCAL_COUNTER("route.be.reason.unclassified.messages", localLogicalRouteBeUnclassifiedMessages),
-    LOCAL_COUNTER("route.be.reason.internal.messages", localLogicalRouteBeInternalMessages),
-    LOCAL_COUNTER("route.be.reason.capacity_exhausted.messages", localLogicalRouteBeCapacityExhaustedMessages),
-    LOCAL_COUNTER("be.physical.messages", localLogicalBePhysicalMessages),
-    LOCAL_COUNTER("be.active.messages", localLogicalBeActiveMessages),
-    LOCAL_COUNTER("fe.queued.messages", localLogicalFeQueuedMessages),
-    LOCAL_COUNTER("fe.inflight.messages", localLogicalFeActiveMessages),
-    LOCAL_COUNTER("fe.retry.messages", localLogicalFeRetryMessages),
-    LOCAL_COUNTER("fe.registered", localLogicalFeRegistered),
-    LOCAL_COUNTER("fe.started", localLogicalFeStarted),
-    LOCAL_COUNTER("fe.producerless", localLogicalFeProducerless),
-    LOCAL_COUNTER("fe.registration_failures", localLogicalFeRegistrationFailures),
-    LOCAL_COUNTER("workers.fe", localLogicalWorkersFe),
-    LOCAL_COUNTER("workers.be", localLogicalWorkersBe),
-    LOCAL_COUNTER("capacity.frontends", localLogicalConfiguredFrontends),
-    LOCAL_COUNTER("transfer.fe_to_be.messages", localLogicalTransferFeToBeMessages),
-    LOCAL_COUNTER("allocation.bytes", localLogicalAllocationBytes),
-    LOCAL_COUNTER("batch.be_dequeue.count", localLogicalBeDequeueBatches),
-    LOCAL_COUNTER("batch.be_dequeue.messages.sum", localLogicalBeDequeueMessages),
-    LOCAL_COUNTER("batch.be_dequeue.messages.max", localLogicalBeDequeueMax),
-    LOCAL_COUNTER("help.attempts", localLogicalHelpAttempts),
-    LOCAL_COUNTER("help.empty", localLogicalHelpEmpty),
-    LOCAL_COUNTER("batch.help.count", localLogicalHelpBatches),
-    LOCAL_COUNTER("batch.help.messages.sum", localLogicalHelpMessages),
-    LOCAL_COUNTER("batch.help.messages.max", localLogicalHelpMax),
-    LOCAL_COUNTER("inflight.help", localLogicalHelpActive),
-    LOCAL_COUNTER("retry.help", localLogicalHelpRetry),
-    LOCAL_COUNTER("terminal.help", localLogicalHelpTerminal),
-    LOCAL_COUNTER("help.waits", localLogicalHelpWaits),
-    LOCAL_COUNTER("help.wakes", localLogicalHelpWakes),
-    LOCAL_COUNTER("batch.help.limit", localLogicalHelpLimit),
-    LOCAL_COUNTER("help.completed", localLogicalHelpCompleted),
-    LOCAL_COUNTER("help.returned", localLogicalHelpReturned),
-    LOCAL_COUNTER("wake.fe", localLogicalHelpWakeFe),
-    LOCAL_COUNTER("wake.shutdown", localLogicalHelpWakeShutdown),
+    LOCAL_COUNTER("be.terminal.messages", local_logical_be_terminal_messages),
+    LOCAL_COUNTER("route.be.reason.nofit.messages", local_logical_route_be_no_fit_messages),
+    LOCAL_COUNTER("route.be.reason.oversized.messages", local_logical_route_be_oversized_messages),
+    LOCAL_COUNTER("route.be.reason.registration_fallback.messages",
+                  local_logical_route_be_registration_fallback_messages),
+    LOCAL_COUNTER("route.be.reason.shutdown_redirect.messages", local_logical_route_be_shutdown_redirect_messages),
+    LOCAL_COUNTER("route.be.reason.unclassified.messages", local_logical_route_be_unclassified_messages),
+    LOCAL_COUNTER("route.be.reason.internal.messages", local_logical_route_be_internal_messages),
+    LOCAL_COUNTER("route.be.reason.capacity_exhausted.messages", local_logical_route_be_capacity_exhausted_messages),
+    LOCAL_COUNTER("be.physical.messages", local_logical_be_physical_messages),
+    LOCAL_COUNTER("be.active.messages", local_logical_be_active_messages),
+    LOCAL_COUNTER("fe.queued.messages", local_logical_fe_queued_messages),
+    LOCAL_COUNTER("fe.inflight.messages", local_logical_fe_active_messages),
+    LOCAL_COUNTER("fe.retry.messages", local_logical_fe_retry_messages),
+    LOCAL_COUNTER("fe.registered", local_logical_fe_registered),
+    LOCAL_COUNTER("fe.started", local_logical_fe_started),
+    LOCAL_COUNTER("fe.producerless", local_logical_fe_producerless),
+    LOCAL_COUNTER("fe.registration_failures", local_logical_fe_registration_failures),
+    LOCAL_COUNTER("workers.fe", local_logical_workers_fe),
+    LOCAL_COUNTER("workers.be", local_logical_workers_be),
+    LOCAL_COUNTER("capacity.frontends", local_logical_configured_frontends),
+    LOCAL_COUNTER("transfer.fe_to_be.messages", local_logical_transfer_fe_to_be_messages),
+    LOCAL_COUNTER("allocation.bytes", local_logical_allocation_bytes),
+    LOCAL_COUNTER("batch.be_dequeue.count", local_logical_be_dequeue_batches),
+    LOCAL_COUNTER("batch.be_dequeue.messages.sum", local_logical_be_dequeue_messages),
+    LOCAL_COUNTER("batch.be_dequeue.messages.max", local_logical_be_dequeue_max),
+    LOCAL_COUNTER("help.attempts", local_logical_help_attempts),
+    LOCAL_COUNTER("help.empty", local_logical_help_empty),
+    LOCAL_COUNTER("batch.help.count", local_logical_help_batches),
+    LOCAL_COUNTER("batch.help.messages.sum", local_logical_help_messages),
+    LOCAL_COUNTER("batch.help.messages.max", local_logical_help_max),
+    LOCAL_COUNTER("inflight.help", local_logical_help_active),
+    LOCAL_COUNTER("retry.help", local_logical_help_retry),
+    LOCAL_COUNTER("terminal.help", local_logical_help_terminal),
+    LOCAL_COUNTER("help.waits", local_logical_help_waits),
+    LOCAL_COUNTER("help.wakes", local_logical_help_wakes),
+    LOCAL_COUNTER("batch.help.limit", local_logical_help_limit),
+    LOCAL_COUNTER("help.completed", local_logical_help_completed),
+    LOCAL_COUNTER("help.returned", local_logical_help_returned),
+    LOCAL_COUNTER("wake.fe", local_logical_help_wake_fe),
+    LOCAL_COUNTER("wake.shutdown", local_logical_help_wake_shutdown),
 };
 #undef LOCAL_COUNTER
 
 #define FRONTEND_COUNTER(name, member) \
     { name, member }
-static const localCounterDescriptor_t frontendCounters[] = {
-    FRONTEND_COUNTER("registration.id", localFrontendRegistrationId),
-    FRONTEND_COUNTER("registration.generation", localFrontendGeneration),
-    FRONTEND_COUNTER("lifecycle.state", localFrontendLifecycleState),
-    FRONTEND_COUNTER("capacity", localFrontendCapacity),
-    FRONTEND_COUNTER("queued", localFrontendQueued),
-    FRONTEND_COUNTER("free", localFrontendFree),
-    FRONTEND_COUNTER("inflight.fe", localFrontendInflight),
-    FRONTEND_COUNTER("retry.fe", localFrontendRetry),
-    FRONTEND_COUNTER("ingress.messages", localFrontendIngressMessages),
-    FRONTEND_COUNTER("admitted.messages", localFrontendAdmittedMessages),
-    FRONTEND_COUNTER("admitted.batches", localFrontendAdmittedBatches),
-    FRONTEND_COUNTER("batch.submit.count", localFrontendSubmittedBatches),
-    FRONTEND_COUNTER("batch.submit.messages.sum", localFrontendSubmittedMessages),
-    FRONTEND_COUNTER("batch.submit.messages.max", localFrontendSubmittedMax),
-    FRONTEND_COUNTER("terminal.messages", localFrontendTerminalMessages),
-    FRONTEND_COUNTER("overflow.messages", localFrontendOverflowMessages),
-    FRONTEND_COUNTER("overflow.nofit.messages", localFrontendOverflowNoFitMessages),
-    FRONTEND_COUNTER("overflow.oversized.messages", localFrontendOverflowOversizedMessages),
-    FRONTEND_COUNTER("overflow.batches", localFrontendOverflowBatches),
-    FRONTEND_COUNTER("overflow.oversized_batches", localFrontendOversizedBatches),
-    FRONTEND_COUNTER("transfer.fe_to_be.messages", localFrontendTransferToBeMessages),
-    FRONTEND_COUNTER("shutdown.discarded.messages", localFrontendShutdownDiscardedMessages),
-    FRONTEND_COUNTER("producer.exited", localFrontendProducerExited),
-    FRONTEND_COUNTER("batch.fe_dequeue.count", localFrontendDequeueBatches),
-    FRONTEND_COUNTER("batch.fe_dequeue.messages.sum", localFrontendDequeueMessages),
-    FRONTEND_COUNTER("batch.fe_dequeue.messages.max", localFrontendDequeueMax),
-    FRONTEND_COUNTER("admitted.raw_bytes", localFrontendBytes),
-    FRONTEND_COUNTER("help.attempts", localFrontendHelpAttempts),
-    FRONTEND_COUNTER("help.empty", localFrontendHelpEmpty),
-    FRONTEND_COUNTER("batch.help.count", localFrontendHelpBatches),
-    FRONTEND_COUNTER("batch.help.messages.sum", localFrontendHelpMessages),
-    FRONTEND_COUNTER("batch.help.messages.max", localFrontendHelpMax),
-    FRONTEND_COUNTER("inflight.help", localFrontendHelpActive),
-    FRONTEND_COUNTER("retry.help", localFrontendHelpRetry),
-    FRONTEND_COUNTER("terminal.help", localFrontendHelpTerminal),
-    FRONTEND_COUNTER("help.waits", localFrontendHelpWaits),
-    FRONTEND_COUNTER("help.wakes", localFrontendHelpWakes),
-    FRONTEND_COUNTER("batch.help.limit", localFrontendHelpLimit),
-    FRONTEND_COUNTER("help.completed", localFrontendHelpCompleted),
-    FRONTEND_COUNTER("help.returned", localFrontendHelpReturned),
-    FRONTEND_COUNTER("wake.fe", localFrontendHelpWakeFe),
-    FRONTEND_COUNTER("wake.shutdown", localFrontendHelpWakeShutdown),
+static const local_counter_descriptor_t frontend_counters[] = {
+    FRONTEND_COUNTER("registration.id", local_frontend_registration_id),
+    FRONTEND_COUNTER("registration.generation", local_frontend_generation),
+    FRONTEND_COUNTER("lifecycle.state", local_frontend_lifecycle_state),
+    FRONTEND_COUNTER("capacity", local_frontend_capacity),
+    FRONTEND_COUNTER("queued", local_frontend_queued),
+    FRONTEND_COUNTER("free", local_frontend_free),
+    FRONTEND_COUNTER("inflight.fe", local_frontend_inflight),
+    FRONTEND_COUNTER("retry.fe", local_frontend_retry),
+    FRONTEND_COUNTER("ingress.messages", local_frontend_ingress_messages),
+    FRONTEND_COUNTER("admitted.messages", local_frontend_admitted_messages),
+    FRONTEND_COUNTER("admitted.batches", local_frontend_admitted_batches),
+    FRONTEND_COUNTER("batch.submit.count", local_frontend_submitted_batches),
+    FRONTEND_COUNTER("batch.submit.messages.sum", local_frontend_submitted_messages),
+    FRONTEND_COUNTER("batch.submit.messages.max", local_frontend_submitted_max),
+    FRONTEND_COUNTER("terminal.messages", local_frontend_terminal_messages),
+    FRONTEND_COUNTER("overflow.messages", local_frontend_overflow_messages),
+    FRONTEND_COUNTER("overflow.nofit.messages", local_frontend_overflow_no_fit_messages),
+    FRONTEND_COUNTER("overflow.oversized.messages", local_frontend_overflow_oversized_messages),
+    FRONTEND_COUNTER("overflow.batches", local_frontend_overflow_batches),
+    FRONTEND_COUNTER("overflow.oversized_batches", local_frontend_oversized_batches),
+    FRONTEND_COUNTER("transfer.fe_to_be.messages", local_frontend_transfer_to_be_messages),
+    FRONTEND_COUNTER("shutdown.discarded.messages", local_frontend_shutdown_discarded_messages),
+    FRONTEND_COUNTER("producer.exited", local_frontend_producer_exited),
+    FRONTEND_COUNTER("batch.fe_dequeue.count", local_frontend_dequeue_batches),
+    FRONTEND_COUNTER("batch.fe_dequeue.messages.sum", local_frontend_dequeue_messages),
+    FRONTEND_COUNTER("batch.fe_dequeue.messages.max", local_frontend_dequeue_max),
+    FRONTEND_COUNTER("admitted.raw_bytes", local_frontend_bytes),
+    FRONTEND_COUNTER("help.attempts", local_frontend_help_attempts),
+    FRONTEND_COUNTER("help.empty", local_frontend_help_empty),
+    FRONTEND_COUNTER("batch.help.count", local_frontend_help_batches),
+    FRONTEND_COUNTER("batch.help.messages.sum", local_frontend_help_messages),
+    FRONTEND_COUNTER("batch.help.messages.max", local_frontend_help_max),
+    FRONTEND_COUNTER("inflight.help", local_frontend_help_active),
+    FRONTEND_COUNTER("retry.help", local_frontend_help_retry),
+    FRONTEND_COUNTER("terminal.help", local_frontend_help_terminal),
+    FRONTEND_COUNTER("help.waits", local_frontend_help_waits),
+    FRONTEND_COUNTER("help.wakes", local_frontend_help_wakes),
+    FRONTEND_COUNTER("batch.help.limit", local_frontend_help_limit),
+    FRONTEND_COUNTER("help.completed", local_frontend_help_completed),
+    FRONTEND_COUNTER("help.returned", local_frontend_help_returned),
+    FRONTEND_COUNTER("wake.fe", local_frontend_help_wake_fe),
+    FRONTEND_COUNTER("wake.shutdown", local_frontend_help_wake_shutdown),
 };
 #undef FRONTEND_COUNTER
 
-static void localStatsStore(intctr_t *const counter, const uint64_t value) {
+static void local_stats_store(intctr_t *const counter, const uint64_t value) {
     PREFER_STORE_uint64(counter, value);
 }
 
-static void localStatsRunTestPreReadHook(qqueueLocalStats_t *const stats) {
+static void local_stats_run_test_pre_read_hook(qqueue_local_stats_t *const stats) {
 #ifdef ENABLE_TESTBENCH
     if (stats->test_pre_read_hook != NULL) stats->test_pre_read_hook(stats->test_pre_read_context);
 #else
@@ -312,143 +313,144 @@ static void localStatsRunTestPreReadHook(qqueueLocalStats_t *const stats) {
 #endif
 }
 
-static void localStatsPreRead(statsobj_t *const object, void *const context) {
+static void local_stats_pre_read(statsobj_t *const object, void *const context) {
     (void)object;
-    qqueueLocalStats_t *const stats = context;
+    qqueue_local_stats_t *const stats = context;
     qqueueLocalSnapshot_t snapshot;
 
-    localStatsRunTestPreReadHook(stats);
+    local_stats_run_test_pre_read_hook(stats);
     qqueueLocalGetSnapshot(stats->owner, &snapshot);
-    localStatsStore(&stats->logical_counters[localLogicalSampledOut], snapshot.sampled_out);
-    localStatsStore(&stats->logical_counters[localLogicalSeverityDiscarded], snapshot.severity_discarded);
-    localStatsStore(&stats->logical_counters[localLogicalRetryFailed], snapshot.retry_failed);
-    localStatsStore(&stats->logical_counters[localLogicalReserved], snapshot.reserved_messages);
-    localStatsStore(&stats->logical_counters[localLogicalBeCapacity], snapshot.be_capacity);
-    localStatsStore(&stats->logical_counters[localLogicalFeCapacity], snapshot.fe_capacity);
-    localStatsStore(&stats->logical_counters[localLogicalFeActiveCapacity], snapshot.fe_active_capacity);
+    local_stats_store(&stats->logical_counters[local_logical_sampled_out], snapshot.sampled_out);
+    local_stats_store(&stats->logical_counters[local_logical_severity_discarded], snapshot.severity_discarded);
+    local_stats_store(&stats->logical_counters[local_logical_retry_failed], snapshot.retry_failed);
+    local_stats_store(&stats->logical_counters[local_logical_reserved], snapshot.reserved_messages);
+    local_stats_store(&stats->logical_counters[local_logical_be_capacity], snapshot.be_capacity);
+    local_stats_store(&stats->logical_counters[local_logical_fe_capacity], snapshot.fe_capacity);
+    local_stats_store(&stats->logical_counters[local_logical_fe_active_capacity], snapshot.fe_active_capacity);
 
-    localStatsStore(&stats->logical_counters[localLogicalIngressMessages], snapshot.attempts);
-    localStatsStore(&stats->logical_counters[localLogicalAcceptedMessages], snapshot.admitted);
-    localStatsStore(&stats->logical_counters[localLogicalRejectedPreadmissionMessages], snapshot.preadmission_rejected);
-    localStatsStore(&stats->logical_counters[localLogicalTerminalMessages], snapshot.terminal);
-    localStatsStore(&stats->logical_counters[localLogicalRestored], snapshot.restored);
-    localStatsStore(&stats->logical_counters[localLogicalPersisted], snapshot.persisted);
-    localStatsStore(&stats->logical_counters[localLogicalExecuted], snapshot.executed);
-    localStatsStore(&stats->logical_counters[localLogicalDiscarded], snapshot.discarded);
-    localStatsStore(&stats->logical_counters[localLogicalDiskTransferred], snapshot.disk_transferred);
-    localStatsStore(&stats->logical_counters[localLogicalDiskTerminal], snapshot.disk_terminal);
-    localStatsStore(&stats->logical_counters[localLogicalDiskPhysical], snapshot.disk_physical);
-    localStatsStore(&stats->logical_counters[localLogicalDiskActive], snapshot.disk_active);
+    local_stats_store(&stats->logical_counters[local_logical_ingress_messages], snapshot.attempts);
+    local_stats_store(&stats->logical_counters[local_logical_accepted_messages], snapshot.admitted);
+    local_stats_store(&stats->logical_counters[local_logical_rejected_preadmission_messages],
+                      snapshot.preadmission_rejected);
+    local_stats_store(&stats->logical_counters[local_logical_terminal_messages], snapshot.terminal);
+    local_stats_store(&stats->logical_counters[local_logical_restored], snapshot.restored);
+    local_stats_store(&stats->logical_counters[local_logical_persisted], snapshot.persisted);
+    local_stats_store(&stats->logical_counters[local_logical_executed], snapshot.executed);
+    local_stats_store(&stats->logical_counters[local_logical_discarded], snapshot.discarded);
+    local_stats_store(&stats->logical_counters[local_logical_disk_transferred], snapshot.disk_transferred);
+    local_stats_store(&stats->logical_counters[local_logical_disk_terminal], snapshot.disk_terminal);
+    local_stats_store(&stats->logical_counters[local_logical_disk_physical], snapshot.disk_physical);
+    local_stats_store(&stats->logical_counters[local_logical_disk_active], snapshot.disk_active);
 
-    localStatsStore(&stats->logical_counters[localLogicalTerminalShutdownDiscardedMessages],
-                    snapshot.shutdown_discarded);
-    localStatsStore(&stats->logical_counters[localLogicalOutstandingMessages], snapshot.outstanding);
-    localStatsStore(&stats->logical_counters[localLogicalRouteFeMessages], snapshot.route_fe_messages);
-    localStatsStore(&stats->logical_counters[localLogicalRouteFeBatches], snapshot.route_fe_batches);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeMessages], snapshot.route_be_messages);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeBatches], snapshot.route_be_batches);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeAcceptedMessages], snapshot.be_admitted);
-    localStatsStore(&stats->logical_counters[localLogicalBeTerminalMessages], snapshot.be_terminal);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeNoFitMessages], snapshot.be_nofit);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeOversizedMessages], snapshot.be_oversized);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeRegistrationFallbackMessages],
-                    snapshot.be_registration_fallback);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeShutdownRedirectMessages],
-                    snapshot.be_shutdown_redirect);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeUnclassifiedMessages], snapshot.be_unclassified);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeInternalMessages], snapshot.be_internal);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeCapacityExhaustedMessages],
-                    snapshot.be_capacity_exhausted);
-    localStatsStore(&stats->logical_counters[localLogicalBePhysicalMessages], snapshot.be_physical);
-    localStatsStore(&stats->logical_counters[localLogicalBeActiveMessages], snapshot.be_active);
-    localStatsStore(&stats->logical_counters[localLogicalFeQueuedMessages], snapshot.fe_queued);
-    localStatsStore(&stats->logical_counters[localLogicalFeActiveMessages], snapshot.fe_active);
-    localStatsStore(&stats->logical_counters[localLogicalFeRetryMessages], snapshot.fe_retry);
-    localStatsStore(&stats->logical_counters[localLogicalFeRegistered], snapshot.fe_registered);
-    localStatsStore(&stats->logical_counters[localLogicalFeStarted], snapshot.fe_started);
-    localStatsStore(&stats->logical_counters[localLogicalFeProducerless], snapshot.fe_producerless);
-    localStatsStore(&stats->logical_counters[localLogicalFeRegistrationFailures], snapshot.registration_failures);
-    localStatsStore(&stats->logical_counters[localLogicalWorkersFe], snapshot.fe_consumers);
-    localStatsStore(&stats->logical_counters[localLogicalWorkersBe], snapshot.be_consumers);
-    localStatsStore(&stats->logical_counters[localLogicalConfiguredFrontends], snapshot.configured_frontends);
-    localStatsStore(&stats->logical_counters[localLogicalTransferFeToBeMessages], snapshot.transferred);
-    localStatsStore(&stats->logical_counters[localLogicalAllocationBytes], snapshot.allocation_bytes);
-    localStatsStore(&stats->logical_counters[localLogicalBeDequeueBatches], snapshot.be_dequeue_batches);
-    localStatsStore(&stats->logical_counters[localLogicalBeDequeueMessages], snapshot.be_dequeue_messages);
-    localStatsStore(&stats->logical_counters[localLogicalBeDequeueMax], snapshot.be_dequeue_max);
-    localStatsStore(&stats->logical_counters[localLogicalHelpAttempts], snapshot.help_attempts);
-    localStatsStore(&stats->logical_counters[localLogicalHelpEmpty], snapshot.help_empty);
-    localStatsStore(&stats->logical_counters[localLogicalHelpBatches], snapshot.help_batches);
-    localStatsStore(&stats->logical_counters[localLogicalHelpMessages], snapshot.help_messages);
-    localStatsStore(&stats->logical_counters[localLogicalHelpMax], snapshot.help_max);
-    localStatsStore(&stats->logical_counters[localLogicalHelpActive], snapshot.help_active);
-    localStatsStore(&stats->logical_counters[localLogicalHelpRetry], snapshot.help_retry);
-    localStatsStore(&stats->logical_counters[localLogicalHelpTerminal], snapshot.help_terminal);
-    localStatsStore(&stats->logical_counters[localLogicalHelpWaits], snapshot.help_waits);
-    localStatsStore(&stats->logical_counters[localLogicalHelpWakes], snapshot.help_wakes);
-    localStatsStore(&stats->logical_counters[localLogicalHelpLimit], snapshot.help_limit);
-    localStatsStore(&stats->logical_counters[localLogicalHelpCompleted], snapshot.help_completed);
-    localStatsStore(&stats->logical_counters[localLogicalHelpReturned], snapshot.help_returned);
-    localStatsStore(&stats->logical_counters[localLogicalHelpWakeFe], snapshot.wake_fe);
-    localStatsStore(&stats->logical_counters[localLogicalHelpWakeShutdown], snapshot.wake_shutdown);
+    local_stats_store(&stats->logical_counters[local_logical_terminal_shutdown_discarded_messages],
+                      snapshot.shutdown_discarded);
+    local_stats_store(&stats->logical_counters[local_logical_outstanding_messages], snapshot.outstanding);
+    local_stats_store(&stats->logical_counters[local_logical_route_fe_messages], snapshot.route_fe_messages);
+    local_stats_store(&stats->logical_counters[local_logical_route_fe_batches], snapshot.route_fe_batches);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_messages], snapshot.route_be_messages);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_batches], snapshot.route_be_batches);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_accepted_messages], snapshot.be_admitted);
+    local_stats_store(&stats->logical_counters[local_logical_be_terminal_messages], snapshot.be_terminal);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_no_fit_messages], snapshot.be_nofit);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_oversized_messages], snapshot.be_oversized);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_registration_fallback_messages],
+                      snapshot.be_registration_fallback);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_shutdown_redirect_messages],
+                      snapshot.be_shutdown_redirect);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_unclassified_messages], snapshot.be_unclassified);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_internal_messages], snapshot.be_internal);
+    local_stats_store(&stats->logical_counters[local_logical_route_be_capacity_exhausted_messages],
+                      snapshot.be_capacity_exhausted);
+    local_stats_store(&stats->logical_counters[local_logical_be_physical_messages], snapshot.be_physical);
+    local_stats_store(&stats->logical_counters[local_logical_be_active_messages], snapshot.be_active);
+    local_stats_store(&stats->logical_counters[local_logical_fe_queued_messages], snapshot.fe_queued);
+    local_stats_store(&stats->logical_counters[local_logical_fe_active_messages], snapshot.fe_active);
+    local_stats_store(&stats->logical_counters[local_logical_fe_retry_messages], snapshot.fe_retry);
+    local_stats_store(&stats->logical_counters[local_logical_fe_registered], snapshot.fe_registered);
+    local_stats_store(&stats->logical_counters[local_logical_fe_started], snapshot.fe_started);
+    local_stats_store(&stats->logical_counters[local_logical_fe_producerless], snapshot.fe_producerless);
+    local_stats_store(&stats->logical_counters[local_logical_fe_registration_failures], snapshot.registration_failures);
+    local_stats_store(&stats->logical_counters[local_logical_workers_fe], snapshot.fe_consumers);
+    local_stats_store(&stats->logical_counters[local_logical_workers_be], snapshot.be_consumers);
+    local_stats_store(&stats->logical_counters[local_logical_configured_frontends], snapshot.configured_frontends);
+    local_stats_store(&stats->logical_counters[local_logical_transfer_fe_to_be_messages], snapshot.transferred);
+    local_stats_store(&stats->logical_counters[local_logical_allocation_bytes], snapshot.allocation_bytes);
+    local_stats_store(&stats->logical_counters[local_logical_be_dequeue_batches], snapshot.be_dequeue_batches);
+    local_stats_store(&stats->logical_counters[local_logical_be_dequeue_messages], snapshot.be_dequeue_messages);
+    local_stats_store(&stats->logical_counters[local_logical_be_dequeue_max], snapshot.be_dequeue_max);
+    local_stats_store(&stats->logical_counters[local_logical_help_attempts], snapshot.help_attempts);
+    local_stats_store(&stats->logical_counters[local_logical_help_empty], snapshot.help_empty);
+    local_stats_store(&stats->logical_counters[local_logical_help_batches], snapshot.help_batches);
+    local_stats_store(&stats->logical_counters[local_logical_help_messages], snapshot.help_messages);
+    local_stats_store(&stats->logical_counters[local_logical_help_max], snapshot.help_max);
+    local_stats_store(&stats->logical_counters[local_logical_help_active], snapshot.help_active);
+    local_stats_store(&stats->logical_counters[local_logical_help_retry], snapshot.help_retry);
+    local_stats_store(&stats->logical_counters[local_logical_help_terminal], snapshot.help_terminal);
+    local_stats_store(&stats->logical_counters[local_logical_help_waits], snapshot.help_waits);
+    local_stats_store(&stats->logical_counters[local_logical_help_wakes], snapshot.help_wakes);
+    local_stats_store(&stats->logical_counters[local_logical_help_limit], snapshot.help_limit);
+    local_stats_store(&stats->logical_counters[local_logical_help_completed], snapshot.help_completed);
+    local_stats_store(&stats->logical_counters[local_logical_help_returned], snapshot.help_returned);
+    local_stats_store(&stats->logical_counters[local_logical_help_wake_fe], snapshot.wake_fe);
+    local_stats_store(&stats->logical_counters[local_logical_help_wake_shutdown], snapshot.wake_shutdown);
 }
 
-static void localFrontendStatsPreRead(statsobj_t *const object, void *const context) {
+static void local_frontend_stats_pre_read(statsobj_t *const object, void *const context) {
     (void)object;
-    localFrontendStats_t *const frontend = context;
+    local_frontend_stats_t *const frontend = context;
     qqueueLocalFrontendSnapshot_t snapshot;
 
-    localStatsRunTestPreReadHook(frontend->adapter);
+    local_stats_run_test_pre_read_hook(frontend->adapter);
     if (!qqueueLocalGetFrontendSnapshot(frontend->adapter->owner, frontend->index, &snapshot)) return;
-    localStatsStore(&frontend->counters[localFrontendRegistrationId], snapshot.identity);
-    localStatsStore(&frontend->counters[localFrontendGeneration], snapshot.generation);
-    localStatsStore(&frontend->counters[localFrontendLifecycleState], snapshot.state);
-    localStatsStore(&frontend->counters[localFrontendCapacity], snapshot.capacity);
-    localStatsStore(&frontend->counters[localFrontendQueued], snapshot.queued);
-    localStatsStore(&frontend->counters[localFrontendFree],
-                    snapshot.capacity >= snapshot.queued ? snapshot.capacity - snapshot.queued : 0);
-    localStatsStore(&frontend->counters[localFrontendInflight], snapshot.active);
-    localStatsStore(&frontend->counters[localFrontendRetry], snapshot.retry);
-    localStatsStore(&frontend->counters[localFrontendIngressMessages], snapshot.attempts);
-    localStatsStore(&frontend->counters[localFrontendAdmittedMessages], snapshot.published);
-    localStatsStore(&frontend->counters[localFrontendAdmittedBatches], snapshot.published_batches);
-    localStatsStore(&frontend->counters[localFrontendSubmittedBatches], snapshot.submitted_batches);
-    localStatsStore(&frontend->counters[localFrontendSubmittedMessages], snapshot.attempts);
-    localStatsStore(&frontend->counters[localFrontendSubmittedMax], snapshot.submitted_max);
-    localStatsStore(&frontend->counters[localFrontendTerminalMessages], snapshot.terminal);
-    localStatsStore(&frontend->counters[localFrontendOverflowMessages], snapshot.overflow);
-    localStatsStore(&frontend->counters[localFrontendOverflowNoFitMessages], snapshot.nofit);
-    localStatsStore(&frontend->counters[localFrontendOverflowOversizedMessages], snapshot.oversized);
-    localStatsStore(&frontend->counters[localFrontendOverflowBatches], snapshot.overflow_batches);
-    localStatsStore(&frontend->counters[localFrontendOversizedBatches], snapshot.oversized_batches);
-    localStatsStore(&frontend->counters[localFrontendTransferToBeMessages], snapshot.transferred);
-    localStatsStore(&frontend->counters[localFrontendShutdownDiscardedMessages], snapshot.shutdown_discarded);
-    localStatsStore(&frontend->counters[localFrontendProducerExited], snapshot.producer_exited);
-    localStatsStore(&frontend->counters[localFrontendDequeueBatches], snapshot.batches);
-    localStatsStore(&frontend->counters[localFrontendDequeueMessages], snapshot.dequeue_messages);
-    localStatsStore(&frontend->counters[localFrontendDequeueMax], snapshot.dequeue_max);
-    localStatsStore(&frontend->counters[localFrontendBytes], snapshot.bytes);
-    localStatsStore(&frontend->counters[localFrontendHelpAttempts], snapshot.help_attempts);
-    localStatsStore(&frontend->counters[localFrontendHelpEmpty], snapshot.help_empty);
-    localStatsStore(&frontend->counters[localFrontendHelpBatches], snapshot.help_batches);
-    localStatsStore(&frontend->counters[localFrontendHelpMessages], snapshot.help_messages);
-    localStatsStore(&frontend->counters[localFrontendHelpMax], snapshot.help_max);
-    localStatsStore(&frontend->counters[localFrontendHelpActive], snapshot.help_active);
-    localStatsStore(&frontend->counters[localFrontendHelpRetry], snapshot.help_retry);
-    localStatsStore(&frontend->counters[localFrontendHelpTerminal], snapshot.help_terminal);
-    localStatsStore(&frontend->counters[localFrontendHelpWaits], snapshot.help_waits);
-    localStatsStore(&frontend->counters[localFrontendHelpWakes], snapshot.help_wakes);
-    localStatsStore(&frontend->counters[localFrontendHelpLimit], snapshot.help_limit);
-    localStatsStore(&frontend->counters[localFrontendHelpCompleted], snapshot.help_completed);
-    localStatsStore(&frontend->counters[localFrontendHelpReturned], snapshot.help_returned);
-    localStatsStore(&frontend->counters[localFrontendHelpWakeFe], snapshot.wake_fe);
-    localStatsStore(&frontend->counters[localFrontendHelpWakeShutdown], snapshot.wake_shutdown);
+    local_stats_store(&frontend->counters[local_frontend_registration_id], snapshot.identity);
+    local_stats_store(&frontend->counters[local_frontend_generation], snapshot.generation);
+    local_stats_store(&frontend->counters[local_frontend_lifecycle_state], snapshot.state);
+    local_stats_store(&frontend->counters[local_frontend_capacity], snapshot.capacity);
+    local_stats_store(&frontend->counters[local_frontend_queued], snapshot.queued);
+    local_stats_store(&frontend->counters[local_frontend_free],
+                      snapshot.capacity >= snapshot.queued ? snapshot.capacity - snapshot.queued : 0);
+    local_stats_store(&frontend->counters[local_frontend_inflight], snapshot.active);
+    local_stats_store(&frontend->counters[local_frontend_retry], snapshot.retry);
+    local_stats_store(&frontend->counters[local_frontend_ingress_messages], snapshot.attempts);
+    local_stats_store(&frontend->counters[local_frontend_admitted_messages], snapshot.published);
+    local_stats_store(&frontend->counters[local_frontend_admitted_batches], snapshot.published_batches);
+    local_stats_store(&frontend->counters[local_frontend_submitted_batches], snapshot.submitted_batches);
+    local_stats_store(&frontend->counters[local_frontend_submitted_messages], snapshot.attempts);
+    local_stats_store(&frontend->counters[local_frontend_submitted_max], snapshot.submitted_max);
+    local_stats_store(&frontend->counters[local_frontend_terminal_messages], snapshot.terminal);
+    local_stats_store(&frontend->counters[local_frontend_overflow_messages], snapshot.overflow);
+    local_stats_store(&frontend->counters[local_frontend_overflow_no_fit_messages], snapshot.nofit);
+    local_stats_store(&frontend->counters[local_frontend_overflow_oversized_messages], snapshot.oversized);
+    local_stats_store(&frontend->counters[local_frontend_overflow_batches], snapshot.overflow_batches);
+    local_stats_store(&frontend->counters[local_frontend_oversized_batches], snapshot.oversized_batches);
+    local_stats_store(&frontend->counters[local_frontend_transfer_to_be_messages], snapshot.transferred);
+    local_stats_store(&frontend->counters[local_frontend_shutdown_discarded_messages], snapshot.shutdown_discarded);
+    local_stats_store(&frontend->counters[local_frontend_producer_exited], snapshot.producer_exited);
+    local_stats_store(&frontend->counters[local_frontend_dequeue_batches], snapshot.batches);
+    local_stats_store(&frontend->counters[local_frontend_dequeue_messages], snapshot.dequeue_messages);
+    local_stats_store(&frontend->counters[local_frontend_dequeue_max], snapshot.dequeue_max);
+    local_stats_store(&frontend->counters[local_frontend_bytes], snapshot.bytes);
+    local_stats_store(&frontend->counters[local_frontend_help_attempts], snapshot.help_attempts);
+    local_stats_store(&frontend->counters[local_frontend_help_empty], snapshot.help_empty);
+    local_stats_store(&frontend->counters[local_frontend_help_batches], snapshot.help_batches);
+    local_stats_store(&frontend->counters[local_frontend_help_messages], snapshot.help_messages);
+    local_stats_store(&frontend->counters[local_frontend_help_max], snapshot.help_max);
+    local_stats_store(&frontend->counters[local_frontend_help_active], snapshot.help_active);
+    local_stats_store(&frontend->counters[local_frontend_help_retry], snapshot.help_retry);
+    local_stats_store(&frontend->counters[local_frontend_help_terminal], snapshot.help_terminal);
+    local_stats_store(&frontend->counters[local_frontend_help_waits], snapshot.help_waits);
+    local_stats_store(&frontend->counters[local_frontend_help_wakes], snapshot.help_wakes);
+    local_stats_store(&frontend->counters[local_frontend_help_limit], snapshot.help_limit);
+    local_stats_store(&frontend->counters[local_frontend_help_completed], snapshot.help_completed);
+    local_stats_store(&frontend->counters[local_frontend_help_returned], snapshot.help_returned);
+    local_stats_store(&frontend->counters[local_frontend_help_wake_fe], snapshot.wake_fe);
+    local_stats_store(&frontend->counters[local_frontend_help_wake_shutdown], snapshot.wake_shutdown);
 }
 
-static rsRetVal localStatsAddCounters(statsobj_t *const object,
-                                      intctr_t *const counters,
-                                      const localCounterDescriptor_t *const descriptors,
-                                      const size_t count) {
+static rsRetVal local_stats_add_counters(statsobj_t *const object,
+                                         intctr_t *const counters,
+                                         const local_counter_descriptor_t *const descriptors,
+                                         const size_t count) {
     DEFiRet;
     for (size_t i = 0; i < count; ++i) {
         intctr_t *const storage = &counters[descriptors[i].index];
@@ -460,27 +462,27 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal localStatsConstructObject(statsobj_t **const out,
-                                          const uchar *const name,
-                                          void (*const callback)(statsobj_t *, void *),
-                                          void *const context,
-                                          intctr_t *const counters,
-                                          const localCounterDescriptor_t *const descriptors,
-                                          const size_t descriptor_count) {
+static rsRetVal local_stats_construct_object(statsobj_t **const out,
+                                             const uchar *const name,
+                                             void (*const callback)(statsobj_t *, void *),
+                                             void *const context,
+                                             intctr_t *const counters,
+                                             const local_counter_descriptor_t *const descriptors,
+                                             const size_t descriptor_count) {
     DEFiRet;
     CHKiRet(statsobj.Construct(out));
     CHKiRet(statsobj.SetName(*out, (uchar *)name));
     CHKiRet(statsobj.SetOrigin(*out, UCHAR_CONSTANT("core.queue.local")));
-    CHKiRet(localStatsAddCounters(*out, counters, descriptors, descriptor_count));
+    CHKiRet(local_stats_add_counters(*out, counters, descriptors, descriptor_count));
     CHKiRet(statsobj.SetPreReadNotifier(*out, callback, context));
     CHKiRet(statsobj.ConstructFinalize(*out));
 finalize_it:
     RETiRet;
 }
 
-void qqueueLocalStatsDestruct(qqueueLocalStats_t **const stats_ptr) {
+void qqueue_local_stats_destruct(qqueue_local_stats_t **const stats_ptr) {
     if (stats_ptr == NULL || *stats_ptr == NULL) return;
-    qqueueLocalStats_t *const stats = *stats_ptr;
+    qqueue_local_stats_t *const stats = *stats_ptr;
     if (stats->frontends != NULL) {
         for (uint32_t i = 0; i < stats->frontend_limit; ++i) {
             if (stats->frontends[i].object != NULL) statsobj.Destruct(&stats->frontends[i].object);
@@ -493,9 +495,9 @@ void qqueueLocalStatsDestruct(qqueueLocalStats_t **const stats_ptr) {
 }
 
 #ifdef ENABLE_TESTBENCH
-void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *const stats,
-                                        qqueueLocalStatsTestPreReadHook_t const hook,
-                                        void *const context) {
+void qqueue_local_stats_set_test_pre_read_hook(qqueue_local_stats_t *const stats,
+                                               qqueue_local_stats_test_pre_read_hook_t const hook,
+                                               void *const context) {
     if (stats == NULL) return;
     stats->test_pre_read_hook = hook;
     stats->test_pre_read_context = context;
@@ -505,7 +507,7 @@ void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *const stats,
  * queue. The hook is invoked by statsobj.GetAllCounters while the global
  * stats-object list mutex is held. A concurrent adapter destruction must
  * therefore remain blocked until the hook's condition is released. */
-typedef struct localStatsLifetimePhase_s {
+typedef struct local_stats_lifetime_phase_s {
     pthread_mutex_t mutex;
     pthread_cond_t condition;
     int pre_read_entered;
@@ -513,16 +515,16 @@ typedef struct localStatsLifetimePhase_s {
     int destroy_started;
     int destroy_returned;
     rsRetVal reader_status;
-} localStatsLifetimePhase_t;
+} local_stats_lifetime_phase_t;
 
-typedef struct localStatsLifetimeContext_s {
+typedef struct local_stats_lifetime_context_s {
     qqueue_t *owner;
-    localStatsLifetimePhase_t phase;
-} localStatsLifetimeContext_t;
+    local_stats_lifetime_phase_t phase;
+} local_stats_lifetime_context_t;
 
-static void localStatsLifetimePreRead(void *const context) {
-    localStatsLifetimeContext_t *const fixture = context;
-    localStatsLifetimePhase_t *const phase = &fixture->phase;
+static void local_stats_lifetime_pre_read(void *const context) {
+    local_stats_lifetime_context_t *const fixture = context;
+    local_stats_lifetime_phase_t *const phase = &fixture->phase;
 
     if (pthread_mutex_lock(&phase->mutex) != 0) return;
     phase->pre_read_entered = 1;
@@ -531,34 +533,34 @@ static void localStatsLifetimePreRead(void *const context) {
     pthread_mutex_unlock(&phase->mutex);
 }
 
-static rsRetVal localStatsLifetimeCountLocal(void *const context,
-                                             const uchar *const object_name __attribute__((unused)),
-                                             const uchar *const object_origin,
-                                             const uchar *const counter_name __attribute__((unused)),
-                                             const statsCtrType_t counter_type __attribute__((unused)),
-                                             const uint64_t value __attribute__((unused)),
-                                             const int8_t flags __attribute__((unused))) {
+static rsRetVal local_stats_lifetime_count_local(void *const context,
+                                                 const uchar *const object_name __attribute__((unused)),
+                                                 const uchar *const object_origin,
+                                                 const uchar *const counter_name __attribute__((unused)),
+                                                 const statsCtrType_t counter_type __attribute__((unused)),
+                                                 const uint64_t value __attribute__((unused)),
+                                                 const int8_t flags __attribute__((unused))) {
     unsigned *const count = context;
     if (object_origin != NULL && !strcmp((const char *)object_origin, "core.queue.local")) ++*count;
     return RS_RET_OK;
 }
 
-static void *localStatsLifetimeRead(void *const context) {
-    localStatsLifetimeContext_t *const fixture = context;
-    fixture->phase.reader_status = statsobj.GetAllCounters(localStatsLifetimeCountLocal, &(unsigned){0});
+static void *local_stats_lifetime_read(void *const context) {
+    local_stats_lifetime_context_t *const fixture = context;
+    fixture->phase.reader_status = statsobj.GetAllCounters(local_stats_lifetime_count_local, &(unsigned){0});
     return NULL;
 }
 
-static void *localStatsLifetimeDestruct(void *const context) {
-    localStatsLifetimeContext_t *const fixture = context;
-    localStatsLifetimePhase_t *const phase = &fixture->phase;
+static void *local_stats_lifetime_destruct(void *const context) {
+    local_stats_lifetime_context_t *const fixture = context;
+    local_stats_lifetime_phase_t *const phase = &fixture->phase;
 
     if (pthread_mutex_lock(&phase->mutex) == 0) {
         phase->destroy_started = 1;
         pthread_cond_broadcast(&phase->condition);
         pthread_mutex_unlock(&phase->mutex);
     }
-    qqueueLocalStatsDestruct(&fixture->owner->localStats);
+    qqueue_local_stats_destruct(&fixture->owner->local_stats);
     if (pthread_mutex_lock(&phase->mutex) == 0) {
         phase->destroy_returned = 1;
         pthread_cond_broadcast(&phase->condition);
@@ -567,7 +569,7 @@ static void *localStatsLifetimeDestruct(void *const context) {
     return NULL;
 }
 
-static rsRetVal localStatsLifetimeWait(localStatsLifetimePhase_t *const phase, int *const predicate) {
+static rsRetVal local_stats_lifetime_wait(local_stats_lifetime_phase_t *const phase, int *const predicate) {
     int err = 0;
 
     if ((err = pthread_mutex_lock(&phase->mutex)) != 0) return RS_RET_CONC_CTRL_ERR;
@@ -576,9 +578,9 @@ static rsRetVal localStatsLifetimeWait(localStatsLifetimePhase_t *const phase, i
     return err == 0 ? RS_RET_OK : RS_RET_CONC_CTRL_ERR;
 }
 
-rsRetVal qqueueLocalStatsTestLifetime(qqueue_t *const owner) {
-    localStatsLifetimeContext_t fixture = {.owner = owner};
-    qqueueLocalStats_t *stats;
+rsRetVal qqueue_local_stats_test_lifetime(qqueue_t *const owner) {
+    local_stats_lifetime_context_t fixture = {.owner = owner};
+    qqueue_local_stats_t *stats;
     pthread_t reader;
     pthread_t destructor;
     int mutex_initialized = 0;
@@ -588,8 +590,8 @@ rsRetVal qqueueLocalStatsTestLifetime(qqueue_t *const owner) {
     unsigned local_objects = 0;
     DEFiRet;
 
-    if (owner == NULL || owner->localStats == NULL) return RS_RET_PARAM_ERROR;
-    stats = owner->localStats;
+    if (owner == NULL || owner->local_stats == NULL) return RS_RET_PARAM_ERROR;
+    stats = owner->local_stats;
     if (pthread_mutex_init(&fixture.phase.mutex, NULL) != 0) return RS_RET_CONC_CTRL_ERR;
     mutex_initialized = 1;
     if (pthread_cond_init(&fixture.phase.condition, NULL) != 0) {
@@ -597,13 +599,13 @@ rsRetVal qqueueLocalStatsTestLifetime(qqueue_t *const owner) {
         return RS_RET_CONC_CTRL_ERR;
     }
     condition_initialized = 1;
-    qqueueLocalStatsSetTestPreReadHook(stats, localStatsLifetimePreRead, &fixture);
-    CHKiConcCtrl(pthread_create(&reader, NULL, localStatsLifetimeRead, &fixture));
+    qqueue_local_stats_set_test_pre_read_hook(stats, local_stats_lifetime_pre_read, &fixture);
+    CHKiConcCtrl(pthread_create(&reader, NULL, local_stats_lifetime_read, &fixture));
     reader_started = 1;
-    CHKiRet(localStatsLifetimeWait(&fixture.phase, &fixture.phase.pre_read_entered));
-    CHKiConcCtrl(pthread_create(&destructor, NULL, localStatsLifetimeDestruct, &fixture));
+    CHKiRet(local_stats_lifetime_wait(&fixture.phase, &fixture.phase.pre_read_entered));
+    CHKiConcCtrl(pthread_create(&destructor, NULL, local_stats_lifetime_destruct, &fixture));
     destructor_started = 1;
-    CHKiRet(localStatsLifetimeWait(&fixture.phase, &fixture.phase.destroy_started));
+    CHKiRet(local_stats_lifetime_wait(&fixture.phase, &fixture.phase.destroy_started));
 
     CHKiConcCtrl(pthread_mutex_lock(&fixture.phase.mutex));
     if (fixture.phase.destroy_returned) {
@@ -625,12 +627,12 @@ finalize_it:
     if (reader_started && pthread_join(reader, NULL) != 0 && iRet == RS_RET_OK) iRet = RS_RET_CONC_CTRL_ERR;
     if (destructor_started && pthread_join(destructor, NULL) != 0 && iRet == RS_RET_OK) iRet = RS_RET_CONC_CTRL_ERR;
     if (fixture.phase.reader_status != RS_RET_OK && iRet == RS_RET_OK) iRet = fixture.phase.reader_status;
-    if (owner->localStats != NULL && iRet == RS_RET_OK) {
-        qqueueLocalStatsSetTestPreReadHook(owner->localStats, NULL, NULL);
+    if (owner->local_stats != NULL && iRet == RS_RET_OK) {
+        qqueue_local_stats_set_test_pre_read_hook(owner->local_stats, NULL, NULL);
         iRet = RS_RET_INTERNAL_ERROR;
     }
     if (iRet == RS_RET_OK) {
-        CHKiRet(statsobj.GetAllCounters(localStatsLifetimeCountLocal, &local_objects));
+        CHKiRet(statsobj.GetAllCounters(local_stats_lifetime_count_local, &local_objects));
         if (local_objects != 0) iRet = RS_RET_INTERNAL_ERROR;
     }
     if (condition_initialized) pthread_cond_destroy(&fixture.phase.condition);
@@ -639,13 +641,13 @@ finalize_it:
 }
 #endif
 
-rsRetVal qqueueLocalStatsConstruct(qqueue_t *const owner,
-                                   const uchar *const logical_name,
-                                   const uint32_t frontend_limit,
-                                   const int frontend_detail,
-                                   qqueueLocalStats_t **const out) {
+rsRetVal qqueue_local_stats_construct(qqueue_t *const owner,
+                                      const uchar *const logical_name,
+                                      const uint32_t frontend_limit,
+                                      const int frontend_detail,
+                                      qqueue_local_stats_t **const out) {
     DEFiRet;
-    qqueueLocalStats_t *stats = NULL;
+    qqueue_local_stats_t *stats = NULL;
     char *object_name = NULL;
 
     if (owner == NULL || logical_name == NULL || out == NULL) return RS_RET_PARAM_ERROR;
@@ -654,23 +656,23 @@ rsRetVal qqueueLocalStatsConstruct(qqueue_t *const owner,
     stats->owner = owner;
     stats->frontend_limit = frontend_detail ? frontend_limit : 0;
     if (asprintf(&object_name, "%s.local", logical_name) < 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    CHKiRet(localStatsConstructObject(&stats->logical, (const uchar *)object_name, localStatsPreRead, stats,
-                                      stats->logical_counters, logicalCounters,
-                                      sizeof(logicalCounters) / sizeof(logicalCounters[0])));
+    CHKiRet(local_stats_construct_object(&stats->logical, (const uchar *)object_name, local_stats_pre_read, stats,
+                                         stats->logical_counters, logical_counters,
+                                         sizeof(logical_counters) / sizeof(logical_counters[0])));
     free(object_name);
     object_name = NULL;
 
     if (stats->frontend_limit != 0) {
         CHKmalloc(stats->frontends = calloc(stats->frontend_limit, sizeof(*stats->frontends)));
         for (uint32_t i = 0; i < stats->frontend_limit; ++i) {
-            localFrontendStats_t *const frontend = &stats->frontends[i];
+            local_frontend_stats_t *const frontend = &stats->frontends[i];
             frontend->adapter = stats;
             frontend->index = i;
             if (asprintf(&object_name, "%s.local.frontend.%u", logical_name, i + 1) < 0)
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            CHKiRet(localStatsConstructObject(&frontend->object, (const uchar *)object_name, localFrontendStatsPreRead,
-                                              frontend, frontend->counters, frontendCounters,
-                                              sizeof(frontendCounters) / sizeof(frontendCounters[0])));
+            CHKiRet(local_stats_construct_object(
+                &frontend->object, (const uchar *)object_name, local_frontend_stats_pre_read, frontend,
+                frontend->counters, frontend_counters, sizeof(frontend_counters) / sizeof(frontend_counters[0])));
             free(object_name);
             object_name = NULL;
         }
@@ -679,6 +681,6 @@ rsRetVal qqueueLocalStatsConstruct(qqueue_t *const owner,
     stats = NULL;
 finalize_it:
     free(object_name);
-    qqueueLocalStatsDestruct(&stats);
+    qqueue_local_stats_destruct(&stats);
     RETiRet;
 }

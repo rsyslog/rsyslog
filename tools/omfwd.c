@@ -1690,7 +1690,7 @@ finalize_it:
 
 /* count the actual number of active targets.
  */
-static int workerActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
+static int worker_active_targets(const wrkrInstanceData_t *const pWrkrData) {
     int activeTargets = 0;
     for (int j = 0; j < pWrkrData->pData->nTargets; ++j) {
         if (pWrkrData->target[j].bIsConnected) {
@@ -1702,7 +1702,7 @@ static int workerActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
 }
 
 static int countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
-    const int activeTargets = workerActiveTargets(pWrkrData);
+    const int activeTargets = worker_active_targets(pWrkrData);
     /* This shared value is telemetry, never authority over another WID's
      * retry timing or transaction outcome. */
     int oldVal, newVal;
@@ -1766,7 +1766,7 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
     const char *address;
     DEFiRet;
 
-    const int nActiveTargets = workerActiveTargets(pTarget->pWrkrData);
+    const int nActiveTargets = worker_active_targets(pTarget->pWrkrData);
 
     DBGPRINTF("doTryResume: isConnected: %d, ttResume %lld, LastActiveTargets: %d\n", pTarget->bIsConnected,
               (long long)pTarget->ttResume, nActiveTargets);
@@ -2928,14 +2928,14 @@ ENDmodExit
  * belong to the immutable output WID, including when an FE borrows BE work.
  * Namespace setup is the exception: originalNamespace is a mutable instance
  * field shared by connection attempts, so it needs a separate ownership fix. */
-static rsRetVal localQueueCheckAction(void *const instance) {
+static rsRetVal local_queue_check_action(void *const instance) {
     const instanceData *const pData = instance;
     return pData->networkNamespace != NULL ? RS_RET_LOCAL_QUEUE_CONFIG : RS_RET_OK;
 }
 
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
-    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())local_queue_check_action;
     CODEqueryEtryPt_STD_OMODTX_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_SetActionInfo_IF_OMOD_QUERIES;

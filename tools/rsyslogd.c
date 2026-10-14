@@ -1013,7 +1013,7 @@ rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue) {
     CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
         /* no queue is fatal, we need to give up in that case... */
         LogError(0, iRet, "could not start (ruleset) main message queue");
-        if (pQueue->localGraphConf != NULL) {
+        if (pQueue->local_graph_conf != NULL) {
             /* A global boundary is required by the local graph too. Propagate
              * its failure after qqueueStart has unwound; never fall back.
              * Remove the early PID file before returning the error to initAll,
@@ -1025,7 +1025,7 @@ rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue) {
             clearPidFile();
             RETiRet;
         }
-        if (pQueue->bLocalScope || pQueue->bLocalConfigError || runConf->globals.bAbortOnFailedQueueStartup) {
+        if (pQueue->local_scope || pQueue->local_config_error || runConf->globals.bAbortOnFailedQueueStartup) {
             fprintf(stderr,
                     "rsyslogd: could not start (ruleset) main message queue, "
                     "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
@@ -1772,7 +1772,7 @@ static void initAll(int argc, char **argv) {
     localRet = rsconf.Load(&ourConf, ConfFile);
     /* Never permit an unaudited local graph, including developer/partial-config
      * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */
-    if (localRet == RS_RET_LOCAL_QUEUE_CONFIG || (loadConf != NULL && loadConf->bLocalConfigError))
+    if (localRet == RS_RET_LOCAL_QUEUE_CONFIG || (loadConf != NULL && loadConf->local_config_error))
         ABORT_FINALIZE(RS_RET_LOCAL_QUEUE_CONFIG);
 
 #ifdef ENABLE_LIBCAPNG
@@ -2558,7 +2558,7 @@ static void deinitAll(void) {
     glbl.SetGlobalInputTermination();
     /* Wake graph inputs already waiting on capacity before joining them.
      * This does not close graph admission or begin its drain deadlines. */
-    rulesetWakeLocalGraphInputs(runConf);
+    ruleset_wake_local_graph_inputs(runConf);
 
     thrdTerminateAll();
 

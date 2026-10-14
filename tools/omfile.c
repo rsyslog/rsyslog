@@ -82,7 +82,7 @@ MODULE_CNFNAME("omfile")
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 static rsRetVal normalizeDynaFileCacheSize(int *const pNewVal);
-static rsRetVal localQueuePrepareAction(void *instance);
+static rsRetVal local_queue_prepare_action(void *instance);
 
 typedef struct pathComponent_s {
     const char *ptr;
@@ -2214,7 +2214,7 @@ BEGINdoHUP
         if (pData->pStrm != NULL) {
             closeFile(pData);
         }
-        if (pData->localQualified) iRet = localQueuePrepareAction(pData);
+        if (pData->localQualified) iRet = local_queue_prepare_action(pData);
     }
     pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
@@ -2231,7 +2231,7 @@ ENDmodExit
 /* Optional private S2 capability: inspect resolved settings, including legacy
  * and module defaults. File I/O may block; this is a narrow transactional
  * qualification, never a generic nonblocking-output claim. */
-static rsRetVal localQueueCheckAction(void *const instance) {
+static rsRetVal local_queue_check_action(void *const instance) {
     instanceData *const pData = instance;
     if (pData == NULL || pData->localNumericError || pData->localModConf == NULL ||
         pData->localModConf->localNumericError || pData->localModConf->compressionDriver != STRM_COMPRESS_ZIP ||
@@ -2247,7 +2247,7 @@ static rsRetVal localQueueCheckAction(void *const instance) {
 /* Called at action activation after privilege drop, never by -N1. HUP calls it
  * again under mutWrite. An unavailable/replaced/nonregular sink fails closed;
  * workers cannot lazily open a potentially blocking or unaudited descriptor. */
-static rsRetVal localQueuePrepareAction(void *const instance) {
+static rsRetVal local_queue_prepare_action(void *const instance) {
     instanceData *const pData = instance;
     DEFiRet;
     if (!pData->localQualified || pData->isDevNull) RETiRet;
@@ -2260,8 +2260,8 @@ finalize_it:
 
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
-    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
-    if (!strcmp((char *)name, "localQueuePrepareAction")) *pEtryPoint = (rsRetVal(*)())localQueuePrepareAction;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())local_queue_check_action;
+    if (!strcmp((char *)name, "localQueuePrepareAction")) *pEtryPoint = (rsRetVal(*)())local_queue_prepare_action;
     CODEqueryEtryPt_STD_OMODTX_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_QUERIES;

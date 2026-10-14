@@ -135,7 +135,7 @@ static rsRetVal localTestCommitPrepare(action_t *const action) {
     const char *const entry = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ENTRY");
     const char *const release = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_RELEASE");
     struct stat st;
-    if (!runConf->bLocalConfigRequested || !action->isTransactional || action->pQueue->qType != QUEUETYPE_DIRECT ||
+    if (!runConf->local_config_requested || !action->isTransactional || action->pQueue->qType != QUEUETYPE_DIRECT ||
         action->pMod->cnfName == NULL || strcmp((const char *)action->pMod->cnfName, "omfile") || entry == NULL ||
         entry[0] != '/' || release == NULL || release[0] != '/' || localTestCommit.action != NULL)
         return RS_RET_LOCAL_QUEUE_CONFIG;
@@ -2451,7 +2451,7 @@ DEFFUNC_llExecFunc(doActivateActions) {
         return localRet;
     }
 #endif
-    if (runConf->bLocalConfigRequested && pThis->pMod->cnfName != NULL &&
+    if (runConf->local_config_requested && pThis->pMod->cnfName != NULL &&
         !strcmp((const char *)pThis->pMod->cnfName, "omfile")) {
         rsRetVal (*prepare)(void *) = NULL;
         localRet = pThis->pMod->modQueryEtryPt((uchar *)"localQueuePrepareAction", (rsRetVal(**)()) & prepare);
@@ -2466,7 +2466,7 @@ DEFFUNC_llExecFunc(doActivateActions) {
     setSuspendMessageConfVars(pThis);
     localRet = qqueueStart(runConf, pThis->pQueue);
     if (localRet != RS_RET_OK) {
-        if (pThis->pQueue->localGraphConf != NULL) {
+        if (pThis->pQueue->local_graph_conf != NULL) {
             /* Every graph destination is required. The iterator ignores our
              * return, so preserve failure before inputs can be released. */
             *preparationResult = localRet;
@@ -2565,7 +2565,7 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
         /* Record for later local-graph qualification even if this action was
          * declared before scope=local. Preserve existing global conversions. */
         if (pvals[i].val.datatype == 'N' && (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX))
-            pAction->bLocalQueueNumericError = 1;
+            pAction->local_queue_numeric_error = 1;
         if (!strcmp(pblk.descr[i].name, "name")) {
             pAction->pszName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(pblk.descr[i].name, "type")) {

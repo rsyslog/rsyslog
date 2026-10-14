@@ -260,7 +260,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *
     /* The historical converter permits +2^31 and does not check INT_MIN.
      * Retain that global behavior, but remember that a later experimental local
      * graph cannot qualify an inherited value after narrowing loses its intent. */
-    if (loadConf != NULL && (i < INT_MIN || i > INT_MAX)) loadConf->bLocalLegacyNumericError = 1;
+    if (loadConf != NULL && (i < INT_MIN || i > INT_MAX)) loadConf->local_legacy_numeric_error = 1;
     if (i > 2147483648ll) { /*2^31*/
         LogError(0, RS_RET_INVALID_VALUE, "value %lld too large for integer argument.", i);
         ABORT_FINALIZE(RS_RET_INVALID_VALUE);

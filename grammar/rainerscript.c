@@ -5532,7 +5532,7 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         cnfstmtDisable(cnfstmt);
         goto done;
     }
-    qqueueNoteLocalConfigIntent(lst);
+    qqueue_note_local_config_intent(lst);
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
         parser_errmsg("warnings occurred in file '%s' around line %d", cnfcurrfn, yylineno);

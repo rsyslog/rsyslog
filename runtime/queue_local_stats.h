@@ -12,10 +12,10 @@
 #include "rsyslog.h"
 
 typedef struct queue_s qqueue_t;
-typedef struct qqueueLocalStats_s qqueueLocalStats_t;
+typedef struct qqueue_local_stats_s qqueue_local_stats_t;
 
 /* Obtain the adapter's private statsobj interface before construction. */
-rsRetVal qqueueLocalStatsClassInit(void);
+rsRetVal qqueue_local_stats_class_init(void);
 
 /*
  * Construct the always-on logical summary and, when frontend_detail is set,
@@ -25,26 +25,29 @@ rsRetVal qqueueLocalStatsClassInit(void);
  * All published values are lifetime snapshot values.  They deliberately use
  * CTR_FLAG_NONE: a collector reset must not race ownership accounting.
  */
-rsRetVal qqueueLocalStatsConstruct(
-    qqueue_t *owner, const uchar *logical_name, uint32_t frontend_limit, int frontend_detail, qqueueLocalStats_t **out);
+rsRetVal qqueue_local_stats_construct(qqueue_t *owner,
+                                      const uchar *logical_name,
+                                      uint32_t frontend_limit,
+                                      int frontend_detail,
+                                      qqueue_local_stats_t **out);
 
 /*
  * Unlink every stats object before qqueueLocalDestruct() releases owner->local.
  * The statsobj unlink holds its global list lock, so no pre-read callback can
  * retain this adapter after this function returns.
  */
-void qqueueLocalStatsDestruct(qqueueLocalStats_t **stats);
+void qqueue_local_stats_destruct(qqueue_local_stats_t **stats);
 
 #ifdef ENABLE_TESTBENCH
 /* Test-only synchronization point inside the actual pre-read callback. */
-typedef void (*qqueueLocalStatsTestPreReadHook_t)(void *context);
-void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *stats,
-                                        qqueueLocalStatsTestPreReadHook_t hook,
-                                        void *context);
+typedef void (*qqueue_local_stats_test_pre_read_hook_t)(void *context);
+void qqueue_local_stats_set_test_pre_read_hook(qqueue_local_stats_t *stats,
+                                               qqueue_local_stats_test_pre_read_hook_t hook,
+                                               void *context);
 
 /* Exercise real stats-list reader/destruction serialization on an initialized
  * local queue. This destructive test fixture is available only to imdiag. */
-rsRetVal qqueueLocalStatsTestLifetime(qqueue_t *owner);
+rsRetVal qqueue_local_stats_test_lifetime(qqueue_t *owner);
 #endif
 
 #endif

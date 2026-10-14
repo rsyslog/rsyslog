@@ -2925,12 +2925,12 @@ NO_LEGACY_CONF_parseSelectorAct
      * error file is already instance-mutex protected. Retry reinjection is an
      * explicit graph edge, exposed separately for dependency/cycle validation. */
     static rsRetVal
-    localQueueCheckAction(void *const instance) {
+    local_queue_check_action(void *const instance) {
     (void)instance;
     return RS_RET_OK;
 }
 
-static rsRetVal localQueueGetRetryRuleset(void *const instance, ruleset_t **const target) {
+static rsRetVal local_queue_get_retry_ruleset(void *const instance, ruleset_t **const target) {
     const instanceData *const pData = instance;
     *target = pData->retryRuleset;
     return pData->retryFailures ? RS_RET_OK : RS_RET_NOT_FOUND;
@@ -2938,8 +2938,8 @@ static rsRetVal localQueueGetRetryRuleset(void *const instance, ruleset_t **cons
 
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
-    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
-    if (!strcmp((char *)name, "localQueueGetRetryRuleset")) *pEtryPoint = (rsRetVal(*)())localQueueGetRetryRuleset;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())local_queue_check_action;
+    if (!strcmp((char *)name, "localQueueGetRetryRuleset")) *pEtryPoint = (rsRetVal(*)())local_queue_get_retry_ruleset;
     CODEqueryEtryPt_STD_OMOD_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;

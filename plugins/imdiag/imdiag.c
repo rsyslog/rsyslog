@@ -716,7 +716,7 @@ static rsRetVal queue_lease_test(tcps_sess_t *pSess) {
         CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
         FINALIZE;
     }
-    iRet = qqueueTestLeaseCompletionPaths(runConf->pMsgQueue);
+    iRet = qqueue_test_lease_completion_paths(runConf->pMsgQueue);
     if (iRet == RS_RET_OK) {
         CHKiRet(sendResponse(pSess, "OK\n"));
     } else {
@@ -736,7 +736,7 @@ static rsRetVal local_queue_stats_lifetime_test(tcps_sess_t *pSess) {
     if (runConf->pMsgQueue == NULL) {
         CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
     } else {
-        iRet = qqueueLocalStatsTestLifetime(runConf->pMsgQueue);
+        iRet = qqueue_local_stats_test_lifetime(runConf->pMsgQueue);
         if (iRet == RS_RET_OK) {
             CHKiRet(sendResponse(pSess, "OK\n"));
         } else {
@@ -1142,8 +1142,8 @@ static rsRetVal inputTermFixtureQueue(qqueue_t **const queue, const char *const 
     (*queue)->iMaxQueueSize = (*queue)->iDeqBatchSize = (*queue)->iMinMsgsPerWrkr = 1;
     (*queue)->toEnq = 60000;
     (*queue)->toQShutdown = (*queue)->toActShutdown = 5000;
-    if (graph) (*queue)->localGraphConf = runConf;
-    (*queue)->localGraphReady = 1;
+    if (graph) (*queue)->local_graph_conf = runConf;
+    (*queue)->local_graph_ready = 1;
     ret = obj.SetName((obj_t *)*queue, (uchar *)name);
     return ret == RS_RET_OK ? qqueueStart(runConf, *queue) : ret;
 }
@@ -1177,8 +1177,9 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     DEFiRet;
     if (pthread_once(&inputTermFixtureCondOnce, inputTermFixtureInitCond) != 0 || !inputTermFixtureCondReady)
         return RS_RET_ERR;
-    if (destination->localGraphConf == NULL || destination->iMaxQueueSize != 16 || destination->iDeqBatchSize != 1 ||
-        (destination->local != NULL && (destination->localFrontendSize != 4 || destination->localMaxFrontends != 1)))
+    if (destination->local_graph_conf == NULL || destination->iMaxQueueSize != 16 || destination->iDeqBatchSize != 1 ||
+        (destination->local != NULL &&
+         (destination->local_frontend_size != 4 || destination->local_max_frontends != 1)))
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     inputTermFixtureDestination = destination;
     inputTermFixtureEntered = inputTermFixtureRelease = inputTermFixtureDone = 0;
@@ -1202,7 +1203,7 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     /* Real shutdown ordering: publish flag, wake admissions, then join input.
      * Downstream callbacks are still gated and cannot make capacity available. */
     glbl.SetGlobalInputTermination();
-    rulesetWakeLocalGraphInputs(runConf);
+    ruleset_wake_local_graph_inputs(runConf);
     if (!inputTermFixtureAwait(&inputTermFixtureDone, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
     pthread_join(producer, NULL);
     started = 0;
@@ -1248,7 +1249,7 @@ finalize_it:
      * wait. Publish termination and wake it before releasing held consumers. */
     if (started) {
         glbl.SetGlobalInputTermination();
-        rulesetWakeLocalGraphInputs(runConf);
+        ruleset_wake_local_graph_inputs(runConf);
     }
     pthread_mutex_lock(&inputTermFixtureMut);
     inputTermFixtureRelease = 1;
@@ -1261,7 +1262,7 @@ finalize_it:
         pthread_join(producer, NULL);
     }
     if (inputTermFixtureSource != NULL) {
-        inputTermFixtureSource->localGraphConf = NULL;
+        inputTermFixtureSource->local_graph_conf = NULL;
         qqueueDestruct(&inputTermFixtureSource);
     }
     if (global != NULL) qqueueDestruct(&global);
