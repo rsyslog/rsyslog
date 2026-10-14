@@ -1837,10 +1837,12 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
     es_str_t *res;
     uchar *src_buff = es_getBufAddr(str);
     uint i, j;
+    /* A shorter replacement can bring an oversized source below the limit. */
     for (i = j = 0; i <= lSrc; i++, lDst++) {
-        if (lDst > maxResult) goto oversize;
+        if (lReplaceWith >= lfind && lDst > maxResult) goto oversize;
         if (j == lfind) {
-            if (lReplaceWith > maxResult - (lDst - lfind)) goto oversize;
+            if (lReplaceWith > lfind && (lDst - lfind > maxResult || lReplaceWith > maxResult - (lDst - lfind)))
+                goto oversize;
             lDst = lDst - lfind + lReplaceWith;
             j = 0;
             if (lfind == 0) break;
@@ -1854,6 +1856,7 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
             j = 0;
         }
     }
+    if (lDst > maxResult) goto oversize;
     res = es_newStr((es_size_t)lDst);
     if (res == NULL) goto done;
     unsigned char *dest = es_getBufAddr(res);
