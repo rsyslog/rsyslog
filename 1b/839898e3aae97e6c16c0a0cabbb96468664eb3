@@ -1,0 +1,14 @@
+tests/fuzz/prepare-imtcp-session-corpus.py
+  h_95716f3de0caf5 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b839898e3aae97e6c16c0a0cabbb96468664eb3",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
