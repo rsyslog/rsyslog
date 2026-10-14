@@ -743,7 +743,6 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-disablelfdelimiter.rst \
     source/reference/parameters/imtcp-discardtruncatedmsg.rst \
     source/reference/parameters/imtcp-flowcontrol.rst \
-    source/reference/parameters/imtcp-failonbinderror.rst \
     source/reference/parameters/imtcp-gnutlsprioritystring.rst \
     source/reference/parameters/imtcp-keepalive-interval.rst \
     source/reference/parameters/imtcp-keepalive-probes.rst \

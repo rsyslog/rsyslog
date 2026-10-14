@@ -187,13 +187,13 @@ static rsRetVal addListener(instanceConf_t *iconf) {
 
     DBGPRINTF("imczmq: addListener called..\n");
     struct listener_t *pData = NULL;
-    CHKmalloc(pData = (struct listener_t *)malloc(sizeof(struct listener_t)));
+    CHKmalloc(pData = calloc(1, sizeof(*pData)));
     pData->ruleset = iconf->pBindRuleset;
 
     pData->sock = zsock_new(iconf->sockType);
     if (!pData->sock) {
         LogError(0, RS_RET_NO_ERRCODE, "imczmq: new socket failed for endpoints: %s", iconf->sockEndpoints);
-        ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+        ABORT_FINALIZE(RS_RET_ERR);
     }
 
     DBGPRINTF("imczmq: created socket of type %d..\n", iconf->sockType);
@@ -309,6 +309,7 @@ static rsRetVal addListener(instanceConf_t *iconf) {
     }
 finalize_it:
     if (iRet != RS_RET_OK) {
+        if (pData != NULL && pData->sock != NULL) zsock_destroy(&pData->sock);
         free(pData);
     }
     RETiRet;
@@ -327,6 +328,8 @@ finalize_it:
  */
 static rsRetVal rcvData(void) {
     DEFiRet;
+    zpoller_t *poller = NULL;
+    struct listener_t *pData = NULL;
 
     if (!listenerList) {
         listenerList = zlist_new();
@@ -349,14 +352,12 @@ static rsRetVal rcvData(void) {
         CHKiRet(addListener(inst));
     }
 
-    zpoller_t *poller = zpoller_new(NULL);
+    poller = zpoller_new(NULL);
     if (!poller) {
         LogError(0, NO_ERRCODE, "could not create poller");
         ABORT_FINALIZE(RS_RET_ERR);
     }
     DBGPRINTF("imczmq: created poller\n");
-
-    struct listener_t *pData;
 
     pData = zlist_first(listenerList);
     if (!pData) {
@@ -421,11 +422,9 @@ static rsRetVal rcvData(void) {
     }
 finalize_it:
     zpoller_destroy(&poller);
-    pData = zlist_first(listenerList);
-    while (pData) {
+    while (listenerList != NULL && (pData = zlist_pop(listenerList)) != NULL) {
         zsock_destroy(&pData->sock);
-        free(pData->ruleset);
-        pData = zlist_next(listenerList);
+        free(pData);
     }
     zlist_destroy(&listenerList);
     zactor_destroy(&authActor);

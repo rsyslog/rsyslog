@@ -120,6 +120,7 @@ struct instanceConf_s {
     redisSSLContext *ssl_conn; /* redis ssl connection */
 #endif
     struct event_base *evtBase;
+    sbool startup_valid;
 
     redisNode *currentNode; /* currently used redis node, can be any of the nodes in the redisNodesList list */
     /* the list of seen nodes
@@ -143,6 +144,7 @@ struct modConfData_s {
  */
 static struct imhiredisWrkrInfo_s {
     pthread_t tid; /* the worker's thread ID */
+    int started;
     instanceConf_t *inst; /* Pointer to imhiredis instance */
     rsRetVal (*fnConnectMaster)(instanceConf_t *inst);
     sbool (*fnIsConnected)(instanceConf_t *inst);
@@ -692,13 +694,22 @@ BEGINactivateCnf
     CODESTARTactivateCnf;
     for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
         iRet = checkInstance(inst);
+        if (iRet != RS_RET_OK) {
+            if (runConf->globals.bRequireAllInputs) break;
+            iRet = RS_RET_OK;
+            continue;
+        }
         if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE) {
             if ((inst->evtBase = event_base_new()) == NULL) {
                 LogError(0, RS_RET_OUT_OF_MEMORY, "imhiredis: could not create libevent base");
-                iRet = RS_RET_OUT_OF_MEMORY;
-                break;
+                if (runConf->globals.bRequireAllInputs) {
+                    iRet = RS_RET_OUT_OF_MEMORY;
+                    break;
+                }
+                continue;
             }
         }
+        inst->startup_valid = 1;
     }
 ENDactivateCnf
 
@@ -773,7 +784,7 @@ static void shutdownImhiredisWorkers(void) {
 
     DBGPRINTF("imhiredis: waiting on imhiredis workerthread termination\n");
     for (i = 0; i < activeHiredisworkers; ++i) {
-        pthread_join(imhiredisWrkrInfo[i].tid, NULL);
+        if (imhiredisWrkrInfo[i].started) pthread_join(imhiredisWrkrInfo[i].tid, NULL);
         DBGPRINTF("imhiredis: Stopped worker %d\n", i);
     }
     free(imhiredisWrkrInfo);
@@ -791,7 +802,7 @@ BEGINrunInput
     DBGPRINTF("imhiredis: runInput loop started ...\n");
     activeHiredisworkers = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        ++activeHiredisworkers;
+        if (inst->startup_valid) ++activeHiredisworkers;
     }
 
     if (activeHiredisworkers == 0) {
@@ -814,9 +825,17 @@ BEGINrunInput
      */
     i = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        if (!inst->startup_valid) continue;
         /* init worker info structure! */
         imhiredisWrkrInfo[i].inst = inst; /* Set reference pointer */
-        pthread_create(&imhiredisWrkrInfo[i].tid, &wrkrThrdAttr, imhirediswrkr, &(imhiredisWrkrInfo[i]));
+        const int err =
+            pthread_create(&imhiredisWrkrInfo[i].tid, &wrkrThrdAttr, imhirediswrkr, &(imhiredisWrkrInfo[i]));
+        if (err == 0) {
+            imhiredisWrkrInfo[i].started = 1;
+        } else {
+            LogError(err, RS_RET_SYS_ERR, "imhiredis: failed to start worker thread %d", i);
+            thrd_report_fatal_input_failure();
+        }
         i++;
     }
 
