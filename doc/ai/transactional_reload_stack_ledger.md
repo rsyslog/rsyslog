@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: first five dependent draft PRs published;
-current-main local-queue integration and slice 6 construction in progress.
+Recorded: 2026-10-15. Status: first five dependent draft PRs published and
+integrated with current main; slice 6 construction and focused checks ongoing.
 Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 
 ## Method and merge contract
@@ -27,6 +27,9 @@ Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 - Start every PR description with prominent merge requirements: parent first,
   retarget to main after parent merge, verify the delta, pass relevant checks
   and review, and never merge a child into an unmerged parent as a substitute.
+- This umbrella-branch ledger is the canonical live record linked by every PR.
+  Earlier slices contain historical snapshots; copy the final current ledger
+  into the assembled stack tip so the merged series retains the final map.
 - Maintainer-approved validation scope (2026-10-15): focused builds/tests and
   independent review for each intermediate PR; broad container validation on
   the final combined tip. Intermediate slices are targeted-tested, not fully
@@ -153,11 +156,14 @@ The final combined tip still requires the broad container gate.
 Upstream advanced from the validated rebase base to ed0094984 while slicing;
 the stack was refreshed onto it, retaining imtcp regex-framing and fuzz-corpus
 whitespace fixes. Subsequently main advanced to c62d84ad7, merging PR #7593's
-local queue implementation. GitHub reports slice 1 conflicting; integration
-is in progress before any slice is called merge-ready. Preserve upstream local
-queue ownership/shutdown behavior, and reject unsupported local/mixed graph
-reload rather than assume legacy queue barriers cover it. Rebuild security
-inputs and refresh review evidence after this material integration.
+local queue implementation. The initial conflict is resolved; the complete
+five-branch chain was published atomically with exact leases. GitHub verifies
+all five are conflict-free against their declared bases, with one functional
+commit each. Local queue ownership/shutdown behavior is preserved; active
+local/mixed graph activation rejects explicitly before cloning or barriers.
+All five current security packages have complete, unique reviewed-file coverage
+and passed receipts against freshly rebuilt clean inventories. Hosted checks
+and review remain separate merge requirements, not implied by mergeability.
 
 Boundary adjustments already made: benchmark assets are absent from the first
 three slices, retained in the umbrella for later performance/tooling work.
@@ -177,5 +183,45 @@ ruleset graph/call lifecycle). Current bounded reload is not full-config reload.
 Next boundary in progress: slice 6, bounded compatible existing-listener live
 policy and accept-time profiles. First-introduction fixes include poll capacity
 and failed-resume ownership/automatic retry before candidate disposal. It must
-not enable listener addition/removal/replacement. Local construction is held
-until integration of the published parent stack with current main is sound.
+not enable listener addition/removal/replacement. Construction has resumed on
+the integrated parent; module/input-only changes must also reject active
+local/mixed graphs before any module preparation or publication.
+
+Current-main integration results: slices 1-3 are published on
+c62d84ad7 at f21fdc83c / 2d05b707f / ba2f993cf. Their refreshed focused
+lanes passed 13/13 (71.38s), 9/9 (63.89s) and 12/12 (64.00s), including
+RainerScript/YAML local-queue configuration controls and all three checkpoint
+intervals in slice 1. Fresh independent security reviews cover those exact
+deltas; receipts are sealed against the rebuilt clean inventories.
+
+| PR | Current published head | Verified base |
+| --- | --- | --- |
+| #7683 | f21fdc83cb2075540c7179332f6cc07ee6ccf716 | main / c62d84ad7 |
+| #7684 | 2d05b707f03c600cd4f93d86851f77ec4360ecd4 | #7683 / f21fdc83c |
+| #7685 | ba2f993cfac69c93f2462e27bc4d131fb7dcbe45 | #7684 / 2d05b707f |
+| #7686 | 33aeada71a5077156d9eb43f241db2e863767873 | #7685 / ba2f993cf |
+| #7687 | 659a3cbf8874b8e02af56de5f5cbff27aa8f827e | #7686 / 33aeada71 |
+
+Slice 4's six final RS/YAML controls passed: global activation positives plus
+local-only and mixed-graph rejection with old generation, old routing and the
+configured-omfile cause verified. Eight units, four critical local lifecycle
+controls and the closed-dequeue regression passed. Mock distcheck passed with
+1,577 passes / 10 skips; HTML documentation passed. Slice 5 passed all 13
+focused controls, including the four inherited local/mixed rejections.
+Initial fixture and command setup failures are retained, not counted as passing
+coverage. Details and exact commands are in the durable slice-4 ignored report
+.codex/security-review/current-main-integration.md. Slice 4/5 build concurrency
+was -j20, focused checks -j6 (final six controls -j4), mock checks -j20, docs
+-j20. Elasticsearch, Kafka and MySQL were disabled in these targeted configure
+lanes; service-backed coverage remains deferred to the final combined tip.
+
+The umbrella source remains a historical reference, not the current integrated
+candidate. Final parity checks must compare the assembled feature delta on
+the current upstream base and explicitly retain upstream changes, rather than
+equating raw trees across different upstream baselines.
+
+Future full-reload work must address producer-local frontend consumer barriers
+and graph ownership explicitly. The present stack will reject activation for
+active local/mixed graphs; it does not pretend the legacy queue barrier covers
+those workers. Lifting that restriction belongs to a later designed and tested
+capability, not an unreviewed expansion during this rebase.
