@@ -35,6 +35,7 @@
 #ifndef MODULES_H_INCLUDED
 #define MODULES_H_INCLUDED 1
 
+#include <time.h>
 #include "objomsr.h"
 #include "rainerscript.h"
 
@@ -160,6 +161,13 @@ typedef void (*modReloadAbortV1_t)(void *pReloadState);
  * the controller can retry. Never reactivate the old configuration.
  */
 typedef rsRetVal (*modReloadRetireV1_t)(void *pReloadState);
+/** @brief Quiesce prepared input state until an absolute CLOCK_REALTIME deadline.
+ * Caller owns state and retains it on failure; successful resume is required
+ * before abort/retire consumes state. The callback manages its own input locks.
+ */
+typedef rsRetVal (*modReloadQuiesceV1_t)(void *pReloadState, const struct timespec *deadline);
+/** @brief Resume quiesced state; failure retains state and retry responsibility. */
+typedef rsRetVal (*modReloadResumeV1_t)(void *pReloadState);
 /** @brief Explicit guarantees required before invoking the live lifecycle. */
 typedef enum eModReloadCapabilityFlags_ {
     eMOD_RELOAD_CAP_VALIDATE_PRIVATE = 1U << 0, /**< Validation has no external effects. */
@@ -168,7 +176,8 @@ typedef enum eModReloadCapabilityFlags_ {
      * this alone does not imply support for a mutating transition. */
     eMOD_RELOAD_CAP_REUSE = 1U << 2,
     eMOD_RELOAD_CAP_COMMIT = 1U << 3, /**< Commit cannot fail. */
-    eMOD_RELOAD_CAP_RETIRE = 1U << 4 /**< Old resources survive until quiescence. */
+    eMOD_RELOAD_CAP_RETIRE = 1U << 4, /**< Old resources survive until quiescence. */
+    eMOD_RELOAD_CAP_QUIESCE = 1U << 5 /**< Inputs provide paired quiesce/resume hooks. */
 } eModReloadCapabilityFlags_t;
 /** @brief Module-supplied optional interface, copied into the core module record. */
 typedef struct modReloadInterfaceV1_s {
@@ -180,6 +189,9 @@ typedef struct modReloadInterfaceV1_s {
     modReloadCommitV1_t commit; /**< Infallible publication callback. */
     modReloadAbortV1_t abort; /**< Uncommitted-state cleanup callback. */
     modReloadRetireV1_t retire; /**< Quiescent committed-state cleanup callback. */
+    /* Optional append-only input/runtime safepoint hooks. */
+    modReloadQuiesceV1_t quiesce; /**< Paired input safepoint acquisition. */
+    modReloadResumeV1_t resume; /**< Resume retains retry ownership on failure. */
 } modReloadInterfaceV1_t;
 /** @brief Version identifier for the optional reload interface. */
 #define eMOD_RELOAD_INTERFACE_V1 1
@@ -376,6 +388,12 @@ rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *pMod,
  * conservative preflight.
  */
 eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
+rsRetVal modReloadPrepare(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf, void **pReloadState);
+void modReloadCommit(const modInfo_t *pMod, void *pReloadState);
+void modReloadAbort(const modInfo_t *pMod, void *pReloadState);
+rsRetVal modReloadRetire(const modInfo_t *pMod, void *pReloadState);
+rsRetVal modReloadQuiesce(const modInfo_t *pMod, void *pReloadState, const struct timespec *deadline);
+rsRetVal modReloadResume(const modInfo_t *pMod, void *pReloadState);
 
 
 /* interfaces */

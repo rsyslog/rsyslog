@@ -1,7 +1,12 @@
 /* SPDX-License-Identifier: Apache-2.0
- * Unit coverage for the dormant module reload capability contract.  The
- * oracle is an exact capability result from synthetic module records, so no
- * daemon configuration, activation, or timing is involved.
+ * Unit coverage for the module reload capability and lifecycle contract. The
+ * oracle is an exact capability/state result from synthetic module records:
+ * optional append-only quiesce hooks remain backward compatible, invalid or
+ * partial callbacks fail closed, and no daemon timing is involved. Resume
+ * failures retain retry ownership and cannot reject a published generation;
+ * exact callback counts and result values are the deterministic retry oracle.
+ * The production imtcp resume guard also proves same-generation failure/retry
+ * ownership and suppresses callbacks for stopped-generation runtime sentinels.
  */
 #include "config.h"
 #include <stddef.h>
@@ -12,6 +17,8 @@
 
 /* Keep this small API unit independent of the full runtime link closure. */
 #include "../../runtime/module-reload.c"
+#include "../../tools/shadow_reload_lifecycle.h"
+#include "../../plugins/imtcp/imtcp-reload-resume.h"
 
 #define CHECK(condition)                                                                    \
     do {                                                                                    \
@@ -20,6 +27,39 @@
             return 1;                                                                       \
         }                                                                                   \
     } while (0)
+
+static unsigned guardedReleaseCalls;
+static rsRetVal guardedReleaseResult;
+static int guardedRuntime;
+
+static rsRetVal guardedRelease(void *const runtime, const uint64_t token) {
+    ++guardedReleaseCalls;
+    /* Never dereference the stopped-generation sentinel, even on test failure. */
+    if (runtime != &guardedRuntime || token != 9) return RS_RET_PARAM_ERROR;
+    return guardedReleaseResult;
+}
+
+static int stoppedRuntimeResume(void) {
+    int held = 1;
+    guardedReleaseResult = RS_RET_ERR;
+    CHECK(imtcpReloadResumeHeldV1(1, 1, &guardedRuntime, 9, &held, guardedRelease) == RS_RET_ERR);
+    CHECK(held == 1 && guardedReleaseCalls == 1);
+    guardedReleaseResult = RS_RET_OK;
+    CHECK(imtcpReloadResumeHeldV1(1, 1, &guardedRuntime, 9, &held, guardedRelease) == RS_RET_OK);
+    CHECK(held == 0 && guardedReleaseCalls == 2);
+    CHECK(imtcpReloadResumeHeldV1(1, 1, NULL, 0, &held, guardedRelease) == RS_RET_OK);
+    CHECK(guardedReleaseCalls == 2);
+    held = 1;
+    guardedReleaseResult = RS_RET_ERR;
+    CHECK(imtcpReloadResumeHeldV1(1, 1, &guardedRuntime, 9, &held, guardedRelease) == RS_RET_ERR);
+    CHECK(held == 1 && guardedReleaseCalls == 3);
+    /* afterRun advanced the generation and freed runtime. The actual
+     * production guard must consume only the held flag, without calling a
+     * callback that could dereference this invalid endpoint sentinel. */
+    CHECK(imtcpReloadResumeHeldV1(1, 2, (void *)(uintptr_t)1, 9, &held, guardedRelease) == RS_RET_OK);
+    CHECK(held == 0 && guardedReleaseCalls == 3);
+    return 0;
+}
 
 static rsRetVal classify_live_swap(const void __attribute__((unused)) * pOldCnf,
                                    const void __attribute__((unused)) * pNewCnf,
@@ -49,10 +89,15 @@ static rsRetVal classify_invalid(const void __attribute__((unused)) * pOldCnf,
     return RS_RET_OK;
 }
 
+static int reloadStateSentinel;
+static int quiesceCount;
+static int resumeCount;
+static rsRetVal resumeResult = RS_RET_OK;
+
 static rsRetVal reload_prepare(const void __attribute__((unused)) * pOldCnf,
                                const void __attribute__((unused)) * pNewCnf,
                                void **pReloadState) {
-    *pReloadState = NULL;
+    *pReloadState = &reloadStateSentinel;
     return RS_RET_OK;
 }
 
@@ -60,6 +105,18 @@ static void reload_commit_or_abort(void __attribute__((unused)) * pReloadState) 
 
 static rsRetVal reload_retire(void __attribute__((unused)) * pReloadState) {
     return RS_RET_OK;
+}
+
+static rsRetVal reload_quiesce(void *const pReloadState, const struct timespec *const deadline) {
+    if (pReloadState != &reloadStateSentinel || deadline == NULL) return RS_RET_PARAM_ERROR;
+    ++quiesceCount;
+    return RS_RET_OK;
+}
+
+static rsRetVal reload_resume(void *const pReloadState) {
+    if (pReloadState != &reloadStateSentinel) return RS_RET_PARAM_ERROR;
+    ++resumeCount;
+    return resumeResult;
 }
 
 static int sourceSentinel;
@@ -110,6 +167,7 @@ static rsRetVal source_classify_invalid(const void __attribute__((unused)) * old
 }
 
 int main(void) {
+    CHECK(stoppedRuntimeResume() == 0);
     /* Pin the published ABI, not just symbolic comparisons within one build. */
     CHECK(eMOD_RELOAD_RESTART_REQUIRED == 0);
     CHECK(eMOD_RELOAD_LIVE_SWAP == 1);
@@ -118,6 +176,8 @@ int main(void) {
     modInfo_t legacy;
     modReloadSourceBuildContextV1_t sourceContext;
     void *candidateCnf = NULL;
+    void *reloadState = NULL;
+    struct timespec deadline = {.tv_sec = 1, .tv_nsec = 0};
     memset(&legacy, 0, sizeof(legacy));
     CHECK(!modReloadHasLifecycleHooks(&legacy));
     CHECK(!modReloadHasValidSourceInterfaceV1(&legacy));
@@ -156,6 +216,40 @@ int main(void) {
                                       eMOD_RELOAD_CAP_REUSE | eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
     CHECK(modReloadHasLifecycleHooks(&legacy));
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_LIVE_SWAP);
+    CHECK(modReloadPrepare(&legacy, &legacy, &legacy, &reloadState) == RS_RET_OK);
+    CHECK(reloadState == &reloadStateSentinel);
+    CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(modReloadResume(&legacy, reloadState) == RS_RET_NOT_IMPLEMENTED);
+    legacy.reloadV1.capabilityFlags |= eMOD_RELOAD_CAP_QUIESCE;
+    legacy.reloadV1.quiesce = reload_quiesce;
+    legacy.reloadV1.resume = reload_resume;
+    CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_OK);
+    CHECK(modReloadResume(&legacy, reloadState) == RS_RET_OK);
+    CHECK(quiesceCount == 1);
+    CHECK(resumeCount == 1);
+    int resumePending = 1;
+    rsRetVal activationResult = RS_RET_OK;
+    resumeResult = RS_RET_ERR;
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 1, &activationResult) == RS_RET_ERR);
+    CHECK(resumePending == 1 && activationResult == RS_RET_OK && resumeCount == 2);
+    /* Repeated cleanup must retain the same live state on failure. */
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, NULL) == RS_RET_ERR);
+    CHECK(resumePending == 1 && resumeCount == 3);
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, &activationResult) == RS_RET_ERR);
+    CHECK(resumePending == 1 && activationResult == RS_RET_ERR && resumeCount == 4);
+    activationResult = RS_RET_OUT_OF_MEMORY;
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, &activationResult) == RS_RET_ERR);
+    CHECK(activationResult == RS_RET_OUT_OF_MEMORY && resumePending == 1);
+    resumeResult = RS_RET_OK;
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, NULL) == RS_RET_OK);
+    CHECK(resumePending == 0 && resumeCount == 6);
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, NULL) == RS_RET_OK);
+    CHECK(resumeCount == 6);
+    legacy.reloadV1.structSize = offsetof(modReloadInterfaceV1_t, quiesce);
+    CHECK(modReloadHasValidInterfaceV1(&legacy));
+    CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_NOT_IMPLEMENTED);
+    legacy.reloadV1.structSize = sizeof(legacy.reloadV1);
+    reloadState = NULL;
 
     legacy.reloadV1.classify = classify_new_sessions;
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_NEW_SESSIONS);

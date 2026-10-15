@@ -997,6 +997,8 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 
 TESTS_IMTCP = \
 	global-reloadonhup-ruleset-metadata-rainerscript.sh \
+	global-reloadonhup-imtcp-defaulttz-rainerscript.sh \
+	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
 	global-reloadonhup-closed-dequeue-window.sh \
 	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-unnamed-rainerscript.sh \
@@ -1881,10 +1883,14 @@ TESTS_LIBYAML_IMTCP = \
 	config-translate-yaml-roundtrip.sh \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
+	global-reloadonhup-imtcp-defaulttz-yaml.sh \
+	global-reloadonhup-imtcp-ruleset-yaml.sh \
 	global-reloadonhup-on-local-yaml.sh \
 	global-reloadonhup-on-mixed-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \
 	yaml-include-recursion.sh
+
+TESTS_LIBYAML_IMTCP_MMJSONPARSE = global-reloadonhup-ruleset-constructs-yaml.sh
 
 TESTS_LIBYAML_IMTCP_OSSL = \
 	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
@@ -2647,6 +2653,7 @@ EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
 EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
+EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_IMPSTATS)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_OSSL)
@@ -2865,11 +2872,13 @@ check_LTLIBRARIES =
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
-	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce
+	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
+	runtime_unit_tcpsrv_fence
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
-	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce
+	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
+	runtime_unit_tcpsrv_fence
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
@@ -2911,7 +2920,8 @@ runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
 
 runtime_unit_module_reload_SOURCES = \
-	unit/module_reload_test.c
+	unit/module_reload_test.c \
+	../tools/shadow_reload_lifecycle.h
 
 runtime_unit_reload_report_SOURCES = \
 	unit/reload_report_test.c
@@ -2933,6 +2943,9 @@ runtime_unit_reload_syntax_clone_SOURCES = \
 
 runtime_unit_wtp_quiesce_SOURCES = \
 	unit/wtp_quiesce_test.c
+
+runtime_unit_tcpsrv_fence_SOURCES = \
+	unit/tcpsrv_fence_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -3041,6 +3054,8 @@ runtime_unit_reload_syntax_clone_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_wtp_quiesce_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_tcpsrv_fence_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3058,6 +3073,7 @@ runtime_unit_reload_normalized_graph_LDADD = $(LIBESTR_LIBS)
 runtime_unit_reload_candidate_graph_LDADD = $(LIBESTR_LIBS)
 runtime_unit_reload_syntax_clone_LDADD = $(LIBESTR_LIBS)
 runtime_unit_wtp_quiesce_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_tcpsrv_fence_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -3366,6 +3382,9 @@ endif # ENABLE_MMJSONPARSE
 endif # ENABLE_IMPTCP
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_LIBYAML_IMTCP)
+if ENABLE_MMJSONPARSE
+TESTS += $(TESTS_LIBYAML_IMTCP_MMJSONPARSE)
+endif # ENABLE_MMJSONPARSE
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_LIBYAML_IMTCP_IMPSTATS)
 endif # ENABLE_IMPSTATS

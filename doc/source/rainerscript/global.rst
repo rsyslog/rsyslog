@@ -24,9 +24,11 @@ The following parameters can be set:
   reports source-level differences against captured startup configuration.
   It does not construct module runtime objects or prove full semantic validity.
   ``on`` can activate supported body changes to existing named rulesets, reusing
-  unchanged named actions at queue batch boundaries. Default-ruleset body
-  changes are unsupported at this stage. It rejects changes to
-  action definitions, input profiles, global settings, queues, and other
+  unchanged named actions at queue batch boundaries, plus the explicitly
+  supported policy fields of existing imtcp listeners described in the ADR.
+  Default-ruleset body changes remain unsupported at this stage.
+  It does not add or remove listeners. It rejects changes to
+  action definitions, unsupported input profiles, global settings, queues, and other
   non-ruleset scope, as well as unsupported dependencies or ownership changes.
   Activation also rejects active local-queue graphs, including mixed graphs
   with global-scope boundaries, before changing any ruleset root. Restart

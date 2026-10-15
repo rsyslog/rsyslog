@@ -6,7 +6,7 @@
  * deterministic; fixed imtcp endpoints are canonical and collision-safe.
  * An isolated elseif-marker mutation must change production
  * candidate serialization; restoring it must restore byte-identical output.
- * Ruleset-only report admission rejects NULL storage, misaligned bases/strides,
+ * Both report admission gates reject NULL storage, misaligned bases/strides,
  * undersized strides, size overflow and address wrap before reading entries;
  * a normally built report remains accepted.
  * Named ruleset metadata has a separate row: source/candidate agreement,
@@ -43,6 +43,7 @@ static int parserResult = 1;
 static rsRetVal parserCaptureError = RS_RET_OK;
 static rsRetVal parserRequestedFatalError = RS_RET_OK;
 static rsRetVal parserFatalError = RS_RET_OK;
+static struct nvlst *parameter(const char *name, const char *value);
 
 /* Parser-facing stubs let the unit drive classification without bringing up
  * either frontend. */
@@ -108,6 +109,28 @@ struct cnfobj *cnfobjNew(enum cnfobjType type, struct nvlst *list) {
     return object;
 }
 
+static rsRetVal imtcpGateResult(const rsReloadCandidate_t *const candidate,
+                                const rsReloadObjectKind_t kind,
+                                const rsReloadDiffKind_t diff,
+                                const char *const identity) {
+    rsReloadReportEntryV1_t entry = {.objectKind = kind, .diffKind = diff, .identity = (char *)identity};
+    rsReloadReportV1_t report = {.version = RS_RELOAD_REPORT_V1,
+                                 .structSize = sizeof(report),
+                                 .entryCount = 1,
+                                 .entryStride = sizeof(entry),
+                                 .entries = &entry};
+    return rsReloadCandidateCheckRulesetImtcpReportV1(candidate, &report);
+}
+
+static struct nvlst *parameterPair(const char *const firstName,
+                                   const char *const firstValue,
+                                   const char *const secondName,
+                                   const char *const secondValue) {
+    struct nvlst *const first = parameter(firstName, firstValue);
+    if (first != NULL) first->next = parameter(secondName, secondValue);
+    return first;
+}
+
 struct nvlst *nvlstNewStr(es_str_t *value) {
     struct nvlst *node = calloc(1, sizeof(*node));
     if (node != NULL) {
@@ -116,8 +139,6 @@ struct nvlst *nvlstNewStr(es_str_t *value) {
     }
     return node;
 }
-
-static struct nvlst *parameter(const char *name, const char *value);
 
 void nvlstDestruct(struct nvlst *list) {
     while (list != NULL) {
@@ -1024,24 +1045,31 @@ int main(void) {
             rsReloadReportV1_t malformed = *report;
             malformed.entries = NULL;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             /* Deliberately invalid numeric address: admission must reject its
              * alignment before any entry is dereferenced. */
             malformed.entries = (rsReloadReportEntryV1_t *)((uintptr_t)report->entries + 1);
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entryStride = sizeof(rsReloadReportEntryV1_t) - 1;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entryStride = sizeof(rsReloadReportEntryV1_t) + 1;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entryCount = SIZE_MAX / malformed.entryStride + 1;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entries = (rsReloadReportEntryV1_t *)(uintptr_t)(UINTPTR_MAX - malformed.entryStride + 1);
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_OK);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, report) == RS_RET_OK);
         }
         rsReloadReportDestructV1(&report);
         {
@@ -1065,6 +1093,7 @@ int main(void) {
      * and combined edits cannot enter a program-only materialization plan. */
     {
         rsReloadNormalizedGraphBuilderV1_t *source = NULL;
+        rsReloadCandidate_t *sourceCatalog = NULL;
         rsReloadNormalizedGraphV1_t sourceGraph;
         struct nvlst *attributes = parameter("name", "Route");
         struct cnfobj *active;
@@ -1075,11 +1104,12 @@ int main(void) {
         CHECK(active != NULL);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceCaptureObject(active);
-        CHECK(rsReloadCandidateSourceFinish(&source) == RS_RET_OK);
+        CHECK(rsReloadCandidateSourceFinish(&source, &sourceCatalog) == RS_RET_OK);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(source, &sourceGraph) == RS_RET_OK);
         for (int variant = 0; variant < 6; ++variant) {
             rsReloadCandidate_t *edited = calloc(1, sizeof(*edited));
             rsReloadNormalizedGraphBuilderV1_t *editedBuilder = NULL;
+            rsReloadCandidate_t *editedCatalog = NULL;
             rsReloadNormalizedGraphV1_t editedGraph;
             rsReloadReportV1_t *report = NULL;
             struct nvlst *params = parameter("QUEUE.TYPE", variant == 1 || variant == 4 ? "FixedArray" : "LinkedList");
@@ -1103,8 +1133,8 @@ int main(void) {
                 CHECK(editedBuilder == NULL);
                 CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
                 rsReloadCandidateSourceCaptureObject(edited->head->object);
-                CHECK(rsReloadCandidateSourceFinish(&editedBuilder) == RS_RET_NOT_IMPLEMENTED);
-                CHECK(editedBuilder == NULL);
+                CHECK(rsReloadCandidateSourceFinish(&editedBuilder, &editedCatalog) == RS_RET_NOT_IMPLEMENTED);
+                CHECK(editedBuilder == NULL && editedCatalog == NULL);
             } else {
                 CHECK(rsReloadCandidateBuildNormalizedGraphV1(edited, &editedBuilder) == RS_RET_OK);
                 CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(editedBuilder, &editedGraph) == RS_RET_OK);
@@ -1128,9 +1158,11 @@ int main(void) {
             }
             rsReloadReportDestructV1(&report);
             rsReloadNormalizedGraphBuilderV1Destruct(&editedBuilder);
+            rsReloadCandidateDestruct(&editedCatalog);
             rsReloadCandidateDestruct(&edited);
         }
         rsReloadNormalizedGraphBuilderV1Destruct(&source);
+        rsReloadCandidateDestruct(&sourceCatalog);
         cnfstmtDestructLst(active->script);
         cnfobjDestruct(active);
     }
@@ -1145,6 +1177,31 @@ int main(void) {
     CHECK(!constructionFailed);
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_CONF_PARSE_ERROR);
     CHECK(builder == NULL);
+    rsReloadCandidateDestruct(&candidate);
+
+    /* The broadened materializer gate is authorized only for candidate-side
+     * imtcp objects already classified LIVE_SWAP. Other modules/inputs and
+     * every add/remove operation must remain fail-closed. */
+    candidate = calloc(1, sizeof(*candidate));
+    CHECK(candidate != NULL);
+    addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
+    addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "omfile"), NULL));
+    addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "tcp1"), NULL));
+    addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imudp", "name", "udp1"), NULL));
+    CHECK(!constructionFailed);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:named:5:imtcp") ==
+          RS_RET_OK);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:named:4:tcp1") == RS_RET_OK);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, NULL) == RS_RET_PARAM_ERROR);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, NULL) == RS_RET_PARAM_ERROR);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:named:6:omfile") ==
+          RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:named:4:udp1") ==
+          RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_ADDED, "module:named:5:imtcp") ==
+          RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:named:4:tcp1") ==
+          RS_RET_NOT_IMPLEMENTED);
     rsReloadCandidateDestruct(&candidate);
     puts("reload candidate graph tests passed");
     return 0;

@@ -95,6 +95,8 @@ Known flake-prone patterns from prior fixes:
 - CPU tick, runtime, or timeout thresholds without a header comment explaining
   the oracle and why the value is safe under loaded CI runners.
 - Background helpers without deterministic readiness and cleanup.
+- Direct `exit()` calls in tests or test helpers. Return failure through the
+  normal test/thread lifecycle and assert it after cleanup or join instead.
 - Queue tests that assume immediate drain or shutdown ordering without
   queue-specific synchronization.
 - Shared external state such as fixed ports, filenames, spool directories,

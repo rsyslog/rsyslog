@@ -21,6 +21,8 @@
 #ifndef INCLUDED_TCPSRV_H
 #define INCLUDED_TCPSRV_H
 
+#include <time.h>
+
 #if defined(ENABLE_IMTCP_EPOLL) && defined(HAVE_SYS_EPOLL_H)
     #include <sys/epoll.h>
 #endif
@@ -123,7 +125,7 @@ struct tcpsrv_io_descr_s {
     int id; /* index into listener or session table, depending on ptrType */
     int sock; /* socket descriptor we need to "monitor" */
     unsigned ioDirection;
-    enum { NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS } ptrType;
+    enum { NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS, NSD_PTR_TYPE_FENCE, NSD_PTR_TYPE_CONTROL } ptrType;
     union {
         tcps_sess_t *pSess;
         netstrm_t **ppLstn; /**<  accept listener's netstream */
@@ -226,6 +228,28 @@ struct tcpsrv_s {
         /* work queue */
         workQueue_t workQueue;
         int currWrkrs;
+        /* Append-only control-path state. Existing instance-field offsets stay stable. */
+        int controlPipe[2]; /**< nonblocking self-pipe used to wake poll/epoll */
+        tcpsrv_io_descr_t controlDescr; /**< server-owned event-loop wake descriptor */
+        tcpsrv_io_descr_t *fenceItems; /**< stable FIFO sentinels, one per worker */
+        pthread_mutex_t fenceMut; /**< guards fence state; acquired before workQueue.mut */
+        pthread_cond_t fenceCond; /**< state changes, acknowledgments and drain completion */
+        uint64_t fenceGeneration; /**< fenceMut: nonzero generation/token, never reused while active */
+        unsigned fenceAcks; /**< fenceMut: workers that consumed their marker */
+        unsigned fenceParked; /**< fenceMut: workers still inside the safepoint */
+        unsigned fenceOutstanding; /**< fenceMut: markers not yet consumed */
+        sbool fenceEventLoopParked; /**< fenceMut: event loop cannot dispatch ready descriptors */
+        pthread_t fenceOwner; /**< fenceMut: requesting control thread; valid iff fenceOwnerValid */
+        sbool fenceOwnerValid; /**< fenceMut: owner/token lifetime includes asynchronous abort drain */
+        sbool fenceRequested; /**< fenceMut: event loop must activate this generation */
+        sbool fenceActive; /**< fenceMut: generation active until all participants drain */
+        sbool fenceRelease; /**< fenceMut: resume requested by release, timeout or termination */
+        sbool fenceAcquired; /**< fenceMut: owner successfully waited for all acknowledgments */
+        sbool fenceReleaseCommitted; /**< fenceMut: successful release may be retried idempotently */
+        sbool fenceSyncInitialized; /**< construction/destruction only: both primitives are initialized */
+        sbool fenceReady; /**< fenceMut: running event loop accepts fence requests */
+        sbool fenceOrdering; /**< workQueue.mut: normal work precedes queued fence markers */
+        tcpsrv_io_descr_t *fenceWorkTail; /**< workQueue.mut: last normal item before markers, borrowed */
 };
 
 
@@ -356,9 +380,17 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      */
     rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
                                     const char *const networkNamespace);
+    /* added v33 -- live-reload activation control-path fence */
+    rsRetVal (*RequestFence)(tcpsrv_t *pThis, uint64_t *token);
+    rsRetVal (*WaitFence)(tcpsrv_t *pThis, uint64_t token, const struct timespec *deadline);
+    rsRetVal (*ReleaseFence)(tcpsrv_t *pThis, uint64_t token);
+    /* added v34 -- update the accept profile while fenced */
+    rsRetVal (*SetSupportOctetCountedFraming)(tcpsrv_t *pThis, int enabled);
+    /* added v35 -- update the accept profile while fenced */
+    rsRetVal (*SetMultiLineForNewSessions)(tcpsrv_t *pThis, int enabled);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 32 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 35 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -371,6 +403,90 @@ ENDinterface(tcpsrv)
 /* prototypes */
 PROTOTYPEObjFull(tcpsrv);
 PROTOTYPEObjDebugPrint(tcpsrv);
+
+/*
+ * Request an exclusive event-loop/worker fence. The requesting thread owns
+ * the token and must also Wait and Release it. A successful Wait guarantees
+ * that the complete ready-I/O batch observed before the request and all work
+ * queued ahead of the fence have finished, and that both the event loop and
+ * every worker remain parked until Release.
+ *
+ * The Wait deadline is absolute CLOCK_REALTIME. A Wait error (including
+ * timeout or termination) aborts and resumes the
+ * fence automatically; the caller must not Release that token. While aborted
+ * sentinels drain, a new Request fails closed. The caller must pin the tcpsrv
+ * object and its Run lifetime through the final Wait/Release return. These are
+ * control-path operations; normal TCP message processing never calls them.
+ */
+rsRetVal tcpsrvRequestFence(tcpsrv_t *pThis, uint64_t *token);
+/** Construction-only initializer; unwinds the mutex on condition-init failure.
+ * Caller owns zeroed server; do not call again after successful initialization. */
+rsRetVal tcpsrvInitFenceSync(tcpsrv_t *pThis);
+/** Wait as the requesting thread until all participants park; timeout/TERM aborts
+ * and invalidates the token. deadline is absolute CLOCK_REALTIME, borrowed. */
+rsRetVal tcpsrvWaitFence(tcpsrv_t *pThis, uint64_t token, const struct timespec *deadline);
+/** Release an acquired owner token and wait for unpark/drain; retry the same
+ * token after an error. Successful release is idempotent for that generation. */
+rsRetVal tcpsrvReleaseFence(tcpsrv_t *pThis, uint64_t token);
+/** Event-loop-only safepoint; no mutex held on entry. Blocks until release or
+ * abort and borrows the server, which must remain alive through drain. */
+void tcpsrvActivateFence(tcpsrv_t *pThis);
+/** Worker-only safepoint after dequeueing its marker; no queue mutex held.
+ * Each worker consumes at most one marker before release/abort wakes it. */
+void tcpsrvParkAtFence(tcpsrv_t *pThis);
+/** Abort under caller-held fenceMut, taking workQueue.mut only for an active
+ * multiworker fence. Wakes participants; owner/server lifetime extends to drain. */
+void tcpsrvAbortFenceLocked(tcpsrv_t *pThis);
+/** Append a borrowed ready descriptor under workQueue.mut; caller holds that mutex.
+ * The descriptor must survive dequeue and must not already be queued. */
+void tcpsrvAppendWorkLocked(tcpsrv_t *pThis, tcpsrv_io_descr_t *item);
+/** Remove the head under workQueue.mut, returning a borrowed descriptor or NULL. */
+tcpsrv_io_descr_t *tcpsrvPopWorkLocked(tcpsrv_t *pThis);
+/** Read the core termination state; no fence/queue mutex required. */
+int tcpsrvFenceTerminated(void);
+
+/** @name Live control-path mutations
+ * The caller must hold a successfully acquired
+ * tcpsrv fence whenever the server is running. Snapshot-bearing settings also
+ * update listener/session copies before the fence is released. No mutex is
+ * acquired here. The caller pins server/listener/session lifetimes until
+ * release; borrowed pointer arguments must remain live while installed.
+ * @{ */
+/** Update server and established-session flow-control snapshots. */
+void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
+/** Update the receive-loop starvation threshold. */
+void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
+/** Update subsequent connection-open/close notification decisions. */
+void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
+/** Update hostname case policy for sessions accepted after release only. */
+void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *pThis, int preserveCase);
+/** Update socket keepalive profile for sessions accepted after release only. */
+void tcpsrvApplyKeepAliveForNewSessions(tcpsrv_t *pThis, int enabled, int interval, int probes, int time);
+/** Update framing snapshots for future sessions, preserving established sessions. */
+void tcpsrvApplyFramingForNewSessions(tcpsrv_t *pThis,
+                                      int spFramingFix,
+                                      int additionalDelimiter,
+                                      int maxFrameSize,
+                                      int disableLFDelimiter,
+                                      int discardTruncatedMessage);
+/** Update octet-counted framing for future sessions only. */
+void tcpsrvApplyOctetCountedFramingForNewSessions(tcpsrv_t *pThis, int enabled);
+/** Update the copied compression profile for future sessions only. */
+void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *pThis,
+                                          int mode,
+                                          int driver,
+                                          uint64_t maxExpansionRatio,
+                                          uint64_t maxDecompressedBytesPerReceive,
+                                          uint64_t maxTotalZstdWindowBytes);
+/** Update multiline acceptance for future sessions only. */
+void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *pThis, int enabled);
+/** Copy the default timezone into server, listeners and established sessions;
+ * NULL clears it. The caller retains ownership of the string. */
+void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
+/** Install a borrowed ruleset in listener and established-session snapshots;
+ * the ruleset must outlive every session retaining it. */
+void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
+/** @} */
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"
