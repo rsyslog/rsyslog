@@ -68,6 +68,7 @@ struct tcpLstnParams_s {
     uchar *pszRatelimitName; /**< name of rate limit configuration */
     struct AllowedSenders *pAllowedSenderRoot; /**< source-address ACL list */
     sbool bUseLegacyAllowedSender; /**< if true, use protocol-global legacy ACLs */
+    sbool bOwnAllowedSenderRoot; /**< Listener owns its independent ACL clone. */
 };
 
 /* list of tcp listen ports */
@@ -300,6 +301,13 @@ struct tcpsrv_workset_s {
 
 
 /* interfaces */
+/** @brief Evaluate a borrowed session without mutation under the caller-owned fence.
+ * @param session Borrowed session, valid only during the synchronous call.
+ * @param context Borrowed policy snapshot, owned by the reload transaction.
+ * @param permitted Output verdict; errors abort before any policy is committed.
+ */
+typedef rsRetVal (*tcpsrv_reload_session_policy_eval_t)(tcps_sess_t *session, void *context, int *permitted);
+
 BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     INTERFACEObjDebugPrint(tcpsrv);
     rsRetVal (*Construct)(tcpsrv_t **ppThis);
@@ -434,8 +442,23 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      */
     void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
 
+    /** @brief Evaluate sessions without mutation under the caller-owned fence.
+     * Caller-owned output storage must cover every current session slot.
+     * Callback errors abort before policy publication; borrowed inputs never transfer.
+     */
+    rsRetVal (*EvaluateSessionPolicyWhileFenced)(tcpsrv_t *, tcpsrv_reload_session_policy_eval_t, void *,
+                                                 unsigned char *, size_t);
+    /** @brief Synchronously error-close denied sessions under the owned fence.
+     * Verdict storage covers the committed table; partial frames are never flushed.
+     */
+    void (*ApplySessionPolicyLive)(tcpsrv_t *, const unsigned char *, size_t);
+    /** @brief Transfer the prepared ACL under the single listener's owned fence.
+     * Returns old root plus ownership for retirement after resume; no allocation.
+     */
+    void (*SwapAllowedSendersLive)(tcpsrv_t *, struct AllowedSenders *, int, struct AllowedSenders **, int *);
+
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 37 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 38 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

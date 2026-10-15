@@ -400,6 +400,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
         pszTmp = (uchar *)strchr((char *)pszIP, ']');
         if (pszTmp == NULL) {
             free(*pIP);
+            *pIP = NULL;
             ABORT_FINALIZE(RS_RET_INVALID_IP);
         }
         *pszTmp = '\0';
@@ -421,6 +422,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
                 break;
             default:
                 free(*pIP);
+                *pIP = NULL;
                 ABORT_FINALIZE(RS_RET_ERR);
         }
 
@@ -457,6 +459,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
                 break;
             default:
                 free(*pIP);
+                *pIP = NULL;
                 ABORT_FINALIZE(RS_RET_ERR);
         }
 

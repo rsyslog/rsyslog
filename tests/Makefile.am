@@ -1152,6 +1152,8 @@ TESTS_IMPTCP_FROMHOST_PORT = \
 	imptcp-fromhost-port.sh
 
 TESTS_IMTCP_IMPSTATS = \
+	global-reloadonhup-imtcp-allowedsender-reject-rainerscript.sh \
+	global-reloadonhup-imtcp-allowedsender-rainerscript.sh \
 	imtcp-impstats.sh \
 	queue-mutex-contention-impstats-default.sh \
 	queue-mutex-contention-impstats.sh
@@ -1887,6 +1889,7 @@ TESTS_OMSTDOUT = \
 
 TESTS_LIBYAML_IMTCP = \
 	global-reloadonhup-imtcp-notifications-yaml.sh \
+	imtcp-allowedsender-config.sh \
 	config-translate-rs-roundtrip.sh \
 	config-translate-yaml-roundtrip.sh \
 	yaml-queue-mutex-contention-stats.sh \
@@ -1909,7 +1912,10 @@ TESTS_LIBYAML_IMTCP_MMJSONPARSE = global-reloadonhup-ruleset-constructs-yaml.sh
 TESTS_LIBYAML_IMTCP_OSSL = \
 	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
 
-TESTS_LIBYAML_IMTCP_IMPSTATS = global-reloadonhup-on-yaml.sh global-reloadonhup-unnamed-yaml.sh
+TESTS_LIBYAML_IMTCP_IMPSTATS = global-reloadonhup-on-yaml.sh \
+	global-reloadonhup-unnamed-yaml.sh \
+	global-reloadonhup-imtcp-allowedsender-yaml.sh \
+	global-reloadonhup-imtcp-allowedsender-reject-yaml.sh
 
 TESTS_LIBYAML_OSSL = \
 	yaml-omfwd-tls-ossl-pkcs11-module-defaults.sh
@@ -4642,3 +4648,35 @@ inputfilegen_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
+
+# Real modules/backend closure: no ignored unresolved symbols or backend stubs.
+if ENABLE_TESTBENCH
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_tcpsrv_accept_publication
+TESTS += runtime_unit_tcpsrv_accept_publication
+runtime_unit_tcpsrv_accept_publication_SOURCES = \
+	unit/tcpsrv_accept_publication_test.c helpers/tcpsrv_prepared_daemon_link.c \
+	../tools/syslogd.c ../tools/shadow_reload.c ../tools/omshell.c ../tools/omusrmsg.c \
+	../tools/omfwd.c ../tools/omfile.c ../tools/ompipe.c ../tools/omdiscard.c \
+	../tools/pmrfc5424.c ../tools/pmrfc3164.c ../tools/smtradfile.c ../tools/smfile.c \
+	../tools/smfwd.c ../tools/smtradfwd.c ../tools/iminternal.c
+runtime_unit_tcpsrv_accept_publication_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_tcpsrv_accept_publication_LDADD = \
+	$(top_builddir)/grammar/libgrammar.la $(top_builddir)/runtime/librsyslog.la \
+	$(top_builddir)/compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) \
+	$(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) $(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
+if OS_AIX
+runtime_unit_tcpsrv_accept_publication_LDFLAGS = -brtl -bexpall -lsrc
+else
+runtime_unit_tcpsrv_accept_publication_LDFLAGS = -export-dynamic
+endif
+if ENABLE_LIBZSTD
+runtime_unit_tcpsrv_accept_publication_CPPFLAGS += $(ZSTD_CFLAGS)
+runtime_unit_tcpsrv_accept_publication_LDADD += $(ZSTD_LIBS)
+endif
+if ENABLE_LIBLOGGING_STDLOG
+runtime_unit_tcpsrv_accept_publication_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_tcpsrv_accept_publication_LDADD += $(LIBLOGGING_STDLOG_LIBS)
+endif
+endif
+endif
