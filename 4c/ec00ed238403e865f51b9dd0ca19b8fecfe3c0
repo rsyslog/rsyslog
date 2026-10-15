@@ -7,6 +7,7 @@ tests/Makefile.am
   s_f2c089be484e12::t_b34d1f9a5a9697 492,834
   s_f2c089be484e12::t_96c244597b13f5 2881
   s_f2c089be484e12::t_431eb6abe9fce2 2871
+  s_f2c089be484e12::t_a8535affccabdf 2737,2740,2872
 tests/tsan.supp
   s_52daf9b39e2b17::t_f0b08250591fe0 9
 plugins/omsendertrack/omsendertrack.c
