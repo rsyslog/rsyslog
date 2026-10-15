@@ -236,8 +236,8 @@ static rsRetVal appendStmt(es_str_t **out, const struct cnfstmt *stmt) {
                                     rsCStrLen(stmt->d.s_propfilt.pCSCompValue)));
             }
             CHKiRet(appendStmtList(out, stmt->d.s_propfilt.t_then));
-            /* Legacy property filters execute only t_then. Their unused
-             * t_else field is not initialized by the parser constructor. */
+            /* Legacy property filters execute only t_then; the unused else
+             * slot is not part of the effective program. */
             break;
         case S_RELOAD_LOOKUP_TABLE:
             CHKiRet(appendCString(out, (const char *)stmt->d.s_reload_lookup_table.table_name));

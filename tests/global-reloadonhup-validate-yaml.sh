@@ -28,7 +28,7 @@ wait_queueempty
 # cnfobj/nvlst serializer without changing the active route.
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=6 added=0 removed=0 modified=0 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=7 added=0 removed=0 modified=0 invalid=0"* ]]; then
 	echo "FAIL: unexpected YAML no-op reload status: $reload_status"
 	error_exit 1
 fi
@@ -38,7 +38,7 @@ mv "$CONF_FILE.candidate" "$CONF_FILE"
 # report-only: the established listener continues to use the old route.
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: unexpected YAML action-change reload status: $reload_status"
 	error_exit 1
 fi
@@ -50,7 +50,7 @@ sed -i '/config.reloadOnHUP:/a\  debug.logFile: "'$RSYSLOG_DYNNAME'.reload-senti
 cp "$CONF_FILE" "$CONF_FILE.valid"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=4 added=0 removed=0 modified=2 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=2 invalid=0"* ]]; then
 	echo "FAIL: unexpected reload status: $reload_status"
 	error_exit 1
 fi
@@ -76,7 +76,7 @@ wait_queueempty
 cp "$CONF_FILE.valid" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=4 added=0 removed=0 modified=2 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=2 invalid=0"* ]]; then
 	echo "FAIL: YAML parser did not recover after invalid candidate: $reload_status"
 	error_exit 1
 fi

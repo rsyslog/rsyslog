@@ -4,7 +4,7 @@
 
 .. meta::
    :description: Staged transactional reload design; the current delivery adds
-                 private candidate parsing and source reports without activation.
+                 bounded activation for existing named ruleset bodies.
    :keywords: rsyslog, ADR, configuration reload, generation, ruleset, imtcp,
               transactional, performance
 
@@ -13,8 +13,9 @@ Transactional configuration reload
 
 .. summary-start
 
-The current delivery privately parses candidate syntax and reports source-level
-differences; semantic preparation and activation remain fail-closed.
+The current delivery privately parses candidate syntax, reports source-level
+differences, and activates supported changes to existing named ruleset bodies.
+Unsupported scopes and dependencies remain fail-closed.
 This ADR defines the staged target contract: private validation
 and capability reporting precede activation; live changes commit atomically;
 and retiring work drains only after consumers quiesce at a batch boundary.
@@ -33,8 +34,14 @@ is already available in a released rsyslog version.
 Current implementation boundary
 -------------------------------
 
-This delivery adds side-effect-free candidate parsing and source-level diff
-reports to policy accounting and the owned active ruleset-program graph.
+This delivery adds activation of supported body changes to existing named
+rulesets, using private syntax clones and unchanged named actions. Preparation owns all
+new syntax; queue workers quiesce at batch boundaries before prepared roots
+are published together. Old roots retire only after the cutover. A no-op
+candidate reports without advancing the generation.
+
+Side-effect-free candidate parsing and source-level diff reports remain the
+front end of the transaction.
 ``validate`` parses and structurally normalizes a private candidate, compares
 it with the captured startup source, and reports the result without invoking
 module preparation or configuration activation. This is not a full semantic
@@ -42,18 +49,23 @@ validation or proof that a candidate can run: objects requiring module runtime
 validation are not constructed. Dirty startup configurations cannot become a
 trusted baseline.
 
-``on`` follows the same private parse/report path, rejects unsupported
-non-ruleset scope, and fails closed with
-``rejected_reason=activation_not_implemented`` for both an unchanged candidate
-and an otherwise scope-eligible ruleset change. No new generation is activated.
-The active configuration
-remains unchanged, and the established legacy HUP hooks still run in every
-mode. The active runtime graph covers ruleset program structure, not complete
-action configuration, queues, or parser chains.
+``on`` follows the private parse/report path and activates only supported
+changes to existing named ruleset bodies; default-ruleset body changes are not
+supported at this stage. Action definitions, input profiles,
+global settings, queues, and other non-ruleset objects must remain unchanged;
+unsupported statement dependencies or action ownership changes fail closed.
+Active local-queue graphs, including mixed local/global graphs, are unsupported
+for activation: producer-owned frontend workers are outside the legacy queue
+barrier. Preparation rejects these changes as ``candidate_scope_unsupported``
+before any root swap, retaining the current generation. Restart to apply them;
+``validate`` remains available for report-only comparison.
+This is not general live configuration reload. Failed preparation or barrier
+acquisition leaves the current generation in place. The established legacy
+HUP hooks still run in every mode. The active runtime graph covers ruleset
+program structure, not complete action configuration, queues, or parser chains.
 
 The lifecycle and mode descriptions below specify the staged target design,
-not functionality available at this candidate/report boundary. In particular,
-``on`` does not yet reload configuration.
+not functionality available at this existing-ruleset activation boundary.
 
 Context
 -------
@@ -288,14 +300,13 @@ module capability classification, preparation, and ``on`` activation remain
 fail-closed until their later gates are complete.  Later releases retain or
 refine these counters alongside the target outcome counters above.
 
-Before private compilation is enabled, ``on`` applies a conservative scope
-gate to that report.  Only modifications to already existing rulesets pass to
-the unavailable activation phase; added or removed rulesets and every change
-to actions, inputs, parsers, queues, templates, modules, or global settings are
-rejected as ``candidate_scope_unsupported``.  This is a capability boundary,
-not yet a claim that the accepted ruleset syntax has been semantically prepared.
-An unchanged candidate also passes this scope gate, but ``on`` still rejects it
-as ``activation_not_implemented``; it is not reported as a successful activation.
+``on`` applies a conservative scope gate to that report. Only modifications to
+already existing rulesets pass this report gate. Private preparation additionally
+requires named rulesets: default-ruleset body changes remain unsupported.
+Added or removed rulesets and every change to actions, inputs, parsers, queues,
+templates, modules, or global settings are rejected as
+``candidate_scope_unsupported``. Passing the report gate alone does not prove
+that the ruleset syntax can be semantically prepared or activated.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

@@ -606,12 +606,14 @@ static rsRetVal appendStmt(es_str_t **out, const struct cnfstmt *stmt) {
             CHKiRet(
                 appendBytes(out, stmt->printable, stmt->printable == NULL ? 0 : strlen((const char *)stmt->printable)));
             CHKiRet(appendStmtList(out, stmt->d.s_prifilt.t_then));
+            CHKiRet(appendStmtList(out, stmt->d.s_prifilt.t_else));
             break;
         case S_RELOAD_PROPFILT:
         case S_PROPFILT:
             CHKiRet(
                 appendBytes(out, stmt->printable, stmt->printable == NULL ? 0 : strlen((const char *)stmt->printable)));
             CHKiRet(appendStmtList(out, stmt->d.s_propfilt.t_then));
+            /* Legacy property filters execute only the then child. */
             break;
         case S_RELOAD_LOOKUP_TABLE:
             CHKiRet(appendBytes(out, stmt->d.s_reload_lookup_table.table_name,
@@ -999,12 +1001,7 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
                 CHKmalloc(identity = malloc((size_t)n + 1));
                 snprintf(identity, (size_t)n + 1, "action:named:%zu:%.*s", nameLen, (int)nameLen, name);
             }
-            CHKmalloc(serialized = es_newStr(128));
-            CHKiRet(appendToken(&serialized, "rsyslog.reload.action.v1;"));
-            CHKiRet(appendNvlst(&serialized, actionSyntax));
-            CHKiRet(sha256Fingerprint(serialized, &fingerprint));
-            es_deleteStr(serialized);
-            serialized = NULL;
+            CHKiRet(rsReloadActionSyntaxFingerprintV1(actionSyntax, &fingerprint));
             CHKiRet(rsReloadNormalizedGraphBuilderV1Add(builder, RS_RELOAD_OBJ_ACTION, identity, fingerprint));
             free(identity);
             identity = NULL;
@@ -1018,6 +1015,7 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_foreach.body, ordinal));
         } else if (stmt->nodetype == S_RELOAD_PRIFILT || stmt->nodetype == S_PRIFILT) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_prifilt.t_then, ordinal));
+            CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_prifilt.t_else, ordinal));
         } else if (stmt->nodetype == S_RELOAD_PROPFILT || stmt->nodetype == S_PROPFILT) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_propfilt.t_then, ordinal));
         }
@@ -1027,6 +1025,78 @@ finalize_it:
     free(identity);
     free(fingerprint);
     if (serialized != NULL) es_deleteStr(serialized);
+    RETiRet;
+}
+
+rsRetVal rsReloadActionSyntaxFingerprintV1(const struct nvlst *syntax, char **ownedFingerprint) {
+    es_str_t *serialized = NULL;
+    DEFiRet;
+    if (syntax == NULL || ownedFingerprint == NULL || *ownedFingerprint != NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(serialized = es_newStr(128));
+    CHKiRet(appendToken(&serialized, "rsyslog.reload.action.v1;"));
+    CHKiRet(appendNvlst(&serialized, syntax));
+    CHKiRet(sha256Fingerprint(serialized, ownedFingerprint));
+finalize_it:
+    if (serialized != NULL) es_deleteStr(serialized);
+    RETiRet;
+}
+
+rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *const syntax,
+                                    const char **const borrowedName,
+                                    size_t *const nameLength) {
+    const char *name;
+    size_t length;
+    if (syntax == NULL || borrowedName == NULL || nameLength == NULL) return RS_RET_PARAM_ERROR;
+    *borrowedName = NULL;
+    *nameLength = 0;
+    name = nvlstString(syntax, "name", &length);
+    if (name == NULL) return RS_RET_NOT_IMPLEMENTED;
+    *borrowedName = name;
+    *nameLength = length;
+    return RS_RET_OK;
+}
+
+/* Only a ruleset program can be materialized into an existing runtime object.
+ * Its attributes stay with that object and must have their own fail-closed row.
+ * Keep objectFingerprint() unchanged for full syntax callers. */
+static rsRetVal graphObjectFingerprint(const struct cnfobj *object, char **fingerprint) {
+    if (object->objType == CNFOBJ_RULESET) {
+        const struct cnfobj program = {
+            .objType = CNFOBJ_RULESET, .nvlst = NULL, .subobjs = object->subobjs, .script = object->script};
+        return objectFingerprint(&program, fingerprint);
+    }
+    return objectFingerprint(object, fingerprint);
+}
+
+static rsRetVal addRulesetMetadata(rsReloadNormalizedGraphBuilderV1_t *builder,
+                                   const char *identity,
+                                   const struct nvlst *syntax) {
+    struct nvlst *attributes = NULL;
+    const struct nvlst *name;
+    es_str_t *serialized = NULL;
+    char *fingerprint = NULL;
+    size_t i;
+    DEFiRet;
+
+    /* Validate before cloning so duplicate parameter names remain errors. */
+    CHKiRet(validateNvlst(syntax));
+    CHKmalloc(attributes = rsconfTranslateCloneNvlst(syntax));
+    name = findNvlst(attributes, "name");
+    if (name == NULL || name->val.datatype != 'S') ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+    /* The registry and row identity fold ASCII names; metadata must agree. */
+    for (i = 0; i < es_strlen(name->val.d.estr); ++i) {
+        unsigned char *c = es_getBufAddr(name->val.d.estr) + i;
+        if (*c >= 'A' && *c <= 'Z') *c += 'a' - 'A';
+    }
+    CHKmalloc(serialized = es_newStr(128));
+    CHKiRet(appendToken(&serialized, "rsyslog.reload.ruleset-metadata.v1;"));
+    CHKiRet(appendNvlst(&serialized, attributes));
+    CHKiRet(sha256Fingerprint(serialized, &fingerprint));
+    CHKiRet(rsReloadNormalizedGraphBuilderV1Add(builder, RS_RELOAD_OBJ_RULESET_METADATA, identity, fingerprint));
+finalize_it:
+    nvlstDestruct(attributes);
+    if (serialized != NULL) es_deleteStr(serialized);
+    free(fingerprint);
     RETiRet;
 }
 
@@ -1065,10 +1135,11 @@ rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *cand
                              entry->object->objType == CNFOBJ_INPUT ? inputTypeOrdinal(candidate, entry) : ordinal,
                              &identity));
         if (entry->object->objType == CNFOBJ_RULESET) lowerRulesetIdentity(identity);
-        CHKiRet(objectFingerprint(entry->object, &fingerprint));
+        CHKiRet(graphObjectFingerprint(entry->object, &fingerprint));
         CHKiRet(rsReloadNormalizedGraphBuilderV1Add(builder, objectKind(entry->object), identity, fingerprint));
         if (entry->object->objType == CNFOBJ_RULESET) {
             size_t actionOrdinal = 0;
+            CHKiRet(addRulesetMetadata(builder, identity, entry->object->nvlst));
             CHKiRet(addActionNodes(builder, identity, entry->object->script, &actionOrdinal));
         }
         free(identity);
@@ -1100,13 +1171,20 @@ finalize_it:
 
 rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *const report) {
     size_t i;
-    if (report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report))
+    if (report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report) ||
+        report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
+        report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0 ||
+        (uintptr_t)(const void *)report->entries % _Alignof(rsReloadReportEntryV1_t) != 0 ||
+        (report->entryCount != 0 && report->entries == NULL) || report->entryCount > SIZE_MAX / report->entryStride ||
+        (uintptr_t)(const void *)report->entries > UINTPTR_MAX - report->entryCount * report->entryStride)
         return RS_RET_PARAM_ERROR;
     for (i = 0; i < report->entryCount; ++i) {
-        const rsReloadReportEntryV1_t *entry = &report->entries[i];
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *entry = (const rsReloadReportEntryV1_t *)(const void *)address;
         if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
         /* Added/removed rulesets alter call targets. Any changed action,
-         * input, parser, queue, module, template, or global fails closed. */
+         * input, parser, queue, ruleset metadata, module, template, or global
+         * fails closed. */
         if (entry->objectKind != RS_RELOAD_OBJ_RULESET || entry->diffKind != RS_RELOAD_DIFF_MODIFIED)
             return RS_RET_NOT_IMPLEMENTED;
     }
@@ -1189,12 +1267,13 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
     }
     ret = makeIdentity(object, identityOrdinal, &identity);
     if (ret == RS_RET_OK && object->objType == CNFOBJ_RULESET) lowerRulesetIdentity(identity);
-    if (ret == RS_RET_OK) ret = objectFingerprint(object, &fingerprint);
+    if (ret == RS_RET_OK) ret = graphObjectFingerprint(object, &fingerprint);
     if (ret == RS_RET_OK)
         ret = rsReloadNormalizedGraphBuilderV1Add(sourceBuilder, objectKind(object), identity, fingerprint);
     if (ret == RS_RET_OK && object->objType == CNFOBJ_RULESET) {
         size_t actionOrdinal = 0;
-        ret = addActionNodes(sourceBuilder, identity, object->script, &actionOrdinal);
+        ret = addRulesetMetadata(sourceBuilder, identity, object->nvlst);
+        if (ret == RS_RET_OK) ret = addActionNodes(sourceBuilder, identity, object->script, &actionOrdinal);
     }
     free(identity);
     free(fingerprint);
@@ -1354,6 +1433,63 @@ void rsReloadCandidateNoteError(const rsRetVal error) {
 
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *const candidate) {
     return candidate == NULL ? 0 : candidate->objectCount;
+}
+
+typedef struct visitedRulesetIdentity_s {
+    char *identity;
+    int syntheticDefault;
+    struct visitedRulesetIdentity_s *next;
+} visitedRulesetIdentity_t;
+
+static void visitedRulesetIdentitiesDestruct(visitedRulesetIdentity_t *entry) {
+    while (entry != NULL) {
+        visitedRulesetIdentity_t *const next = entry->next;
+        free(entry->identity);
+        free(entry);
+        entry = next;
+    }
+}
+
+rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *candidate,
+                                                  rsReloadCandidateRulesetFragmentVisitorV1_t visitor,
+                                                  void *context) {
+    const rsReloadCandidateObject_t *entry;
+    visitedRulesetIdentity_t *visited = NULL;
+    char *identity = NULL;
+    DEFiRet;
+    if (candidate == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
+    for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        const struct cnfobj *object = entry->object;
+        visitedRulesetIdentity_t *seen;
+        int first = 1;
+        const int isSyntheticDefault = object != NULL && object->objType == CNFOBJ_RULESET && object->nvlst == NULL;
+        if (object == NULL || object->objType != CNFOBJ_RULESET) continue;
+        CHKiRet(makeIdentity(object, 0, &identity));
+        lowerRulesetIdentity(identity);
+        for (seen = visited; seen != NULL; seen = seen->next) {
+            if (strcmp(seen->identity, identity)) continue;
+            if (!isSyntheticDefault || !seen->syntheticDefault) {
+                ABORT_FINALIZE(RS_RET_DUP_PARAM);
+            }
+            first = 0;
+            break;
+        }
+        if (seen == NULL) {
+            CHKmalloc(seen = calloc(1, sizeof(*seen)));
+            seen->identity = identity;
+            seen->syntheticDefault = isSyntheticDefault;
+            identity = NULL;
+            seen->next = visited;
+            visited = seen;
+        }
+        free(identity);
+        identity = NULL;
+        CHKiRet(visitor(seen->identity, object->script, first, isSyntheticDefault, context));
+    }
+finalize_it:
+    free(identity);
+    visitedRulesetIdentitiesDestruct(visited);
+    RETiRet;
 }
 
 rsRetVal rsReloadCandidateParse(const char *const path, rsReloadCandidate_t **const ppCandidate) {

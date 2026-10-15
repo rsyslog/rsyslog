@@ -5,8 +5,8 @@
  * SIGHUP handling remains in rsyslogd.c. The option plumbing calls
  * shadowReloadConfigure(), which records the requested policy and master
  * configuration path. Validate mode produces a side-effect-free,
- * source-syntactic diff report; semantic preparation and activation remain
- * fail-closed.
+ * source-syntactic diff report. ON mode can activate the narrow supported
+ * existing-ruleset plan scope; all other changes remain fail-closed.
  */
 #ifndef INCLUDED_SHADOW_RELOAD_H
 #define INCLUDED_SHADOW_RELOAD_H
@@ -37,14 +37,15 @@ rsRetVal shadowReloadConfigure(reloadOnHUPMode_t mode,
                                const char *configPath,
                                rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder);
 
-/** @brief Borrow the active generation's normalized ruleset fingerprint.
+/** @brief Copy the active generation's normalized ruleset fingerprint.
  * This control-path accessor lets diagnostics avoid rebuilding the graph.
  * @param name Borrowed ruleset name to find in the active graph.
- * @param ppFingerprint Output borrowed string, valid until manager teardown.
+ * @param ppFingerprint Initially NULL output; caller owns and frees the copy.
  * @return RS_RET_OK on success; parameter, allocation or not-found error
- * otherwise. No ownership is transferred.
+ * otherwise. Diagnostic control-path accessor: takes statusMut internally to
+ * exclude generation retirement while copying; caller must not hold that lock.
  */
-rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFingerprint);
+rsRetVal shadowReloadGetRulesetFingerprint(const char *name, char **ppFingerprint);
 
 /** @brief Copy the last terminal request result into a caller-owned buffer.
  * @param buffer Writable caller-owned destination; no ownership transfers.
@@ -65,10 +66,16 @@ void shadowReloadRequestFromSignal(void);
  * at this seam; no active runtime objects are changed. */
 void shadowReloadBeginRequest(void);
 
-/** @brief Complete accounting after legacy hooks; enabled modes fail closed.
+/** @brief Account for one actually completed historic HUP-hook cycle.
+ * Main-thread only, paired with the completed legacy hook cycle.
+ */
+void shadowReloadLegacyHooksCompleted(void);
+
+/** @brief Complete accounting and eligible activation after legacy hooks.
  * Main-thread only, paired with begin; a call without begin is a no-op.
- * Publishes the prepared structural result without activating a candidate
- * or undoing legacy-hook effects.
+ * Publishes prepared roots and structural generation metadata under queue
+ * barriers, or retains the active generation on failure. Legacy-hook effects
+ * are not undone. Acquires queue/pool locks internally; caller holds none.
  */
 void shadowReloadProcess(void);
 

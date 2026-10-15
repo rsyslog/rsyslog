@@ -60,6 +60,7 @@ librsyslog_la_SOURCES = \
 	module-reload.c \
 	reload-candidate.c \
 	reload-candidate.h \
+	reload-ruleset-materializer.h \
 	reload-normalized-graph.c \
 	reload-normalized-graph.h \
 	reload-ruleset-graph.c \
@@ -82,6 +83,7 @@ librsyslog_la_SOURCES = \
 	var.h \
 	wtp.c \
 	wtp.h \
+	wtp-quiesce.c \
 	wti.c \
 	wti.h \
 	queue.c \
@@ -93,6 +95,7 @@ librsyslog_la_SOURCES = \
 	queue_spsc.c \
 	queue_spsc.h \
 	queue_lease.h \
+	queue-barrier.c \
 	queue_da.c \
 	queue_da.h \
 	segdisk_codec.c \

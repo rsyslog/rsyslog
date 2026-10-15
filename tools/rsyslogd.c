@@ -279,6 +279,10 @@ int get_bHadHUP(void) {
     return ret;
 }
 
+int get_bFinished(void) {
+    return PREFER_LOAD_INT(&bFinished) != 0;
+}
+
 /* Testbench synchronization point. The main thread publishes a new value only
  * after all legacy HUP hooks and reload-manager accounting have completed. */
 int getHUPProcessedCount(void) {
@@ -2168,10 +2172,9 @@ DEFFUNC_llExecFunc(doHUPActions) {
  * @note This function is *called* by the main loop after a signal handler
  * detected SIGHUP. It is NOT the signal handler itself.
  *
- * @note This function **DOES NOT** reload the main configuration (rsyslog.conf).
- * It is primarily used for **Log Rotation** (closing/reopening output files)
- * and notifying modules to refresh internal state (like lookup tables).
- * To reload configuration, a restart is required.
+ * Historic HUP hooks still handle log rotation and module refresh. The reload
+ * coordinator then applies the explicitly supported transactional subset;
+ * unsupported configuration changes remain rejected without publication.
  *
  * There is a VERY slim chance of a data race when the hostname is reset.
  * We prefer to take this risk rather than sync all accesses, because to the best
@@ -2192,19 +2195,21 @@ static void doHUP(void) {
         logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
     }
 
-    queryLocalHostname(runConf); /* re-read our name */
-    assert(runConf != NULL);
-    ruleset.IterateAllActions(runConf, doHUPActions, NULL);
-    DBGPRINTF("doHUP: doing modules\n");
-    modDoHUP();
-    DBGPRINTF("doHUP: doing lookup tables\n");
-    lookupDoHUP();
-    DBGPRINTF("doHUP: doing ratelimits\n");
-    ratelimitDoHUP();
-    DBGPRINTF("doHUP: doing errmsgs\n");
-    errmsgDoHUP();
-    /* Keep historic HUP hooks above unconditional for log rotation and module
-     * refresh. The Release B coordinator only accounts for the request. */
+    if (!get_bFinished()) {
+        queryLocalHostname(runConf); /* re-read our name */
+        assert(runConf != NULL);
+        ruleset.IterateAllActions(runConf, doHUPActions, NULL);
+        DBGPRINTF("doHUP: doing modules\n");
+        modDoHUP();
+        DBGPRINTF("doHUP: doing lookup tables\n");
+        lookupDoHUP();
+        DBGPRINTF("doHUP: doing ratelimits\n");
+        ratelimitDoHUP();
+        DBGPRINTF("doHUP: doing errmsgs\n");
+        errmsgDoHUP();
+        shadowReloadLegacyHooksCompleted();
+    }
+    /* Historic hooks retain their order and run unless termination has won. */
     shadowReloadProcess();
 }
 

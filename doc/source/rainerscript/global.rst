@@ -23,12 +23,17 @@ The following parameters can be set:
   ``validate`` privately parses and structurally normalizes a candidate and
   reports source-level differences against captured startup configuration.
   It does not construct module runtime objects or prove full semantic validity.
-  ``on`` currently performs that private parse/report work but rejects scope
-  outside ruleset changes; otherwise it fails closed with
-  ``rejected_reason=activation_not_implemented``. Neither mode activates a
-  new generation. The established legacy HUP hooks run in every mode,
+  ``on`` can activate supported body changes to existing named rulesets, reusing
+  unchanged named actions at queue batch boundaries. Default-ruleset body
+  changes are unsupported at this stage. It rejects changes to
+  action definitions, input profiles, global settings, queues, and other
+  non-ruleset scope, as well as unsupported dependencies or ownership changes.
+  Activation also rejects active local-queue graphs, including mixed graphs
+  with global-scope boundaries, before changing any ruleset root. Restart
+  rsyslog to apply such changes; ``validate`` can still report their differences.
+  ``validate`` remains report-only. The established legacy HUP hooks run in every mode,
   including reopening output files. Keep the default ``off`` for normal
-  operation; do not use ``on`` as a live reload mechanism at this stage. See
+  operation; ``on`` is not a general live reload mechanism. See
   :ref:`transactional-config-reload-adr` for the staged target design.
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+

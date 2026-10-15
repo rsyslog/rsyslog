@@ -95,6 +95,7 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
     pthread_mutex_init(&pThis->mutWtp, NULL);
     pthread_cond_init(&pThis->condThrdInitDone, NULL);
     pthread_cond_init(&pThis->condThrdTrm, NULL);
+    pthread_cond_init(&pThis->condQuiesced, NULL);
     pthread_attr_init(&pThis->attrThrd);
     /* Set thread scheduling policy to default */
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
@@ -199,6 +200,7 @@ BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODE
     d_pthread_mutex_unlock(&pThis->mutWtp);
     pthread_cond_destroy(&pThis->condThrdTrm);
     pthread_cond_destroy(&pThis->condThrdInitDone);
+    pthread_cond_destroy(&pThis->condQuiesced);
     pthread_mutex_destroy(&pThis->mutWtp);
     pthread_attr_destroy(&pThis->attrThrd);
     DESTROY_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
@@ -255,10 +257,19 @@ rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex) {
      */
     wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
 
-    if (wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
-        ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
-    } else if (wtpState == wtpState_SHUTDOWN) {
-        ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
+    if (unlikely(wtpState != wtpState_RUNNING)) {
+        switch (wtpState) {
+            case wtpState_QUIESCE:
+                ABORT_FINALIZE(RS_RET_QUIESCE);
+            case wtpState_SHUTDOWN:
+                ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
+            case wtpState_SHUTDOWN_IMMEDIATE:
+                ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
+            case wtpState_RUNNING:
+                break;
+            default:
+                ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
+        }
     }
 
     /* try customer handler if one was set and we do not yet have a definite result */
@@ -450,6 +461,7 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
     /* the order of the next two statements is important! */
     wtiSetState(pWti, WRKTHRD_WAIT_JOIN);
     ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
+    pthread_cond_broadcast(&pThis->condQuiesced);
 
     /* note: numWorkersNow is only for message generation, so we do not try
      * hard to get it 100% accurate (as curently done, it is not).
@@ -484,12 +496,11 @@ static void wtpWrkrExecCancelCleanup(void *arg) {
     d_pthread_mutex_lock(pThis->pmutUsr);
     wtiMarkExiting(pWti);
     d_pthread_mutex_unlock(pThis->pmutUsr);
-    /* Local monotonic waiters test the active count under mutWtp. Pair the
-     * cancellation transition with that mutex to prevent a lost final wake. */
-    if (pThis->monotonicTermination) d_pthread_mutex_lock(&pThis->mutWtp);
+    /* Shutdown and quiescence both observe worker state under mutWtp. */
+    d_pthread_mutex_lock(&pThis->mutWtp);
     wtpWrkrExecCleanup(pWti);
-    pthread_cond_broadcast(&pThis->condThrdTrm);
-    if (pThis->monotonicTermination) d_pthread_mutex_unlock(&pThis->mutWtp);
+    pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+    d_pthread_mutex_unlock(&pThis->mutWtp);
 }
 
 
@@ -592,6 +603,10 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
      * subsequent worker creation are an atomic unit, fixing the TOCTOU race.
      */
     const wtpState_t wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
+    if (wtpState == wtpState_QUIESCE && !permit_during_shutdown) {
+        d_pthread_mutex_unlock(&pThis->mutWtp);
+        return RS_RET_OK; /* enqueue succeeds; resume will advise workers */
+    }
     if (wtpState != wtpState_RUNNING && !permit_during_shutdown) {
         d_pthread_mutex_unlock(&pThis->mutWtp);
         DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
@@ -753,7 +768,7 @@ DEFpropSetMeth(wtp, iNumWorkerThreads, int);
 DEFpropSetMeth(wtp, pUsr, void *);
 DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t);
 DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal (*pVal)(void *, int));
-DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *));
+DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *, wti_t *));
 DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal (*pVal)(void *, int *));
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal (*pVal)(void *, void *));
 DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *));

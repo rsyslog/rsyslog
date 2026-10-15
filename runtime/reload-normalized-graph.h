@@ -40,6 +40,8 @@ typedef enum eRsReloadObjectKind_ {
     RS_RELOAD_OBJ_CONSTANT,
     RS_RELOAD_OBJ_LEGACY_OPAQUE,
     RS_RELOAD_OBJ_OPAQUE,
+    /* Control-plane attributes are separate from the swappable program. */
+    RS_RELOAD_OBJ_RULESET_METADATA,
     RS_RELOAD_OBJ_COUNT
 } rsReloadObjectKind_t;
 

@@ -544,7 +544,7 @@ finalize_it:
 
 /* Testbench oracle for the real, frontend-neutral ruleset graph producer. */
 static rsRetVal getReloadRulesetFingerprint(uchar *pszCmd, tcps_sess_t *pSess) {
-    const char *fingerprint = NULL;
+    char *fingerprint = NULL;
     char *name = NULL;
     char *response = NULL;
     size_t nameLen;
@@ -576,6 +576,7 @@ static rsRetVal getReloadRulesetFingerprint(uchar *pszCmd, tcps_sess_t *pSess) {
     }
 
 finalize_it:
+    free(fingerprint);
     free(name);
     free(response);
     RETiRet;

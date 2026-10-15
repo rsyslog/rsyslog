@@ -132,8 +132,13 @@ enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char *cnfFiltType2str(const enum cnfFiltType filttype);
 
 
+/** @brief A prepared reload script may borrow an already-active action. Such a node
+ * owns its statement storage but must never destruct the shared action. */
+#define CNFSTMT_FLAG_BORROWED_ACTION 0x0001U
+
 struct cnfstmt {
     unsigned nodetype;
+    unsigned flags;
     struct cnfstmt *next;
     uchar *printable; /* printable text for debugging */
     union {
@@ -429,6 +434,20 @@ void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr,
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
 struct json_object *cnfexprEvalCollection(struct cnfexpr *const expr, void *const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
+/** @brief Clone supported expression syntax without parser/runtime caches.
+ * @param src Borrowed immutable expression, kept alive during this call.
+ * @param out Initially NULL output; caller owns it and uses cnfexprDestruct().
+ * @return RS_RET_OK or a fail-closed unsupported/allocation error; output stays
+ * NULL on failure. No locks are acquired; caller serializes source mutation.
+ */
+rsRetVal cnfexprCloneReloadSafe(const struct cnfexpr *src, struct cnfexpr **out);
+/** @brief Deep-copy supported name/value syntax without retaining source data.
+ * @param src Borrowed immutable list, or NULL for an empty list.
+ * @param out Initially NULL output, destroyed by caller with nvlstDestruct().
+ * @return RS_RET_OK or an error with output still NULL. No internal locking;
+ * caller excludes concurrent source destruction or mutation.
+ */
+rsRetVal nvlstCloneReloadSafe(const struct nvlst *src, struct nvlst **out);
 /** @brief Consume a parser array and its owned contents; NULL is safe. */
 void cnfarrayDestruct(struct cnfarray *ar);
 /** @brief Consume a complete function-parameter list and its expressions; NULL is safe. */
@@ -479,6 +498,13 @@ char *rmLeadingSpace(char *s);
 struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 struct cnfstmt *cnfstmtNewAct(struct nvlst *lst);
+/** @brief Allocate syntax referring to an action without taking its ownership.
+ * @param action Borrowed active action, kept alive while the statement exists.
+ * @return Owned statement (cnfstmtDestructLst) or NULL on allocation failure.
+ * Destruction leaves the action alive. Caller provides lifecycle serialization;
+ * this helper acquires no action or queue locks.
+ */
+struct cnfstmt *cnfstmtNewBorrowedAct(struct action_s *action);
 struct cnfstmt *cnfstmtNewLegaAct(char *actline);
 struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset);
 struct cnfstmt *cnfstmtNewUnset(char *var);
@@ -486,6 +512,14 @@ struct cnfstmt *cnfstmtNewCall(es_str_t *name);
 struct cnfstmt *cnfstmtNewContinue(void);
 struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
+/** @brief Deep-copy supported private reload syntax, never live action state.
+ * @param src Borrowed immutable statement list, or NULL for an empty body.
+ * @param out Initially NULL output; caller owns it via cnfstmtDestructLst().
+ * @return RS_RET_OK or a fail-closed unsupported/allocation error. Partial trees
+ * are freed and output stays NULL on failure. No locks are taken; caller keeps
+ * source syntax alive and excludes mutation throughout the copy.
+ */
+rsRetVal cnfstmtCloneReloadSafe(const struct cnfstmt *src, struct cnfstmt **out);
 struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray *cnfarrayNew(es_str_t *val);
 struct cnfarray *cnfarrayDup(struct cnfarray *old);
