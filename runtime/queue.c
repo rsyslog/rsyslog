@@ -3613,17 +3613,19 @@ static rsRetVal RateLimiter(qqueue_t *pThis, wti_t *pWti) {
 
     if (iDelay > 0) {
         struct timespec deadline;
-        int waitRet;
+        int waitRet = 0;
         DBGOPRINT((obj_t *)pThis, "outside dequeue time window, delaying %d seconds\n", iDelay);
         timeoutComp(&deadline, (long)iDelay * 1000L);
         /* The condition wait releases the queue mutex atomically. A reload
          * quiesce or shutdown request signals this worker condition, so a
          * long dequeue window can never strand a batch-boundary barrier.
-         * Ordinary worker wakeups are ignored while the pool stays RUNNING. */
-        do {
+         * Ordinary worker wakeups are ignored while the pool stays RUNNING.
+         * Check before waiting as well: the request may have signalled while
+         * the preceding consumer callback had released the queue mutex. */
+        while (waitRet == 0 && (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pWti->pWtp->wtpState, &pWti->pWtp->mutWtpState) ==
+                                   wtpState_RUNNING) {
             waitRet = d_pthread_cond_timedwait(&pWti->pcondBusy, pThis->mut, &deadline);
-        } while (waitRet == 0 && (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pWti->pWtp->wtpState,
-                                                               &pWti->pWtp->mutWtpState) == wtpState_RUNNING);
+        }
     }
 
     RETiRet;

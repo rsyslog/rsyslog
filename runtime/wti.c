@@ -501,9 +501,12 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
             break; /* end of loop */
         } else if (localRet == RS_RET_IDLE) {
             /* Even an idle callback can release the queue mutex to dispose
-             * its completed batch. Shutdown may have signalled during that
-             * interval, before this worker registered an idle wait. */
+             * its completed batch. Shutdown or reload quiescence may have
+             * signalled during that interval, before this worker registered
+             * an idle wait. Re-enter the loop for quiescence so the worker
+             * acknowledges the batch-boundary barrier instead of sleeping. */
             terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
+            if (terminateRet == RS_RET_QUIESCE) continue;
             if (terminateRet == RS_RET_TERMINATE_NOW) goto terminate_now;
             if (terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccurred) {
                 if (bInactivityTOOccurred && pWtp->pfIdleTimeout != NULL && pWtp->pWrkr[0] == pThis &&

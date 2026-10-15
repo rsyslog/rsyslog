@@ -2,7 +2,9 @@
  * Unit coverage for the module reload capability and lifecycle contract. The
  * oracle is an exact capability/state result from synthetic module records:
  * optional append-only quiesce hooks remain backward compatible, invalid or
- * partial callbacks fail closed, and no daemon timing is involved.
+ * partial callbacks fail closed, and no daemon timing is involved. Resume
+ * failures retain retry ownership and cannot reject a published generation;
+ * exact callback counts and result values are the deterministic retry oracle.
  */
 #include "config.h"
 #include <stddef.h>
@@ -13,6 +15,7 @@
 
 /* Keep this small API unit independent of the full runtime link closure. */
 #include "../../runtime/module-reload.c"
+#include "../../tools/shadow_reload_lifecycle.h"
 
 #define CHECK(condition)                                                                    \
     do {                                                                                    \
@@ -60,6 +63,7 @@ static rsRetVal classify_invalid(const void __attribute__((unused)) * pOldCnf,
 static int reloadStateSentinel;
 static int quiesceCount;
 static int resumeCount;
+static rsRetVal resumeResult = RS_RET_OK;
 
 static rsRetVal reload_prepare(const void __attribute__((unused)) * pOldCnf,
                                const void __attribute__((unused)) * pNewCnf,
@@ -83,7 +87,7 @@ static rsRetVal reload_quiesce(void *const pReloadState, const struct timespec *
 static rsRetVal reload_resume(void *const pReloadState) {
     if (pReloadState != &reloadStateSentinel) return RS_RET_PARAM_ERROR;
     ++resumeCount;
-    return RS_RET_OK;
+    return resumeResult;
 }
 
 static int sourceSentinel;
@@ -171,6 +175,24 @@ int main(void) {
     CHECK(modReloadResume(&legacy, reloadState) == RS_RET_OK);
     CHECK(quiesceCount == 1);
     CHECK(resumeCount == 1);
+    int resumePending = 1;
+    rsRetVal activationResult = RS_RET_OK;
+    resumeResult = RS_RET_ERR;
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 1, &activationResult) == RS_RET_ERR);
+    CHECK(resumePending == 1 && activationResult == RS_RET_OK && resumeCount == 2);
+    /* A repeated cleanup attempt must retain the same live state on failure. */
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, NULL) == RS_RET_ERR);
+    CHECK(resumePending == 1 && resumeCount == 3);
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, &activationResult) == RS_RET_ERR);
+    CHECK(resumePending == 1 && activationResult == RS_RET_ERR && resumeCount == 4);
+    activationResult = RS_RET_OUT_OF_MEMORY;
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, &activationResult) == RS_RET_ERR);
+    CHECK(activationResult == RS_RET_OUT_OF_MEMORY && resumePending == 1);
+    resumeResult = RS_RET_OK;
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, NULL) == RS_RET_OK);
+    CHECK(resumePending == 0 && resumeCount == 6);
+    CHECK(shadowReloadResumePending(&legacy, reloadState, &resumePending, 0, NULL) == RS_RET_OK);
+    CHECK(resumeCount == 6);
     legacy.reloadV1.structSize = offsetof(modReloadInterfaceV1_t, quiesce);
     CHECK(modReloadHasValidInterfaceV1(&legacy));
     CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_NOT_IMPLEMENTED);

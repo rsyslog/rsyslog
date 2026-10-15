@@ -30,6 +30,7 @@
 #include "shadow_reload.h"
 #include "statsobj.h"
 #include "modules.h"
+#include "shadow_reload_lifecycle.h"
 
 DEFobjStaticHelpers;
 DEFobjCurrIf(module) DEFobjCurrIf(statsobj);
@@ -80,6 +81,9 @@ static int pendingSourceModuleRefHeld = 0;
 static void *pendingSourceModuleCnf = NULL;
 static void *pendingModuleReloadState = NULL;
 static int pendingModuleReloadCommitted = 0;
+/* Resume owns the reload state until all acquired input fences are released,
+ * including when activation failed before publication. */
+static int pendingModuleReloadResume = 0;
 static int retirementPending = 0;
 static rsRetVal lastRetirementError = RS_RET_OK;
 static int pendingGenerationActivated = 0;
@@ -154,6 +158,16 @@ static enum shadowReloadFailurePhase_e pendingFailurePhase = SHADOW_RELOAD_FAILU
 
 static rsRetVal destructPendingSourceModule(void) {
     if (pendingModuleReloadState != NULL) {
+        if (pendingModuleReloadResume) {
+            const rsRetVal ret = shadowReloadResumePending(pendingSourceModule, pendingModuleReloadState,
+                                                           &pendingModuleReloadResume, 0, NULL);
+            if (ret != RS_RET_OK) {
+                pthread_mutex_lock(&statusMut);
+                retirementPending = 1;
+                pthread_mutex_unlock(&statusMut);
+                return ret;
+            }
+        }
         if (pendingModuleReloadCommitted) {
             const rsRetVal ret = modReloadRetire(pendingSourceModule, pendingModuleReloadState);
             if (ret != RS_RET_OK) {
@@ -1456,14 +1470,30 @@ void shadowReloadProcess(void) {
                 deadline.tv_sec += 5;
                 if (pendingModuleReloadState != NULL) {
                     (void)monotonicUsec(&inputPauseStartedUsec);
+                    /* Quiesce can acquire only some fences before failing. */
+                    pendingModuleReloadResume = 1;
                     pendingCandidateResult = modReloadQuiesce(pendingSourceModule, pendingModuleReloadState, &deadline);
                 }
                 if (pendingCandidateResult == RS_RET_OK)
                     pendingCandidateResult = rsReloadRulesetPlanActivateV1(
                         pendingPlan, &deadline, shadowReloadCancelled, NULL, shadowReloadEnterCommit,
                         shadowReloadLeaveCommit, &commitGuard, publishActivatedGeneration, NULL, &pauseUsec);
-                if (pendingModuleReloadState != NULL)
-                    (void)modReloadResume(pendingSourceModule, pendingModuleReloadState);
+                if (pendingModuleReloadResume) {
+                    const rsRetVal resumeRet = shadowReloadResumePending(
+                        pendingSourceModule, pendingModuleReloadState, &pendingModuleReloadResume,
+                        pendingGenerationActivated, &pendingCandidateResult);
+                    if (resumeRet != RS_RET_OK) {
+                        pthread_mutex_lock(&statusMut);
+                        retirementPending = 1;
+                        pthread_mutex_unlock(&statusMut);
+                        LogError(0, resumeRet,
+                                 "shadow_reload: module reload resume failed and remains pending; generation %s",
+                                 pendingGenerationActivated ? "already activated" : "not activated");
+                        /* Publication is irreversible. Keep the activated result
+                         * and retry resume before retiring its state; do not
+                         * report an already-published generation as rejected. */
+                    }
+                }
                 if (inputPauseStartedUsec != 0) {
                     uint64_t inputPauseFinishedUsec;
                     if (monotonicUsec(&inputPauseFinishedUsec) && inputPauseFinishedUsec >= inputPauseStartedUsec)

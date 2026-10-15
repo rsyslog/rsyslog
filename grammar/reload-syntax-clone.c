@@ -33,6 +33,7 @@ rsRetVal cnfexprCloneReloadSafe(const struct cnfexpr *src, struct cnfexpr **out)
             CHKmalloc(target = calloc(1, sizeof(*target)));
             copy = (struct cnfexpr *)target;
             target->nodetype = 'V';
+            target->cache_slot = -1;
             CHKmalloc(target->name = strdup(value->name));
             /* prop is derived by the normal constructor, never borrowed. */
             CHKiRet(msgPropDescrFill(&target->prop, (uchar *)target->name, strlen(target->name)));
@@ -176,6 +177,7 @@ rsRetVal cnfstmtCloneReloadSafe(const struct cnfstmt *src, struct cnfstmt **out)
             case S_STOP:
                 break;
             case S_IF:
+                copy->d.s_if.is_else_if = src->d.s_if.is_else_if;
                 CHKiRet(cnfexprCloneReloadSafe(src->d.s_if.expr, &copy->d.s_if.expr));
                 CHKiRet(cnfstmtCloneReloadSafe(src->d.s_if.t_then, &copy->d.s_if.t_then));
                 CHKiRet(cnfstmtCloneReloadSafe(src->d.s_if.t_else, &copy->d.s_if.t_else));

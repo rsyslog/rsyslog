@@ -241,6 +241,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	global-reloadonhup-closed-dequeue-window.sh \
 	record-container-validation.sh \
 	global-reloadonhup-escapeprefix-rainerscript.sh \
 	global-reloadonhup-permitslash-rainerscript.sh \
@@ -2855,7 +2856,8 @@ runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
 
 runtime_unit_module_reload_SOURCES = \
-	unit/module_reload_test.c
+	unit/module_reload_test.c \
+	../tools/shadow_reload_lifecycle.h
 
 runtime_unit_reload_report_SOURCES = \
 	unit/reload_report_test.c

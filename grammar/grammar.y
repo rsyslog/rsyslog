@@ -129,7 +129,7 @@ extern int yyerror(const char*);
 %destructor { free($$); } LEGACY_ACTION LEGACY_RULESET PRIFILT PROPFILT BSD_TAG_SELECTOR BSD_HOST_SELECTOR VAR
 %destructor { es_deleteStr($$); } NAME FUNC STRING
 %destructor { cnfobjDestructAll($$); } obj property constant
-%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script
+%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script elseif_tail
 %destructor { nvlstDestruct($$); } nv nvlst value
 %destructor { objlstDestruct($$); } propconst
 %destructor { cnfexprDestruct($$); } expr

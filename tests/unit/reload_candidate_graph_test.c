@@ -6,7 +6,8 @@
  * retains owned global/module/input/ratelimit/ruleset header syntax, modified
  * rulesets authorize only unchanged headers (not queue/parser/unknown keys), fixed imtcp endpoint
  * identities are canonical and collision-safe, and enumeration is
- * deterministic.
+ * deterministic. Else-if selector identity changes fingerprints, while
+ * optimizer-derived cache metadata does not.
  */
 #include "config.h"
 
@@ -449,6 +450,29 @@ int main(void) {
         es_deleteStr(knownInput);
     }
 
+    /* The stack AST differs only in selector syntax or optimizer metadata:
+     * fingerprints must distinguish else-if from an ordinary nested if, but
+     * not allocation slots recomputed during private optimization. */
+    {
+        struct cnfnumval condition = {.nodetype = 'N', .val = 1};
+        struct cnfstmt selector = {.nodetype = S_IF};
+        struct cnfobj rulesetObject = {.objType = CNFOBJ_RULESET, .script = &selector};
+        char *plainFingerprint = NULL;
+        char *elseifFingerprint = NULL;
+        char *cacheFingerprint = NULL;
+        selector.d.s_if.expr = (struct cnfexpr *)&condition;
+        CHECK(rsReloadObjectSyntaxFingerprintV1(&rulesetObject, &plainFingerprint) == RS_RET_OK);
+        selector.d.s_if.is_else_if = 1;
+        CHECK(rsReloadObjectSyntaxFingerprintV1(&rulesetObject, &elseifFingerprint) == RS_RET_OK);
+        CHECK(strcmp(plainFingerprint, elseifFingerprint));
+        selector.d.s_if.cache_slots = 7;
+        CHECK(rsReloadObjectSyntaxFingerprintV1(&rulesetObject, &cacheFingerprint) == RS_RET_OK);
+        CHECK(!strcmp(elseifFingerprint, cacheFingerprint));
+        free(plainFingerprint);
+        free(elseifFingerprint);
+        free(cacheFingerprint);
+    }
+
     CHECK(candidate != NULL);
     CHECK(global != NULL);
     global->next = parameter("zeta", "one");
@@ -838,6 +862,11 @@ int main(void) {
         CHECK(observedSourceCatalog->tail->object->objType == CNFOBJ_RULESET);
         CHECK(observedSourceCatalog->tail->object->script == NULL);
         CHECK(observedSourceCatalog->tail->object->nvlst != rulesetObject->nvlst);
+        /* Source capture retains cloned headers and serialized graph data,
+         * not this fixture's script. The unit cnfobjDestruct stub leaves
+         * script ownership to its caller, so release the untransferred tree. */
+        cnfstmtDestructLst(rulesetObject->script);
+        rulesetObject->script = NULL;
         cnfobjDestruct(rulesetObject);
         cnfobjDestruct(globalObject);
         cnfobjDestruct(moduleObject);
