@@ -4,6 +4,8 @@
  * No sleeps, sockets or daemon timing. Exact invocation counts prove that all
  * callers sharing a schedule cannot double-attempt before due; pending state
  * blocks another candidate while resources stay owned through every error.
+ * The production rejection selector distinguishes OFF, VALIDATE and ON;
+ * OFF after publication/resume failure must not select the ON counter.
  */
 #include "config.h"
 #include <stdio.h>
@@ -50,7 +52,23 @@ static void complete(void *const context) {
     cycle->gauge = cycle->signalPending != 0;
 }
 
+static unsigned rejectedValidate, rejectedOn;
+
+static void rejectValidate(void) {
+    ++rejectedValidate;
+}
+
+static void rejectOn(void) {
+    ++rejectedOn;
+}
+
 int main(void) {
+    shadowReloadRetirementReject(RELOAD_ON_HUP_OFF, rejectValidate, rejectOn);
+    CHECK(rejectedValidate == 0 && rejectedOn == 0);
+    shadowReloadRetirementReject(RELOAD_ON_HUP_VALIDATE, rejectValidate, rejectOn);
+    CHECK(rejectedValidate == 1 && rejectedOn == 0);
+    shadowReloadRetirementReject(RELOAD_ON_HUP_ON, rejectValidate, rejectOn);
+    CHECK(rejectedValidate == 1 && rejectedOn == 1);
     shadowReloadRetirement_t state = {0};
     fixture_t fixture = {.owned = 1, .result = RS_RET_ERR};
     uint64_t now = 1000000;

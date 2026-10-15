@@ -360,6 +360,14 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     assert(pMsg != NULL);
     if (pMsg->iLenRawMsg == 0) ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
+    /* Each independent scalar is sampled once before first use; scan and
+     * rewrite retain those samples, not an atomic configuration generation. */
+    const int dropTrailingLF = glbl.GetParserDropTrailingLFOnReception(runConf);
+    const int dropTrailingCR = glbl.GetParserDropTrailingCROnReception(runConf);
+    const int spaceLF = glbl.GetParserSpaceLFOnReceive(runConf);
+    const int escapeControl = glbl.GetParserEscapeControlCharactersOnReceive(runConf);
+    const int escape8Bit = glbl.GetParserEscape8BitCharactersOnReceive(runConf);
+
     pszMsg = pMsg->pszRawMsg;
     lenMsg = pMsg->iLenRawMsg;
 
@@ -378,14 +386,14 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
      * compatible to recent IETF developments, we allow the user to
      * turn on/off this handling.  rgerhards, 2007-07-23
      */
-    if (glbl.GetParserDropTrailingLFOnReception(runConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\n') {
+    if (dropTrailingLF && lenMsg > 0 && pszMsg[lenMsg - 1] == '\n') {
         DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
         lenMsg--;
         pszMsg[lenMsg] = '\0';
         bUpdatedLen = RSTRUE;
     }
 
-    if (glbl.GetParserDropTrailingCROnReception(runConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\r') {
+    if (dropTrailingCR && lenMsg > 0 && pszMsg[lenMsg - 1] == '\r') {
         DBGPRINTF("dropped CR at very end of message (DropTrailingCR is set)\n");
         lenMsg--;
         pszMsg[lenMsg] = '\0';
@@ -406,19 +414,19 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     iFirstSanitize = lenMsg;
     for (iSrc = 0; iSrc < lenMsg; iSrc++) {
         if (pszMsg[iSrc] < 32) {
-            if (glbl.GetParserSpaceLFOnReceive(runConf) && pszMsg[iSrc] == '\n') {
+            if (spaceLF && pszMsg[iSrc] == '\n') {
                 pszMsg[iSrc] = ' ';
-            } else if (pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive(runConf)) {
+            } else if (pszMsg[iSrc] == '\0' || escapeControl) {
                 bNeedSanitize = 1;
                 if (iFirstSanitize == lenMsg) iFirstSanitize = iSrc;
-                if (!glbl.GetParserSpaceLFOnReceive(runConf)) {
+                if (!spaceLF) {
                     break;
                 }
             }
-        } else if (pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive(runConf)) {
+        } else if (pszMsg[iSrc] > 127 && escape8Bit) {
             bNeedSanitize = 1;
             if (iFirstSanitize == lenMsg) iFirstSanitize = iSrc;
-            if (!glbl.GetParserSpaceLFOnReceive(runConf)) {
+            if (!spaceLF) {
                 break;
             }
         }
@@ -428,12 +436,17 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
         if (bUpdatedLen == RSTRUE) MsgSetRawMsgSize(pMsg, lenMsg);
         FINALIZE;
     }
+    /* Rewrite-only samples stay off the common ASCII fast path. */
+    const int escapeTab = glbl.GetParserEscapeControlCharacterTab(runConf);
+    const int escapeCStyle = glbl.GetParserEscapeControlCharactersCStyle(runConf);
+    const uchar escapePrefix = glbl.GetParserControlCharacterEscapePrefix(runConf);
+    const size_t maxLine = glbl.GetMaxLine(runConf);
     iSrc = iFirstSanitize;
 
     /* now copy over the message and sanitize it. Note that up to iSrc-1 there was
      * obviously no need to sanitize, so we can go over that quickly...
      */
-    iMaxLine = glbl.GetMaxLine(runConf);
+    iMaxLine = maxLine;
     maxDest = lenMsg * 4; /* message can grow at most four-fold */
 
     if (maxDest > iMaxLine) maxDest = iMaxLine; /* but not more than the max size! */
@@ -454,8 +467,8 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     }
     iDst = iSrc;
     while (iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-        if ((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab(runConf))) {
-            if (glbl.GetParserSpaceLFOnReceive(runConf) && pszMsg[iSrc] == '\n') {
+        if ((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || escapeTab)) {
+            if (spaceLF && pszMsg[iSrc] == '\n') {
                 pDst[iDst++] = ' ';
                 iSrc++;
                 continue;
@@ -463,12 +476,12 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
             /* note: \0 must always be escaped, the rest of the code currently
              * can not handle it! -- rgerhards, 2009-08-26
              */
-            if (pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive(runConf)) {
+            if (pszMsg[iSrc] == '\0' || escapeControl) {
                 /* we are configured to escape control characters. Please note
                  * that this most probably break non-western character sets like
                  * Japanese, Korean or Chinese. rgerhards, 2007-07-17
                  */
-                if (glbl.GetParserEscapeControlCharactersCStyle(runConf)) {
+                if (escapeCStyle) {
                     pDst[iDst++] = '\\';
 
                     switch (pszMsg[iSrc]) {
@@ -510,15 +523,15 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
                     }
 
                 } else {
-                    pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix(runConf);
+                    pDst[iDst++] = escapePrefix;
                     pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
                     pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
                     pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
                 }
             }
 
-        } else if (pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive(runConf)) {
-            if (glbl.GetParserEscapeControlCharactersCStyle(runConf)) {
+        } else if (pszMsg[iSrc] > 127 && escape8Bit) {
+            if (escapeCStyle) {
                 pDst[iDst++] = '\\';
                 pDst[iDst++] = 'x';
 
@@ -530,7 +543,7 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
                 /* In this case, we also do the conversion. Note that this most
                  * probably breaks European languages. -- rgerhards, 2010-01-27
                  */
-                pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix(runConf);
+                pDst[iDst++] = escapePrefix;
                 pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
                 pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
                 pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
@@ -549,6 +562,19 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
 finalize_it:
     RETiRet;
 }
+
+#ifdef RSYSLOG_PARSER_POLICY_TEST
+/** @brief Exchange the sanitizer getter table for a serial, worker-free unit operation.
+ * The caller must exchange the saved table back before runtime destruction.
+ * This seam changes no production function body or normal build interface.
+ */
+void parserPolicyTestExchangeGlobals(glbl_if_t *state);
+void parserPolicyTestExchangeGlobals(glbl_if_t *state) {
+    const glbl_if_t previous = glbl;
+    glbl = *state;
+    *state = previous;
+}
+#endif
 
 /* Helper to compute the offset immediately after the initial PRI.
  * Returns the offset of the first byte after the closing '>' if a valid

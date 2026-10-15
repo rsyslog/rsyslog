@@ -11,7 +11,8 @@
 # the held pre-HUP stream remains independently LF-delimited.
 # Local/mixed controls reject policy and ruleset-body changes without
 # advancing the generation; old-route delivery proves runtime retention.
-# Terminal impstats must account for all eleven acknowledged HUPs.
+# The normal path adds one unsupported-global request and an on-to-validate
+# commit followed by validate-only HUP: fourteen acknowledged HUPs total.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -266,6 +267,7 @@ if [[ "$reload_status" != *"result=activated active_generation=6 unchanged=8 add
 	echo "FAIL: optimized YAML array comparison did not activate: $reload_status"
 	error_exit 1
 fi
+cp "$CONF_FILE" "$CONF_FILE.active-generation-six"
 if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000002-first\n' >&9; then error_exit 1; fi
 if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000002-second\n' >&8; then error_exit 1; fi
 wait_content 'msgnum:00000002-first' "$RSYSLOG_OUT_LOG"
@@ -310,6 +312,34 @@ fi
 printf '<167>Mar 10 01:00:00 host app: msgnum:00000004\n' >&9
 wait_content 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 wait_queueempty
+
+# The global-node authorization is parameter-specific. Changing a second
+# global value must fail closed and retain both generation and TCP sessions.
+sed 's/debug.abortOnProgramError: "on"/debug.abortOnProgramError: "off"/' "$CONF_FILE.active-generation-six" \
+	>"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: unrelated YAML global change escaped the narrow base gate: $reload_status"
+	error_exit 1
+fi
+
+# Native YAML uses the same private base profile. Restore generation six,
+# change only config.reloadOnHUP, then use the next HUP as the runtime-policy
+# oracle: it must validate without publishing another generation.
+sed 's/config.reloadOnHUP: "on"/config.reloadOnHUP: "validate"/' "$CONF_FILE.active-generation-six" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=7 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: YAML reload mode base profile was not activated: $reload_status"
+	error_exit 1
+fi
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=7 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
+	echo "FAIL: activated YAML validate mode did not govern the next HUP: $reload_status"
+	error_exit 1
+fi
 exec 9>&-
 exec 8>&-
 shutdown_when_empty
@@ -327,8 +357,9 @@ content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
 awk '/origin=core.reload / { last = $0 } END { print last }' \
 	"${RSYSLOG_DYNNAME}.policy.log" > "${RSYSLOG_DYNNAME}.terminal-policy.log"
-content_check 'reload_on_total=11 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
-content_check 'reload_on_rejected_total=3 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
-content_check 'reload_legacy_hook_total=11 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
-content_check 'reload_capability_rejected_total=3 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_on_total=13 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_on_rejected_total=4 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_validate_total=1 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_legacy_hook_total=14 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_capability_rejected_total=4 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
 exit_test

@@ -60,10 +60,11 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
                                          rsReloadCandidateObjectVisitorV1_t visitor,
                                          void *context);
-/** @brief Build an independent owned catalog containing module, input and named rate-policy
+/** @brief Build an independent ordered catalog containing global, module, input and named rate-policy
  * declarations. This is the source material required by module-specific
  * effective-profile classifiers; unrelated scripts and objects are omitted.
  * Owned reference values retain non-imtcp policy usage after script disposal.
+ * Ordered global blocks retain startup's last-write parameter semantics.
  * @param candidate Borrowed syntax capture, not consumed.
  * @param ppCatalog Non-NULL address initially containing NULL; output is owned
  * by the caller and released with rsReloadCandidateDestruct().
@@ -118,6 +119,14 @@ rsRetVal rsReloadObjectSyntaxFingerprintV1(const struct cnfobj *object, char **o
  * or RS_RET_OK. No allocation, ownership transfer, or internal locking occurs.
  */
 rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **borrowedName, size_t *nameLength);
+/** @brief Return an owned global string and fingerprint excluding only that parameter.
+ * Omitted values are NULL. Ordered global blocks use startup's last-write map.
+ * Both output slots must initially be NULL; caller frees successful outputs.
+ */
+rsRetVal rsReloadCandidateGlobalStringProfileV1(const rsReloadCandidate_t *candidate,
+                                                const char *parameterName,
+                                                char **ownedValue,
+                                                char **ownedOtherFingerprint);
 
 /**
  * @brief Check a borrowed V1 report against the initial ruleset-only scope.
@@ -143,6 +152,18 @@ rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *rep
 rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *activeSourceCatalog,
                                                     const rsReloadCandidate_t *candidate,
                                                     const rsReloadReportV1_t *report);
+/** @brief Private preparations that authorize otherwise unsupported report kinds. */
+typedef enum rsReloadCandidateAuthorizationV1_e {
+    RS_RELOAD_AUTHORIZE_IMTCP_V1 = 1U << 0, /**< Classified existing-listener/named-policy transition. */
+    RS_RELOAD_AUTHORIZE_BASE_V1 = 1U << 1 /**< Independently validated single global scalar. */
+} rsReloadCandidateAuthorizationV1_t;
+/* Ruleset modifications remain the baseline capability. Additional report
+ * object kinds are accepted only when the caller has already prepared and
+ * authorized the corresponding private runtime transition. */
+rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *activeSourceCatalog,
+                                                  const rsReloadCandidate_t *candidate,
+                                                  const rsReloadReportV1_t *report,
+                                                  unsigned authorizations);
 
 /**
  * @brief Begin single-threaded startup observation, discarding any prior capture.

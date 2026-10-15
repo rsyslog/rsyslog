@@ -28,7 +28,7 @@ The following parameters can be set:
   supported policy fields of existing imtcp listeners described in the ADR.
   Default-ruleset body changes remain unsupported at this stage.
   It does not add or remove listeners. It rejects changes to
-  action definitions, unsupported input profiles, global settings, queues, and other
+  action definitions, unsupported input profiles, unsupported global settings, queues, and other
   non-ruleset scope, as well as unsupported dependencies or ownership changes.
   Activation also rejects active local-queue graphs, including mixed graphs
   with global-scope boundaries, before changing any ruleset root. Restart
@@ -37,6 +37,13 @@ The following parameters can be set:
   including reopening output files. Keep the default ``off`` for normal
   operation; ``on`` is not a general live reload mechanism. See
   :ref:`transactional-config-reload-adr` for the staged target design.
+
+  A currently active ``on`` mode may publish one supported scalar change:
+  this mode, ``reportChildProcessExits``, ``oversizemsg.report``,
+  ``compactJsonString``, ``parser.dropTrailingCROnReception`` or
+  ``parser.dropTrailingLFOnReception``. Every other global parameter must
+  remain unchanged. Committed ``off`` or ``validate`` governs the next HUP;
+  ``off`` does not reread configuration and cannot enable itself.
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
 
@@ -296,6 +303,18 @@ The following parameters can be set:
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
 
+- **parser.dropTrailingLFOnReception** [on/off] available 8.6.0+
+
+  **Default:** on
+
+  If "on", remove one line feed (LF) character from the end of each received
+  message before parser control-character handling runs.
+
+  When ``config.reloadOnHUP`` is ``on``, a candidate that changes only this
+  setting can activate it transactionally. Messages parsed after the commit
+  use the new policy. Combining it with another global change remains
+  unsupported and leaves the active parser policy unchanged.
+
 - **parser.dropTrailingCROnReception** [on/off] available 8.2606.0+
 
   **Default:** off
@@ -305,6 +324,11 @@ The following parameters can be set:
   This is useful for senders that include CRLF line endings in the message
   payload. The default is "off" so existing configurations keep the CR
   byte when it is part of the original message.
+
+  When ``config.reloadOnHUP`` is ``on``, a candidate that changes only this
+  setting can activate it transactionally. Messages parsed after the commit
+  use the new policy. Combining it with another global change remains
+  unsupported and leaves the active parser policy unchanged.
 
 - **parser.parseHostnameAndTag** [on/off] available 8.6.0+
 
@@ -631,6 +655,10 @@ The following parameters can be set:
 
   This parameter specifies if an error shall be reported when an oversized
   message is seen. The default is "on".
+
+  With ``config.reloadOnHUP="on"``, this flag can be changed transactionally
+  by HUP when it is the only changed base/global setting in that generation.
+  Oversized messages submitted after the commit use the new value.
 
 - **abortOnUncleanConfig** [boolean (on/off)] available 8.37.0+
 
@@ -994,3 +1022,9 @@ readability for humans, but needs more resources (disk, transfer, computation)
 in automated pipelines.
 To keep things as compatible as possible, we leave the default as "off" but
 recommend that this option is turned on for use in data pipelines.
+
+When ``config.reloadOnHUP`` is ``on``, a candidate that changes only
+``compactJsonString`` can activate this setting transactionally.  JSON values
+serialized after the commit use the new representation.  A candidate that
+combines this change with another global setting remains unsupported and does
+not partially change the active format.
