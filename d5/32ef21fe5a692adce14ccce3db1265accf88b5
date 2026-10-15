@@ -1,5 +1,8 @@
 tests/global-reloadonhup-on-rainerscript.sh
   s_f2c089be484e12::t_dfe490381a12fa 107-121,123-125,136
+  s_f2c089be484e12::t_ba8d043c4a11ef 3-5,7,12-13,15,20-21,24-25,30-55,59-60,63-78,83,87,91-92,101,105-106,122,129-134,137-140
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_ba8d043c4a11ef 3-6,30,33-34,38-39,44-53,59-87,90,94,105,109,114,116-117
 ---
 {
   "schema_version": "authorship/3.0.0",
