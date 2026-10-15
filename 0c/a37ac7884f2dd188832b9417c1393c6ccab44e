@@ -3,6 +3,10 @@ grammar/rainerscript.c
   s_f2c089be484e12::t_603c6319ae254d 5223
 grammar/rainerscript.h
   s_f2c089be484e12::t_603c6319ae254d 135-138,141
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_320ab45c0f37ea 3-6,32-50,55-57,59
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_320ab45c0f37ea 3-6
 ---
 {
   "schema_version": "authorship/3.0.0",
