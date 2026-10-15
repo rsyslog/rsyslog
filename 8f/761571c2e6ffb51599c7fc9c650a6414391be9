@@ -400,6 +400,7 @@ doc/source/development/transactional_config_reload.rst
   s_f2c089be484e12::t_80519db5851c97 83-88,94-102,104
   s_f2c089be484e12::t_1d411a56c032c2 147,159-177
   s_f2c089be484e12::t_46f7d84334807f 178
+  s_f2c089be484e12::t_a83350bd75a165 144-145
 tests/testsuites/segmented-diskqueue-checkpoint-driver.sh
   s_f2c089be484e12::t_bf9172563e72ac 5-7,32,38-44
 runtime/module-reload.c
@@ -840,6 +841,7 @@ runtime/reload-candidate.h
   s_f2c089be484e12::t_0e8aaef895d191 121-128
   s_f2c089be484e12::t_c22aae08a32bcd 155,158-165
   s_f2c089be484e12::t_1d411a56c032c2 66
+  s_f2c089be484e12::t_a83350bd75a165 63,67
 runtime/yamlconf.c
   s_f2c089be484e12::t_a3cf060caaadc8 1980-1981
   s_f2c089be484e12::t_da868e5dc68914 1654
