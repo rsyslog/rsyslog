@@ -62,6 +62,7 @@ tests/unit/parser_policy_snapshot_test.c
 runtime/parser_sanitize_helper.h
   s_f2c089be484e12::t_de53baa121a596 1-63,65,70-272
   s_f2c089be484e12::t_7a9465fd634497 66-69
+  s_f2c089be484e12::t_6677e59ab41084 64
 doc/source/development/transactional_config_reload.rst
   s_f2c089be484e12::t_3e6297b2585ce6 29-34,322-326
   s_f2c089be484e12::t_98c9460618986e 327-328
