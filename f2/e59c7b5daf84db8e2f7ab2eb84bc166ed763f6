@@ -487,6 +487,7 @@ tests/unit/reload_candidate_graph_test.c
   s_f2c089be484e12::t_87613ecfe858aa 658
   s_f2c089be484e12::t_a4786e33a1e999 574-581,584,586-589,591-592,596-601,604-607,609,612-637,645-657
   s_f2c089be484e12::t_6d31fb79947e5e 582-583,585,593-595,602-603,610-611
+  s_f2c089be484e12::t_173af7e5951c36 6
 grammar/parserif.h
   s_f2c089be484e12::t_9178e515e71d7d 26-28
 runtime/reload-candidate.c
