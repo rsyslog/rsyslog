@@ -600,6 +600,24 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
         }
     }
 
+    /* A source lowerer is separate from the lifecycle interface: a module may
+     * safely describe an effective candidate while still classifying every
+     * change as restart-required. */
+    modReloadSourceGetInterfaceV1_t getReloadSourceInterfaceV1;
+    memset(&pNew->reloadSourceV1, 0, sizeof(pNew->reloadSourceV1));
+    pNew->reloadSourceV1.version = eMOD_RELOAD_SOURCE_INTERFACE_V1;
+    pNew->reloadSourceV1.structSize = sizeof(pNew->reloadSourceV1);
+    localRet = (*pNew->modQueryEtryPt)((uchar *)"getReloadSourceInterfaceV1", &reloadEntryPoint);
+    if (localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+        memset(&pNew->reloadSourceV1, 0, sizeof(pNew->reloadSourceV1));
+    } else if (localRet != RS_RET_OK) {
+        ABORT_FINALIZE(localRet);
+    } else {
+        getReloadSourceInterfaceV1 = (modReloadSourceGetInterfaceV1_t)reloadEntryPoint;
+        CHKiRet(getReloadSourceInterfaceV1(&pNew->reloadSourceV1));
+        if (!modReloadHasValidSourceInterfaceV1(pNew)) ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
+    }
+
     /* optional calls for new config system */
     localRet = (*pNew->modQueryEtryPt)((uchar *)"getModCnfName", &getModCnfName);
     if (localRet == RS_RET_OK) {

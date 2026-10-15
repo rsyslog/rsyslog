@@ -47,6 +47,7 @@ struct rsReloadCandidate_s {
 
 static rsReloadCandidate_t *captureCandidate = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *sourceBuilder = NULL;
+static rsReloadCandidate_t *sourceObjectCatalog = NULL;
 static es_str_t *sourceDefaultSerialized = NULL;
 static struct nvlst *sourceGlobalParams = NULL;
 static struct nvlst *sourceGlobalParamsTail = NULL;
@@ -62,6 +63,37 @@ typedef struct sourceInputOrdinal_s {
     struct sourceInputOrdinal_s *next;
 } sourceInputOrdinal_t;
 static sourceInputOrdinal_t *sourceInputOrdinals = NULL;
+
+static rsRetVal appendObjectCatalogClone(rsReloadCandidate_t *const catalog, const struct cnfobj *const object) {
+    struct nvlst *parameters = NULL;
+    struct cnfobj *copy = NULL;
+    rsReloadCandidateObject_t *entry = NULL;
+    DEFiRet;
+
+    if (catalog == NULL || object == NULL) return RS_RET_PARAM_ERROR;
+    if (object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT) return RS_RET_OK;
+    CHKiRet(nvlstCloneReloadSafe(object->nvlst, &parameters));
+    copy = cnfobjNew(object->objType, parameters);
+    if (copy == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    parameters = NULL;
+    entry = calloc(1, sizeof(*entry));
+    if (entry == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    entry->object = copy;
+    copy = NULL;
+    if (catalog->tail == NULL)
+        catalog->head = entry;
+    else
+        catalog->tail->next = entry;
+    catalog->tail = entry;
+    ++catalog->objectCount;
+    entry = NULL;
+
+finalize_it:
+    nvlstDestruct(parameters);
+    cnfobjDestruct(copy);
+    free(entry);
+    RETiRet;
+}
 
 void rsReloadCandidateSourceNoteError(void) {
     if (sourceBuilder != NULL) sourceError = 1;
@@ -779,6 +811,80 @@ static rsReloadObjectKind_t objectKind(const struct cnfobj *object) {
     }
 }
 
+static int equalFoldedString(const char *left, size_t leftLen, const char *right, size_t rightLen);
+
+static rsRetVal parseFixedTcpPort(const char *const text, const size_t length, unsigned *const port) {
+    unsigned value = 0;
+
+    if (text == NULL || length == 0) return RS_RET_NOT_FOUND;
+    for (size_t i = 0; i < length; ++i) {
+        if (text[i] < '0' || text[i] > '9') return RS_RET_NOT_FOUND;
+        if (value > (65535U - (unsigned)(text[i] - '0')) / 10U) return RS_RET_NOT_FOUND;
+        value = value * 10U + (unsigned)(text[i] - '0');
+    }
+    /* imtcp substitutes 514 only for the literal "0" without a port file.
+     * Other zero spellings request an ephemeral port and cannot be keyed. */
+    if (value == 0 && !(length == 1 && text[0] == '0')) return RS_RET_NOT_FOUND;
+    *port = value == 0 ? 514U : value;
+    return RS_RET_OK;
+}
+
+static rsRetVal makeImtcpEndpointIdentity(const struct cnfobj *object, char **identity) {
+    const char *port;
+    const char *address;
+    const char *netns;
+    size_t portLen, addressLen, netnsLen;
+    unsigned portNumber;
+    int netnsPrefixLen, addressPrefixLen, portSuffixLen;
+    size_t totalLen;
+    char *cursor;
+
+    if (nvlstString(object->nvlst, "listenportfilename", NULL) != NULL) return RS_RET_NOT_FOUND;
+    port = nvlstString(object->nvlst, "port", &portLen);
+    if (parseFixedTcpPort(port, portLen, &portNumber) != RS_RET_OK) return RS_RET_NOT_FOUND;
+    address = nvlstString(object->nvlst, "address", &addressLen);
+    netns = nvlstString(object->nvlst, "networknamespace", &netnsLen);
+    if (address == NULL) {
+        address = "*";
+        addressLen = 1;
+    }
+    if (netns == NULL) {
+        /* The effective namespace inherits the module default. This object-
+         * only catalog has no module context, so do not invent a fixed key. */
+        return RS_RET_NOT_FOUND;
+    }
+
+    /* Length-prefix the textual endpoint components so IPv6 addresses and
+     * namespace names containing separators cannot collide. The numeric port
+     * is canonicalized so equivalent spellings such as 0514 and 514 match. */
+    if (memchr(address, '\0', addressLen) != NULL || memchr(netns, '\0', netnsLen) != NULL) return RS_RET_PARAM_ERROR;
+    netnsPrefixLen = snprintf(NULL, 0, "input:imtcp:endpoint:n%zu:", netnsLen);
+    addressPrefixLen = snprintf(NULL, 0, "a%zu:", addressLen);
+    portSuffixLen = snprintf(NULL, 0, "p%u", portNumber);
+    if (netnsPrefixLen < 0 || addressPrefixLen < 0 || portSuffixLen < 0) return RS_RET_ERR;
+    totalLen = (size_t)netnsPrefixLen;
+    if (netnsLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += netnsLen;
+    if ((size_t)addressPrefixLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += (size_t)addressPrefixLen;
+    if (addressLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += addressLen;
+    if ((size_t)portSuffixLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += (size_t)portSuffixLen;
+    if (totalLen == SIZE_MAX) return RS_RET_OUT_OF_MEMORY;
+    *identity = malloc(totalLen + 1);
+    if (*identity == NULL) return RS_RET_OUT_OF_MEMORY;
+    cursor = *identity;
+    cursor += snprintf(cursor, totalLen + 1, "input:imtcp:endpoint:n%zu:", netnsLen);
+    memcpy(cursor, netns, netnsLen);
+    cursor += netnsLen;
+    cursor += snprintf(cursor, totalLen + 1 - (size_t)(cursor - *identity), "a%zu:", addressLen);
+    memcpy(cursor, address, addressLen);
+    cursor += addressLen;
+    snprintf(cursor, totalLen + 1 - (size_t)(cursor - *identity), "p%u", portNumber);
+    return RS_RET_OK;
+}
+
 static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, char **identity) {
     const char *value = NULL;
     const char *type = cnfobjType2str(object->objType);
@@ -806,6 +912,11 @@ static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, 
             value = nvlstString(object->nvlst, key, &valueLen);
             if (value == NULL) {
                 const char *const inputType = nvlstString(object->nvlst, "type", &valueLen);
+                if (inputType != NULL && equalFoldedString(inputType, valueLen, "imtcp", sizeof("imtcp") - 1)) {
+                    const rsRetVal endpointRet = makeImtcpEndpointIdentity(object, identity);
+                    if (endpointRet == RS_RET_OK) return RS_RET_OK;
+                    if (endpointRet != RS_RET_NOT_FOUND) return endpointRet;
+                }
                 const int n = inputType == NULL ? snprintf(NULL, 0, "%s:anonymous:%zu", type, ordinal)
                                                 : snprintf(NULL, 0, "%s:anonymous:%zu:%.*s:%zu", type, valueLen,
                                                            (int)valueLen, inputType, ordinal);
@@ -1192,6 +1303,8 @@ rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *con
 }
 
 rsRetVal rsReloadCandidateSourceBegin(void) {
+    rsRetVal ret;
+
     rsReloadCandidateSourceAbort();
     sourceOrdinal = 0;
     sourceDefaultActionOrdinal = 0;
@@ -1199,7 +1312,14 @@ rsRetVal rsReloadCandidateSourceBegin(void) {
     sourceHaveGlobal = 0;
     sourceHaveMainQueue = 0;
     sourceInputOrdinalsDestruct();
-    return rsReloadNormalizedGraphBuilderV1Construct(&sourceBuilder);
+    sourceObjectCatalog = calloc(1, sizeof(*sourceObjectCatalog));
+    if (sourceObjectCatalog == NULL) return RS_RET_OUT_OF_MEMORY;
+    ret = rsReloadNormalizedGraphBuilderV1Construct(&sourceBuilder);
+    if (ret != RS_RET_OK) {
+        rsReloadCandidateDestruct(&sourceObjectCatalog);
+        return ret;
+    }
+    return RS_RET_OK;
 }
 
 int rsReloadCandidateSourceActive(void) {
@@ -1213,6 +1333,12 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
     rsRetVal ret;
 
     if (sourceBuilder == NULL || sourceError || object == NULL) return;
+    if (object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT) {
+        if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
+            sourceError = 1;
+            return;
+        }
+    }
     ++sourceOrdinal;
     if (object->objType == CNFOBJ_RULESET && object->nvlst == NULL) {
         if (sourceDefaultSerialized == NULL) sourceDefaultSerialized = es_newStr(256);
@@ -1287,11 +1413,14 @@ void rsReloadCandidateSourceCaptureDefaultScript(const struct cnfstmt *script) {
     rsReloadCandidateSourceCaptureObject(&object);
 }
 
-rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder) {
+rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder,
+                                       rsReloadCandidate_t **ppObjectCatalog) {
     char *fingerprint = NULL;
     rsRetVal ret;
 
-    if (ppBuilder == NULL || *ppBuilder != NULL || sourceBuilder == NULL) return RS_RET_PARAM_ERROR;
+    if (ppBuilder == NULL || *ppBuilder != NULL || ppObjectCatalog == NULL || *ppObjectCatalog != NULL ||
+        sourceBuilder == NULL || sourceObjectCatalog == NULL)
+        return RS_RET_PARAM_ERROR;
     if (sourceError) {
         rsReloadCandidateSourceAbort();
         return RS_RET_NOT_IMPLEMENTED;
@@ -1329,6 +1458,8 @@ rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBu
     }
     *ppBuilder = sourceBuilder;
     sourceBuilder = NULL;
+    *ppObjectCatalog = sourceObjectCatalog;
+    sourceObjectCatalog = NULL;
     if (sourceDefaultSerialized != NULL) es_deleteStr(sourceDefaultSerialized);
     sourceDefaultSerialized = NULL;
     nvlstDestruct(sourceGlobalParams);
@@ -1342,6 +1473,7 @@ rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBu
 
 void rsReloadCandidateSourceAbort(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&sourceBuilder);
+    rsReloadCandidateDestruct(&sourceObjectCatalog);
     if (sourceDefaultSerialized != NULL) es_deleteStr(sourceDefaultSerialized);
     sourceDefaultSerialized = NULL;
     nvlstDestruct(sourceGlobalParams);
@@ -1433,6 +1565,41 @@ void rsReloadCandidateNoteError(const rsRetVal error) {
 
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *const candidate) {
     return candidate == NULL ? 0 : candidate->objectCount;
+}
+
+rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *const candidate,
+                                         const rsReloadCandidateObjectVisitorV1_t visitor,
+                                         void *const context) {
+    const rsReloadCandidateObject_t *entry;
+    size_t ordinal = 0;
+    rsRetVal ret;
+
+    if (candidate == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
+    for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        ret = visitor(entry->object, ordinal, context);
+        if (ret != RS_RET_OK) return ret;
+        ++ordinal;
+    }
+    return RS_RET_OK;
+}
+
+rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *const candidate,
+                                               rsReloadCandidate_t **const ppCatalog) {
+    const rsReloadCandidateObject_t *entry;
+    rsReloadCandidate_t *catalog = NULL;
+    DEFiRet;
+
+    if (candidate == NULL || ppCatalog == NULL || *ppCatalog != NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(catalog = calloc(1, sizeof(*catalog)));
+    for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        CHKiRet(appendObjectCatalogClone(catalog, entry->object));
+    }
+    *ppCatalog = catalog;
+    catalog = NULL;
+
+finalize_it:
+    rsReloadCandidateDestruct(&catalog);
+    RETiRet;
 }
 
 typedef struct visitedRulesetIdentity_s {

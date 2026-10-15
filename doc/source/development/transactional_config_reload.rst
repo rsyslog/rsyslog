@@ -34,8 +34,17 @@ is already available in a released rsyslog version.
 Current implementation boundary
 -------------------------------
 
-This delivery adds activation of supported body changes to existing named
-rulesets, using private syntax clones and unchanged named actions. Preparation owns all
+This delivery adds detached effective imtcp source configurations and
+conservative reuse/restart-required classification. Candidate lowering reuses
+normal module/input parameter handling without creating listeners or changing
+active endpoints. Stable fixed-listener identities, endpoint registry
+ownership, and accepted-session setting snapshots prepare later lifecycle
+work; none enables live input changes in this slice. New, removed, reordered,
+or incompatible inputs remain fail-closed for activation. ACL source lowering
+also remains unsupported.
+
+This delivery adds activation of supported body changes to existing named rulesets,
+using private syntax clones and unchanged named actions. Preparation owns all
 new syntax; queue workers quiesce at batch boundaries before prepared roots
 are published together. Old roots retire only after the cutover. A no-op
 candidate reports without advancing the generation.
@@ -299,6 +308,21 @@ conservative source-syntactic diff, not semantic validation: effective defaults,
 module capability classification, preparation, and ``on`` activation remain
 fail-closed until their later gates are complete.  Later releases retain or
 refine these counters alongside the target outcome counters above.
+
+Modules may opt in to a private source-lowering interface as those later gates
+are developed.  Both ``validate`` and ``on`` then lower the active and candidate
+source catalogs through the module's ordinary parameter and default logic.  A
+lowerer may reject a syntactically captured but semantically invalid setting,
+but it must not construct runtime resources, change the active generation, or
+retain borrowed catalog data.  In ``validate`` mode this remains report-only;
+successful lowering is not permission to activate the module.
+The status field ``source_capability`` distinguishes an exact effective
+``reuse`` comparison from a conservative ``restart_required`` result and from
+``not_evaluated`` when parsing, lowering, legacy syntax, or an unsupported
+side-effectful setting prevented comparison.
+The first imtcp comparator pairs listener instances in source order; a pure
+reorder is therefore conservatively restart-required until endpoint-key
+reconciliation is connected to the runtime registry.
 
 ``on`` applies a conservative scope gate to that report. Only modifications to
 already existing rulesets pass this report gate. Private preparation additionally

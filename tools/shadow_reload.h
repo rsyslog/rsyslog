@@ -15,6 +15,7 @@
 
 #include "typedefs.h"
 #include "rsconf.h"
+#include "reload-candidate.h"
 #include "reload-normalized-graph.h"
 
 /** @brief Initialize main-thread accounting and register owned statistics.
@@ -29,13 +30,15 @@ void shadowReloadExit(void);
  * @param mode Parsed HUP mode; the active configuration must already exist.
  * @param configPath Borrowed master path; a private copy is retained.
  * @param sourceGraphBuilder Ownership transfers on every return path.
+ * @param sourceObjectCatalog Owned source catalog; transfers on every return path.
  * @return RS_RET_OK, including an unavailable baseline reported fail-closed,
  * or RS_RET_OUT_OF_MEMORY when copying the path fails. Main-thread only;
  * does not activate a candidate or change active runtime objects.
  */
 rsRetVal shadowReloadConfigure(reloadOnHUPMode_t mode,
                                const char *configPath,
-                               rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder);
+                               rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder,
+                               rsReloadCandidate_t *sourceObjectCatalog);
 
 /** @brief Copy the active generation's normalized ruleset fingerprint.
  * This control-path accessor lets diagnostics avoid rebuilding the graph.

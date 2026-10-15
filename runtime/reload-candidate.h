@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/** SPDX-License-Identifier: Apache-2.0
  * @file reload-candidate.h
  *
  * Side-effect-free syntax capture for a reload candidate. This is control
@@ -18,6 +18,8 @@ struct cnfstmt;
 struct nvlst;
 /** @brief Opaque owner of private parser objects, never an active runtime. */
 typedef struct rsReloadCandidate_s rsReloadCandidate_t;
+/** @brief Inspect an immutable object in frontend order; never retain its pointers. */
+typedef rsRetVal (*rsReloadCandidateObjectVisitorV1_t)(const struct cnfobj *object, size_t parseOrdinal, void *context);
 /** @brief Visit borrowed immutable syntax in effective parse order.
  * Identity and fragment are valid only during the callback; neither may be
  * mutated or retained. A non-OK result stops traversal and propagates unchanged.
@@ -47,6 +49,26 @@ rsRetVal rsReloadCandidateParse(const char *path, rsReloadCandidate_t **ppCandid
 void rsReloadCandidateDestruct(rsReloadCandidate_t **ppCandidate);
 /** @brief Return captured object count without transferring ownership; NULL yields zero. */
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
+/** @brief Visit catalog objects in frontend parse order.
+ * Objects are borrowed for the callback only and retain frontend parse order.
+ * The visitor must not mutate, destruct, or retain them.
+ * @param candidate Borrowed syntax capture or detached object catalog.
+ * @param visitor Callback; its first non-OK result stops traversal.
+ * @param context Caller-owned callback context, never retained.
+ * @return RS_RET_OK, visitor error, or RS_RET_PARAM_ERROR for invalid arguments.
+ */
+rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
+                                         rsReloadCandidateObjectVisitorV1_t visitor,
+                                         void *context);
+/** @brief Build an independent owned catalog containing only module and input
+ * declarations. This is the source material required by module-specific
+ * effective-profile classifiers; unrelated scripts and objects are omitted.
+ * @param candidate Borrowed syntax capture, not consumed.
+ * @param ppCatalog Non-NULL address initially containing NULL; output is owned
+ * by the caller and released with rsReloadCandidateDestruct().
+ * @return RS_RET_OK on success, or an allocation/clone error.
+ */
+rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *candidate, rsReloadCandidate_t **ppCatalog);
 /** @brief Traverse candidate ruleset fragments without consuming the candidate.
  * @param candidate Immutable candidate, kept alive by the caller throughout.
  * @param visitor Callback with borrowed syntax; must not alter candidate state.
@@ -126,11 +148,14 @@ void rsReloadCandidateSourceCaptureDefaultScript(const struct cnfstmt *script);
  * @brief Finish startup observation and transfer the owned structural builder.
  * @param ppBuilder Non-NULL output, initially NULL; caller frees a successful
  * result with rsReloadNormalizedGraphBuilderV1Destruct().
+ * @param ppObjectCatalog Non-NULL initially NULL output; receives an owned
+ * source catalog on success, released with rsReloadCandidateDestruct().
  * @return RS_RET_OK; RS_RET_PARAM_ERROR for invalid output/inactive capture;
  * RS_RET_NOT_IMPLEMENTED for a dirty baseline; otherwise allocation/graph errors.
  * Valid-output failures discard capture state and leave the output NULL.
  */
-rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
+rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder,
+                                       rsReloadCandidate_t **ppObjectCatalog);
 /** @brief Release unfinished startup observation; safe when no capture exists. */
 void rsReloadCandidateSourceAbort(void);
 /** @brief Mark startup observation unusable; a no-op outside source capture. */

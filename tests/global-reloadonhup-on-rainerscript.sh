@@ -24,8 +24,8 @@ add_conf '
 global(processInternalMessages="on" config.reloadOnHUP="on"
        debug.onShutdown="on" debug.logFile="'$RSYSLOG_DYNNAME'.debug.log")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="prepared")
+module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="prepared" config.enabled="on")
 ruleset(name="prepared") {
     if $msg contains "msgnum" then
         action(type="omfile" name="prepared_sink" file="'$RSYSLOG_OUT_LOG'")
@@ -59,6 +59,55 @@ reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PO
 if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged="* ]]; then
 	echo "FAIL: unchanged on candidate unexpectedly advanced activation: $reload_status"
 	error_exit 1
+fi
+if [[ "$reload_status" != *"source_capability=reuse"* ]]; then
+	echo "FAIL: unchanged RainerScript imtcp profile was not classified reusable: $reload_status"
+	error_exit 1
+fi
+cp "$CONF_FILE" "$CONF_FILE.base"
+
+if [[ -z "${RSYSLOG_RELOAD_LOCAL_CONTROL:-}" && -z "${RSYSLOG_RELOAD_UNNAMED_CONTROL:-}" ]]; then
+# Explicit and omitted module defaults must lower to the same effective
+# profile in RainerScript just as they do in YAML. The raw module node changes,
+# so the current runtime scope gate still rejects without advancing generation.
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="on")|' \
+	"$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: explicit RainerScript imtcp default was not classified reusable: $reload_status"
+	error_exit 1
+fi
+
+# A real module-default change reaches every input that does not override it
+# and is conservatively restart-required until imtcp profile commit exists.
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off")|' \
+	"$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=restart_required"* ]]; then
+	echo "FAIL: changed RainerScript imtcp module profile was not classified conservatively: $reload_status"
+	error_exit 1
+fi
+cp "$CONF_FILE.base" "$CONF_FILE"
+
+# The imtcp source lowerer must parse a valid changed input through the same
+# descriptor/default path as startup before the still-conservative capability
+# gate rejects runtime mutation. The generation and listener remain unchanged.
+sed 's/ruleset="prepared" config.enabled="on")/ruleset="prepared" config.enabled="on" flowControl="off")/' \
+	"$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: valid imtcp candidate did not reach the capability boundary: $reload_status"
+	error_exit 1
+fi
+if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
+	echo "FAIL: changed RainerScript imtcp profile was not classified conservatively: $reload_status"
+	error_exit 1
+fi
+cp "$CONF_FILE.base" "$CONF_FILE"
+
 fi
 
 # A ruleset-only expression change with an unchanged named action must pass
@@ -210,10 +259,10 @@ content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000005' "$RSYSLOG_OUT_LOG"
 content_check 'shadow_reload event=request result=rejected mode=on'
 content_check 'rejected_mode=on rejected_reason=candidate_report_invalid'
-content_check 'reload_on_total=8'
-content_check 'reload_on_rejected_total=4'
-content_check 'reload_capability_rejected_total=3'
-content_check 'reload_legacy_hook_total=8'
+content_check 'reload_on_total=10'
+content_check 'reload_on_rejected_total=6'
+content_check 'reload_capability_rejected_total=5'
+content_check 'reload_legacy_hook_total=10'
 assert_content_missing 'result=validated'
 content_check 'termination requested by signal' "$RSYSLOG_DYNNAME.debug.log"
 exit_test
