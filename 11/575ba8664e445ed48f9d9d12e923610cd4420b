@@ -142,6 +142,7 @@ tools/shadow_reload.c
   s_f2c089be484e12::t_abc16b5cdccceb 954-955
   s_f2c089be484e12::t_58e39dd3468b8d 680-692
   s_f2c089be484e12::t_e289d5373392b5 695-698,710
+  s_f2c089be484e12::t_453280d01dd21b 3
 tools/rsyslogd.c
   s_f2c089be484e12::t_84ac90a252a4c9 1012-1013,1198-1200
   s_f2c089be484e12::t_334c2faa778628 2471
@@ -277,6 +278,7 @@ doc/source/rainerscript/global.rst
   s_f2c089be484e12::t_f002f3cafa0e8e 32,36,38
   s_f2c089be484e12::t_97a4b1803ce7a5 33-35
   s_f2c089be484e12::t_1b719ad63ee5fc 27-28,30-31
+  s_f2c089be484e12::t_453280d01dd21b 29
 tests/global-reloadonhup-off-hup.sh
   s_f2c089be484e12::t_c3072e4666b2b0 1,3-29
   s_f2c089be484e12::t_cf1f4fa4d9bd1d 2
@@ -296,6 +298,7 @@ runtime/modules.h
   s_f2c089be484e12::t_f766af83eee1ea 207,235,246,253-256,336-337,354
   s_f2c089be484e12::t_cdeb3af9072a48 361-363,365
   s_c7fd29f004e3b9::t_de111154cbc741 38,168,170,192,391-396
+  s_f2c089be484e12::t_453280d01dd21b 164-167,169,179-180,193-194
 tools/Makefile.am
   s_f2c089be484e12::t_a0642841fa91b6 11-12
 runtime/module-template.h
@@ -332,6 +335,8 @@ doc/source/development/transactional_config_reload.rst
   s_f2c089be484e12::t_04ac09735d7401 365,368
   s_f2c089be484e12::t_484b99dacf81f1 371
   s_f2c089be484e12::t_0ae7260949ed95 357
+  s_f2c089be484e12::t_453280d01dd21b 74-75,345-349
+  s_f2c089be484e12::t_8610c0e7b02c95 372-380
 tests/testsuites/segmented-diskqueue-checkpoint-driver.sh
   s_f2c089be484e12::t_bf9172563e72ac 5-7,32,38-44
 runtime/module-reload.c
@@ -366,6 +371,7 @@ tests/Makefile.am
   s_f2c089be484e12::t_7ed93cbf4b14be 1885-1886
   s_f2c089be484e12::t_b64123e755b79a 295,2936-2941,3048-3051,3069-3070
   s_f2c089be484e12::t_9ba5daf8d92761 1883-1884,1887,2870-2871,2875-2876,2918-2919,2942-2944,3052-3053,3071
+  s_f2c089be484e12::t_8610c0e7b02c95 999-1000
 tests/segdisk-inspect.py
   s_f2c089be484e12::t_bf9172563e72ac 156-160,281,296-297
   s_d41298c6e29859::t_c479b7618b9695 298
@@ -822,6 +828,7 @@ plugins/imtcp/imtcp.c
   s_f2c089be484e12::t_0ae7260949ed95 1656,1742-1743,1824-1825
   s_f2c089be484e12::t_e1de8a00295179 1685-1688,1745-1748,1827-1830,1909-1912
   s_f2c089be484e12::t_1b719ad63ee5fc 1645,1653-1655,1657-1658,1741,1761-1762,1798-1799,1823,1844-1851,1878-1880,1905,1927-1928
+  s_f2c089be484e12::t_453280d01dd21b 89
 runtime/tcps_sess.h
   s_f2c089be484e12::t_894953666a21a4 95,98-100,108-123
 runtime/tcps_sess.c
@@ -880,11 +887,13 @@ tests/unit/tcpsrv_fence_test.c
   s_f2c089be484e12::t_4930e31aaecc3c 8-11
   s_f2c089be484e12::t_eb95f78aebaa81 426-439,600
   s_f2c089be484e12::t_36df503ec886c8 475-477
+  s_f2c089be484e12::t_8610c0e7b02c95 12-14,319-331
 tools/shadow_reload_lifecycle.h
   s_f2c089be484e12::t_9ba5daf8d92761 1-4,10-23
   s_f2c089be484e12::t_c06a708a290322 5-9
 grammar/reload-ruleset-materializer.h
   s_c7fd29f004e3b9::t_1be328f7edf9aa 41
+  s_f2c089be484e12::t_453280d01dd21b 28-32
 tests/global-reloadonhup-imtcp-ruleset-rainerscript.sh
   s_f2c089be484e12::t_f178d00728b9af 1-52
 runtime/tcpsrv-poll.h
