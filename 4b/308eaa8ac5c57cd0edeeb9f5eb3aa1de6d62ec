@@ -42,6 +42,7 @@ tools/shadow_reload.h
   s_f2c089be484e12::t_7b402fc2c35acd 18
   s_f2c089be484e12::t_14f92d4acfb34f 7-9
   s_f2c089be484e12::t_83e65328a86556 14-15
+  s_f2c089be484e12::t_479ac55712e38e 28,30-35,49-54,64-65,70-71
 runtime/outchannel.h
   s_f2c089be484e12::t_56f84f0be628be 36
 runtime/perctile_stats.c
@@ -231,6 +232,7 @@ doc/source/development/transactional_config_reload.rst
   s_f2c089be484e12::t_f16ab587be16f6 281
   s_f2c089be484e12::t_c08598a4e5c95a 36-46,50-52,55-56,293-296
   s_f2c089be484e12::t_e2b1e7e5a697ff 8-9,47-49,297-298,303-305
+  s_f2c089be484e12::t_479ac55712e38e 6-7,16-17
 tests/testsuites/segmented-diskqueue-checkpoint-driver.sh
   s_f2c089be484e12::t_bf9172563e72ac 5-7,32,38-44
 runtime/module-reload.c
