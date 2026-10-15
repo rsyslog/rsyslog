@@ -387,6 +387,7 @@ tests/Makefile.am
   s_f2c089be484e12::t_5a151bceff836c 2911
   s_f2c089be484e12::t_5df456f716e98c 1905,2918
   s_f2c089be484e12::t_62f7dea9a4e562 2912-2917,2919
+  s_f2c089be484e12::t_7ebb086dc8a409 1008
 tests/segdisk-inspect.py
   s_f2c089be484e12::t_bf9172563e72ac 156-160,281,296-297
   s_d41298c6e29859::t_c479b7618b9695 298
@@ -752,6 +753,7 @@ runtime/reload-candidate.h
   s_f2c089be484e12::t_41d85d3c824fc1 110-111
   s_f2c089be484e12::t_1c6df10fce31d4 142-143
   s_f2c089be484e12::t_5df456f716e98c 65
+  s_f2c089be484e12::t_7ebb086dc8a409 63,66
 runtime/yamlconf.c
   s_f2c089be484e12::t_a3cf060caaadc8 1980-1981
   s_f2c089be484e12::t_da868e5dc68914 1654
@@ -989,6 +991,7 @@ tools/shadow_reload_lifecycle.h
 grammar/reload-ruleset-materializer.h
   s_c7fd29f004e3b9::t_1be328f7edf9aa 45
   s_f2c089be484e12::t_1c6df10fce31d4 42
+  s_f2c089be484e12::t_7ebb086dc8a409 27-28
 tests/global-reloadonhup-imtcp-ruleset-rainerscript.sh
   s_f2c089be484e12::t_f178d00728b9af 1-52
 tests/global-reloadonhup-imtcp-topology-yaml.sh
@@ -1065,9 +1068,12 @@ tests/testsuites/imtcp-named-policy-driver.sh
   s_f2c089be484e12::t_3ca980b8de239a 1-10,13-70,73-118,129-205,230-235
   s_f2c089be484e12::t_5df456f716e98c 206-229
   s_f2c089be484e12::t_1d5c0e0de7e4fb 71-72
+  s_f2c089be484e12::t_9af997a321f64e 11-12,119-128
 tests/global-reloadonhup-imtcp-named-rainerscript.sh
   s_f2c089be484e12::t_3ca980b8de239a 1-3,5
   s_f2c089be484e12::t_1c7c4ce525208f 4
+plugins/imtcp/Makefile.am
+  s_f2c089be484e12::t_7ebb086dc8a409 3
 ---
 {
   "schema_version": "authorship/3.0.0",
