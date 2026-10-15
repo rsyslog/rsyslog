@@ -1,13 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: first five dependent draft PRs published and
-integrated with current main; slice 6 construction and focused checks ongoing.
+Recorded: 2026-10-15. Status: first six dependent draft PRs published and
+integrated with current main; the hosted-feedback correction batch and its
+dependency cascade are atomically published through slice 5; slice 6 is now
+published separately. Slice 7 is prepared for implementation, not implemented.
 Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 
 ## Method and merge contract
 
 - Use durable sibling worktrees; never depend on /tmp for work or evidence.
+- Before stopping any validation container, verify its exact ID and task
+  worktree mount in a separate read-only check. Never infer ownership from
+  it being the only running container or combine inspection and stop blindly.
 - Split by complete functionality and ownership invariant, not patch size alone.
 - Each PR targets its immediate predecessor; merge strictly in numbered order.
   After its predecessor merges, retarget the next PR to main and verify that
@@ -75,6 +80,78 @@ an assertion that those intermediate revisions are safe to merge unchanged.
 
 ## Current evidence and remaining work
 
+### Hosted-feedback correction batch (published)
+
+The five dependent branches were published atomically at 09450eb85 / 7c4b9cea8 /
+ea52e6752 / 7d14e94c9 / b74f85476, with one functional commit per slice and
+the correct immediate-parent bases. Freshly fetched upstream main remained
+c62d84ad735404e23990806c53c882b0057b866c; fork main was fast-forwarded to the
+same commit. Fresh independent Luna/high digest-bound reviews and receipts
+are sealed for all five candidates. The serialized imdiag literal concern
+was revalidated as non-blocking hardening in slice 2.
+
+Previous published heads f21fdc83c / 2d05b707f / ba2f993cf / 33aeada71 /
+659a3cbf8 and frozen pre-cascade fix checkpoints 4060068 / 66cbb3f / 2925e6 /
+9ca7bea are historical provenance, not current heads. Publication used the
+explicitly authorized intermediate-only container-validation override; the
+final combined tip still requires the broad validation gate.
+
+| Slice | Functional correction and focused evidence |
+| --- | --- |
+| 1 | Atomic scraped-gauge stores and pending lifetime; invalid/OOM policy status; guarded duration accounting; minimal HUP/TERM handlers, pending-TERM priority and main-context shutdown debugging; stronger legacy rotation and YAML accounting oracles. Focused lane 8/8, then final handler controls 2/2 passed. |
+| 2 | Partial-send/reset handling, report provenance and duplicate-field controls; initial 6/6 and final post-cascade 8/8 passed (build -j4, checks -j2). |
+| 3 | Portable working-directory handling, source identity and grammar corrections; initial 4/4 and final post-cascade 11/11 passed (build -j6, checks -j2). |
+| 4 | OOM clone cleanup and report bounds; initial 13/13, alignment 2/2 and final post-cascade 16/16 passed (build -j4, checks -j2). |
+| 5 | Final post-cascade focused TCP controls 20/20 passed (build -j4, checks -j2); actual assertion-enabled ASan/UBSan fuzz execution completed 1,000 iterations. |
+
+Slice 6 is published as draft [#7689](https://github.com/rsyslog/rsyslog/pull/7689),
+head b6e3c527e674e61f68070a6008caebb2d8f95f65, based on slice 5 b74f85476.
+Its boundary is compatible existing-listener live policy and accept-time
+new-session profiles; no listener addition/removal/replacement is enabled.
+Final-head actual poll controls passed 19/19 (19.38s), configured with
+`--disable-imtcp-epoll` and verified `mode: no`. Before the internal report
+storage-shape/null-identity guard correction, ef1232893 passed epoll 18/18
+(20.33s) and poll 19/19 (38.56s). Native controls cover the final guard;
+there is no exact-final-head epoll claim.
+
+Final mock distcheck passed: 1,631 total, 1,621 passes, 10 skips, zero failures
+(69.34s). HTML documentation passed with -j20 at 89d03f12d; final doc/source
+bytes are identical. The pinned Ubuntu 26.04 image recorded below was used
+with `--no-pull`, GCC -g, build/check -j20; mock execution used
+`CI_CHECK_CMD=distcheck` and `CI_MAKE_CHECK_OPT='-j20 TEST_RUN_TYPE=MOCK-OK'`.
+Fresh Luna/high review used two shards covering all 32 expected files and
+3,227 reviewable changed lines; receipt digest
+`e9b4427d4c5d3406b0274352da19994335465e37c8b8d1dc788e10ebadc25acb`
+is sealed passed. The explicitly approved intermediate-only publication
+override was also used for slice 6. Detailed commands and evidence are in its
+ignored `.codex/security-review/cascade-validation-summary.md`.
+
+Hosted checks and review-thread disposition remain pending. The post-push
+snapshot for the first five PRs has 75 unresolved non-outdated AI threads;
+the earlier count of 94 is historical. Agents posted factual replies only and
+resolved no threads reserved for human authority. Doxygen, ABI, performance
+and style items still require review decisions. All six PRs remain draft and
+are not merge-ready; mergeability alone does not change that status.
+GitHub reports all six conflict-free against their declared bases. Hosted
+jobs remain queued/in progress; cancelled duplicate runs must not be treated
+as source failures. For example, slice-2 style run 38741228483 was cancelled
+on the current head and superseded by pending run 38741230102 on that same
+head. No cancelled-job rerun was requested while replacements were active.
+
+Next slice 7 is planned, not implemented: identity-based retained-endpoint
+reconciliation, mixed live/new-session profiles and unnamed rate-limit base
+support. Keep addition/removal/replacement gated before Prepare until slice
+12, and reuse the retirement retry already folded into slice 6 rather than
+reintroducing historical ownership code.
+
+An unrelated local-queue validation container was stopped by exact ID during
+this session. The incident was reported to the user; no source was deleted
+and no restart was attempted. The durable incident note is in slice 6's ignored
+`.codex/security-review/stack06-validation-container-incident.md`. The ownership
+check in the method contract above governs subsequent container stops.
+
+### Earlier umbrella and stack evidence
+
 Published umbrella head before rebase: 75f8c832cb6901f0b642cad878b393fec858815b.
 Backup: codex/reload-before-rebase-20261015.
 Rebase base: 62ab7a35ff8dfe0fd572c6a39853b2b32d9b9e8f.
@@ -109,10 +186,14 @@ Merge order: [1 / #7683](https://github.com/rsyslog/rsyslog/pull/7683) ->
 [2 / #7684](https://github.com/rsyslog/rsyslog/pull/7684) ->
 [3 / #7685](https://github.com/rsyslog/rsyslog/pull/7685) ->
 [4 / #7686](https://github.com/rsyslog/rsyslog/pull/7686) ->
-[5 / #7687](https://github.com/rsyslog/rsyslog/pull/7687) -> remaining slices.
-All five are draft, assigned to rgerhards, milestone v8.2610, categories
+[5 / #7687](https://github.com/rsyslog/rsyslog/pull/7687) ->
+[6 / #7689](https://github.com/rsyslog/rsyslog/pull/7689) -> planned slice 7.
+All six are draft, assigned to rgerhards, milestone v8.2610, categories
 configuration/enhancement. Each child targets the preceding feature branch.
 Do not merge umbrella #7654 in parallel with this replacement stack.
+All six descriptions begin with merge conditions and link the complete
+published order: parent first, retarget after its merge, verify the delta,
+and pass required checks and review before merging the child.
 
 | Slice / PR | Published opening head / base | Functional checks before latest main integration | Review and other evidence |
 | --- | --- | --- | --- |
@@ -122,8 +203,8 @@ Do not merge umbrella #7654 in parallel with this replacement stack.
 | 4 / #7686 | 097f45f8f / codex/reload-stack-03-candidates | 12/12 clone/barrier/worker/activation checks (100.40s) | Two Luna/high shards covered all 36 expected paths; HTML passed; specialist sanitizer/distribution evidence remains distinct |
 | 5 / #7687 | 99ded8113 / codex/reload-stack-04-ruleset-activation | 9/9 detached-candidate/frontend/TCP checks (55.58s) | Two Luna/high shards covered all 17 expected paths; HTML passed; permitted-peer allocation cleanup folded here, static error-path audit, no forced-OOM runtime claim |
 
-These opening heads preserve provenance; current-main integration will change
-them and requires refreshed evidence. Each slice contains one functional commit
+These opening heads preserve provenance and differ from the current published
+heads below; refreshed evidence is recorded above. Each slice contains one functional commit
 with applicable follow-up fixes folded in. Never infer merge readiness from
 draft publication or the table alone. Hosted CI and hosted AI review are
 pending, not equivalent to the independent local reviews recorded here.
@@ -161,9 +242,12 @@ five-branch chain was published atomically with exact leases. GitHub verifies
 all five are conflict-free against their declared bases, with one functional
 commit each. Local queue ownership/shutdown behavior is preserved; active
 local/mixed graph activation rejects explicitly before cloning or barriers.
-All five current security packages have complete, unique reviewed-file coverage
-and passed receipts against freshly rebuilt clean inventories. Hosted checks
-and review remain separate merge requirements, not implied by mergeability.
+At that published-head checkpoint, all five security packages had complete,
+unique reviewed-file coverage and passed receipts against freshly rebuilt
+clean inventories. Those historical receipts are superseded by the fresh
+correction-batch reviews recorded above. Hosted checks and review remain
+separate merge requirements, not
+implied by mergeability.
 
 Boundary adjustments already made: benchmark assets are absent from the first
 three slices, retained in the umbrella for later performance/tooling work.
@@ -180,14 +264,14 @@ and exact source/image evidence, review security per slice, and complete the
 activation-mode release-performance gate. Only then begin milestone 4 (general
 ruleset graph/call lifecycle). Current bounded reload is not full-config reload.
 
-Next boundary in progress: slice 6, bounded compatible existing-listener live
+Historical slice-6 construction boundary: bounded compatible existing-listener live
 policy and accept-time profiles. First-introduction fixes include poll capacity
 and failed-resume ownership/automatic retry before candidate disposal. It must
-not enable listener addition/removal/replacement. Construction has resumed on
+not enable listener addition/removal/replacement. Construction used
 the integrated parent; module/input-only changes must also reject active
 local/mixed graphs before any module preparation or publication.
 
-Current-main integration results: slices 1-3 are published on
+Historical current-main integration checkpoint: slices 1-3 were published on
 c62d84ad7 at f21fdc83c / 2d05b707f / ba2f993cf. Their refreshed focused
 lanes passed 13/13 (71.38s), 9/9 (63.89s) and 12/12 (64.00s), including
 RainerScript/YAML local-queue configuration controls and all three checkpoint
@@ -196,11 +280,12 @@ deltas; receipts are sealed against the rebuilt clean inventories.
 
 | PR | Current published head | Verified base |
 | --- | --- | --- |
-| #7683 | f21fdc83cb2075540c7179332f6cc07ee6ccf716 | main / c62d84ad7 |
-| #7684 | 2d05b707f03c600cd4f93d86851f77ec4360ecd4 | #7683 / f21fdc83c |
-| #7685 | ba2f993cfac69c93f2462e27bc4d131fb7dcbe45 | #7684 / 2d05b707f |
-| #7686 | 33aeada71a5077156d9eb43f241db2e863767873 | #7685 / ba2f993cf |
-| #7687 | 659a3cbf8874b8e02af56de5f5cbff27aa8f827e | #7686 / 33aeada71 |
+| #7683 | 09450eb85f50257a51b137790dabdbe8f667c64b | main / c62d84ad7 |
+| #7684 | 7c4b9cea8fed73772c4e9cc0da43f8e135f1676e | #7683 / 09450eb85 |
+| #7685 | ea52e6752a359b744b94fe918692e7f7e5c788a2 | #7684 / 7c4b9cea8 |
+| #7686 | 7d14e94c9e35e17146aa00010e0293172d99bc81 | #7685 / ea52e6752 |
+| #7687 | b74f85476b972ad89ed18a10949b7c4a30609094 | #7686 / 7d14e94c9 |
+| #7689 | b6e3c527e674e61f68070a6008caebb2d8f95f65 | #7687 / b74f85476 |
 
 Slice 4's six final RS/YAML controls passed: global activation positives plus
 local-only and mixed-graph rejection with old generation, old routing and the
