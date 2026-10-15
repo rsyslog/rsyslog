@@ -18,6 +18,7 @@ grammar/rainerscript.c
   s_f2c089be484e12::t_c4724fe7b2261e 6642-6643
 tests/Makefile.am
   s_f2c089be484e12::t_8da186ae1089a3 2738,2742,2787-2789,2887-2888,2901
+  s_f2c089be484e12::t_d332ca37a005fb 2737,2741
 doc/source/development/coding_practices/no_process_exit.rst
   s_f2c089be484e12::t_dd9b4f93c388da 38-40
   s_f2c089be484e12::t_b651424628881c 1-37,41-78
