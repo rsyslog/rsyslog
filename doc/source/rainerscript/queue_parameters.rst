@@ -446,12 +446,14 @@ queue.discardSeverity
    :widths: auto
    :class: parameter-table
 
-   "integer", "8", "no", "``$ActionQueueDiscardSeverity``"
+   "integer or severity name", "8", "no", "``$ActionQueueDiscardSeverity``"
 
 As soon as the threshold of the parameter queue.discardMark is reached
 incoming as well as queued messages with a priority equal or lower than
 specified will be erased. With the default no messages will be erased.
-You have to specify a numeric severity value for this parameter.
+Specify a numeric severity from ``0`` (emergency) through ``7`` (debug), or a
+syslog severity name such as ``warning``. The default ``8`` disables severity
+discarding. A numeric value has the same meaning for global and local queues.
 
 
 queue.checkpointInterval

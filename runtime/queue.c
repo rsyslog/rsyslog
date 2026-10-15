@@ -293,7 +293,7 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.fulldelaymark", eCmdHdlrInt, 0},
                                            {"queue.lightdelaymark", eCmdHdlrInt, 0},
                                            {"queue.discardmark", eCmdHdlrInt, 0},
-                                           {"queue.discardseverity", eCmdHdlrFacility, 0},
+                                           {"queue.discardseverity", eCmdHdlrSeverity, 0},
                                            {"queue.checkpointinterval", eCmdHdlrInt, 0},
                                            {"queue.syncqueuefiles", eCmdHdlrBinary, 0},
                                            {"queue.type", eCmdHdlrQueueType, 0},
@@ -6260,8 +6260,7 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         } else if (!strcmp(pblk.descr[i].name, "queue.discardmark")) {
             pThis->iDiscardMrk = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.discardseverity")) {
-            /* This historical descriptor decodes facility names globally.
-             * Local scope uses the strictly checked priority above. */
+            /* Local scope uses the stricter raw-value check above. */
             pThis->iDiscardSeverity = pThis->local_scope && localSeverity >= 0 ? localSeverity : pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.checkpointinterval")) {
             pThis->iPersistUpdCnt = pvals[i].val.d.n;

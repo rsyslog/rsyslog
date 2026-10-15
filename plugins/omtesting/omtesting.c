@@ -610,7 +610,7 @@ ENDmodExit
 
 /* Only a testbench build may qualify controlled blocking/error injection. */
 static rsRetVal local_queue_check_action(void *const instance) {
-#ifdef ENABLE_IMDIAG
+#ifdef ENABLE_TESTBENCH
     const instanceData *const pData = instance;
     if (pData != NULL && pData->iWaitSeconds >= 0 && pData->iWaitUSeconds >= 0) {
         switch (pData->mode) {
