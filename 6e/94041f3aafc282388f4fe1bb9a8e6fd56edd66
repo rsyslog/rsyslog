@@ -2,6 +2,7 @@ tests/Makefile.am
   s_f2c089be484e12::t_0bf979441dfc55 2862
   s_f2c089be484e12::t_cb2f5fed461b73 2865-2882,2884-2901
   s_f2c089be484e12::t_eafa83ef5dbb52 2859-2861,2863-2864,2883,2902-2903
+  s_f2c089be484e12::t_24ddf97decd1b2 2858
 runtime/AGENTS.md
   s_f2c089be484e12::t_25b77c746d3e3c 41-44
 tests/unit/tcpsrv_prepared_backend_test.c
