@@ -938,6 +938,7 @@ runtime/tcpsrv.h
   s_f2c089be484e12::t_7969c73c72c375 99-101
   s_f2c089be484e12::t_575cdf8e94fef9 140-151,472-478,596-629
   s_f2c089be484e12::t_4189a88c835649 630
+  s_f2c089be484e12::t_e0c22efefb5c7d 471,480
 tests/global-reloadonhup-ruleset-constructs-yaml.sh
   s_f2c089be484e12::t_f178d00728b9af 1-119
 runtime/tcpsrv.c
