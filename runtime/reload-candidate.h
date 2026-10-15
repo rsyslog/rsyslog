@@ -60,9 +60,10 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
                                          rsReloadCandidateObjectVisitorV1_t visitor,
                                          void *context);
-/** @brief Build an independent owned catalog containing only module and input
+/** @brief Build an independent owned catalog containing module, input and named rate-policy
  * declarations. This is the source material required by module-specific
  * effective-profile classifiers; unrelated scripts and objects are omitted.
+ * Owned reference values retain non-imtcp policy usage after script disposal.
  * @param candidate Borrowed syntax capture, not consumed.
  * @param ppCatalog Non-NULL address initially containing NULL; output is owned
  * by the caller and released with rsReloadCandidateDestruct().
@@ -107,6 +108,8 @@ rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *cand
  * failure. Caller serializes access to syntax; no runtime/module locks are used.
  */
 rsRetVal rsReloadActionSyntaxFingerprintV1(const struct nvlst *syntax, char **ownedFingerprint);
+/** @brief Copy an immutable object's canonical fingerprint into caller-owned storage. */
+rsRetVal rsReloadObjectSyntaxFingerprintV1(const struct cnfobj *object, char **ownedFingerprint);
 /** @brief Borrow an explicit action name from immutable source parameters.
  * @param syntax Borrowed parameter list, which must outlive the returned bytes.
  * @param borrowedName Output bytes, not necessarily NUL terminated.
@@ -128,7 +131,17 @@ rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **bor
  * changes, or RS_RET_PARAM_ERROR for a NULL/incompatible report header.
  */
 rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *report);
-rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *candidate,
+/** @brief Admit retained imtcp changes and exclusively owned named-policy mutations.
+ * @param activeSourceCatalog Borrowed active catalog with owned non-imtcp references;
+ * required for any named-policy mutation, otherwise NULL is accepted.
+ * @param candidate Borrowed complete candidate syntax.
+ * @param report Borrowed structurally valid report; no ownership is transferred.
+ * @return RS_RET_OK for the bounded scope; parameter or unsupported-scope error otherwise.
+ * Source authorization is not semantic validation or permission to bypass
+ * topology, local/mixed queue, module classification or preparation guards.
+ */
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *activeSourceCatalog,
+                                                    const rsReloadCandidate_t *candidate,
                                                     const rsReloadReportV1_t *report);
 
 /**

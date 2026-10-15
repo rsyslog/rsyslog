@@ -8,6 +8,10 @@
  * pointer arrays stay transaction-owned until resume/retirement succeeds.
  * Listener table replacement also rebinds descriptor table bases while fenced;
  * it owns only arrays, never the retained listener/session objects they name.
+ * Named policy owners are control-thread references shared by metadata and
+ * prepared/runtime/retired bindings. Publication holds every listener fence;
+ * old limiter instances are released before their registry owner references.
+ * No owner-reference operation or new lock runs on the message path.
  * This is the implementation of the TCP input module.
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
@@ -72,6 +76,8 @@
 #include "netstrm.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "srUtils.h"
+#include "ratelimit.h"
 #include "tcpsrv.h"
 #include "imtcp-reload-resume.h"
 #include "imtcp-reload-regex.h"
@@ -79,6 +85,8 @@
 #include "rainerscript.h"
 #include "parserif.h"
 #include "reload-candidate.h"
+#include "imtcp-policy-owner.h"
+#include <limits.h>
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
@@ -99,6 +107,7 @@ typedef struct tcpsrv_etry_s {
     char *endpoint_key; /**< Owned canonical socket identity; NULL for unkeyable endpoints. */
     char *config_name; /**< Owned inputname copy for diagnostics, never socket identity. */
     size_t source_ordinal; /**< Stable startup order for unkeyable dynamic endpoints. */
+    imtcpPolicyOwner_t *policyOwner; /**< Owns one registry reference, not the listener limiter. */
     enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
@@ -198,6 +207,8 @@ finalize_it:
 }
 
 static void endpointRegistryRemove(tcpsrv_etry_t *const entry) {
+    /* tcpsrv destruction has already released the listener's limiter. */
+    imtcpPolicyOwnerRelease(&entry->policyOwner);
     entry->state = IMTCP_ENDPOINT_RETIRING;
     free(entry->endpoint_key);
     free(entry->config_name);
@@ -304,6 +315,8 @@ struct instanceConf_s {
 };
 
 
+static reloadRateProfile_t *activeRateProfiles;
+
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     instanceConf_t *root, *tail;
@@ -356,6 +369,7 @@ struct modConfData_s {
     /* Exact module origin, owned only by private reload snapshots. */
     char *reloadModuleLoadName; /**< Owned spelling from the detached catalog; freed with this config. */
     sbool reloadSnapshot;
+    reloadRateProfile_t *reloadRateProfiles; /**< Owned values, no retained syntax or runtime borrows. */
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -1648,6 +1662,87 @@ static int reloadUStringEqual(const uchar *const left, const uchar *const right)
     return reloadStringEqual((const char *)left, (const char *)right);
 }
 
+
+/** @brief Lower only independently owned scalar policy values; never retain AST pointers. */
+static rsRetVal lowerReloadRateProfile(const struct cnfobj *object, modConfData_t *config) {
+    const struct nvlst *parameter;
+    reloadRateProfile_t *profile = NULL;
+    char *text = NULL;
+    DEFiRet;
+    CHKmalloc(profile = calloc(1, sizeof(*profile)));
+    parameter = findSourceParam(object->nvlst, "name");
+    if (parameter == NULL || parameter->val.datatype != 'S' || parameter->val.d.estr == NULL)
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    CHKmalloc(profile->name = es_str2cstr(parameter->val.d.estr, NULL));
+    if (*profile->name == '\0' || strlen(profile->name) != es_strlen(parameter->val.d.estr) ||
+        reloadRateFind(config->reloadRateProfiles, profile->name) != NULL)
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    CHKiRet(rsReloadObjectSyntaxFingerprintV1(object, &profile->fingerprint));
+    profile->burst = 10000;
+    profile->severity = -1;
+    profile->simple = 1;
+    for (parameter = object->nvlst; parameter != NULL; parameter = parameter->next) {
+        if (nvlstNameEquals(parameter->name, "name")) continue;
+        /* Capture is not normal runtime dispatch: do not silently activate a
+         * declaration whose startup enable/disable semantics were not applied. */
+        if (nvlstNameEquals(parameter->name, "config.enabled")) {
+            profile->simple = 0;
+            continue;
+        }
+        if (nvlstNameEquals(parameter->name, "interval") || nvlstNameEquals(parameter->name, "burst")) {
+            long value;
+            if (parameter->val.datatype == 'N') {
+                if (parameter->val.d.n < 0 || parameter->val.d.n > INT_MAX) ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+                value = parameter->val.d.n;
+            } else if (parameter->val.datatype == 'S' && parameter->val.d.estr != NULL) {
+                char *end;
+                CHKmalloc(text = es_str2cstr(parameter->val.d.estr, NULL));
+                errno = 0;
+                value = strtol(text, &end, 10);
+                if (errno != 0 || end == text || *end != '\0' || strlen(text) != es_strlen(parameter->val.d.estr))
+                    ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+                free(text);
+                text = NULL;
+            } else
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            if (value < 0 || value > INT_MAX) ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            if (nvlstNameEquals(parameter->name, "interval"))
+                profile->interval = (unsigned)value;
+            else
+                profile->burst = (unsigned)value;
+        } else if (nvlstNameEquals(parameter->name, "severity")) {
+            if (parameter->val.datatype != 'S' || parameter->val.d.estr == NULL) ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            CHKmalloc(text = es_str2cstr(parameter->val.d.estr, NULL));
+            if (strlen(text) != es_strlen(parameter->val.d.estr)) ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            profile->severity = decodeSyslogName((uchar *)text, syslogPriNames);
+            free(text);
+            text = NULL;
+            if (profile->severity < 0 || profile->severity > 7) ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+        } else
+            profile->simple = 0;
+    }
+    profile->next = config->reloadRateProfiles;
+    config->reloadRateProfiles = profile;
+    profile = NULL;
+finalize_it:
+    free(text);
+    reloadRateProfilesDestruct(&profile);
+    RETiRet;
+}
+
+static int reloadNamedRateEqual(const instanceConf_t *left,
+                                const modConfData_t *leftConfig,
+                                const instanceConf_t *right,
+                                const modConfData_t *rightConfig) {
+    const char *leftName = (const char *)left->cnf_params->pszRatelimitName;
+    const char *rightName = (const char *)right->cnf_params->pszRatelimitName;
+    reloadRateProfile_t *leftProfile = reloadRateFind(leftConfig->reloadRateProfiles, leftName);
+    reloadRateProfile_t *rightProfile = reloadRateFind(rightConfig->reloadRateProfiles, rightName);
+    return reloadStringEqual(leftName, rightName) &&
+           ((leftName == NULL && rightName == NULL) || (leftProfile != NULL && rightProfile != NULL &&
+                                                        !strcmp(leftProfile->fingerprint, rightProfile->fingerprint)));
+}
+
 static int reloadRulesetNameEqual(const uchar *const left, const uchar *const right) {
     return left == right || (left != NULL && right != NULL && !strcasecmp((const char *)left, (const char *)right));
 }
@@ -1829,7 +1924,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
-           ((ignoreLiveFields && leftParams->pszRatelimitName == NULL && rightParams->pszRatelimitName == NULL) ||
+           (ignoreLiveFields ||
             (left->ratelimitInterval == right->ratelimitInterval && left->ratelimitBurst == right->ratelimitBurst)) &&
            (ignoreNewSessionFields ||
             (left->bSPFramingFix == right->bSPFramingFix && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
@@ -1878,7 +1973,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            (ignoreNewSessionFields || reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex)) &&
-           reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
+           (ignoreLiveFields || reloadNamedRateEqual(left, leftModule, right, rightModule)) &&
            (ignoreLiveFields ||
             (leftLegacyAcl == rightLegacyAcl && reloadAllowedSenderConfigEqual(left, leftModule, right, rightModule) &&
              reloadAllowedSendersEqual(leftAllowed, rightAllowed))) &&
@@ -2013,6 +2108,15 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     if (!reloadAllowedSenderConfigEqual(oldInst, oldConfig, newInst, newConfig) &&
         !reloadAllowedSenderChangeSupported(oldInst, oldConfig, newInst, newConfig))
         return 0;
+    if (!reloadNamedRateEqual(oldInst, oldConfig, newInst, newConfig)) {
+        reloadRateProfile_t *oldPolicy =
+            reloadRateFind(oldConfig->reloadRateProfiles, (const char *)oldInst->cnf_params->pszRatelimitName);
+        reloadRateProfile_t *newPolicy =
+            reloadRateFind(newConfig->reloadRateProfiles, (const char *)newInst->cnf_params->pszRatelimitName);
+        if ((oldInst->cnf_params->pszRatelimitName != NULL && (oldPolicy == NULL || !oldPolicy->simple)) ||
+            (newInst->cnf_params->pszRatelimitName != NULL && (newPolicy == NULL || !newPolicy->simple)))
+            return 0;
+    }
     /* Capacity is live only when cold-start listen-backlog semantics stay
      * unchanged. The occupied-tail shrink check requires the runtime fence. */
     if (oldInst->iTCPSessMax != newInst->iTCPSessMax &&
@@ -2126,6 +2230,7 @@ typedef struct imtcpReloadEntryV1_s {
 typedef struct imtcpReloadStateV1_s {
     size_t count;
     uint64_t runtimeGeneration; /**< Captured registry lifetime, not a configuration generation. */
+    imtcpPolicyTransaction_t *policies;
     imtcpReloadEntryV1_t entries[];
 } imtcpReloadStateV1_t;
 
@@ -2149,6 +2254,7 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
         tcpsrv.DestructListenerTables(&state->entries[i].preparedListenerTables);
         tcpsrv.DestructListenerTables(&state->entries[i].retiredListenerTables);
     }
+    imtcpPolicyTransactionDestruct(&state->policies);
 }
 
 typedef struct imtcpAclEvaluation_s {
@@ -2221,6 +2327,8 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
     CHKmalloc(state = calloc(1, sizeof(*state) + count * sizeof(state->entries[0])));
     state->count = count;
     state->runtimeGeneration = runtimeGeneration;
+    CHKiRet(imtcpPolicyTransactionPrepare(oldConfig->reloadRateProfiles, newConfig->reloadRateProfiles,
+                                          activeRateProfiles, newConfig->pConf, count, &state->policies));
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) {
         char *key = NULL;
         const rsRetVal keyRet =
@@ -2273,6 +2381,12 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
                                                  &state->entries[index].preparedListenerTables));
         }
         state->entries[index].flowControl = newInst->bUseFlowControl;
+        tcpLstnPortList_t *listener = state->entries[index].runtime->tcpsrv->pLstnPorts;
+        CHKiRet(imtcpPolicyBindingPrepare(
+            &state->policies->entries[index], oldConfig->reloadRateProfiles, state->policies->preparedPolicies,
+            &state->entries[index].runtime->policyOwner, &listener->ratelimiter,
+            &listener->cnf_params->pszRatelimitName, (const char *)newInst->cnf_params->pszRatelimitName,
+            (unsigned)newInst->ratelimitInterval, (unsigned)newInst->ratelimitBurst));
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].ratelimitInterval = (unsigned)newInst->ratelimitInterval;
         state->entries[index].ratelimitBurst = (unsigned)newInst->ratelimitBurst;
@@ -2409,6 +2523,8 @@ static void commitReloadV1(void *const pReloadState) {
     /* Core serialization keeps this prepared runtime generation live through
      * infallible publication; shutdown cannot start midway through commit. */
     imtcpReloadStateV1_t *const state = pReloadState;
+    for (size_t i = 0; i < state->count; ++i) assert(state->entries[i].fenceAcquired);
+    imtcpPolicyTransactionCommit(state->policies, &activeRateProfiles);
     for (size_t i = 0; i < state->count; ++i) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
         if (state->entries[i].preparedSessionSlots != NULL) {
@@ -2472,6 +2588,7 @@ static rsRetVal retireReloadV1(void *const pReloadState) {
     rsRetVal ret;
     if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
     ret = resumeReloadV1(pReloadState);
+    ret = imtcpPolicyTransactionRetire(&((imtcpReloadStateV1_t *)pReloadState)->policies, ret);
     if (ret != RS_RET_OK) return ret;
     freeReloadPreparedValues(pReloadState);
     free(pReloadState);
@@ -2507,6 +2624,10 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     instanceConf_t *inst = NULL;
     DEFiRet;
 
+    if (object->objType == CNFOBJ_RATELIMIT) {
+        CHKiRet(lowerReloadRateProfile(object, build->config));
+        FINALIZE;
+    }
     if (object->objType == CNFOBJ_MODULE && sourceModuleIsImtcp(object)) {
         const struct nvlst *const load = findSourceParam(object->nvlst, "load");
         if (build->moduleSeen) ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
@@ -2521,6 +2642,10 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     }
     if (object->objType != CNFOBJ_INPUT || !sourceInputIsImtcp(object)) FINALIZE;
     if (!build->moduleSeen) ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    if (findSourceParam(object->nvlst, "ratelimit.name") != NULL &&
+        (findSourceParam(object->nvlst, "ratelimit.interval") != NULL ||
+         findSourceParam(object->nvlst, "ratelimit.burst") != NULL))
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
     CHKiRet(validateSourceParams(object->nvlst, &inppblk, "type"));
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
     pvals = nvlstGetParams(paramsClone, &inppblk, NULL);
@@ -2721,6 +2846,7 @@ ENDactivateCnf
 static void destructModuleConfigContents(modConfData_t *const pModConf) {
     instanceConf_t *inst, *del;
     if (pModConf == NULL) return;
+    reloadRateProfilesDestruct(&pModConf->reloadRateProfiles);
     free(pModConf->gnutlsPriorityString);
     free(pModConf->reloadModuleLoadName);
     freeReloadAllowedSenderSpecs(&pModConf->reloadAllowedSenderSpecs, &pModConf->reloadAllowedSenderSpecCount);
@@ -2887,6 +3013,7 @@ BEGINafterRun
         etry = etry->next;
         endpointRegistryRemove(del);
     }
+    reloadRateProfilesDestruct(&activeRateProfiles);
     endpoint_registry.head = NULL;
     endpoint_registry.count = 0;
     net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));

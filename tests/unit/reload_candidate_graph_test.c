@@ -87,6 +87,8 @@ const char *cnfobjType2str(const enum cnfobjType type) {
             return "template";
         case CNFOBJ_MAINQ:
             return "main_queue";
+        case CNFOBJ_RATELIMIT:
+            return "ratelimit";
         case CNFOBJ_PROPERTY:
         case CNFOBJ_CONSTANT:
         case CNFOBJ_LOOKUP_TABLE:
@@ -94,7 +96,6 @@ const char *cnfobjType2str(const enum cnfobjType type) {
         case CNFOBJ_TIMEZONE:
         case CNFOBJ_DYN_STATS:
         case CNFOBJ_PERCTILE_STATS:
-        case CNFOBJ_RATELIMIT:
         default:
             return "opaque";
     }
@@ -119,7 +120,7 @@ static rsRetVal imtcpGateResult(const rsReloadCandidate_t *const candidate,
                                  .entryCount = 1,
                                  .entryStride = sizeof(entry),
                                  .entries = &entry};
-    return rsReloadCandidateCheckRulesetImtcpReportV1(candidate, &report);
+    return rsReloadCandidateCheckRulesetImtcpReportV1(NULL, candidate, &report);
 }
 
 static struct nvlst *parameterPair(const char *const firstName,
@@ -191,7 +192,12 @@ rsRetVal nvlstCloneReloadSafe(const struct nvlst *const source, struct nvlst **c
 void cnfstmtDestructLst(struct cnfstmt *list) {
     while (list != NULL) {
         struct cnfstmt *next = list->next;
-        if (list->nodetype == S_RELOAD_ACT)
+        if (list->nodetype == S_IF) {
+            cnfstmtDestructLst(list->d.s_if.t_then);
+            cnfstmtDestructLst(list->d.s_if.t_else);
+        } else if (list->nodetype == S_FOREACH) {
+            cnfstmtDestructLst(list->d.s_foreach.body);
+        } else if (list->nodetype == S_RELOAD_ACT)
             nvlstDestruct(list->d.reload_action);
         else if (list->nodetype == S_RELOAD_PRIFILT) {
             cnfstmtDestructLst(list->d.s_prifilt.t_then);
@@ -1045,31 +1051,31 @@ int main(void) {
             rsReloadReportV1_t malformed = *report;
             malformed.entries = NULL;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             /* Deliberately invalid numeric address: admission must reject its
              * alignment before any entry is dereferenced. */
             malformed.entries = (rsReloadReportEntryV1_t *)((uintptr_t)report->entries + 1);
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entryStride = sizeof(rsReloadReportEntryV1_t) - 1;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entryStride = sizeof(rsReloadReportEntryV1_t) + 1;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entryCount = SIZE_MAX / malformed.entryStride + 1;
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             malformed = *report;
             malformed.entries = (rsReloadReportEntryV1_t *)(uintptr_t)(UINTPTR_MAX - malformed.entryStride + 1);
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, &malformed) == RS_RET_PARAM_ERROR);
             CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_OK);
-            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(rulesetCandidate, report) == RS_RET_OK);
+            CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, rulesetCandidate, report) == RS_RET_OK);
         }
         rsReloadReportDestructV1(&report);
         {
@@ -1203,6 +1209,59 @@ int main(void) {
     CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:named:4:tcp1") ==
           RS_RET_NOT_IMPLEMENTED);
     rsReloadCandidateDestruct(&candidate);
+    /* Named definition mutation requires exclusive imtcp ownership in both
+     * generations, including nested actions whose ASTs the catalog discards.
+     * Destroying the original capture proves catalog reference ownership. */
+    {
+        rsReloadCandidate_t *active = calloc(1, sizeof(*active));
+        rsReloadCandidate_t *next = calloc(1, sizeof(*next));
+        rsReloadCandidate_t *catalog = NULL;
+        struct nvlst *binding = parameterPair("type", "imtcp", "ratelimit.name", "A");
+        struct nvlst *newBinding = parameterPair("type", "imtcp", "ratelimit.name", "A");
+        CHECK(active != NULL && next != NULL && binding != NULL && newBinding != NULL);
+        addObject(active, object(CNFOBJ_RATELIMIT, parameter("name", "A"), NULL));
+        addObject(next, object(CNFOBJ_RATELIMIT, parameter("name", "A"), NULL));
+        addObject(active, object(CNFOBJ_INPUT, binding, NULL));
+        addObject(next, object(CNFOBJ_INPUT, newBinding, NULL));
+        char policyIdentity[] = "ratelimit:named:1:A";
+        rsReloadReportEntryV1_t entry = {
+            .objectKind = RS_RELOAD_OBJ_RATELIMIT, .diffKind = RS_RELOAD_DIFF_MODIFIED, .identity = policyIdentity};
+        rsReloadReportV1_t report = {.version = RS_RELOAD_REPORT_V1,
+                                     .structSize = sizeof(report),
+                                     .entryCount = 1,
+                                     .entryStride = sizeof(entry),
+                                     .entries = &entry};
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(active, next, &report) == RS_RET_OK);
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(NULL, next, &report) == RS_RET_NOT_IMPLEMENTED);
+        struct cnfstmt *nested = calloc(1, sizeof(*nested));
+        struct cnfstmt *action = calloc(1, sizeof(*action));
+        CHECK(nested != NULL && action != NULL);
+        nested->nodetype = S_IF;
+        nested->d.s_if.t_else = action;
+        action->nodetype = S_RELOAD_ACT;
+        action->d.reload_action = parameter("action.ratelimit.name", "A");
+        CHECK(action->d.reload_action != NULL);
+        addObject(active, object(CNFOBJ_RULESET, parameter("name", "nested"), nested));
+        CHECK(rsReloadCandidateBuildObjectCatalogV1(active, &catalog) == RS_RET_OK);
+        CHECK(catalog->otherRateReferences != NULL);
+        rsReloadCandidateDestruct(&active);
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(catalog, next, &report) == RS_RET_NOT_IMPLEMENTED);
+        entry.diffKind = RS_RELOAD_DIFF_REMOVED;
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(catalog, next, &report) == RS_RET_NOT_IMPLEMENTED);
+        rsReloadCandidateDestruct(&catalog);
+        active = calloc(1, sizeof(*active));
+        CHECK(active != NULL);
+        entry.diffKind = RS_RELOAD_DIFF_ADDED;
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(active, next, &report) == RS_RET_OK);
+        addObject(next, object(CNFOBJ_INPUT, parameterPair("type", "imudp", "ratelimit.name", "A"), NULL));
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(active, next, &report) == RS_RET_NOT_IMPLEMENTED);
+        CHECK(rsReloadCandidateBuildObjectCatalogV1(next, &catalog) == RS_RET_OK);
+        CHECK(catalog->otherRateReferences != NULL);
+        rsReloadCandidateDestruct(&next);
+        CHECK(rsReloadCandidateCheckRulesetImtcpReportV1(active, catalog, &report) == RS_RET_NOT_IMPLEMENTED);
+        rsReloadCandidateDestruct(&catalog);
+        rsReloadCandidateDestruct(&active);
+    }
     puts("reload candidate graph tests passed");
     return 0;
 }

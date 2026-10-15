@@ -24,6 +24,8 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 
 /** @brief Prepare supported existing named-ruleset body changes privately.
  * @param active Borrowed live configuration, kept alive until plan destruction.
+ * @param activeSourceCatalog Borrowed catalog proving exclusive named-policy
+ * usage when a rate-policy declaration changes.
  * @param candidate Borrowed immutable syntax; cloned roots become plan-owned.
  * @param report Borrowed source diff; unsupported non-ruleset objects must be unchanged.
  * @param sourceCapability Private effective classifier result authorizing imtcp
@@ -37,6 +39,7 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
  * Preparation does not instantiate actions; borrowed actions stay active-owned.
  */
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
+                                      const rsReloadCandidate_t *activeSourceCatalog,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
                                       eModReloadCapability_t sourceCapability,
