@@ -205,6 +205,8 @@ tests/global-reloadonhup-on-yaml.sh
   s_f2c089be484e12::t_ba8d043c4a11ef 3-6,34-39,68,72-81,96-147,157,161,166-169
   s_f2c089be484e12::t_d4d64be5d5b0a1 54-55,57
   s_f2c089be484e12::t_6ebb21a8b93489 58-59
+  s_f2c089be484e12::t_920fe63e457048 9
+  s_f2c089be484e12::t_7dc13e334f3cc6 173-176
 doc/source/rainerscript/global.rst
   s_f2c089be484e12::t_6c6eef3a7ab247 17
   s_f2c089be484e12::t_4c1f59dee45171 20-22,36-37
