@@ -1,0 +1,55 @@
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_659a45d80a3f5e 2790-2793
+tests/global-reloadonhup-imtcp-maxsessions-yaml.sh
+  s_f2c089be484e12::t_f8184208e9a833 15,164,168-170
+doc/source/reference/parameters/imtcp-maxlisteners.rst
+  s_f2c089be484e12::t_f8184208e9a833 8-11,38-57
+  s_f2c089be484e12::t_793d080d2fe7ca 58
+tests/global-reloadonhup-imtcp-maxlisteners-yaml.sh
+  s_f2c089be484e12::t_bc4a29d20b6c5f 1-5
+tests/unit/tcpsrv_fence_test.c
+  s_f2c089be484e12::t_c69c5e5b9acc7f 10-12,46-60,62-63,508-512,516-581,586-592,594
+  s_f2c089be484e12::t_69626754e6a88b 27,513-515,582-585
+tests/global-reloadonhup-imtcp-maxsessions-rainerscript.sh
+  s_f2c089be484e12::t_f8184208e9a833 15-16,154,158-160
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_f8184208e9a833 168
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_575cdf8e94fef9 139-150,447-454,456,533-566
+  s_f2c089be484e12::t_4189a88c835649 567
+tests/Makefile.am
+  s_f2c089be484e12::t_bc4a29d20b6c5f 277-284
+  s_f2c089be484e12::t_43bb9040bb4445 3199-3202
+tests/global-reloadonhup-imtcp-maxlisteners-rainerscript.sh
+  s_f2c089be484e12::t_bc4a29d20b6c5f 1-7,11-116,134-139
+  s_f2c089be484e12::t_805cc014aa027c 8-10,117-133
+tests/global-reloadonhup-imtcp-maxlisteners-validate-yaml.sh
+  s_f2c089be484e12::t_bc4a29d20b6c5f 1-6
+runtime/tcpsrv-fence.c
+  s_f2c089be484e12::t_805cc014aa027c 259-260,263-266,282,313-315
+  s_f2c089be484e12::t_659a45d80a3f5e 247-258,261-262,267-281,283-312,316-327
+  s_f2c089be484e12::t_575cdf8e94fef9 7-9
+tests/global-reloadonhup-imtcp-maxlisteners-validate-rainerscript.sh
+  s_f2c089be484e12::t_bc4a29d20b6c5f 1-5
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_f8184208e9a833 48-53
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_f8184208e9a833 9-10
+  s_f2c089be484e12::t_69dc4427fe8c27 1688,1968-1969,2019-2020,2099-2102,2180-2187,2223-2225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c6f8238773ae37270cc75c858a682659a40691ed",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
