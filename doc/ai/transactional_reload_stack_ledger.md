@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: stack construction in progress; umbrella rebase
-published, individual stack PRs not yet published.
+Recorded: 2026-10-15. Status: first five dependent draft PRs published;
+current-main local-queue integration and slice 6 construction in progress.
 Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 
 ## Method and merge contract
@@ -24,6 +24,9 @@ Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 - Every PR description must link parent, child, umbrella, and full merge order;
   state newly supported behavior, retained restrictions, and actual validation.
   Do not carry final-branch capability claims into an earlier stack member.
+- Start every PR description with prominent merge requirements: parent first,
+  retarget to main after parent merge, verify the delta, pass relevant checks
+  and review, and never merge a child into an unmerged parent as a substitute.
 - Maintainer-approved validation scope (2026-10-15): focused builds/tests and
   independent review for each intermediate PR; broad container validation on
   the final combined tip. Intermediate slices are targeted-tested, not fully
@@ -90,26 +93,37 @@ rebase-range-diff.log, original-merge-resolution.patch,
 rebase-focused-restored.log and rebase-format-final.log.
 
 Rebased umbrella c779824606fb8095c48e52c5ee6f933d72301043 was published with
-an explicit lease against the old head; GitHub reports mergeable. Fresh broad
+an explicit lease against the old head; GitHub then reported mergeable. Fresh broad
 Ubuntu 26.04 evidence: 1,667 passes, 70 skips, zero failures/errors (863.94s).
 Production analyzer: no bugs (267.35s). The recorder sealed the actual source
 commit and original Automake summary; no publication override was needed.
 Current whole-branch security package has 172 reviewable files and 25,406
 changed reviewable lines: needs_human, to be replaced by per-slice review.
 
-## Prepared stack checkpoints (not published PRs)
+## Published dependent stack
 
-| Slice | Branch / current checkpoint | Functional checks | Review and other evidence |
+Merge order: [1 / #7683](https://github.com/rsyslog/rsyslog/pull/7683) ->
+[2 / #7684](https://github.com/rsyslog/rsyslog/pull/7684) ->
+[3 / #7685](https://github.com/rsyslog/rsyslog/pull/7685) ->
+[4 / #7686](https://github.com/rsyslog/rsyslog/pull/7686) ->
+[5 / #7687](https://github.com/rsyslog/rsyslog/pull/7687) -> remaining slices.
+All five are draft, assigned to rgerhards, milestone v8.2610, categories
+configuration/enhancement. Each child targets the preceding feature branch.
+Do not merge umbrella #7654 in parallel with this replacement stack.
+
+| Slice / PR | Published opening head / base | Functional checks before latest main integration | Review and other evidence |
 | --- | --- | --- | --- |
-| 1 | codex/reload-stack-01-foundation, 0f259088d | No-systemd build; 8/8 policy/unit tests | Fresh independent Luna/high discovery and lead passed; analyzer clean; mock distcheck, HTML and extended docs distribution passed |
-| 2 | codex/reload-stack-02-reports, 589658d1c | 7/7 report/graph/frontend checks; both field-omission negative controls fail, restored control passes | Independent discovery and lead completed; independent validation classified the diagnostic-surface concern as non-blocking hardening; digest-bound receipt passed; mock distribution passed |
-| 3 | codex/reload-stack-03-candidates, 5cc3d0f6c | 10/10 candidate/graph/frontend/error checks | Two bounded independent Luna/high security shards passed, including parser/lexer context; distribution/docs gates pending |
-| 4 | codex/reload-stack-04-ruleset-activation, 0fb1e65db | 12/12 clone/barrier/worker/activation checks | Independent security, sanitizer and distribution/docs gates pending |
+| 1 / #7683 | 557693312 / main | 8/8 policy/unit tests (104.58s); corrected checkpoint intervals 0/1/5 all pass (7.22s) | Independent Luna/high discovery and lead covered all 34 expected paths; earlier analyzer, no-systemd, mock distcheck, HTML and extended docs distribution passed |
+| 2 / #7684 | 6b7e5ddd7 / codex/reload-stack-01-foundation | 7/7 report/graph/frontend checks (100.24s); both field-omission negative controls fail, restored control passes | Independent discovery, lead and validation completed; diagnostic concern classified non-blocking hardening; mock distribution and HTML passed |
+| 3 / #7685 | 36b6722fa / codex/reload-stack-02-reports | 10/10 candidate/graph/frontend/error checks (100.09s) | Two Luna/high shards covered all 21 expected paths plus parser/lexer context; mock distribution and HTML passed |
+| 4 / #7686 | 097f45f8f / codex/reload-stack-03-candidates | 12/12 clone/barrier/worker/activation checks (100.40s) | Two Luna/high shards covered all 36 expected paths; HTML passed; specialist sanitizer/distribution evidence remains distinct |
+| 5 / #7687 | 99ded8113 / codex/reload-stack-04-ruleset-activation | 9/9 detached-candidate/frontend/TCP checks (55.58s) | Two Luna/high shards covered all 17 expected paths; HTML passed; permitted-peer allocation cleanup folded here, static error-path audit, no forced-OOM runtime claim |
 
-These head IDs are reconstruction checkpoints, not permanent PR identities;
-later folded fixes may change them. Each branch is based on its preceding
-slice, not independently on main. Never infer merge readiness from the table
-alone. Published PR links and verified bases must replace these placeholders.
+These opening heads preserve provenance; current-main integration will change
+them and requires refreshed evidence. Each slice contains one functional commit
+with applicable follow-up fixes folded in. Never infer merge readiness from
+draft publication or the table alone. Hosted CI and hosted AI review are
+pending, not equivalent to the independent local reviews recorded here.
 
 Slice 1's additional broad Ubuntu 26.04 run completed in 789.98 seconds:
 1,595 passes, 70 skips, one failure, zero errors. The failing test is
@@ -117,29 +131,39 @@ segmented-diskqueue-checkpoint-5; its original log is retained. An isolated
 rerun on the same source and pinned image failed identically: 15 physical
 records (three startup records plus 12 injected messages), three periodic
 writes versus the test's expected two. This is reproducible, not an accepted
-flake or a clean broad-run result. Earlier
-focused, analyzer, documentation and distribution results remain separate.
+flake or a clean broad-run result. The exact startup-residue oracle correction
+is now folded into slice 1, with all three interval checks passing. Original
+failure evidence is retained; the broad suite has not been rerun after this
+correction. Earlier focused, analyzer and distribution results remain separate.
 The image was rsyslog/rsyslog_dev_base_ubuntu:26.04, ID
 sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09;
 the run used devtools/run-ci.sh, GCC -g, build -j20 and checks -j10 with
 default service relevance. Exact command/log provenance remains in the
-worktree's ignored .codex/security-review/ directory. Hosted review has not
-started for these unpublished slices.
+worktree's ignored .codex/security-review/ directory. Refreshed focused lanes
+use GCC -g and build/check -j10 for slices 1-4; slice 5 uses build -j60,
+check -j20. HTML builds used doc/tools/build-doc-linux.sh --clean --format
+html --jobs 10. These commands do not constitute a broad runtime gate.
 
 The normal branch-push guard rejected slice 1 because it has no broad-pass
-marker. No marker was fabricated. Explicit approval for a narrowly scoped
-intermediate-branch push override has been requested separately from the
-approved focused-test scope; branches remain local pending that decision.
+marker. No marker was fabricated. The maintainer explicitly authorized the
+intermediate-branch SKIP_CONTAINER_VALIDATION=1 override separately from
+focused-test scope; it was used for the five published feature branches only.
+The final combined tip still requires the broad container gate.
 
 Upstream advanced from the validated rebase base to ed0094984 while slicing;
-refresh the stack before publication and retain the new imtcp regex-framing
-and fuzz-corpus whitespace fixes. Do not reuse old digest-bound receipts as
-fresh review evidence after changing a slice's source or base.
+the stack was refreshed onto it, retaining imtcp regex-framing and fuzz-corpus
+whitespace fixes. Subsequently main advanced to c62d84ad7, merging PR #7593's
+local queue implementation. GitHub reports slice 1 conflicting; integration
+is in progress before any slice is called merge-ready. Preserve upstream local
+queue ownership/shutdown behavior, and reject unsupported local/mixed graph
+reload rather than assume legacy queue barriers cover it. Rebuild security
+inputs and refresh review evidence after this material integration.
 
 Boundary adjustments already made: benchmark assets are absent from the first
 three slices, retained in the umbrella for later performance/tooling work.
-Unrelated disk-queue checkpoint-residue maintenance is excluded from slice 2,
-retained in the umbrella, and needs a separate test-maintenance boundary.
+The disk-queue checkpoint-residue oracle correction is folded into slice 1
+after its broad and isolated runs demonstrated the intermediate failure; no
+later PR is needed to repair that test. It is not introduced again in slice 2.
 The early graph producer is source-spelling-sensitive: case-only names can be
 reported more strictly than runtime's case-insensitive ruleset lookup. This is
 a conservative report limitation, not a security finding or semantic-equivalence
@@ -149,3 +173,9 @@ Open work: construct and validate each adjusted stack boundary, record PR URLs
 and exact source/image evidence, review security per slice, and complete the
 activation-mode release-performance gate. Only then begin milestone 4 (general
 ruleset graph/call lifecycle). Current bounded reload is not full-config reload.
+
+Next boundary in progress: slice 6, bounded compatible existing-listener live
+policy and accept-time profiles. First-introduction fixes include poll capacity
+and failed-resume ownership/automatic retry before candidate disposal. It must
+not enable listener addition/removal/replacement. Local construction is held
+until integration of the published parent stack with current main is sound.
