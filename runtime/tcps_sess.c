@@ -515,10 +515,11 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
 
     if (c == '\n') {
         pThis->iCurrLine = pThis->iMsg;
-    } else {
+    } else if (pThis->iCurrLine > 0) {
+        /* A new frame can only start after a line boundary. */
         const int isMatch =
             !regexp.regexec(&pThis->pLstnInfo->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
-        if (pThis->iCurrLine > 0 && isMatch) {
+        if (isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
             const size_t len_save = pThis->iMsg - pThis->iCurrLine;
             memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, len_save);
