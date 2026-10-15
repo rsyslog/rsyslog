@@ -11,6 +11,7 @@ rsyslogd_SOURCES = \
 	shadow_reload.c \
 	shadow_reload.h \
 	shadow_reload_retirement.h \
+	shadow_reload_policy.h \
 	syslogd.h \
 	omshell.c \
 	omshell.h \
@@ -89,9 +90,9 @@ EXTRA_DIST = $(man5_MANS) $(man8_MANS) \
 noinst_PROGRAMS =
 if ENABLE_TESTBENCH
 # Reuse the daemon link closure and platform flags, without invoking its main.
-# Explicit parser object supplies a narrow getter seam; its archive twin stays unused.
+# Explicit parser/msg objects supply narrow getter seams; their archive twins stay unused.
 noinst_PROGRAMS += parser_policy_unit
-parser_policy_unit_SOURCES = $(rsyslogd_SOURCES) ../runtime/parser.c ../tests/unit/parser_policy_test.c
+parser_policy_unit_SOURCES = $(rsyslogd_SOURCES) ../runtime/parser.c ../runtime/msg.c ../tests/unit/parser_policy_test.c
 parser_policy_unit_CPPFLAGS = $(rsyslogd_CPPFLAGS) -DRSYSLOG_PARSER_POLICY_TEST -Dmain=rsyslogd_main
 parser_policy_unit_LDADD = $(rsyslogd_LDADD)
 parser_policy_unit_LDFLAGS = $(rsyslogd_LDFLAGS)

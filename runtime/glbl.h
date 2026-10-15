@@ -139,6 +139,34 @@ void glblSetParserDropTrailingCROnReception(rsconf_t *cnf, int enabled);
 /** @brief Sample trailing-CR policy; NULL configuration uses startup default off. */
 int glblGetParserDropTrailingCROnReception(rsconf_t *cnf);
 extern int glblUnloadModules;
+/** @brief Atomically publish ParserEscapeControlCharactersOnReceive; NULL configuration is ignored. */
+void glblSetParserEscapeControlCharactersOnReceive(rsconf_t *cnf, int value);
+/** @brief Sample ParserEscapeControlCharactersOnReceive; NULL configuration returns its startup default. */
+int glblGetParserEscapeControlCharactersOnReceive(rsconf_t *cnf);
+/** @brief Atomically publish ParserSpaceLFOnReceive; NULL configuration is ignored. */
+void glblSetParserSpaceLFOnReceive(rsconf_t *cnf, int value);
+/** @brief Sample ParserSpaceLFOnReceive; NULL configuration returns its startup default. */
+int glblGetParserSpaceLFOnReceive(rsconf_t *cnf);
+/** @brief Atomically publish ParserEscape8BitCharactersOnReceive; NULL configuration is ignored. */
+void glblSetParserEscape8BitCharactersOnReceive(rsconf_t *cnf, int value);
+/** @brief Sample ParserEscape8BitCharactersOnReceive; NULL configuration returns its startup default. */
+int glblGetParserEscape8BitCharactersOnReceive(rsconf_t *cnf);
+/** @brief Atomically publish ParserEscapeControlCharacterTab; NULL configuration is ignored. */
+void glblSetParserEscapeControlCharacterTab(rsconf_t *cnf, int value);
+/** @brief Sample ParserEscapeControlCharacterTab; NULL configuration returns its startup default. */
+int glblGetParserEscapeControlCharacterTab(rsconf_t *cnf);
+/** @brief Atomically publish ParserEscapeControlCharactersCStyle; NULL configuration is ignored. */
+void glblSetParserEscapeControlCharactersCStyle(rsconf_t *cnf, int value);
+/** @brief Sample ParserEscapeControlCharactersCStyle; NULL configuration returns its startup default. */
+int glblGetParserEscapeControlCharactersCStyle(rsconf_t *cnf);
+/** @brief Atomically publish ParserPermitSlashInProgramName; NULL configuration is ignored. */
+void glblSetParserPermitSlashInProgramName(rsconf_t *cnf, int value);
+/** @brief Sample ParserPermitSlashInProgramName; NULL configuration returns its startup default. */
+int glblGetParserPermitSlashInProgramName(rsconf_t *cnf);
+/** @brief Atomically publish ParserControlCharacterEscapePrefix; NULL configuration is ignored. */
+void glblSetParserControlCharacterEscapePrefix(rsconf_t *cnf, uchar value);
+/** @brief Sample ParserControlCharacterEscapePrefix; NULL configuration returns its startup default. */
+uchar glblGetParserControlCharacterEscapePrefix(rsconf_t *cnf);
 extern short janitorInterval;
 extern char **glblDbgFiles;
 extern size_t glblDbgFilesNum;

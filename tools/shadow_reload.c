@@ -34,6 +34,7 @@
 #include "modules.h"
 #include "shadow_reload_lifecycle.h"
 #include "shadow_reload_retirement.h"
+#include "shadow_reload_policy.h"
 
 DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj);
@@ -99,6 +100,20 @@ static int pendingParserDropTrailingLF = 1;
 static int pendingParserDropTrailingLFUpdate = 0;
 static int pendingParserDropTrailingCR = 0;
 static int pendingParserDropTrailingCRUpdate = 0;
+static int pendingParserEscapeControlCharacters = 1;
+static int pendingParserEscapeControlCharactersUpdate = 0;
+static int pendingParserSpaceLF = 0;
+static int pendingParserSpaceLFUpdate = 0;
+static int pendingParserEscape8BitCharacters = 0;
+static int pendingParserEscape8BitCharactersUpdate = 0;
+static int pendingParserEscapeControlCharacterTab = 1;
+static int pendingParserEscapeControlCharacterTabUpdate = 0;
+static int pendingParserEscapeControlCharactersCStyle = 0;
+static int pendingParserEscapeControlCharactersCStyleUpdate = 0;
+static int pendingParserPermitSlashInProgramName = 0;
+static int pendingParserPermitSlashInProgramNameUpdate = 0;
+static uchar pendingParserControlCharacterEscapePrefix = '#';
+static int pendingParserControlCharacterEscapePrefixUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -514,6 +529,13 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     int activeCompactJsonString;
     int activeParserDropTrailingLF;
     int activeParserDropTrailingCR;
+    int activeParserEscapeControlCharacters;
+    int activeParserSpaceLF;
+    int activeParserEscape8BitCharacters;
+    int activeParserEscapeControlCharacterTab;
+    int activeParserEscapeControlCharactersCStyle;
+    int activeParserPermitSlashInProgramName;
+    uchar activeParserControlCharacterEscapePrefix;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -625,13 +647,159 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeValue, &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.droptrailingcronreception",
                                                    &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserDropTrailingCR));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserDropTrailingCR));
+        if (activeParserDropTrailingCR != glblGetParserDropTrailingCROnReception(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserDropTrailingCRUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.escapecontrolcharactersonreceive",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(
+        pendingSourceObjectCatalog, "parser.escapecontrolcharactersonreceive", &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserEscapeControlCharacters));
+        CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserEscapeControlCharacters));
+        if (activeParserEscapeControlCharacters != glblGetParserEscapeControlCharactersOnReceive(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserEscapeControlCharactersUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.spacelfonreceive", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.spacelfonreceive",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserSpaceLF));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserSpaceLF));
+        if (activeParserSpaceLF != glblGetParserSpaceLFOnReceive(runConf)) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserSpaceLFUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.escape8bitcharactersonreceive",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.escape8bitcharactersonreceive",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserEscape8BitCharacters));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserEscape8BitCharacters));
+        if (activeParserEscape8BitCharacters != glblGetParserEscape8BitCharactersOnReceive(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserEscape8BitCharactersUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.escapecontrolcharactertab",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.escapecontrolcharactertab",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserEscapeControlCharacterTab));
+        CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserEscapeControlCharacterTab));
+        if (activeParserEscapeControlCharacterTab != glblGetParserEscapeControlCharacterTab(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserEscapeControlCharacterTabUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.escapecontrolcharacterscstyle",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.escapecontrolcharacterscstyle",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserEscapeControlCharactersCStyle));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserEscapeControlCharactersCStyle));
+        if (activeParserEscapeControlCharactersCStyle != glblGetParserEscapeControlCharactersCStyle(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserEscapeControlCharactersCStyleUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.permitslashinprogramname",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.permitslashinprogramname",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserPermitSlashInProgramName));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserPermitSlashInProgramName));
+        if (activeParserPermitSlashInProgramName != glblGetParserPermitSlashInProgramName(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserPermitSlashInProgramNameUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.controlcharacterescapeprefix",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.controlcharacterescapeprefix",
+                                                   &candidateValue, &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserDropTrailingCR));
-    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserDropTrailingCR));
-    if (activeParserDropTrailingCR != glblGetParserDropTrailingCROnReception(runConf))
+    CHKiRet(shadowReloadParseCharPolicy(activeValue, '#', &activeParserControlCharacterEscapePrefix));
+    CHKiRet(shadowReloadParseCharPolicy(candidateValue, '#', &pendingParserControlCharacterEscapePrefix));
+    if (activeParserControlCharacterEscapePrefix != glblGetParserControlCharacterEscapePrefix(runConf))
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     pendingBaseAuthorized = 1;
-    pendingParserDropTrailingCRUpdate = 1;
+    pendingParserControlCharacterEscapePrefixUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -855,6 +1023,13 @@ void shadowReloadBeginRequest(void) {
     pendingCompactJsonString = glblGetCompactJsonString();
     pendingParserDropTrailingLF = glblGetParserDropTrailingLFOnReception(runConf);
     pendingParserDropTrailingCR = glblGetParserDropTrailingCROnReception(runConf);
+    pendingParserEscapeControlCharacters = glblGetParserEscapeControlCharactersOnReceive(runConf);
+    pendingParserSpaceLF = glblGetParserSpaceLFOnReceive(runConf);
+    pendingParserEscape8BitCharacters = glblGetParserEscape8BitCharactersOnReceive(runConf);
+    pendingParserEscapeControlCharacterTab = glblGetParserEscapeControlCharacterTab(runConf);
+    pendingParserEscapeControlCharactersCStyle = glblGetParserEscapeControlCharactersCStyle(runConf);
+    pendingParserPermitSlashInProgramName = glblGetParserPermitSlashInProgramName(runConf);
+    pendingParserControlCharacterEscapePrefix = glblGetParserControlCharacterEscapePrefix(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
@@ -862,6 +1037,13 @@ void shadowReloadBeginRequest(void) {
     pendingCompactJsonStringUpdate = 0;
     pendingParserDropTrailingLFUpdate = 0;
     pendingParserDropTrailingCRUpdate = 0;
+    pendingParserEscapeControlCharactersUpdate = 0;
+    pendingParserSpaceLFUpdate = 0;
+    pendingParserEscape8BitCharactersUpdate = 0;
+    pendingParserEscapeControlCharacterTabUpdate = 0;
+    pendingParserEscapeControlCharactersCStyleUpdate = 0;
+    pendingParserPermitSlashInProgramNameUpdate = 0;
+    pendingParserControlCharacterEscapePrefixUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -1156,6 +1338,19 @@ static void publishActivatedGeneration(void *const context) {
     if (pendingCompactJsonStringUpdate) glblSetCompactJsonString(pendingCompactJsonString);
     if (pendingParserDropTrailingLFUpdate) glblSetParserDropTrailingLFOnReception(runConf, pendingParserDropTrailingLF);
     if (pendingParserDropTrailingCRUpdate) glblSetParserDropTrailingCROnReception(runConf, pendingParserDropTrailingCR);
+    if (pendingParserEscapeControlCharactersUpdate)
+        glblSetParserEscapeControlCharactersOnReceive(runConf, pendingParserEscapeControlCharacters);
+    if (pendingParserSpaceLFUpdate) glblSetParserSpaceLFOnReceive(runConf, pendingParserSpaceLF);
+    if (pendingParserEscape8BitCharactersUpdate)
+        glblSetParserEscape8BitCharactersOnReceive(runConf, pendingParserEscape8BitCharacters);
+    if (pendingParserEscapeControlCharacterTabUpdate)
+        glblSetParserEscapeControlCharacterTab(runConf, pendingParserEscapeControlCharacterTab);
+    if (pendingParserEscapeControlCharactersCStyleUpdate)
+        glblSetParserEscapeControlCharactersCStyle(runConf, pendingParserEscapeControlCharactersCStyle);
+    if (pendingParserPermitSlashInProgramNameUpdate)
+        glblSetParserPermitSlashInProgramName(runConf, pendingParserPermitSlashInProgramName);
+    if (pendingParserControlCharacterEscapePrefixUpdate)
+        glblSetParserControlCharacterEscapePrefix(runConf, pendingParserControlCharacterEscapePrefix);
     publishActivatedGraph(context);
 }
 

@@ -109,6 +109,13 @@ pid_t glbl_ourpid;
  * runs in the main thread, so both sides use the synchronized accessor. */
 DEF_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
 DEF_ATOMIC_HELPER_MUT(mutReloadOnHUPMode);
+DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
+DEF_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
+DEF_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
+DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharacterTab);
+DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersCStyle);
+DEF_ATOMIC_HELPER_MUT(mutParserPermitSlashInProgramName);
+DEF_ATOMIC_HELPER_MUT(mutParserControlCharacterEscapePrefix);
 DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
 DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
 DEF_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
@@ -291,7 +298,6 @@ static struct cnfobj *GetmainqCnfObj(void) {
 
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(DisableDNS, bDisableDNS, int)
-SIMP_PROP(ParserEscapeControlCharactersCStyle, parser.bParserEscapeCCCStyle, int)
 SIMP_PROP(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
 /* We omit setter on purpose, because we want to customize it */
@@ -300,15 +306,39 @@ SIMP_PROP_GET(DfltNetstrmDrvrCRLF, pszDfltNetstrmDrvrCRLF, uchar *)
 SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar *)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar *)
 SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar *)
-SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
-SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
-SIMP_PROP_GET(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
-SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
-SIMP_PROP_GET(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
 
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
+
+static int GetParserEscapeControlCharactersOnReceive(rsconf_t *const cnf) {
+    return glblGetParserEscapeControlCharactersOnReceive(cnf);
+}
+
+static int GetParserSpaceLFOnReceive(rsconf_t *const cnf) {
+    return glblGetParserSpaceLFOnReceive(cnf);
+}
+
+static int GetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf) {
+    return glblGetParserEscape8BitCharactersOnReceive(cnf);
+}
+
+static int GetParserEscapeControlCharacterTab(rsconf_t *const cnf) {
+    return glblGetParserEscapeControlCharacterTab(cnf);
+}
+
+static int GetParserEscapeControlCharactersCStyle(rsconf_t *const cnf) {
+    return glblGetParserEscapeControlCharactersCStyle(cnf);
+}
+
+static uchar GetParserControlCharacterEscapePrefix(rsconf_t *const cnf) {
+    return glblGetParserControlCharacterEscapePrefix(cnf);
+}
+
+static rsRetVal SetParserEscapeControlCharactersCStyle(const int value) {
+    glblSetParserEscapeControlCharactersCStyle(loadConf, value);
+    return RS_RET_OK;
+}
 
 static int GetParserDropTrailingLFOnReception(rsconf_t *const cnf) {
     return glblGetParserDropTrailingLFOnReception(cnf);
@@ -633,7 +663,7 @@ finalize_it:
 
 static rsRetVal setParserControlCharacterEscapePrefix(void __attribute__((unused)) * pVal, uchar *pNewVal) {
     DEFiRet;
-    loadConf->globals.parser.cCCEscapeChar = *pNewVal;
+    glblSetParserControlCharacterEscapePrefix(loadConf, *pNewVal);
     RETiRet;
 }
 
@@ -651,25 +681,25 @@ static rsRetVal setParserDropTrailingCROnReception(void __attribute__((unused)) 
 
 static rsRetVal setParserEscapeControlCharactersOnReceive(void __attribute__((unused)) * pVal, int pNewVal) {
     DEFiRet;
-    loadConf->globals.parser.bEscapeCCOnRcv = pNewVal;
+    glblSetParserEscapeControlCharactersOnReceive(loadConf, pNewVal);
     RETiRet;
 }
 
 static rsRetVal setParserSpaceLFOnReceive(void __attribute__((unused)) * pVal, int pNewVal) {
     DEFiRet;
-    loadConf->globals.parser.bSpaceLFOnRcv = pNewVal;
+    glblSetParserSpaceLFOnReceive(loadConf, pNewVal);
     RETiRet;
 }
 
 static rsRetVal setParserEscape8BitCharactersOnReceive(void __attribute__((unused)) * pVal, int pNewVal) {
     DEFiRet;
-    loadConf->globals.parser.bEscape8BitChars = pNewVal;
+    glblSetParserEscape8BitCharactersOnReceive(loadConf, pNewVal);
     RETiRet;
 }
 
 static rsRetVal setParserEscapeControlCharacterTab(void __attribute__((unused)) * pVal, int pNewVal) {
     DEFiRet;
-    loadConf->globals.parser.bEscapeTab = pNewVal;
+    glblSetParserEscapeControlCharacterTab(loadConf, pNewVal);
     RETiRet;
 }
 
@@ -949,6 +979,77 @@ int glblReportOversizeMessage(rsconf_t *cnf) {
 int glblGetJsonFormatOpt(void) {
     return ATOMIC_LOAD_32BIT(&glblJsonFormatOpt, &mutJsonFormatOpt);
 }
+
+void glblSetParserEscapeControlCharactersOnReceive(rsconf_t *const cnf, const int value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bEscapeCCOnRcv, &mutParserEscapeControlCharactersOnReceive, value);
+}
+
+int glblGetParserEscapeControlCharactersOnReceive(rsconf_t *const cnf) {
+    if (cnf == NULL) return 1;
+    return (int)ATOMIC_LOAD_32BIT(&cnf->globals.parser.bEscapeCCOnRcv, &mutParserEscapeControlCharactersOnReceive);
+}
+
+void glblSetParserSpaceLFOnReceive(rsconf_t *const cnf, const int value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bSpaceLFOnRcv, &mutParserSpaceLFOnReceive, value);
+}
+
+int glblGetParserSpaceLFOnReceive(rsconf_t *const cnf) {
+    if (cnf == NULL) return 0;
+    return (int)ATOMIC_LOAD_32BIT(&cnf->globals.parser.bSpaceLFOnRcv, &mutParserSpaceLFOnReceive);
+}
+
+void glblSetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf, const int value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bEscape8BitChars, &mutParserEscape8BitCharactersOnReceive, value);
+}
+
+int glblGetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf) {
+    if (cnf == NULL) return 0;
+    return (int)ATOMIC_LOAD_32BIT(&cnf->globals.parser.bEscape8BitChars, &mutParserEscape8BitCharactersOnReceive);
+}
+
+void glblSetParserEscapeControlCharacterTab(rsconf_t *const cnf, const int value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bEscapeTab, &mutParserEscapeControlCharacterTab, value);
+}
+
+int glblGetParserEscapeControlCharacterTab(rsconf_t *const cnf) {
+    if (cnf == NULL) return 1;
+    return (int)ATOMIC_LOAD_32BIT(&cnf->globals.parser.bEscapeTab, &mutParserEscapeControlCharacterTab);
+}
+
+void glblSetParserEscapeControlCharactersCStyle(rsconf_t *const cnf, const int value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bParserEscapeCCCStyle, &mutParserEscapeControlCharactersCStyle, value);
+}
+
+int glblGetParserEscapeControlCharactersCStyle(rsconf_t *const cnf) {
+    if (cnf == NULL) return 0;
+    return (int)ATOMIC_LOAD_32BIT(&cnf->globals.parser.bParserEscapeCCCStyle, &mutParserEscapeControlCharactersCStyle);
+}
+
+void glblSetParserPermitSlashInProgramName(rsconf_t *const cnf, const int value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bPermitSlashInProgramname, &mutParserPermitSlashInProgramName, value);
+}
+
+int glblGetParserPermitSlashInProgramName(rsconf_t *const cnf) {
+    if (cnf == NULL) return 0;
+    return (int)ATOMIC_LOAD_32BIT(&cnf->globals.parser.bPermitSlashInProgramname, &mutParserPermitSlashInProgramName);
+}
+
+void glblSetParserControlCharacterEscapePrefix(rsconf_t *const cnf, const uchar value) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.cCCEscapeChar, &mutParserControlCharacterEscapePrefix, value);
+}
+
+uchar glblGetParserControlCharacterEscapePrefix(rsconf_t *const cnf) {
+    if (cnf == NULL) return '#';
+    return (uchar)ATOMIC_LOAD_32BIT(&cnf->globals.parser.cCCEscapeChar, &mutParserControlCharacterEscapePrefix);
+}
+
 
 int glblGetReloadOnHUPMode(const rsconf_t *const cnf) {
     if (cnf == NULL) return RELOAD_ON_HUP_OFF;
@@ -1258,14 +1359,14 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     bPreserveFQDN = 0;
     loadConf->globals.iMaxLine = 8192;
     glblSetReportOversizeMessage(loadConf, 1);
-    loadConf->globals.parser.cCCEscapeChar = '#';
+    glblSetParserControlCharacterEscapePrefix(loadConf, '#');
     glblSetParserDropTrailingLFOnReception(loadConf, 1);
     glblSetParserDropTrailingCROnReception(loadConf, 0);
-    loadConf->globals.parser.bEscapeCCOnRcv = 1; /* default is to escape control characters */
-    loadConf->globals.parser.bSpaceLFOnRcv = 0;
-    loadConf->globals.parser.bEscape8BitChars = 0; /* default is not to escape control characters */
-    loadConf->globals.parser.bEscapeTab = 1; /* default is to escape tab characters */
-    loadConf->globals.parser.bParserEscapeCCCStyle = 0;
+    glblSetParserEscapeControlCharactersOnReceive(loadConf, 1);
+    glblSetParserSpaceLFOnReceive(loadConf, 0);
+    glblSetParserEscape8BitCharactersOnReceive(loadConf, 0);
+    glblSetParserEscapeControlCharacterTab(loadConf, 1);
+    glblSetParserEscapeControlCharactersCStyle(loadConf, 0);
 #ifdef USE_UNLIMITED_SELECT
     iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof(fd_mask);
 #endif
@@ -1577,7 +1678,7 @@ rsRetVal glblDoneLoadCnf(void) {
             const int tmp = (int)cnfparamvals[i].val.d.n;
             SetParseHOSTNAMEandTAG(tmp);
         } else if (!strcmp(paramblk.descr[i].name, "parser.permitslashinprogramname")) {
-            loadConf->globals.parser.bPermitSlashInProgramname = (int)cnfparamvals[i].val.d.n;
+            glblSetParserPermitSlashInProgramName(loadConf, (int)cnfparamvals[i].val.d.n);
         } else if (!strcmp(paramblk.descr[i].name, "debug.logfile")) {
             if (pszAltDbgFileName == NULL) {
                 pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
@@ -1820,6 +1921,13 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
     INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
     INIT_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
     INIT_ATOMIC_HELPER_MUT(mutReloadOnHUPMode);
+    INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
+    INIT_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
+    INIT_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
+    INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharacterTab);
+    INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersCStyle);
+    INIT_ATOMIC_HELPER_MUT(mutParserPermitSlashInProgramName);
+    INIT_ATOMIC_HELPER_MUT(mutParserControlCharacterEscapePrefix);
     INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
     INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
     INIT_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
@@ -1843,5 +1951,12 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     DESTROY_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
     DESTROY_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
     DESTROY_ATOMIC_HELPER_MUT(mutReloadOnHUPMode);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharacterTab);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersCStyle);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserPermitSlashInProgramName);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserControlCharacterEscapePrefix);
     DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)

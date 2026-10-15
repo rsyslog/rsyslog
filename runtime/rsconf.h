@@ -82,7 +82,7 @@ struct queuecnf_s {
 
 /* parser config parameters */
 struct parsercnf_s {
-    uchar cCCEscapeChar; /* character to be used to start an escape sequence for control chars */
+    int cCCEscapeChar; /* escape prefix; int-sized for synchronized live reads */
     int bDropTrailingLF; /* drop trailing LF's on reception? */
     int bDropTrailingCR; /* drop trailing CR's on reception? */
     int bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
