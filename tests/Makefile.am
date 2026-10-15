@@ -274,6 +274,14 @@ EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES) $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh imfifo-startup-failure.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
+TESTS_RELOAD_LISTENER_CAPACITY = \
+	global-reloadonhup-imtcp-maxlisteners-rainerscript.sh \
+	global-reloadonhup-imtcp-maxlisteners-validate-rainerscript.sh
+TESTS_RELOAD_LISTENER_CAPACITY_YAML = \
+	global-reloadonhup-imtcp-maxlisteners-yaml.sh \
+	global-reloadonhup-imtcp-maxlisteners-validate-yaml.sh
+EXTRA_DIST += $(TESTS_RELOAD_LISTENER_CAPACITY) $(TESTS_RELOAD_LISTENER_CAPACITY_YAML)
+
 TESTS_GSSAPI = \
 	imgssapi-listen-port-file.sh \
 	imgssapi-maxsessions.sh
@@ -3206,6 +3214,10 @@ endif
 if ENABLE_IMTCP_TESTS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
+TESTS += $(TESTS_RELOAD_LISTENER_CAPACITY)
+if HAVE_LIBYAML
+TESTS += $(TESTS_RELOAD_LISTENER_CAPACITY_YAML)
+endif
 endif
 if ENABLE_IMPSTATS
 if ENABLE_IMDIAG
