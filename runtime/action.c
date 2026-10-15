@@ -451,6 +451,7 @@ rsRetVal actionConstruct(action_t **ppThis) {
     pThis->iResumeIntervalMax = 1800; /* max interval default is half an hour */
     pThis->iResumeRetryCount = 0;
     pThis->pszName = NULL;
+    pThis->bNameWasGenerated = 0;
     pThis->pszErrFile = NULL;
     pThis->maxErrFileSize = 0;
     pThis->currentErrFileSize = 0;
@@ -536,6 +537,7 @@ rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvls
     if (pThis->pszName == NULL) {
         snprintf((char *)pszAName, sizeof(pszAName), "action-%d-%s", pThis->iActionNbr, pThis->pMod->pszName);
         pThis->pszName = ustrdup(pszAName);
+        pThis->bNameWasGenerated = 1;
     }
 
     /* cache transactional attribute */

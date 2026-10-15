@@ -70,8 +70,10 @@
 #endif
 #include "rsconf.h"
 #include "lookup.h"
+#include "tools/shadow_reload.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 #include "statsobj.h"
+#include "imdiag-response.h"
 
 
 MODULE_TYPE_INPUT;
@@ -254,6 +256,12 @@ static void getFirstWord(uchar **ppszSrc, uchar *pszBuf, size_t lenBuf, int opti
 /* send a response back to the originator
  * rgerhards, 2009-05-27
  */
+/* Keep the transport seam small enough to exercise short/failed sends without
+ * replacing a process-wide netstrm interface in a running daemon. */
+static rsRetVal sendResponseChunk(void *stream, uchar *buffer, ssize_t *length) {
+    return netstrm.Send((netstrm_t *)stream, buffer, length);
+}
+
 static rsRetVal __attribute__((format(printf, 2, 3))) sendResponse(tcps_sess_t *pSess,
                                                                    const char *const __restrict__ fmt,
                                                                    ...) {
@@ -271,7 +279,7 @@ static rsRetVal __attribute__((format(printf, 2, 3))) sendResponse(tcps_sess_t *
     } else if ((size_t)len >= sizeof(buf)) {
         len = sizeof(buf) - 1;
     }
-    CHKiRet(netstrm.Send(pSess->pStrm, buf, &len));
+    CHKiRet(imdiagSendAll(pSess->pStrm, buf, len, sendResponseChunk));
 
 finalize_it:
     RETiRet;
@@ -466,14 +474,37 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal awaitHUPComplete(tcps_sess_t *pSess) {
+static int parsePosLong(const uchar *s, long *val);
+
+static rsRetVal awaitHUPComplete(uchar *pszCmd, tcps_sess_t *pSess) {
     const int max_tries = 10;
     const int ms_to_sleep = 50;
     const char *return_msg;
     int b_saw_HUP = 0;
     int tries = max_tries;
     unsigned actual_tries = 0;
+    long target = -1;
     DEFiRet;
+
+    while (*pszCmd == ' ' || *pszCmd == '\t') ++pszCmd;
+    if (*pszCmd != '\0' && !parsePosLong(pszCmd, &target)) {
+        CHKiRet(sendResponse(pSess, "ERROR: invalid HUP completion generation\n"));
+        FINALIZE;
+    }
+
+    if (target >= 0) {
+        /* Sanitizer and high-concurrency builders can hold a legacy action's
+         * HUP lock longer than ten seconds while an existing batch finishes.
+         * The generation is still the oracle; this only widens its deadline. */
+        tries = 2400;
+        while (tries-- > 0 && getHUPProcessedCount() < target) srSleep(0, 25000);
+        if (getHUPProcessedCount() >= target) {
+            CHKiRet(sendResponse(pSess, "HUP completed generation %ld\n", target));
+        } else {
+            CHKiRet(sendResponse(pSess, "ERROR: HUP generation %ld did not complete\n", target));
+        }
+        FINALIZE;
+    }
 
     while (tries > 0) {
         ++actual_tries;
@@ -508,6 +539,45 @@ static rsRetVal enableDebug(tcps_sess_t *pSess) {
     CHKiRet(sendResponse(pSess, "debug enabled\n"));
 
 finalize_it:
+    RETiRet;
+}
+
+/* Testbench oracle for the real, frontend-neutral ruleset graph producer. */
+static rsRetVal getReloadRulesetFingerprint(uchar *pszCmd, tcps_sess_t *pSess) {
+    const char *fingerprint = NULL;
+    char *name = NULL;
+    char *response = NULL;
+    size_t nameLen;
+    size_t fingerprintLen;
+    ssize_t responseLen;
+    DEFiRet;
+
+    while (*pszCmd == ' ' || *pszCmd == '\t') ++pszCmd;
+    nameLen = strcspn((const char *)pszCmd, " \t\r\n");
+    if (nameLen == 0) {
+        CHKiRet(sendResponse(pSess, "ERROR: missing ruleset name\n"));
+        FINALIZE;
+    }
+    CHKmalloc(name = strndup((const char *)pszCmd, nameLen));
+    iRet = shadowReloadGetRulesetFingerprint(name, &fingerprint);
+    if (iRet == RS_RET_NOT_FOUND) {
+        CHKiRet(sendResponse(pSess, "ERROR: ruleset not found\n"));
+        iRet = RS_RET_OK;
+    } else {
+        CHKiRet(iRet);
+        fingerprintLen = strlen(fingerprint);
+        if (fingerprintLen > (size_t)SSIZE_MAX - 1) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        CHKmalloc(response = malloc(fingerprintLen + 2));
+        memcpy(response, fingerprint, fingerprintLen);
+        response[fingerprintLen] = '\n';
+        response[fingerprintLen + 1] = '\0';
+        responseLen = (ssize_t)fingerprintLen + 1;
+        CHKiRet(imdiagSendAll(pSess->pStrm, (uchar *)response, responseLen, sendResponseChunk));
+    }
+
+finalize_it:
+    free(name);
+    free(response);
     RETiRet;
 }
 
@@ -1347,7 +1417,21 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
-        CHKiRet(awaitHUPComplete(pSess));
+        CHKiRet(awaitHUPComplete(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("gethupprocessedcount"))) {
+        CHKiRet(sendResponse(pSess, "%d\n", getHUPProcessedCount()));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("gethupidlecount"))) {
+        /* Only return a baseline after all older requests have completed.
+         * issue_HUP owns signal issuance in the testbench. */
+        int tries = 2400;
+        while (tries-- > 0 && get_bHadHUP()) srSleep(0, 25000);
+        if (get_bHadHUP()) {
+            CHKiRet(sendResponse(pSess, "ERROR: HUP coordinator did not become idle\n"));
+        } else {
+            CHKiRet(sendResponse(pSess, "%d\n", getHUPProcessedCount()));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreloadrulesetfingerprint"))) {
+        CHKiRet(getReloadRulesetFingerprint(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {

@@ -2,22 +2,27 @@
  * @file
  * @brief Fail-closed reload request accounting foundation.
  *
- * This deliberately owns request state and observability only. It does not
- * parse, validate, construct, or activate a configuration generation. Those
- * operations remain unsafe until their process-global lifetime and side
- * effects are isolated. Historic HUP hooks are intentionally outside this
- * manager and remain unconditional.
+ * This owns request state, observability, and the active generation's
+ * normalized ruleset-plan graph. It does not parse, validate, construct, or
+ * activate a candidate configuration generation. Those operations remain
+ * unsafe until their process-global lifetime and side effects are isolated.
+ * Historic HUP hooks are intentionally outside this manager and remain
+ * unconditional.
  */
 #include "config.h"
 
 #include <inttypes.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "reload-ruleset-graph.h"
 #include "shadow_reload.h"
 #include "statsobj.h"
 
@@ -39,11 +44,13 @@ static intctr_t rejectedOnTotal = 0;
 static intctr_t legacyHookTotal = 0;
 static intctr_t durationTotalUsec = 0;
 static intctr_t lastDurationUsec = 0;
-static int activeGeneration = 0;
+static unsigned activeGeneration = 0;
 static int requestInProgress = 0;
 static int pendingGauge = 0;
 static uint64_t requestStartedUsec = 0;
 static statsobj_t *reloadStats = NULL;
+static rsReloadNormalizedGraphBuilderV1_t *activeRulesetGraphBuilder = NULL;
+static rsReloadNormalizedGraphV1_t activeRulesetGraph;
 /* Scrapeable counters are separate from the always-on log state above. */
 STATSCOUNTER_DEF(ctrRequests, mutCtrRequests)
 STATSCOUNTER_DEF(ctrOff, mutCtrOff)
@@ -139,15 +146,72 @@ finalize_it:
 }
 
 void shadowReloadExit(void) {
+    rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
     if (reloadStats != NULL) statsobj.Destruct(&reloadStats);
     objRelease(statsobj, CORE_COMPONENT);
 }
 
 void shadowReloadConfigure(const reloadOnHUPMode_t mode) {
+    rsReloadNormalizedGraphBuilderV1_t *newBuilder = NULL;
+    rsReloadNormalizedGraphV1_t newGraph;
+    rsRetVal graphRet;
+
     configuredMode = mode;
     PREFER_STORE_INT(&activeGeneration, 1);
     PREFER_STORE_INT(&pendingGauge, signalRequestPending != 0);
+    memset(&newGraph, 0, sizeof(newGraph));
+    graphRet = rsReloadRulesetGraphBuildV1(runConf, &newBuilder);
+    if (graphRet == RS_RET_OK) {
+        graphRet = rsReloadNormalizedGraphBuilderV1GetGraph(newBuilder, &newGraph);
+    }
+    if (graphRet != RS_RET_OK) {
+        rsReloadNormalizedGraphBuilderV1Destruct(&newBuilder);
+        LogError(0, graphRet, "shadow_reload: active ruleset graph unavailable");
+    } else {
+        rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
+        activeRulesetGraphBuilder = newBuilder;
+        activeRulesetGraph = newGraph;
+    }
     logState("configured", "idle", "none", "none");
+}
+
+typedef struct reloadRulesetLookup_s {
+    const char *identity;
+    const char *fingerprint;
+} reloadRulesetLookup_t;
+
+static rsRetVal findReloadRuleset(const rsReloadNormalizedNodeV1_t *node, void *context) {
+    reloadRulesetLookup_t *lookup = context;
+
+    if (node->objectKind == RS_RELOAD_OBJ_RULESET && !strcasecmp(node->identity, lookup->identity)) {
+        lookup->fingerprint = node->fingerprint;
+    }
+    return RS_RET_OK;
+}
+
+rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFingerprint) {
+    reloadRulesetLookup_t lookup;
+    char *identity = NULL;
+    size_t identityLen;
+    DEFiRet;
+
+    if (name == NULL || *name == '\0' || ppFingerprint == NULL || *ppFingerprint != NULL ||
+        activeRulesetGraphBuilder == NULL) {
+        return RS_RET_PARAM_ERROR;
+    }
+    if (strlen(name) > SIZE_MAX - sizeof("ruleset:")) return RS_RET_OUT_OF_MEMORY;
+    identityLen = sizeof("ruleset:") + strlen(name);
+    CHKmalloc(identity = malloc(identityLen));
+    snprintf(identity, identityLen, "ruleset:%s", name);
+    lookup.identity = identity;
+    lookup.fingerprint = NULL;
+    CHKiRet(activeRulesetGraph.enumerate(activeRulesetGraph.context, findReloadRuleset, &lookup));
+    if (lookup.fingerprint == NULL) ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    *ppFingerprint = lookup.fingerprint;
+
+finalize_it:
+    free(identity);
+    RETiRet;
 }
 
 void shadowReloadRequestFromSignal(void) {
@@ -160,6 +224,8 @@ void shadowReloadBeginRequest(void) {
      * during doHUP() sets this flag again and is retained for the next legacy
      * HUP cycle rather than being cleared while this one completes. */
     signalRequestPending = 0;
+    /* A claimed request remains pending through the legacy hooks until
+     * shadowReloadProcess completes it; signal state tracks the next cycle. */
     PREFER_STORE_INT(&pendingGauge, 1);
     PREFER_STORE_INT(&requestInProgress, 1);
     ++requestsTotal;

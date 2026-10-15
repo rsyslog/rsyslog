@@ -1315,7 +1315,13 @@ void glblDestructMainqCnfObj(rsconf_t *cnf) {
 }
 
 void glblCnfDestruct(rsconf_t *cnf) {
-    glblDestructMainqCnfObj(cnf);
+    /* Ownership cleanup is also used by $ResetConfigVariables, which
+     * intentionally discards options before they have been consumed. Normal
+     * end-load validation stays in glblDestructMainqCnfObj(). */
+    if (cnf->mainqCnfObj != NULL) {
+        cnfobjDestruct(cnf->mainqCnfObj);
+        cnf->mainqCnfObj = NULL;
+    }
     cnfparamvalsDestruct(cnf->globalParamVals, &paramblk);
     cnf->globalParamVals = NULL;
 }

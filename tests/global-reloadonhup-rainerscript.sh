@@ -4,6 +4,8 @@
 # config-check oracle accepts off, validate, and on and rejects invalid values.
 # The live daemon oracle then sends HUP and requires validate to log an explicit
 # unsupported rejection; it must not claim that any candidate was validated.
+# Reset discards a deferred main_queue without unknown-parameter diagnostics;
+# the same unknown parameter without reset must still fail end-load validation.
 . ${srcdir:=.}/diag.sh init
 
 modpath="${RSYSLOG_MODDIR}"
@@ -30,6 +32,26 @@ action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
 CONF_EOF
 	run_expect_status 0 "${cfg}" "${RSYSLOG_DYNNAME}.${mode}.log"
 done
+
+cfg="${RSYSLOG_DYNNAME}.reset-mainqueue.conf"
+cat >"${cfg}" <<CONF_EOF
+main_queue(queue.type="LinkedList" queue.size="1000")
+\$ResetConfigVariables
+template(name="resetFormat" type="string" string="%msg%")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out" template="resetFormat")
+CONF_EOF
+run_expect_status 0 "${cfg}" "${RSYSLOG_DYNNAME}.reset-mainqueue.log"
+if grep -q 'not known' "${RSYSLOG_DYNNAME}.reset-mainqueue.log"; then
+	cat "${RSYSLOG_DYNNAME}.reset-mainqueue.log"
+	error_exit 1
+fi
+cfg="${RSYSLOG_DYNNAME}.unknown-mainqueue.conf"
+cat >"${cfg}" <<CONF_EOF
+main_queue(queue.unknownResetControl="1")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+run_expect_status 1 "${cfg}" "${RSYSLOG_DYNNAME}.unknown-mainqueue.log"
+content_check 'not known' "${RSYSLOG_DYNNAME}.unknown-mainqueue.log"
 
 cfg="${RSYSLOG_DYNNAME}.invalid.conf"
 cat >"${cfg}" <<CONF_EOF

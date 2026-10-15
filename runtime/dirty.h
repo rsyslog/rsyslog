@@ -45,6 +45,7 @@ rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(const uchar *hname,
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst);
 rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *pQueue);
 int get_bHadHUP(void);
+int getHUPProcessedCount(void);
 
 extern int MarkInterval;
 #define CONF_VERIFY_PARTIAL_CONF 0x02 /* bit: partial configuration to be checked */

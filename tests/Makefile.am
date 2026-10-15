@@ -289,6 +289,9 @@ EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 EXTRA_DIST += unit/mmaitag_gemini_response_test.c
 EXTRA_DIST += unit/module_reload_test.c
+EXTRA_DIST += unit/reload_report_test.c
+EXTRA_DIST += unit/reload_normalized_graph_test.c
+EXTRA_DIST += unit/imdiag_response_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -943,6 +946,7 @@ TESTS_LIBYAML = \
 	global-maxopenfiles-yaml.sh \
 	global-reloadonhup-yaml.sh \
 	global-systemd-notifyreadydelay-yaml.sh \
+	yaml-reload-ruleset-graph-parity.sh \
 	action-ratelimit-drop.sh \
 	action-ratelimit-pace.sh \
 	action-ratelimit-reload.sh \
@@ -2838,11 +2842,8 @@ CLEANFILES=\
 	tmp.qi nocert
 
 CLEANFILES+= \
-	IN_AUTO_DEBUG \
 	runtime_unit_imbeats_seq \
 	runtime_unit_mmaitag_gemini_response
-# IN_AUTO_DEBUG should be deleted each time make check is run, but
-# there exists no such hook. Se we at least delete it on make clean.
 # These unit binaries are conditional, but an outer build with their modules
 # enabled can leave them for an inner distcheck configured without them.
 
@@ -2852,10 +2853,10 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
@@ -2898,6 +2899,18 @@ runtime_unit_wtp_wakeup_SOURCES = \
 
 runtime_unit_module_reload_SOURCES = \
 	unit/module_reload_test.c
+
+runtime_unit_reload_report_SOURCES = \
+	unit/reload_report_test.c
+
+runtime_unit_reload_normalized_graph_SOURCES = \
+	unit/reload_normalized_graph_test.c
+
+check_PROGRAMS += runtime_unit_imdiag_response
+TESTS += runtime_unit_imdiag_response
+runtime_unit_imdiag_response_SOURCES = unit/imdiag_response_test.c
+runtime_unit_imdiag_response_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imdiag_response_LDADD =
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -2996,6 +3009,10 @@ runtime_unit_wtp_wakeup_CPPFLAGS = \
 
 runtime_unit_module_reload_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_report_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_normalized_graph_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3008,6 +3025,8 @@ runtime_unit_queue_lease_LDADD = $(PTHREADS_LIBS)
 runtime_unit_queue_spsc_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_module_reload_LDADD =
+runtime_unit_reload_report_LDADD =
+runtime_unit_reload_normalized_graph_LDADD = $(LIBESTR_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
