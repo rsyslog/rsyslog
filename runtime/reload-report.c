@@ -11,6 +11,60 @@
 #include "rsyslog.h"
 #include "reload-report.h"
 
+static uint64_t reportHashByte(const uint64_t hash, const unsigned char value) {
+    /* FNV-1a multiplication modulo 2^64 without relying on an overflowing
+     * C expression. This keeps the control-path digest clean under the
+     * unsigned-overflow sanitizer used by CI. 1099511628211 = 2^40 + 435. */
+    const uint32_t low = (uint32_t)(hash ^ value);
+    const uint32_t high = (uint32_t)((hash ^ value) >> 32);
+    const uint64_t lowProduct = (uint64_t)low * 435U;
+    const uint32_t upper = (uint32_t)((uint64_t)high * 435U + (uint64_t)low * 256U + (lowProduct >> 32));
+    return (uint64_t)(uint32_t)lowProduct | ((uint64_t)upper << 32);
+}
+
+static void reportHashUnsigned(uint64_t *const hash, uint64_t value) {
+    unsigned i;
+
+    for (i = 0; i < sizeof(value); ++i) {
+        *hash = reportHashByte(*hash, (unsigned char)value);
+        value >>= 8;
+    }
+}
+
+/**
+ * @brief Hash the domain, little-endian uint64 fields and NUL-ended identities.
+ *
+ * Excluding pointers, padding, and summary fields makes this diagnostic
+ * independent of address space, native integer width, and byte order. The
+ * ordered V1 entries determine the result, not frontend or runtime state.
+ */
+uint64_t rsReloadReportDiagnosticHashV1(const rsReloadReportV1_t *report) {
+    static const unsigned char domain[] = "rsyslog.reload.report.v1";
+    uint64_t hash = UINT64_C(14695981039346656037);
+    size_t i;
+
+    if (report == NULL) return 0;
+    for (i = 0; i < sizeof(domain) - 1; ++i) hash = reportHashByte(hash, domain[i]);
+    reportHashUnsigned(&hash, report->version);
+    reportHashUnsigned(&hash, report->entryCount);
+    for (i = 0; i < report->entryCount; ++i) {
+        rsReloadReportEntryV1_t entry;
+        /* A V1 byte stride need not preserve native struct alignment. Read
+         * the representation into an aligned local before accessing fields. */
+        memcpy(&entry, (const unsigned char *)report->entries + i * report->entryStride, sizeof(entry));
+        const unsigned char *identity = (const unsigned char *)entry.identity;
+        reportHashUnsigned(&hash, entry.objectKind);
+        reportHashUnsigned(&hash, entry.diffKind);
+        reportHashUnsigned(&hash, entry.requiredFlags);
+        reportHashUnsigned(&hash, entry.advertisedFlags);
+        reportHashUnsigned(&hash, entry.disposition);
+        reportHashUnsigned(&hash, entry.reason);
+        while (identity != NULL && *identity != '\0') hash = reportHashByte(hash, *identity++);
+        hash = reportHashByte(hash, 0);
+    }
+    return hash;
+}
+
 typedef struct rsReloadCollectedNode_s {
     rsReloadNormalizedNodeV1_t node;
 } rsReloadCollectedNode_t;

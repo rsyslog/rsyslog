@@ -59,6 +59,7 @@
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "parserif.h"
+#include "reload-candidate.h"
 
 PRAGMA_IGNORE_Wsign_compare;
 PRAGMA_IGNORE_Wmissing_noreturn;
@@ -212,6 +213,10 @@ expand_backticks(char *const param)
 {
 	es_str_t *estr;
 	assert(param != NULL);
+	if(rsReloadCandidateCaptureActive()) {
+		parser_errmsg("backtick expansion is not reloadable");
+		return es_newStr(1);
+	}
 
 	if(strncmp(param, "echo ", sizeof("echo ")-1) == 0) {
 		estr = expand_backticks_echo(param);
@@ -478,7 +483,16 @@ static void cnfPrintToken(const char *token);
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@\^?~>][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+,;]*	{ cnfPrintToken(yytext); yylval.s = yytext; return LEGACY_ACTION; }
+[a-z0-9_][a-z0-9_\-\+,;]*	{
+				  cnfPrintToken(yytext);
+				  yylval.s = strdup(yytext);
+				  if(yylval.s == NULL) {
+					  cnfNoteFatalParseError(RS_RET_OUT_OF_MEMORY);
+					  parser_errmsg("out of memory while copying legacy action");
+					  return CNF_SCANNER_ERROR;
+				  }
+				  return LEGACY_ACTION;
+				}
 <INOBJ>")"			{ cnfPrintToken(yytext); BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -538,6 +552,51 @@ static void cnfPrintToken(const char *token)
 	}
 }
 
+/* Flex's yy_scan_buffer() terminates the process when its small buffer-state
+ * allocation fails. Configuration reload must instead report the allocation
+ * failure to its caller. This equivalent scanner setup uses recoverable
+ * allocations and is confined to the preloaded configuration-buffer path. */
+static YY_BUFFER_STATE
+cnfScanBuffer(char *const base, const yy_size_t size)
+{
+	YY_BUFFER_STATE buffer;
+
+	if(size < 2 || base[size - 2] != YY_END_OF_BUFFER_CHAR ||
+	   base[size - 1] != YY_END_OF_BUFFER_CHAR)
+		return NULL;
+	buffer = yyalloc(sizeof(struct yy_buffer_state));
+	if(buffer == NULL)
+		return NULL;
+	if(yy_buffer_stack == NULL) {
+		yy_buffer_stack = yyalloc(sizeof(*yy_buffer_stack));
+		if(yy_buffer_stack == NULL) {
+			yyfree(buffer);
+			return NULL;
+		}
+		yy_buffer_stack[0] = NULL;
+		yy_buffer_stack_max = 1;
+		yy_buffer_stack_top = 0;
+	}
+	buffer->yy_buf_size = (int)(size - 2);
+	buffer->yy_buf_pos = buffer->yy_ch_buf = base;
+	buffer->yy_is_our_buffer = 0;
+	buffer->yy_input_file = NULL;
+	buffer->yy_n_chars = buffer->yy_buf_size;
+	buffer->yy_is_interactive = 0;
+	buffer->yy_at_bol = 1;
+	buffer->yy_fill_buffer = 0;
+	buffer->yy_buffer_status = YY_BUFFER_NEW;
+	if(YY_CURRENT_BUFFER != NULL) {
+		*yy_c_buf_p = yy_hold_char;
+		YY_CURRENT_BUFFER_LVALUE->yy_buf_pos = yy_c_buf_p;
+		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yy_n_chars;
+	}
+	YY_CURRENT_BUFFER_LVALUE = buffer;
+	yy_load_buffer_state();
+	yy_did_buffer_switch_on_eof = 1;
+	return buffer;
+}
+
 /* add config file or text the the stack of config objects to be
  * processed.
  * cnfobjname is either the file name or "text" if generated from
@@ -552,23 +611,32 @@ static void cnfPrintToken(const char *token)
 int ATTR_NONNULL()
 cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
 {
-	struct bufstack *bs;
+	struct bufstack *bs = NULL;
 	int r = 0;
 	assert(str != NULL);
 	assert(cnfobj_name != NULL);
 
 	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
-		r = 1;
+		r = 3;
 		goto done;
 	}
+	memset(bs, 0, sizeof(*bs));
 
 	if(currbs != NULL)
 		currbs->lineno = yylineno;
 	bs->prev = currbs;
 	bs->fn = strdup(cnfobj_name);
+	if(bs->fn == NULL) {
+		r = 3;
+		goto done;
+	}
 	yy_size_t lll = es_strlen(str);
 	/* NOTE: yy_scan_buffer() does an automatic yy_switch_to_buffer to the new buffer */
-	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
+	bs->bs = cnfScanBuffer((char*)es_getBufAddr(str), lll);
+	if(bs->bs == NULL) {
+		r = 3;
+		goto done;
+	}
 	bs->estr = str; /* needed so we can free it later */
 	currbs = bs;
 	cnfcurrfn = bs->fn;
@@ -582,6 +650,8 @@ cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
 done:
 	if(r != 0) {
 		es_deleteStr(str);
+		if(bs != NULL) free(bs->fn);
+		free(bs);
 	}
 	return r;
 }
@@ -597,6 +667,7 @@ cnfSetLexFile(const char *const fname)
 	struct bufstack *bs;
 	FILE *fp;
 	int r = 0;
+	rsRetVal readRet;
 
 	/* check for invalid recursive include */
 	for(bs = currbs ; bs != NULL ; bs = bs->prev) {
@@ -616,9 +687,14 @@ cnfSetLexFile(const char *const fname)
 			goto done;
 		}
 	}
-	readConfFile(fp, &str);
+	readRet = readConfFile(fp, &str);
 	if(fp != stdin)
 		fclose(fp);
+	if(readRet != RS_RET_OK) {
+		errno = readRet == RS_RET_OUT_OF_MEMORY ? ENOMEM : EIO;
+		r = readRet == RS_RET_OUT_OF_MEMORY ? 3 : 4;
+		goto done;
+	}
 
 	r = cnfAddConfigBuffer(str, ((fname == NULL) ? "stdin" : fname));
 
@@ -676,6 +752,20 @@ tellLexEndParsing(void)
 {
 	free(cnfcurrfn);
 	cnfcurrfn= NULL;
+}
+
+/* A syntax error can return from yyparse() before flex has consumed and popped
+ * the current buffer. A later HUP must not inherit that buffer or its start
+ * condition. This is deliberately separate from tellLexEndParsing(), whose
+ * startup caller historically invokes it only after a fully drained parse. */
+void
+cnfResetParser(void)
+{
+	while(currbs != NULL)
+		(void) popfile();
+	BEGIN INITIAL;
+	tellLexEndParsing();
+	yylineno = 1;
 }
 
 /* Returns non-zero when there are config buffers queued for yyparse()

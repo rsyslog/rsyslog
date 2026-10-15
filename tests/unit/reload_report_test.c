@@ -6,6 +6,9 @@
  * either enumeration order, while invalid singletons retain INVALID_NODE.
  * Thousands of rows must retain canonical ordering with logarithmically many
  * reallocations; injected allocation failures must preserve owned rows/counts.
+ * Diagnostic hash vectors pin the production FNV-1a encoding and standard
+ * offset basis, including empty and strided views. Expected values are fixed
+ * constants, not a second implementation that could repeat production bugs.
  */
 #include "config.h"
 #include <stdio.h>
@@ -189,6 +192,56 @@ int main(void) {
         CHECK(owner.report.entries == saved && owner.report.entryCount == SIZE_MAX);
         free(saved);
     }
+    {
+        char rulesetIdentity[] = "ruleset:main";
+        char actionIdentity[] = "action:named";
+        char defaultIdentity[] = "ruleset:default";
+        struct extendedEntry_s {
+            rsReloadReportEntryV1_t entry;
+            uint64_t extension[2];
+        } entries[2] = {
+            {.entry = {.objectKind = RS_RELOAD_OBJ_RULESET,
+                       .diffKind = RS_RELOAD_DIFF_MODIFIED,
+                       .disposition = RS_RELOAD_DISPOSITION_RESTART_REQUIRED,
+                       .reason = RS_RELOAD_REASON_CORE_OBJECT_CHANGED,
+                       .identity = rulesetIdentity},
+             .extension = {UINT64_MAX, UINT64_MAX}},
+            {.entry = {.objectKind = RS_RELOAD_OBJ_ACTION,
+                       .diffKind = RS_RELOAD_DIFF_UNCHANGED,
+                       .requiredFlags = 1,
+                       .advertisedFlags = 31,
+                       .identity = actionIdentity}},
+        };
+        rsReloadReportV1_t diagnostic = {.version = RS_RELOAD_REPORT_V1,
+                                         .structSize = sizeof(diagnostic),
+                                         .entries = &entries[0].entry,
+                                         .entryStride = sizeof(entries[0]),
+                                         .entryCount = 2};
+        CHECK(rsReloadReportDiagnosticHashV1(NULL) == 0);
+        CHECK(rsReloadReportDiagnosticHashV1(&diagnostic) == UINT64_C(0x840d57d5f7b9f322));
+        /* The first row has malloc alignment; the second starts one byte
+         * beyond a native entry. Only memcpy touches that padded byte row:
+         * constructing or dereferencing a misaligned typed pointer is invalid. */
+        const size_t byteStride = sizeof(rsReloadReportEntryV1_t) + 1;
+        void *const byteRows = malloc(2 * byteStride);
+        CHECK(byteRows != NULL);
+        memcpy(byteRows, &entries[0].entry, sizeof(entries[0].entry));
+        memcpy((unsigned char *)byteRows + byteStride, &entries[1].entry, sizeof(entries[1].entry));
+        diagnostic.entries = byteRows;
+        diagnostic.entryStride = byteStride;
+        const uint64_t byteRowsHash = rsReloadReportDiagnosticHashV1(&diagnostic);
+        free(byteRows);
+        CHECK(byteRowsHash == UINT64_C(0x840d57d5f7b9f322));
+        diagnostic.entries = &entries[0].entry;
+        diagnostic.entryStride = sizeof(entries[0]);
+        diagnostic.entryCount = 0;
+        CHECK(rsReloadReportDiagnosticHashV1(&diagnostic) == UINT64_C(0xee741e169b104151));
+        /* The canonical byte encoding is domain ASCII, version/count and six
+         * entry fields as little-endian uint64, then NUL-ended identity. */
+        entries[0].entry = (rsReloadReportEntryV1_t){.objectKind = RS_RELOAD_OBJ_RULESET, .identity = defaultIdentity};
+        diagnostic.entryCount = 1;
+        CHECK(rsReloadReportDiagnosticHashV1(&diagnostic) == UINT64_C(0x5cff85559882b6cc));
+    }
 
     memset(&capableModule, 0, sizeof(capableModule));
     capableModule.reloadV1.version = eMOD_RELOAD_INTERFACE_V1;
@@ -338,6 +391,7 @@ int main(void) {
     CHECK(rsReloadReportBuildV1(&oldGraph, &newGraph, &report) == RS_RET_OK);
     CHECK(report->entryCount == 0);
     CHECK(report->overallDisposition == RS_RELOAD_DISPOSITION_UNCHANGED);
+    CHECK(rsReloadReportDiagnosticHashV1(report) == UINT64_C(0xee741e169b104151));
     savedReport = report;
     CHECK(rsReloadReportBuildV1(&oldGraph, &newGraph, &report) == RS_RET_PARAM_ERROR);
     CHECK(report == savedReport);

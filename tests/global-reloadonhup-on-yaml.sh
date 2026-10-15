@@ -1,10 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# Verify native YAML reloadOnHUP=on fails closed in the Release-B foundation.
-# The candidate changes only the omfile target; because activation is not yet
-# safe, both numbered records must use the old active ruleset after HUP.
-# An impstats record with on_total=1 proves on-policy rejection/accounting;
-# wait_content synchronizes that scrape without a fixed timing assumption.
+# Verify native YAML reloadOnHUP=on safely parses the candidate, then fails
+# closed at the unavailable activation phase. Both numbered records must use
+# the old active ruleset after HUP. After synchronized shutdown, the terminal
+# impstats snapshot must account for both acknowledged HUPs and exactly one
+# scope rejection; an earlier scrape is not a completion oracle.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -31,10 +31,25 @@ add_yaml_conf '        file: "'$RSYSLOG_OUT_LOG'"'
 startup
 tcpflood -m1 -i0
 wait_queueempty
+# The unchanged graph is inside the ruleset-only scope and reaches the
+# deliberately unavailable activation phase.
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1"* ]]; then
+	echo "FAIL: unchanged YAML candidate did not reach the activation gate: $reload_status"
+	error_exit 1
+fi
+
+# Changing the named action is outside the first live-ruleset scope and must
+# be classified before any prepare or activation work occurs.
 sed "s|$RSYSLOG_OUT_LOG|$RSYSLOG2_OUT_LOG|" "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
-wait_content 'reload_on_total=1' "${RSYSLOG_DYNNAME}.policy.log"
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1"* ]]; then
+	echo "FAIL: unexpected reload status: $reload_status"
+	error_exit 1
+fi
 tcpflood -m1 -i1
 wait_queueempty
 shutdown_when_empty
@@ -42,7 +57,10 @@ wait_shutdown
 content_check 'msgnum:00000000' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000001' "$RSYSLOG_OUT_LOG"
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
-content_check 'reload_on_total=1' "${RSYSLOG_DYNNAME}.policy.log"
-content_check 'reload_on_rejected_total=1' "${RSYSLOG_DYNNAME}.policy.log"
-content_check 'reload_legacy_hook_total=1' "${RSYSLOG_DYNNAME}.policy.log"
+awk '/origin=core.reload / { last = $0 } END { print last }' \
+	"${RSYSLOG_DYNNAME}.policy.log" > "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_on_total=2 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_on_rejected_total=2 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_legacy_hook_total=2 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
+content_check 'reload_capability_rejected_total=1 ' "${RSYSLOG_DYNNAME}.terminal-policy.log"
 exit_test

@@ -69,6 +69,7 @@
 #include "rainerscript.h"
 #include "rsconf.h"
 #include "shadow_reload.h"
+#include "reload-candidate.h"
 #include "translate.h"
 #include "cfsysline.h"
 #include "datetime.h"
@@ -232,6 +233,7 @@ rsconf_t *ourConf = NULL;
 int MarkInterval = 20 * 60; /* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar *)PATH_CONFFILE;
+static char *reloadConfFile = NULL;
 int bHaveMainQueue = 0; /* set to 1 if the main queue - in queueing mode - is available
                          * If the main queue is either not yet ready or not running in
                          * queueing mode (mode DIRECT!), then this is set to 0.
@@ -1495,7 +1497,7 @@ static void rsyslogdDebugSwitch(void) {
  * of a break-in is very low in the startup phase, we decide it is more important
  * to emit error messages.
  */
-static void initAll(int argc, char **argv) {
+static int initAll(int argc, char **argv) {
     rsRetVal localRet;
     int ch;
     int iHelperUOpt;
@@ -1505,6 +1507,7 @@ static void initAll(int argc, char **argv) {
     enum rsconfTranslateFormat iTranslateFmt = RSCONF_TRANSLATE_NONE;
     char cwdbuf[128]; /* buffer to obtain/display current working directory */
     int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
+    int requestedExitCode = 1;
     DEFiRet;
 
     /* prepare internal signaling */
@@ -1566,7 +1569,7 @@ static void initAll(int argc, char **argv) {
                 break;
             case 'v': /* MUST be carried out immediately! */
                 printVersion();
-                exit(0); /* exit for -v option - so this is a "good one" */
+                return 0;
             case 'h':
             case '?':
             default:
@@ -1587,7 +1590,7 @@ static void initAll(int argc, char **argv) {
 
     if ((iRet = modInitIminternal()) != RS_RET_OK) {
         fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n", iRet);
-        exit(1); /* "good" exit, leaving at init for fatal error */
+        FINALIZE;
     }
 
     /* we now can emit error messages "the regular way" */
@@ -1656,7 +1659,7 @@ static void initAll(int argc, char **argv) {
             case 'F':
                 if (arg == NULL) {
                     fprintf(stderr, "rsyslogd: -F requires a format argument\n");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 if (!strcasecmp(arg, "yaml")) {
                     iTranslateFmt = RSCONF_TRANSLATE_YAML;
@@ -1664,7 +1667,7 @@ static void initAll(int argc, char **argv) {
                     iTranslateFmt = RSCONF_TRANSLATE_RAINERSCRIPT;
                 } else {
                     fprintf(stderr, "rsyslogd: unsupported translation format '%s'\n", arg);
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 break;
             case 'o':
@@ -1693,15 +1696,15 @@ static void initAll(int argc, char **argv) {
                      * but we want to keep the static analyzer happy.
                      */
                     fprintf(stderr, "-T options needs a parameter\n");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 if (chroot(arg) != 0) {
                     perror("chroot");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 if (chdir("/") != 0) {
                     perror("chdir");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 break;
             case 'u': /* misc user settings */
@@ -1786,6 +1789,31 @@ static void initAll(int argc, char **argv) {
     }
 
     resetErrMsgsFlag();
+    free(reloadConfFile);
+    reloadConfFile = NULL;
+    if (ConfFile[0] == '/') {
+        CHKmalloc(reloadConfFile = strdup((const char *)ConfFile));
+    } else {
+        size_t cwdSize = 256;
+        char *cwd = NULL;
+        /* POSIX getcwd requires a caller-owned buffer. Grow on ERANGE so
+         * startup anchoring does not impose a fixed pathname limit. */
+        for (;;) {
+            cwd = malloc(cwdSize);
+            if (cwd == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            if (getcwd(cwd, cwdSize) != NULL) break;
+            const int cwdError = errno;
+            free(cwd);
+            cwd = NULL;
+            if (cwdError != ERANGE) ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+            if (cwdSize > SIZE_MAX / 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            cwdSize *= 2;
+        }
+        if (asprintf(&reloadConfFile, "%s/%s", cwd, ConfFile) < 0) reloadConfFile = NULL;
+        free(cwd);
+        if (reloadConfFile == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    CHKiRet(rsReloadCandidateSourceBegin());
     localRet = rsconf.Load(&loadConf, ConfFile);
     /* Never permit an unaudited local graph, including developer/partial-config
      * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */
@@ -1916,6 +1944,7 @@ static void initAll(int argc, char **argv) {
         ABORT_FINALIZE(localRet);
 
     if (hadErrMsgs()) {
+        rsReloadCandidateSourceNoteError();
         if (loadConf->globals.bAbortOnUncleanConfig) {
             fprintf(stderr,
                     "rsyslogd: global(AbortOnUncleanConfig=\"on\") is set, and "
@@ -1923,11 +1952,14 @@ static void initAll(int argc, char **argv) {
                     "Check error log for details, fix errors and restart. As a last\n"
                     "resort, you may want to use global(AbortOnUncleanConfig=\"off\") \n"
                     "to permit a startup with a dirty config.\n");
-            exit(2);
+            requestedExitCode = 2;
+            iRet = RS_RET_CONF_PARSE_ERROR;
+            FINALIZE;
         }
         if (iConfigVerify) {
-            /* a bit dirty, but useful... */
-            exit(1);
+            /* Preserve validation failure without bypassing normal teardown. */
+            iRet = RS_RET_CONF_PARSE_ERROR;
+            FINALIZE;
         }
         localRet = RS_RET_OK;
     }
@@ -1975,9 +2007,22 @@ static void initAll(int argc, char **argv) {
         CHKiRet(writePidFile());
     }
 
-    CHKiRet(rsconf.Activate(loadConf));
+    {
+        rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder = NULL;
 
-    shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf));
+        if (localRet == RS_RET_OK) {
+            if (rsReloadCandidateSourceFinish(&sourceGraphBuilder) != RS_RET_OK) sourceGraphBuilder = NULL;
+        } else {
+            rsReloadCandidateSourceAbort();
+        }
+        localRet = rsconf.Activate(loadConf);
+        if (localRet != RS_RET_OK) {
+            rsReloadNormalizedGraphBuilderV1Destruct(&sourceGraphBuilder);
+            CHKiRet(localRet);
+        }
+
+        CHKiRet(shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf), reloadConfFile, sourceGraphBuilder));
+    }
 
     if (runConf->globals.bLogStatusMsgs) {
         char bufStartUpMsg[512];
@@ -2004,17 +2049,19 @@ static void initAll(int argc, char **argv) {
     }
 
 finalize_it:
+    rsReloadCandidateSourceAbort();
     rsconfTranslateCleanup();
     if (iRet == RS_RET_VALIDATION_RUN) {
         fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
-        exit(0);
+        return 0;
     } else if (iRet != RS_RET_OK) {
         fprintf(stderr,
                 "rsyslogd: run failed with error %d (see rsyslog.h "
                 "or try https://www.rsyslog.com/e/%d to learn what that number means)\n",
                 iRet, iRet * -1);
-        exit(1);
+        return requestedExitCode;
     }
+    return -1;
 }
 
 
@@ -2631,6 +2678,8 @@ static void deinitAll(void) {
 
     module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
+    free(reloadConfFile);
+    reloadConfFile = NULL;
     rsrtExit(); /* runtime MUST always be deinitialized LAST (except for debug system) */
     DBGPRINTF("Clean shutdown completed, bye\n");
 
@@ -2656,6 +2705,7 @@ static void deinitAll(void) {
 int rsyslogd_main(int argc, char **argv);
 #endif
 int main(int argc, char **argv) {
+    int initExitCode;
 #if defined(_AIX)
     /* SRC support : fd 0 (stdin) must be the SRC socket
      * startup.  fd 0 is duped to a new descriptor so that stdin can be used
@@ -2703,7 +2753,8 @@ int main(int argc, char **argv) {
 
     dbgClassInit();
 
-    initAll(argc, argv);
+    initExitCode = initAll(argc, argv);
+    if (initExitCode >= 0) return initExitCode;
 #ifdef HAVE_LIBSYSTEMD
     if (rsconfShouldDelayReadyNotify(runConf)) {
         rsconfWaitForModulesReady();
