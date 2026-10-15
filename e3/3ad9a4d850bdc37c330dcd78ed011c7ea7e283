@@ -33,6 +33,7 @@ tools/shadow_reload.h
   s_f2c089be484e12::t_a0642841fa91b6 4,10-14,16,43,54-56
   s_f2c089be484e12::t_334c2faa778628 15,27-30,42,44
   s_f2c089be484e12::t_8bc8ab331ff5a7 38-39
+  s_f2c089be484e12::t_1bf1c38980a897 31-37
 runtime/outchannel.h
   s_f2c089be484e12::t_56f84f0be628be 36
 runtime/perctile_stats.c
