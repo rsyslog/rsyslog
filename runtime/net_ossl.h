@@ -69,6 +69,15 @@ typedef enum {
     osslClient = 1 /**< Client SSL Object */
 } osslSslState_t;
 
+typedef enum {
+    NET_OSSL_EXDATA_PTCP,
+    NET_OSSL_EXDATA_PERMITEXPIREDCERTS,
+    NET_OSSL_EXDATA_IMDTLS_INST,
+    NET_OSSL_EXDATA_TLSREVOCATIONCHECK,
+    NET_OSSL_EXDATA_NET_OSSL,
+    NET_OSSL_EXDATA_COUNT
+} net_ossl_exdata_key_t;
+
 /* the net_ossl object */
 struct net_ossl_s {
     BEGINobjInstance
@@ -86,6 +95,10 @@ struct net_ossl_s {
                              * one successful authentication. */
         int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not check CN) */
         int bTlsRevocationCheck;
+        const char *device; /**< borrowed outbound connection device */
+        const char *network_namespace; /**< borrowed outbound connection namespace */
+        const net_source_policy_t *source_policy; /**< borrowed outbound source policy */
+        int ipfreebind; /**< free-bind mode for outbound source addresses */
         /* Open SSL objects */
         BIO *bio; /* OpenSSL main BIO obj */
         int ctx_is_copy;
@@ -98,6 +111,8 @@ struct net_ossl_s {
 BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*Construct)(net_ossl_t **ppThis);
     rsRetVal (*Destruct)(net_ossl_t **ppThis);
+    void *(*get_exdata)(SSL *ssl, net_ossl_exdata_key_t key);
+    int (*set_exdata)(SSL *ssl, net_ossl_exdata_key_t key, void *value);
     rsRetVal (*osslCtxInit)(net_ossl_t *pThis, const SSL_METHOD *method);
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
     rsRetVal (*osslCtxInitCookie)(net_ossl_t *pThis);
@@ -118,7 +133,7 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
                                     const char *pszOsslApi);
 ENDinterface(net_ossl)
 
-#define net_osslCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define net_osslCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 // ------------------------------------------------------
 
 /* OpenSSL API differences */
@@ -167,7 +182,7 @@ void locking_function(int mode, int n, __attribute__((unused)) const char *file,
 int opensslh_THREAD_setup(void);
 int opensslh_THREAD_cleanup(void);
 
-void osslGlblInit(void);
+rsRetVal osslGlblInit(void);
 void osslGlblExit(void);
 /*-----------------------------------------------------------------------------*/
 

@@ -99,6 +99,5 @@ rsRetVal rsParsDestruct(rsParsObj *pThis);
 int parsIsAtEndOfParseString(rsParsObj *pThis);
 int parsGetCurrentPosition(rsParsObj *pThis);
 char parsPeekAtCharAtParsPtr(rsParsObj *pThis);
-rsRetVal parsAddrWithBits(rsParsObj *pThis, netAddr_t **pIP, int *pBits);
 
 #endif

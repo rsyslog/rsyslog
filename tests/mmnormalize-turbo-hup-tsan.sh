@@ -83,6 +83,11 @@ for ((i = 1; i <= HUP_COUNT; ++i)); do
 done
 
 wait_tcpflood_async "$TCPFLOOD_PID" "$TCPFLOOD_MARKER"
+# The sender's completion marker only proves that tcpflood handed all messages
+# to the TCP stack. Wait for rsyslogd to emit the complete output sequence
+# before asking it to shut down; otherwise buffered input can be discarded
+# after the main queue happens to become empty.
+wait_file_lines "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1))

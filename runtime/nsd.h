@@ -29,6 +29,35 @@
 
 enum nsdsel_waitOp_e { NSDSEL_RD = 1, NSDSEL_WR = 2, NSDSEL_RDWR = 3 }; /**< the operation we wait for */
 
+#define NSD_CONNECT_PARAMS_VERSION 2
+/**
+ * @brief Versioned parameters for an outbound network-stream connection.
+ * @var nsd_connect_params_s::version Must equal NSD_CONNECT_PARAMS_VERSION.
+ * @var nsd_connect_params_s::family Address family passed to the resolver.
+ * @var nsd_connect_params_s::port Borrowed service name or numeric port.
+ * @var nsd_connect_params_s::host Borrowed destination host name or address.
+ * @var nsd_connect_params_s::device Borrowed optional SO_BINDTODEVICE name.
+ * @var nsd_connect_params_s::network_namespace Borrowed optional network
+ *      namespace name.
+ * @var nsd_connect_params_s::source_policy Borrowed immutable source-address
+ *      policy, or NULL for operating-system source selection.
+ * @var nsd_connect_params_s::ipfreebind IPFREEBIND_* mode used when binding a
+ *      configured source address.
+ * @details All pointers remain owned by the caller and must remain valid until
+ *      Connect2() returns. Drivers that need data during a synchronous TLS
+ *      handshake may borrow these values for that connection operation only.
+ */
+typedef struct nsd_connect_params_s {
+    unsigned version;
+    int family;
+    uchar *port;
+    uchar *host;
+    char *device;
+    const char *network_namespace;
+    const net_source_policy_t *source_policy;
+    int ipfreebind;
+} nsd_connect_params_t;
+
 /* nsd_t is actually obj_t (which is somewhat better than void* but in essence
  * much the same).
  */
@@ -98,8 +127,17 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
     /* v19 -- TLS revocation checking (OCSP/CRL) */
     rsRetVal (*SetTlsRevocationCheck)(nsd_t *pThis, int enabled);
 
+    /**
+     * @brief Open an outbound connection using versioned parameters.
+     * @param pThis Driver instance that will own the connected socket/session.
+     * @param params Borrowed connection parameters valid for this call.
+     * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for invalid parameters,
+     *         or a driver-specific connection or TLS error.
+     */
+    rsRetVal (*Connect2)(nsd_t *pThis, const nsd_connect_params_t *params);
+
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 21 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 22 /* increment whenever you change the interface structure! */
     /* interface version 4 added GetRemAddr()
      * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
      * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -111,6 +149,7 @@ ENDinterface(nsd)
      * interface version 18 added SetRemoteSNI -- jfcantu, 2020-01-15
      * interface version 20 added SetTcpUserTimeout
      * interface version 21 added SetTlsCAExtraFiles
+     * interface version 22 added Connect2
      */
 
 #endif /* #ifndef INCLUDED_NSD_H */

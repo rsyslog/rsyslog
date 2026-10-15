@@ -1327,22 +1327,34 @@ static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
     return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
 
-/* open a connection to a remote host (server).
+/**
+ * @brief Open an mbedTLS network stream using versioned parameters.
+ * @param pNsd mbedTLS driver instance that will own the TCP and TLS state.
+ * @param params Borrowed destination, namespace, device, and source-policy
+ *        settings valid for this call.
+ * @return RS_RET_OK on success or an rsRetVal parameter, TCP, or TLS error.
+ * @details The aggregated plain-TCP driver creates and binds the socket. In TLS
+ *        mode this function configures mbedTLS and starts the client handshake.
  */
-static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+static rsRetVal Connect2(nsd_t *pNsd, const nsd_connect_params_t *params) {
     DEFiRet;
     nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int mbedtlsRet;
 
-    dbgprintf("Connect to %s:%s\n", host, port);
-
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
-    assert(port != NULL);
-    assert(host != NULL);
+    if (params == NULL || params->version != NSD_CONNECT_PARAMS_VERSION || params->port == NULL ||
+        params->host == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    dbgprintf("Connect to %s:%s\n", params->host, params->port);
+    assert(params != NULL);
+    assert(params->version == NSD_CONNECT_PARAMS_VERSION);
+    assert(params->port != NULL);
+    assert(params->host != NULL);
 
     CHKiRet(mbedtlsInitSession(pThis));
     CHKiRet(mbedtlsInitCred(pThis));
-    CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
+    CHKiRet(nsd_ptcp.Connect2(pThis->pTcp, params));
 
     if (pThis->iMode == 0) FINALIZE;
 
@@ -1370,7 +1382,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
 
     // peer id will be checked in verify() callback
     CHKiRet(mbedtls_ssl_set_hostname(&(pThis->ssl), NULL));
-    CHKmalloc(pThis->pszConnectHost = (uchar *)strdup((char *)host));
+    CHKmalloc(pThis->pszConnectHost = (uchar *)strdup((char *)params->host));
 
     CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &(pThis->sock)));
     mbedtls_ssl_set_bio(&(pThis->ssl), pThis, mbedtlsNetSend, mbedtlsNetRecv, NULL);
@@ -1393,6 +1405,21 @@ finalize_it:
     }
 
     RETiRet;
+}
+
+/**
+ * @brief Adapt the legacy mbedTLS Connect interface to Connect2().
+ * @param pNsd mbedTLS driver instance.
+ * @param family Resolver address family.
+ * @param port Borrowed destination service or numeric port.
+ * @param host Borrowed destination host name or address.
+ * @param device Borrowed optional SO_BINDTODEVICE name.
+ * @return Result from Connect2().
+ * @details Uses the current namespace, OS source selection, and disabled free-bind.
+ */
+static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+    const nsd_connect_params_t params = {NSD_CONNECT_PARAMS_VERSION, family, port, host, device, NULL, NULL, 0};
+    return Connect2(pNsd, &params);
 }
 
 static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
@@ -1518,6 +1545,7 @@ BEGINobjQueryInterface(nsd_mbedtls)
     pIf->FmtRemotePortStr = FmtRemotePortStr;
     pIf->SetRemoteSNI = SetRemoteSNI;
     pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
+    pIf->Connect2 = Connect2;
 finalize_it:
 ENDobjQueryInterface(nsd_mbedtls)
 

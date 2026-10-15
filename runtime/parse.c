@@ -28,12 +28,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include "rsyslog.h"
-#include "net.h" /* struct NetAddr */
 #include "parse.h"
 #include "debug.h"
 
@@ -45,16 +40,6 @@
 /* ################################################################# *
  * public members                                                    *
  * ################################################################# */
-
-static void freeNetAddrContent(struct NetAddr *const pIP) {
-    if (pIP == NULL) return;
-
-    if (F_ISSET(pIP->flags, ADDR_NAME))
-        free(pIP->addr.HostWildcard);
-    else
-        free(pIP->addr.NetAddr);
-}
-
 
 /**
  * Destruct a rsPars object and its associated string.
@@ -349,147 +334,6 @@ finalize_it:
 
     RETiRet;
 }
-
-/*
- * Parsing routine for IPv4, IPv6 and domain name wildcards.
- *
- * Parses string in the format <addr>[/bits] where
- * addr can be a IPv4 address (e.g.: 127.0.0.1), IPv6 address (e.g.: [::1]),
- * full hostname (e.g.: localhost.localdomain) or hostname wildcard
- * (e.g.: *.localdomain).
- */
-rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
-    register uchar *pC;
-    uchar *pszIP = NULL;
-    uchar *pszTmp;
-    struct addrinfo hints, *res = NULL;
-    cstr_t *pCStr;
-    DEFiRet;
-
-    rsCHECKVALIDOBJECT(pThis, OIDrsPars);
-    assert(pIP != NULL);
-    assert(pBits != NULL);
-
-    CHKiRet(cstrConstruct(&pCStr));
-
-    parsSkipWhitespace(pThis);
-    pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
-
-    /* we parse everything until either '/', ',' or
-     * whitespace. Validity will be checked down below.
-     */
-    while (pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
-        if ((iRet = cstrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-            cstrDestruct(&pCStr);
-            FINALIZE;
-        }
-        ++pThis->iCurrPos;
-        ++pC;
-    }
-
-    cstrFinalize(pCStr);
-
-    /* now we have the string and must check/convert it to
-     * an NetAddr structure.
-     */
-    CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
-
-    if ((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-    if (*((char *)pszIP) == '[') {
-        pszTmp = (uchar *)strchr((char *)pszIP, ']');
-        if (pszTmp == NULL) {
-            free(*pIP);
-            ABORT_FINALIZE(RS_RET_INVALID_IP);
-        }
-        *pszTmp = '\0';
-
-        memset(&hints, 0, sizeof(struct addrinfo));
-        hints.ai_family = AF_INET6;
-        hints.ai_flags = AI_NUMERICHOST;
-
-        switch (getaddrinfo((char *)pszIP + 1, NULL, &hints, &res)) {
-            case 0:
-                (*pIP)->addr.NetAddr = malloc(res->ai_addrlen);
-                memcpy((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
-                freeaddrinfo(res);
-                break;
-            case EAI_NONAME:
-                /* The "address" is not an IP prefix but a wildcard */
-                F_SET((*pIP)->flags, ADDR_NAME | ADDR_PRI6);
-                (*pIP)->addr.HostWildcard = strdup((const char *)pszIP + 1);
-                break;
-            default:
-                free(*pIP);
-                ABORT_FINALIZE(RS_RET_ERR);
-        }
-
-        if (*pC == '/') {
-            /* mask bits follow, let's parse them! */
-            ++pThis->iCurrPos; /* eat slash */
-            if ((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
-                freeNetAddrContent(*pIP);
-                free(*pIP);
-                *pIP = NULL;
-                FINALIZE;
-            }
-            /* we need to refresh pointer (changed by parsInt()) */
-            pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
-        } else {
-            /* no slash, so we assume a single host (/128) */
-            *pBits = 128;
-        }
-    } else { /* now parse IPv4 */
-        memset(&hints, 0, sizeof(struct addrinfo));
-        hints.ai_family = AF_INET;
-        hints.ai_flags = AI_NUMERICHOST;
-
-        switch (getaddrinfo((char *)pszIP, NULL, &hints, &res)) {
-            case 0:
-                (*pIP)->addr.NetAddr = malloc(res->ai_addrlen);
-                memcpy((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
-                freeaddrinfo(res);
-                break;
-            case EAI_NONAME:
-                /* The "address" is not an IP prefix but a wildcard */
-                F_SET((*pIP)->flags, ADDR_NAME);
-                (*pIP)->addr.HostWildcard = strdup((const char *)pszIP);
-                break;
-            default:
-                free(*pIP);
-                ABORT_FINALIZE(RS_RET_ERR);
-        }
-
-        if (*pC == '/') {
-            /* mask bits follow, let's parse them! */
-            ++pThis->iCurrPos; /* eat slash */
-            if ((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
-                freeNetAddrContent(*pIP);
-                free(*pIP);
-                *pIP = NULL;
-                FINALIZE;
-            }
-            /* we need to refresh pointer (changed by parsInt()) */
-            pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
-        } else {
-            /* no slash, so we assume a single host (/32) */
-            *pBits = 32;
-        }
-    }
-
-    /* skip to next processable character */
-    while (pThis->iCurrPos < rsCStrLen(pThis->pCStr) && (*pC == ',' || isspace((int)*pC))) {
-        ++pThis->iCurrPos;
-        ++pC;
-    }
-
-    iRet = RS_RET_OK;
-
-finalize_it:
-    free(pszIP);
-    RETiRet;
-}
-
 
 /* tell if the parsepointer is at the end of the
  * to-be-parsed string. Returns 1, if so, 0
