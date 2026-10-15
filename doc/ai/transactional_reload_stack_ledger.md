@@ -1,8 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: nine updated/new branches were atomically pushed;
-all eleven published draft PR heads have fresh passed exact-candidate security
+Recorded: 2026-10-15. Status: nine updated/new branches were atomically pushed,
+followed by a separate slice-9 publication;
+all twelve published draft PR heads have fresh passed exact-candidate security
 receipts. Main remains c62d84ad7. Hosted checks/review are awaited; targeted
 validation is not final-tip broad validation and no merge-readiness is claimed.
 
@@ -131,7 +132,9 @@ registry while snapshot destruction waits; this has not been reproduced at
 runtime. Treat it as an ordinary lifecycle/deadlock correctness constraint,
 not an exploit claim. Named policies share policy configuration, not bucket
 budgets: buckets are listener-local. Unchanged continuous bindings retain
-counters; unbinding and rebinding creates a fresh local bucket. The earlier
+counters for the same budget; a changed budget or unbinding/rebinding creates
+a fresh local bucket. Unused owners preserve identity, not retired token
+history. There is no aggregate policy bucket. The earlier
 shared/unused-budget preservation promise was incorrect. Preserve policy-owner
 lifetime and retain correct
 ownership across failed resume and subsequent cleanup/retry. Source
@@ -146,7 +149,7 @@ already-proven final-candidate behavior.
 ### Current publication and remaining local work
 
 The nine-branch atomic push completed with exact published heads verified.
-Slice 7 now targets slice 6a. All eleven PRs are draft; the explicitly approved
+Slice 7 now targets slice 6a. All twelve PRs are draft; the explicitly approved
 intermediate-only validation override was used only for this authorized
 publication. Main remains c62d84ad735404e23990806c53c882b0057b866c.
 
@@ -163,10 +166,13 @@ publication. Main remains c62d84ad735404e23990806c53c882b0057b866c.
 | 8a / #7692 | 434c0d2a0ea7f88f527a2c6c6bd41599ca3347ce | #7690 / 1cc47d918 |
 | 8b / #7693 | d1ac0c3ac3ffd8b653a7350077f5afba3519d341 | #7692 / 434c0d2a0 |
 | 8c / #7694 | 33356ca522e9fe48a89f7df240ac4315362ecf22 | #7693 / d1ac0c3ac |
+| 9 / #7695 | 0b22b3cef9784d4704d886c50b32b1d29774fc7d | #7694 / 33356ca52 |
 
 Strict merge order: 1/#7683 -> 2/#7684 -> 3/#7685 -> 4/#7686 -> 5/#7687 ->
 6/#7689 -> 6a/#7691 -> 7/#7690 -> 8a/#7692 -> 8b/#7693 -> 8c/#7694 ->
-planned 9 -> 10 -> 11 -> 12 -> helper supplement -> benchmark. Parent first;
+[9/#7695](https://github.com/rsyslog/rsyslog/pull/7695) -> planned 10 -> 11 -> 12
+-> helper supplement -> benchmark. All twelve source PR descriptions are
+synchronized with the full order and merge conditions. Parent first;
 retarget after parent merge and reverify the delta. Do not merge umbrella
 #7654 alongside this stack. Hosted new runs and review-thread decisions remain
 pending; no thread-resolution or hosted-clean claim is made.
@@ -188,10 +194,10 @@ after their final cascades.
 | 8a | Published 434c0d2a0ea7f88f527a2c6c6bd41599ca3347ce has a fresh passed receipt with the non-blocking operational hardening tradeoff stated above. |
 | 8b | Published d1ac0c3ac3ffd8b653a7350077f5afba3519d341 has fresh completed discovery/lead review and a passed receipt. Combined current GCC focused controls passed 9/9. Pre-cascade 925d35580f03d5c56fa18abdb8821652916e9958 evidence remains epoll 22/22, poll 22/22, ASan 7/7 with leak detection disabled, mock distribution 1,601 passes/10 skips and HTML; these are not exact-current-head claims. |
 | 8c | Published 33356ca522e9fe48a89f7df240ac4315362ecf22 is integrated onto slice 8b with interface 39. Actual epoll 17/17, poll 17/17, mock distribution 1,127 passes/6 skips and HTML passed. Fresh discovery/lead reviews covered all 12 files, with zero candidates and a passed receipt. |
-| 9 | Frozen local 0b22b3cef9784d4704d886c50b32b1d29774fc7d is a documentation-only change after b569 runtime validation on published 33356ca5. Runtime passed epoll 17/17 and poll 17/17; mock distribution passed 1,130/6 skips. Final HTML refresh passed and rendered policy/bucket wording was verified. Fresh discovery found no security or ordinary correctness candidate; lead review is pending. Earlier f18e413 evidence remains historical. |
-| 10 | Rebased local 8f761571c2e6ffb51599c7fc9c650a6414391be9 includes the testbench registration guard and real oversize diagnostic controls from 31d19b03a. Pre-cascade native GCC, direct Clang parser/owner, HTML and mock evidence remains separate. Combined thirteen-scalar live validation is now running on slice 11. |
-| 11 | Rebased local 5007c9fe807e3079236a1d9922ef99dfb67256f9 retains the source-equivalent 595189 patch. Pre-cascade native GCC, direct Clang parser/message/owner, HTML and mock evidence remains historical. Current combined epoll/poll, sanitizer, documentation and distribution checks are in progress. |
-| 12 | Worktree was created from 595189 and is adopting the integrated slice-11 base before topology edits. Architecture review identified additional production all-worker-ready and early-stop lifetime requirements. Source work is starting, not live-validated. |
+| 9 | Published draft #7695 at 0b22b3cef9784d4704d886c50b32b1d29774fc7d, parent 33356ca522e9fe48a89f7df240ac4315362ecf22. Actual epoll 17/17, poll 17/17, mock distribution 1,130 passes/6 skips and HTML passed, using the same pinned image and build/check -j4/-j2. Fresh Luna/high discovery and lead reviews covered all 14 files with zero candidates and a passed receipt. Earlier f18e413 evidence remains historical. |
+| 10 | Current local 2d54d8699ae083a2104a6b3ba4c6b7d68ff9917e includes the testbench registration guard and corrected oversized-message helper/YAML oracles. Pre-cascade native GCC, direct Clang parser/owner, HTML and mock evidence remains separate. |
+| 11 | Exact current local f0b853059e48a938a274bef9efc5d2238ee4e990 passed combined epoll 42/42 (57.45s) and actual poll 42/42 (57.30s). Each backend's config.h, test-suite summary and actual ELF SHA evidence is preserved. Three originally failing oversized-message helper/YAML oracles were corrected and passed 3/3; original failures are retained. Three Clang 21 ASan+UBSan controls are underway with detect_leaks=0; no leak-validation claim. Earlier native/Clang/documentation/mock evidence remains separate. |
+| 12 | Production all-worker readiness, not merely backend readiness, remains an implementation requirement alongside early-stop lifetime handling. Source work is in progress on parent 5007 pending a rebase after the next parent freeze; no live-validation claim. |
 
 New local functional slice 6a separates operational retirement retry from
 the ownership safety already implemented in slice 6: bounded attempts with
@@ -210,7 +216,7 @@ Final performance acceptance is blocked pending a user-provided capable host
 or an explicit reduced-scope decision; this is not N/A or acceptance.
 Slice 10 uses a portable
 full-daemon parser-unit seam; this is not live-validation clearance.
-All current published slices 1-8c have valid matching receipts. Only subsequent
+All current published slices 1-9 have valid matching receipts. Only subsequent
 changes/rebases require refreshed exact-candidate checks and digest-bound
 receipts; those receipts do not transfer automatically across rebases.
 Hosted checks, thread decisions
@@ -236,6 +242,7 @@ the current published deltas, not the older historical tables below.
 | 8a | lead_required | 13/13 | 11521f6abbe254ae799151225055de372b62ee34185a6fef83cefac7ce5bfdfe |
 | 8b | lead_required | 14/14 | 2eed464864eba805e14715f7f66a1dbfea6a207ee7585c2c3fd21c157ba665e8 |
 | 8c | lead_required | 12/12 | 7dd8f74372fb39fc65253b761d78ba1375b9837a0b6b3d4f0897d97f40eada26 |
+| 9 | lead_required | 14/14 | 8c130dcf78656878b933e11ada17fba1e2af93d39ad8e9667dd298147e6e99e5 |
 
 Representative exact focused commands below run from the matching sibling
 worktree. Common command prefix and configure flags are shared literally by
@@ -473,7 +480,7 @@ changed reviewable lines: needs_human, to be replaced by per-slice review.
 ## Historical seven-PR publication checkpoint
 
 This section preserves the earlier seven-PR order and heads. The current
-eleven-PR table and strict order above supersede it.
+twelve-PR table and strict order above supersede it.
 
 Merge order: [1 / #7683](https://github.com/rsyslog/rsyslog/pull/7683) ->
 [2 / #7684](https://github.com/rsyslog/rsyslog/pull/7684) ->
