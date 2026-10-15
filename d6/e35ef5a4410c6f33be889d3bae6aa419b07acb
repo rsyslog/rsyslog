@@ -71,6 +71,7 @@ tools/shadow_reload.h
   s_f2c089be484e12::t_d86eec0dac2cab 59-60
   s_f2c089be484e12::t_fd160eac19a6d6 8-9,51,75-76
   s_f2c089be484e12::t_9bb0f8b5464e33 18,40-41
+  s_f2c089be484e12::t_ecc31c189ec6d7 33
 runtime/outchannel.h
   s_f2c089be484e12::t_56f84f0be628be 36
 runtime/perctile_stats.c
@@ -278,6 +279,7 @@ runtime/modules.h
   s_f2c089be484e12::t_e4e18d059a2d58 193,196,202,204-208,211-213,224-229,233,235-239,341,343-348,352,354-360
   s_f2c089be484e12::t_cdeb3af9072a48 349-351,353
   s_f2c089be484e12::t_ca77e96c1e117e 101-102
+  s_f2c089be484e12::t_ecc31c189ec6d7 108-109,167-168,328,331-333
 tools/Makefile.am
   s_f2c089be484e12::t_a0642841fa91b6 11-12
 runtime/module-template.h
@@ -305,6 +307,7 @@ doc/source/development/transactional_config_reload.rst
   s_f2c089be484e12::t_d096468c03138a 319-322
   s_f2c089be484e12::t_43f46100a3298b 323-325
   s_f2c089be484e12::t_adcaec93cb681c 37-45
+  s_f2c089be484e12::t_c3c8431c9de642 46
 tests/testsuites/segmented-diskqueue-checkpoint-driver.sh
   s_f2c089be484e12::t_bf9172563e72ac 5-7,32,38-44
 runtime/module-reload.c
@@ -664,6 +667,7 @@ runtime/reload-candidate.h
   s_f2c089be484e12::t_c4220d57ffe82d 54-59,67-68
   s_f2c089be484e12::t_740a874c759b60 1
   s_f2c089be484e12::t_ca77e96c1e117e 2
+  s_f2c089be484e12::t_c3c8431c9de642 150-151
 runtime/yamlconf.c
   s_f2c089be484e12::t_a3cf060caaadc8 1980-1981
   s_f2c089be484e12::t_da868e5dc68914 1654
