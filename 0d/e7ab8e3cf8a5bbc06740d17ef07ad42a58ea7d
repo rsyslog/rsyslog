@@ -174,6 +174,7 @@ tests/global-reloadonhup-on-yaml.sh
   s_f2c089be484e12::t_112d62f2b329e6 282
   s_f2c089be484e12::t_9d85ddd55c5535 317,319
   s_c7fd29f004e3b9::t_795aa8d2105640 297,300-301,304,307-308,310-311
+  s_f2c089be484e12::t_6e9db486736cb3 3-4,83,128-129
 runtime/rsyslog.h
   s_f2c089be484e12::t_17692d0d995d60 758-759
 runtime/reload-candidate.h
@@ -384,6 +385,7 @@ tests/global-reloadonhup-on-rainerscript.sh
   s_c7fd29f004e3b9::t_c9117ae5128278 241-242,255,270,285,308,313
   s_f2c089be484e12::t_03156ccaf4b663 136,141,144-149
   s_f2c089be484e12::t_f37e42771ac614 256,271,286
+  s_f2c089be484e12::t_fcc630499ee3b0 3-4,50,94-95
 runtime/reload-candidate.c
   s_f2c089be484e12::t_6e40e778124e7f 1242,1244-1245
   s_f2c089be484e12::t_e043dc1de379a9 1243
