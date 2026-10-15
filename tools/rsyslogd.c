@@ -997,7 +997,9 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 #undef setQPROPstr
     } else { /* use new style config! */
         qqueueSetDefaultsRulesetQueue(*ppQueue);
-        qqueueApplyCnfParam(*ppQueue, lst);
+        /* Preserve historical global parsing, but a failed local queue is fatal. */
+        const rsRetVal configRet = qqueueApplyCnfParam(*ppQueue, lst);
+        if (configRet == RS_RET_LOCAL_QUEUE_CONFIG) ABORT_FINALIZE(configRet);
     }
     qqueueCorrectParams(*ppQueue);
 
@@ -1011,10 +1013,22 @@ rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue) {
     CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
         /* no queue is fatal, we need to give up in that case... */
         LogError(0, iRet, "could not start (ruleset) main message queue");
-        if (runConf->globals.bAbortOnFailedQueueStartup) {
+        if (pQueue->local_graph_conf != NULL) {
+            /* A global boundary is required by the local graph too. Propagate
+             * its failure after qqueueStart has unwound; never fall back.
+             * Remove the early PID file before returning the error to initAll,
+             * which still emits the final startup diagnostic. */
             fprintf(stderr,
                     "rsyslogd: could not start (ruleset) main message queue, "
-                    "abortOnFailedQueueStartup is set, so we abort rsyslog now.\n");
+                    "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
+            fflush(stderr);
+            clearPidFile();
+            RETiRet;
+        }
+        if (pQueue->local_scope || pQueue->local_config_error || runConf->globals.bAbortOnFailedQueueStartup) {
+            fprintf(stderr,
+                    "rsyslogd: could not start (ruleset) main message queue, "
+                    "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
             fflush(stderr);
             clearPidFile();
             exit(1); /* "good" exit, this is intended here */
@@ -1756,6 +1770,10 @@ static void initAll(int argc, char **argv) {
 
     resetErrMsgsFlag();
     localRet = rsconf.Load(&ourConf, ConfFile);
+    /* Never permit an unaudited local graph, including developer/partial-config
+     * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */
+    if (localRet == RS_RET_LOCAL_QUEUE_CONFIG || (loadConf != NULL && loadConf->local_config_error))
+        ABORT_FINALIZE(RS_RET_LOCAL_QUEUE_CONFIG);
 
 #ifdef ENABLE_LIBCAPNG
     if (loadConf->globals.bCapabilityDropEnabled) {
@@ -1862,7 +1880,7 @@ static void initAll(int argc, char **argv) {
          * even on hard config errors. Note that this may lead to segfaults
          * or other malfunction further down the road.
          */
-        if ((loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
+        if (loadConf != NULL && (loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
             fprintf(stderr,
                     "rsyslogd: NOTE: developer-only option set to keep rsyslog "
                     "running where it should abort - this can lead to "
@@ -2544,6 +2562,9 @@ static void deinitAll(void) {
     /* close the inputs */
     DBGPRINTF("Terminating input threads...\n");
     glbl.SetGlobalInputTermination();
+    /* Wake graph inputs already waiting on capacity before joining them.
+     * This does not close graph admission or begin its drain deadlines. */
+    ruleset_wake_local_graph_inputs(runConf);
 
     thrdTerminateAll();
 

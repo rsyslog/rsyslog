@@ -45,6 +45,82 @@ Configuration Parameters
    object are case-insensitive.
 
 
+.. _queue-scope-local:
+
+queue.scope
+-----------
+
+``global`` (default) retains one shared queue per configured main queue,
+ruleset queue or action queue. ``local`` adds producer-specific SPSC front
+queues (FE) ahead of that queue's shared backend (BE). This is one logical
+queue, not a separate action or ruleset per producer.
+
+Local scope is experimental and supports ``FixedArray`` and ``LinkedList``
+memory backends, including disk assistance using either classic or segmented
+storage. Pure ``Disk`` and ``Direct`` queues cannot themselves have local scope.
+Direct actions inside a supported local pipeline still execute on the calling
+queue worker. See :ref:`local-queue-operation` for support restrictions,
+ordering, persistence and troubleshooting.
+
+Local scope requires lock-free 64-bit atomics and POSIX condition variables
+using ``CLOCK_MONOTONIC``. It is unavailable on platforms that lack these
+primitives, including macOS; attempting to start a local queue fails. Global
+scope remains available on those platforms.
+
+queue.local.frontendSize
+------------------------
+
+Positive integer, explicitly required with ``queue.scope="local"``. Sets the
+number of messages each FE ring can buffer. A producer's entire submitted
+batch must fit the available FE space; otherwise that batch goes to the BE.
+A batch larger than the FE capacity also goes to the BE. The producer does
+not wait for FE space before taking this fallback path, but BE enqueue can
+apply its normal flow control and timeout.
+
+``10000`` is a useful starting point for experiments, not a universal sizing
+recommendation. Batches have a maximum size and can be smaller. Increasing
+this setting reserves more slots per frontend and can increase queued-message
+memory substantially.
+
+queue.local.maxFrontends
+------------------------
+
+Positive integer, explicitly required with local scope. Caps registered
+frontends for the queue's lifetime. Each registered FE has one consumer worker;
+``queue.workerThreads`` independently controls BE workers. Size the cap for
+actual calling workers, including upstream FE/BE workers at queued boundaries,
+not TCP connections. Producers that cannot register use the BE. Registration
+slots are not reclaimed for reuse during that queue's lifetime.
+
+For BE capacity ``B=queue.size``, FE capacity ``F``, cap ``N``, and
+``D=min(queue.dequeueBatchSize,F)``, the conservative memory delivery-obligation
+bound is ``B + N*(F+D)``. It includes FE active batches as well as rings.
+It is not a byte/RSS limit and excludes disk backlog and downstream queues.
+``queue.size`` and full/light delay marks remain BE-specific.
+
+queue.local.helperBatchSize
+---------------------------
+
+Optional nonnegative integer. Defaults to ``D=min(queue.dequeueBatchSize,F)``;
+``0`` disables BE helping. An explicit value must not exceed ``D``. When an
+FE worker has no FE work, it can take up to this many messages from the memory
+BE using the existing consumer callback. Helping does not wait to accumulate
+a minimum-size batch and does not directly dequeue the disk store.
+
+queue.local.frontendStats
+-------------------------
+
+Boolean, default ``off``. Enables individual impstats objects named
+``<queue-name>.local.frontend.<id>``. Aggregate local counters remain available
+as ``<queue-name>.local`` when impstats is enabled. Useful fields include
+``route.fe.messages``, ``route.be.messages``, ``outstanding.messages``,
+``fe.queued.messages``, ``fe.inflight.messages`` and ``terminal.help``.
+These are observations, not a synchronized admission or shutdown API.
+
+All four ``queue.local.*`` parameters above require local scope. RainerScript
+and YAML frontends use the same queue validation. Validate the complete
+configuration with ``rsyslogd -N1`` before deployment.
+
 queue.filename
 --------------
 

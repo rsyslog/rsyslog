@@ -741,6 +741,8 @@ enum rsRetVal_ {
     RS_RET_NO_TEMPLATE_SUPPORT_ERR = -2464, /**< journald namespace doesn't support template yet */
     RS_RET_SERVER_NO_TLS = -2465, /**< server received TLS handshake but is not configured for TLS */
 
+    RS_RET_LOCAL_QUEUE_CONFIG = -2466, /**< experimental local queue configuration is not safe to activate */
+
     /* RainerScript error messages (range 1000.. 1999) */
     RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
     RS_RET_FIELD_NOT_FOUND = 1002, /**< field() function did not find requested field */

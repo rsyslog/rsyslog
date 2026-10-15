@@ -274,6 +274,12 @@ struct rulesets_s {
 struct rsconf_s {
     BEGINobjInstance
         ; /* Data to implement generic object - MUST be the first data element! */
+        /* Sticky during load, including failed/dropped local queue objects. */
+        sbool local_config_requested;
+        sbool local_config_error;
+        sbool local_legacy_numeric_error; /* whole-config local qualification only */
+        sbool local_custom_parser; /* explicit parser instances are outside S2 */
+        struct local_queue_graph_s *local_queue_graph; /* immutable S4 queue dependency inventory */
         cfgmodules_t modules;
         globals_t globals;
         defaults_t defaults;

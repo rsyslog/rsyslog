@@ -485,6 +485,9 @@ static void freeActionNames(rsconf_t *pThis) {
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
+    const rsRetVal graph_ret = ruleset_shutdown_local_graph(pThis);
+    if (graph_ret != RS_RET_OK) LogError(0, graph_ret, "local queue graph shutdown failed during config teardown");
+    ruleset_free_local_graph(pThis);
     freeCnf(pThis);
     tplDeleteAll(pThis);
     dynstats_destroyAllBuckets(pThis);
@@ -790,6 +793,7 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             glblProcessTimezone(o);
             break;
         case CNFOBJ_MAINQ:
+            qqueue_note_local_config_intent(o->nvlst);
             glblProcessMainQCnf(o);
             bDestructObj = 0;
             break;
@@ -809,6 +813,7 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             perctile_processCnf(o);
             break;
         case CNFOBJ_PARSER:
+            loadConf->local_custom_parser = 1;
             parserProcessCnf(o);
             break;
         case CNFOBJ_RATELIMIT:
@@ -818,6 +823,7 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             if (tplProcessCnf(o) != RS_RET_OK) parser_errmsg("error processing template object");
             break;
         case CNFOBJ_RULESET:
+            qqueue_note_local_config_intent(o->nvlst);
             rulesetProcessCnf(o);
             break;
         case CNFOBJ_PROPERTY:
@@ -1292,6 +1298,7 @@ static rsRetVal activate(rsconf_t *cnf) {
     CHKiRet(activateActions());
     CHKiRet(activateRulesetQueues());
     CHKiRet(activateMainQueue());
+    ruleset_activate_local_graph(cnf);
     /* finally let the inputs run... */
     CHKiRet(runInputModules());
     qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
@@ -1771,6 +1778,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(checkParserInstances());
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
+    CHKiRet(rulesetValidateLocalQueues(loadConf));
 
     if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;
@@ -1788,6 +1796,12 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     rsconfDebugPrint(loadConf);
 
 finalize_it:
+    if (loadConf != NULL && (loadConf->local_config_requested || loadConf->local_config_error) &&
+        (loadConf->local_config_error || hadErrMsgs() || (iRet != RS_RET_OK && iRet != RS_RET_VALIDATION_RUN) ||
+         delayed_iRet != RS_RET_OK)) {
+        loadConf->local_config_error = 1;
+        iRet = RS_RET_LOCAL_QUEUE_CONFIG;
+    }
     if (iRet == RS_RET_OK && delayed_iRet != RS_RET_OK) {
         iRet = delayed_iRet;
     }

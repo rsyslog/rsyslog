@@ -30,6 +30,9 @@
 #include "action.h"
 
 struct rscript_var_cache;
+struct queue_s;
+
+enum { WTI_CALLBACK_UNKNOWN, WTI_CALLBACK_SUCCEEDED, WTI_CALLBACK_FAILED };
 
 
 #define ACT_STATE_RDY 0 /* action ready, waiting for new transaction */
@@ -80,8 +83,21 @@ struct wti_s {
         int *pbShutdownImmediate; /* end processing of this batch immediately if set to 1 */
         DEF_ATOMIC_HELPER_MUT(*pmutShutdownImmediate); /* fallback mutex for atomic access */
         wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
+        /* Worker-private outcome of the current outer queue callback. Reset
+         * before cancellation is enabled; nested Direct commit failures may
+         * set FAILED. Only SUCCEEDED proves that existing COMM entries need
+         * no replay after a later slowdown or shutdown cancellation. Cleanup
+         * reads this on the same thread, or maintenance only after join. */
+        uint8_t callback_outcome;
         batch_t batch; /* pointer to an object array meaningful for current user
                   pointer (e.g. queue pUsr data elemt) */
+        /* Queue batch source and its logical owner. Both are protected by
+         * the source mutex (home mutex for ordinary workers) and are NULL
+         * while no responsibility is live. Local helpers change source only
+         * with cancellation disabled and exclusive ownership of this WTI;
+         * shutdown maintenance waits for join before accessing its lease. */
+        struct queue_s *source_queue;
+        struct queue_s *logical_owner;
         uchar *pszDbgHdr; /* header string for debug messages */
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */
