@@ -26,6 +26,7 @@ runtime/Makefile.am
   s_f2c089be484e12::t_07d914a16b6cba 61-62
 tests/Makefile.am
   s_f2c089be484e12::t_07d914a16b6cba 183,2780-2782,2876-2877,2888
+  s_f2c089be484e12::t_5a332495e68221 2738,2741
 tests/unit/reload_report_test.c
   s_f2c089be484e12::t_1ba13f14b38262 45,51-54
   s_f2c089be484e12::t_77002e0cc000f4 96,210-215,217-221
