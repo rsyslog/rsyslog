@@ -51,6 +51,7 @@ tools/shadow_reload.h
   s_f2c089be484e12::t_675d8bddb515ef 36-38
   s_f2c089be484e12::t_d86eec0dac2cab 55-56
   s_f2c089be484e12::t_fd160eac19a6d6 8-9,47,71-72
+  s_f2c089be484e12::t_4c5834909968f4 40,43,45,68-70,73,75-77
 runtime/outchannel.h
   s_f2c089be484e12::t_56f84f0be628be 36
 runtime/perctile_stats.c
