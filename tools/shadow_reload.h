@@ -82,10 +82,17 @@ void shadowReloadLegacyHooksCompleted(void);
  */
 void shadowReloadProcess(void);
 
-/* Main-thread-only retry driver. Failed resume retains state even when the
+/** @brief Report main-thread-owned retirement blocking of new candidates.
+ * @return Nonzero while retained resume/retirement has not completed.
+ * Failed resume retains state even when the
  * candidate was rejected before publication; never start another candidate
- * until the owned state can be safely aborted or retired. */
+ * until the owned state can be safely aborted or retired. No ownership transfer.
+ */
 int shadowReloadRetirementPending(void);
+/** @brief Run due main-thread cleanup with monotonic capped backoff.
+ * Requires no caller-held locks. No callback occurs before its deadline.
+ * Final post-input-join shutdown alone permits one deadline bypass.
+ */
 void shadowReloadRetryRetirement(void);
 
 #endif /* INCLUDED_SHADOW_RELOAD_H */

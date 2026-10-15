@@ -10,6 +10,7 @@ rsyslogd_SOURCES = \
 	rsyslogd.c \
 	shadow_reload.c \
 	shadow_reload.h \
+	shadow_reload_retirement.h \
 	syslogd.h \
 	omshell.c \
 	omshell.h \

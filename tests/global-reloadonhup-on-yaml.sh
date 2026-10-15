@@ -6,6 +6,8 @@
 # imtcp live/new-session profile and ruleset cutover. Exact HUP generation,
 # status, and output checks prove the old/new rules plus later fail-closed
 # rejections.
+# Later-accept multiline framing is proved by a combined continuation record;
+# the held pre-HUP stream remains independently LF-delimited.
 # Local/mixed controls reject policy and ruleset-body changes without
 # advancing the generation; old-route delivery proves runtime retention.
 # Terminal impstats must account for all eleven acknowledged HUPs.
@@ -227,6 +229,16 @@ if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=7 add
 	echo "FAIL: coordinated YAML imtcp/ruleset activation did not publish generation five: $reload_status"
 	error_exit 1
 fi
+# The new accept profile must actually combine continuation lines, while
+# the pre-HUP stream still submits a single LF-delimited frame immediately.
+# Default parser escaping renders the embedded newline as #012 in one record.
+printf '<167>Mar 10 01:00:00 host app: cutover-ack:multiline-old\n' >&9 || error_exit 1
+wait_content 'cutover-ack:multiline-old' "$RSYSLOG_OUT_LOG"
+exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+printf '<167>Mar 10 01:00:00 host app: cutover-ack:multiline-new\ncontinued-body\n<167>Mar 10 01:00:00 host app: cutover-ack:multiline-flush\n' >&7 || error_exit 1
+wait_content 'cutover-ack:multiline-new#012continued-body' "$RSYSLOG_OUT_LOG"
+exec 7>&-
+
 # The graph publication is part of the same commit boundary as the root swap.
 # Repeating the new file must therefore be a no-op against generation five.
 issue_HUP

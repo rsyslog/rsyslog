@@ -32,6 +32,7 @@
 #include "statsobj.h"
 #include "modules.h"
 #include "shadow_reload_lifecycle.h"
+#include "shadow_reload_retirement.h"
 
 DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj);
@@ -57,6 +58,7 @@ static intctr_t quiescePauseTotalUsec = 0;
 static intctr_t lastQuiescePauseUsec = 0;
 static unsigned activeGeneration = 0;
 static int requestInProgress = 0;
+static int retirementBlockedRequest = 0; /* Main-thread cycle, never a deferred candidate. */
 static int pendingGauge = 0;
 static uint64_t requestStartedUsec = 0;
 static statsobj_t *reloadStats = NULL;
@@ -79,8 +81,9 @@ static void *pendingModuleReloadState = NULL;
 static int pendingModuleReloadCommitted = 0;
 /* Only the main/control thread owns pending resume and retirement state. */
 static int pendingModuleReloadResume = 0;
-static int retirementPending = 0;
-static rsRetVal lastRetirementError = RS_RET_OK;
+static shadowReloadRetirement_t retirementSchedule;
+static shadowReloadRetirement_t retirementStatus; /* Observer copy protected by statusMut. */
+static rsRetVal lastLoggedRetirementError = RS_RET_OK;
 static int pendingGenerationActivated = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
@@ -124,20 +127,18 @@ enum shadowReloadFailurePhase_e {
 };
 static enum shadowReloadFailurePhase_e pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
 
-static rsRetVal destructPendingSourceModule(void) {
+static rsRetVal destructPendingSourceModuleNow(void *const context ATTR_UNUSED) {
     if (pendingModuleReloadState != NULL) {
         if (pendingModuleReloadResume) {
             const rsRetVal ret = shadowReloadResumePending(pendingSourceModule, pendingModuleReloadState,
                                                            &pendingModuleReloadResume, 0, NULL);
             if (ret != RS_RET_OK) {
-                retirementPending = 1;
                 return ret;
             }
         }
         if (pendingModuleReloadCommitted) {
             const rsRetVal ret = modReloadRetire(pendingSourceModule, pendingModuleReloadState);
             if (ret != RS_RET_OK) {
-                retirementPending = 1;
                 return ret;
             }
         } else {
@@ -149,21 +150,39 @@ static rsRetVal destructPendingSourceModule(void) {
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingActiveSourceModuleCnf);
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingSourceModuleCnf);
     pendingSourceModule = NULL;
-    retirementPending = 0;
-    lastRetirementError = RS_RET_OK;
     return RS_RET_OK;
 }
 
+/** @brief Publish observer-only retirement fields without holding locks in callbacks. */
+static void publishRetirementStatus(void) {
+    pthread_mutex_lock(&statusMut);
+    retirementStatus = retirementSchedule;
+    pthread_mutex_unlock(&statusMut);
+}
+
+static sbool monotonicUsec(uint64_t *value);
+
+/** @brief Common due-check for every normal cleanup/retry entry point. */
+static rsRetVal destructPendingSourceModule(const int finalShutdown) {
+    uint64_t now = 0;
+    const int clockValid = monotonicUsec(&now);
+    const rsRetVal ret = shadowReloadRetirementTry(&retirementSchedule, now, clockValid, finalShutdown,
+                                                   destructPendingSourceModuleNow, NULL);
+    publishRetirementStatus();
+    return ret;
+}
+
 int shadowReloadRetirementPending(void) {
-    return retirementPending;
+    return retirementSchedule.pending;
 }
 
 void shadowReloadRetryRetirement(void) {
-    if (!retirementPending) return;
-    const rsRetVal ret = destructPendingSourceModule();
-    if (ret != RS_RET_OK && ret != RS_RET_RETRY && ret != lastRetirementError) {
+    if (!retirementSchedule.pending) return;
+    const rsRetVal ret = destructPendingSourceModule(0);
+    if (ret == RS_RET_OK) lastLoggedRetirementError = RS_RET_OK;
+    if (ret != RS_RET_OK && ret != RS_RET_RETRY && ret != lastLoggedRetirementError) {
         LogError(0, ret, "shadow_reload: module reload resume or retirement failed and remains pending");
-        lastRetirementError = ret;
+        lastLoggedRetirementError = ret;
     }
 }
 
@@ -312,9 +331,10 @@ finalize_it:
 }
 
 void shadowReloadExit(void) {
+    /* Inputs have joined: one final guarded cleanup may bypass the deadline. */
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
-    if (destructPendingSourceModule() != RS_RET_OK)
+    if (destructPendingSourceModule(1) != RS_RET_OK)
         LogError(0, RS_RET_ERR, "shadow_reload: module reload retirement remained pending during shutdown");
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
@@ -505,6 +525,7 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     size_t invalid = 0;
     eModReloadCapability_t sourceCapability;
     int sourceCapabilityEvaluated;
+    shadowReloadRetirement_t retirement;
     int n;
 
     if (buffer == NULL || bufferSize == 0) return RS_RET_PARAM_ERROR;
@@ -518,6 +539,7 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     invalid = lastInvalidCount;
     sourceCapability = lastSourceModuleCapability;
     sourceCapabilityEvaluated = lastSourceModuleCapabilityEvaluated;
+    retirement = retirementStatus;
     pthread_mutex_unlock(&statusMut);
     switch (resultCode) {
         case SHADOW_RELOAD_IN_PROGRESS:
@@ -566,9 +588,10 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     }
     n = snprintf(buffer, bufferSize,
                  "result=%s active_generation=%u unchanged=%zu added=%zu removed=%zu modified=%zu invalid=%zu "
-                 "source_capability=%s",
+                 "source_capability=%s retirement_pending=%d retirement_last_error=%d retirement_retry_count=%" PRIu64,
                  result, generation, unchanged, added, removed, modified, invalid,
-                 sourceCapabilityName(sourceCapability, sourceCapabilityEvaluated));
+                 sourceCapabilityName(sourceCapability, sourceCapabilityEvaluated), retirement.pending,
+                 retirement.lastError, retirement.retryCount);
     return n < 0 || (size_t)n >= bufferSize ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
 }
 
@@ -584,8 +607,7 @@ static int stopBeginForTermination(void) {
     return 1;
 }
 
-void shadowReloadBeginRequest(void) {
-    rsRetVal moduleCleanupRet;
+static void accountRequestClaim(void *const context ATTR_UNUSED) {
     /* This runs in lockstep with bHadHUP before doHUP(). A signal arriving
      * during doHUP() sets this flag again and is retained for the next legacy
      * HUP cycle rather than being cleared while this one completes. */
@@ -607,9 +629,16 @@ void shadowReloadBeginRequest(void) {
         STATSCOUNTER_INC(ctrOn, mutCtrOn);
     }
     if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
+}
+
+void shadowReloadBeginRequest(void) {
+    rsRetVal moduleCleanupRet;
+    /* Explicit rejection, not deferred/coalesced execution: main already owns
+     * this HUP and still runs its legacy hooks. Preserve the published status. */
+    if (shadowReloadRetirementClaim(&retirementSchedule, &retirementBlockedRequest, accountRequestClaim, NULL)) return;
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
-    moduleCleanupRet = destructPendingSourceModule();
+    moduleCleanupRet = destructPendingSourceModule(0);
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -892,11 +921,30 @@ static void publishActivatedGeneration(void *const context) {
     publishActivatedGraph(context);
 }
 
+/** @brief Reject a completed legacy HUP without replacing the published status. */
+static void completeRetirementBlockedRequest(void *const context ATTR_UNUSED) {
+    ++rejectedTotal;
+    STATSCOUNTER_INC(ctrRejected, mutCtrRejected);
+    if (configuredMode == RELOAD_ON_HUP_VALIDATE) {
+        ++rejectedValidateTotal;
+        STATSCOUNTER_INC(ctrRejectedValidate, mutCtrRejectedValidate);
+    } else {
+        ++rejectedOnTotal;
+        STATSCOUNTER_INC(ctrRejectedOn, mutCtrRejectedOn);
+    }
+    accountDuration();
+    PREFER_STORE_INT(&requestInProgress, 0);
+    PREFER_STORE_INT(&pendingGauge, signalRequestPending != 0);
+    logState("request", "rejected", modeName(configuredMode), "retirement_pending", 0, NULL, 0);
+}
+
 void shadowReloadProcess(void) {
     int terminalResult;
     if (!requestInProgress) {
         return;
     }
+
+    if (shadowReloadRetirementComplete(&retirementBlockedRequest, completeRetirementBlockedRequest, NULL)) return;
 
     pendingReportHash = rsReloadReportDiagnosticHashV1(pendingReport);
     if (configuredMode == RELOAD_ON_HUP_VALIDATE && pendingCandidateResult == RS_RET_OK && pendingReport != NULL &&
@@ -933,7 +981,10 @@ void shadowReloadProcess(void) {
                         pendingSourceModule, pendingModuleReloadState, &pendingModuleReloadResume,
                         pendingGenerationActivated, &pendingCandidateResult);
                     if (resumeRet != RS_RET_OK) {
-                        retirementPending = 1;
+                        uint64_t retryStarted = 0;
+                        (void)monotonicUsec(&retryStarted);
+                        shadowReloadRetirementFailed(&retirementSchedule, retryStarted, resumeRet);
+                        publishRetirementStatus();
                         LogError(0, resumeRet,
                                  "shadow_reload: module reload resume failed and remains pending; generation %s",
                                  pendingGenerationActivated ? "already activated" : "not activated");
@@ -993,7 +1044,8 @@ void shadowReloadProcess(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
     rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
     rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
-    if (destructPendingSourceModule() != RS_RET_OK)
-        LogError(0, RS_RET_ERR, "shadow_reload: module reload retirement remains pending for retry");
+    const rsRetVal cleanupRet = destructPendingSourceModule(0);
+    if (cleanupRet != RS_RET_OK && cleanupRet != RS_RET_RETRY)
+        LogError(0, cleanupRet, "shadow_reload: module reload retirement remains pending for retry");
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
 }
