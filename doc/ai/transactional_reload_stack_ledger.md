@@ -1,12 +1,16 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: the quality batch is atomically published through
-slice 7, now draft PR #7690. All seven exact published candidates have fresh
-passed security receipts. Hosted checks on the new runs remain pending; all
-seven PRs remain draft, not merge-ready. Slice 8a is rebased and targeted-tested
-but security review is pending; slice 8b parsing cleanup and fixtures are in
-progress. Slices 8c and 9 still use old parents, with network validation held.
+Recorded: 2026-10-15. Status: nine updated/new branches were atomically pushed;
+all eleven published draft PR heads have fresh passed exact-candidate security
+receipts. Main remains c62d84ad7. Hosted checks/review are awaited; targeted
+validation is not final-tip broad validation and no merge-readiness is claimed.
+
+Previous published checkpoint: the quality batch was atomically published through
+slice 7, draft PR #7690. All seven exact published candidates had passed
+security receipts at publication. All seven PRs remain draft, not merge-ready.
+Current local slice/review progress is recorded in the new batch section below;
+network validation for the old-parent later slices remains held.
 The helper-contract supplement has clear independent review of all eight files
 but remains unpublished. Targeted evidence is not final-tip broad validation.
 Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
@@ -83,7 +87,7 @@ an assertion that those intermediate revisions are safe to merge unchanged.
 | 8a | maxSessions capacity and session-owned regex state | eb2f4d101 (shared reconstruction checkpoint) | Rebased 51b209823de4f89af6e553e99652df23f81f5e6a passed epoll/poll 20/20 each, mock 1,596 passes/10 skips and docs; security pending; retain conservative maxListeners rejection |
 | 8b | Sender ACLs and synchronous denied-session reclamation | eb2f4d101 (shared reconstruction checkpoint) | Source work is in progress; ACL support and denied-session closure are one functionality and must never be split |
 | 8c | Independent maxListeners listener-table capacity | 2f52d3cfc | Local c6f8238773ae37270cc75c858a682659a40691ed has socket-free/native/docs/mock evidence only; network validation held |
-| 9 | Simple named rate-limit policy lifecycle | 1a6c3daa8 | Implementation started on old 8c; recommended module-owned policy owner map removes controller-snapshot runtime borrows while preserving shared state and failed-resume ownership |
+| 9 | Simple named rate-limit policy lifecycle | 1a6c3daa8 | Current port is local on published 8c; module-owned policy handles retain shared configuration, listener-local buckets and failed-resume ownership |
 | 10 | Global/parser policy subset | 60dbf92ca | Move unrelated child-exit/scalar work here where practical; retain one-scalar rule |
 | 11 | Remaining scalar profiles and coherent sampling | b2e01e773 | Fold parser helper/sampling fixes into earliest dependent scalar PR |
 | 12 | Bounded prepared TCP add/remove/replace | 0d85d74e3 | Include poll capacity, readiness, startup serialization, diagnostics and docs together |
@@ -95,7 +99,10 @@ The 8a/8b/8c split does not renumber milestones 9-12.
 Place the independent helper-contract supplement after the runtime slices and
 before the later benchmark harness checkpoint; it is not a runtime dependency.
 
-### Slice 8a/8b/8c and 9 ownership plan
+### Historical slice 8a/8b/8c and 9 construction checkpoints
+
+The following checkpoints predate the current publication section below;
+their pending/held states are historical, not current published status.
 
 Slice 8a groups maxSessions capacity changes with session-owned regex state. Its new
 worktree is /home/rger/rsyslog-reload-stack-08a. Rebased checkpoint
@@ -122,8 +129,11 @@ The slice-9 port requires explicit policy-owner handles. Static path review
 confirmed that a historical unchanged named limiter can retain the old
 registry while snapshot destruction waits; this has not been reproduced at
 runtime. Treat it as an ordinary lifecycle/deadlock correctness constraint,
-not an exploit claim. The future port must preserve unchanged shared bucket
-state, give all consumers of the same policy one owner, and retain correct
+not an exploit claim. Named policies share policy configuration, not bucket
+budgets: buckets are listener-local. Unchanged continuous bindings retain
+counters; unbinding and rebinding creates a fresh local bucket. The earlier
+shared/unused-budget preservation promise was incorrect. Preserve policy-owner
+lifetime and retain correct
 ownership across failed resume and subsequent cleanup/retry. Source
 implementation has started on the old slice-8c base. The recommended design
 uses a module-owned policy-owner map to eliminate runtime borrowing from
@@ -133,14 +143,151 @@ already-proven final-candidate behavior.
 
 ## Current evidence and remaining work
 
-### Current published quality batch (slices 1-7)
+### Current publication and remaining local work
+
+The nine-branch atomic push completed with exact published heads verified.
+Slice 7 now targets slice 6a. All eleven PRs are draft; the explicitly approved
+intermediate-only validation override was used only for this authorized
+publication. Main remains c62d84ad735404e23990806c53c882b0057b866c.
+
+| Slice / PR | Current published head | Base |
+| --- | --- | --- |
+| 1 / #7683 | 8bffa5860639278644459224a256ac1991982477 | main / c62d84ad7 |
+| 2 / #7684 | e33ad9a4d850bdc37c330dcd78ed011c7ea7e283 | #7683 / 8bffa5860 |
+| 3 / #7685 | 04debdb95ce690e1b6569a1d1af34fda065d96e1 | #7684 / e33ad9a4d |
+| 4 / #7686 | 88b9882f4ff818517e745b6314fef223bf38151a | #7685 / 04debdb95 |
+| 5 / #7687 | 52d752dad4cbda74f8e392faa193f0f7606fca14 | #7686 / 88b9882f4 |
+| 6 / #7689 | 0de7ab8e3cf8a5bbc06740d17ef07ad42a58ea7d | #7687 / 52d752dad |
+| 6a / #7691 | 4e10c15dd2342be7f7bd1d1c73448b7ef041240d | #7689 / 0de7ab8e3 |
+| 7 / #7690 | 1cc47d91800926cb7c9462d8f167490317701ca4 | #7691 / 4e10c15dd |
+| 8a / #7692 | 434c0d2a0ea7f88f527a2c6c6bd41599ca3347ce | #7690 / 1cc47d918 |
+| 8b / #7693 | d1ac0c3ac3ffd8b653a7350077f5afba3519d341 | #7692 / 434c0d2a0 |
+| 8c / #7694 | 33356ca522e9fe48a89f7df240ac4315362ecf22 | #7693 / d1ac0c3ac |
+
+Strict merge order: 1/#7683 -> 2/#7684 -> 3/#7685 -> 4/#7686 -> 5/#7687 ->
+6/#7689 -> 6a/#7691 -> 7/#7690 -> 8a/#7692 -> 8b/#7693 -> 8c/#7694 ->
+planned 9 -> 10 -> 11 -> 12 -> helper supplement -> benchmark. Parent first;
+retarget after parent merge and reverify the delta. Do not merge umbrella
+#7654 alongside this stack. Hosted new runs and review-thread decisions remain
+pending; no thread-resolution or hosted-clean claim is made.
+
+All exact published candidates have fresh passed receipts. Slice 2 retains its
+non-blocking diagnostic hardening note. Slice 8a retains one non-blocking
+hardening tradeoff: per-session regex compilation cost is unmeasured, not a
+confirmed vulnerability. Other pending local descendants need fresh receipts
+after their final cascades.
+
+| Slice | Local checkpoint and bounded evidence |
+| --- | --- |
+| 3 | 04debdb95 fixes hosted Clang cast-alignment feedback. Actual GCC and Clang 21 production/native checks passed; two fresh review shards reported zero candidates and the receipt is current for this checkpoint. |
+| 4 | Frozen 88b9882f4ff818517e745b6314fef223bf38151a rejects modified rulesets whose optimizer-eliminated unnamed actions escape transfer auditing, while retaining unchanged-unnamed-action positives in both frontends. Focused controls 12/12, ASan 4/4 and mock distribution passed; two fresh security review shards reported zero candidates and the receipt is current. The earlier RS red control wrongly activated; the YAML red control terminated by signal, with cause unproven and no core. This is a correctness correction, not a demonstrated security issue. |
+| 5 | Frozen 52d752dad4cbda74f8e392faa193f0f7606fca14 has two fresh review shards reporting zero candidates and a current receipt; 2,150 reviewable changed lines. |
+| 6 | Frozen 0de7ab8e3cf8a5bbc06740d17ef07ad42a58ea7d includes the MMJSONPARSE test gate, verified through generated TESTS absence/presence controls. The full minimum Clang build and six focused controls passed; two fresh review shards reported zero candidates and the receipt is current for 3,691 reviewable changed lines. |
+| 6a | New frozen 4e10c15dd2342be7f7bd1d1c73448b7ef041240d implements operational retry backoff/status separately from slice 6 ownership safety. Eight current focused controls passed; patch-identical pre-cascade evidence includes epoll 19/19, poll 19/19, mock distribution and HTML. Fresh discovery and lead reviews reported zero candidates and the receipt is current (9 files, 443 reviewable changed lines). |
+| 7 | Published 1cc47d91800926cb7c9462d8f167490317701ca4 corrects unchanged-limiter budget reset on unrelated profile changes. Earlier epoll 22/22, poll 22/22, native red-guard evidence and a clear ordinary independent review are retained separately; fresh discovery and lead review completed with a passed receipt. |
+| 8a | Published 434c0d2a0ea7f88f527a2c6c6bd41599ca3347ce has a fresh passed receipt with the non-blocking operational hardening tradeoff stated above. |
+| 8b | Published d1ac0c3ac3ffd8b653a7350077f5afba3519d341 has fresh completed discovery/lead review and a passed receipt. Combined current GCC focused controls passed 9/9. Pre-cascade 925d35580f03d5c56fa18abdb8821652916e9958 evidence remains epoll 22/22, poll 22/22, ASan 7/7 with leak detection disabled, mock distribution 1,601 passes/10 skips and HTML; these are not exact-current-head claims. |
+| 8c | Published 33356ca522e9fe48a89f7df240ac4315362ecf22 is integrated onto slice 8b with interface 39. Actual epoll 17/17, poll 17/17, mock distribution 1,127 passes/6 skips and HTML passed. Fresh discovery/lead reviews covered all 12 files, with zero candidates and a passed receipt. |
+| 9 | Frozen local 0b22b3cef9784d4704d886c50b32b1d29774fc7d is a documentation-only change after b569 runtime validation on published 33356ca5. Runtime passed epoll 17/17 and poll 17/17; mock distribution passed 1,130/6 skips. Final HTML refresh passed and rendered policy/bucket wording was verified. Fresh discovery found no security or ordinary correctness candidate; lead review is pending. Earlier f18e413 evidence remains historical. |
+| 10 | Rebased local 8f761571c2e6ffb51599c7fc9c650a6414391be9 includes the testbench registration guard and real oversize diagnostic controls from 31d19b03a. Pre-cascade native GCC, direct Clang parser/owner, HTML and mock evidence remains separate. Combined thirteen-scalar live validation is now running on slice 11. |
+| 11 | Rebased local 5007c9fe807e3079236a1d9922ef99dfb67256f9 retains the source-equivalent 595189 patch. Pre-cascade native GCC, direct Clang parser/message/owner, HTML and mock evidence remains historical. Current combined epoll/poll, sanitizer, documentation and distribution checks are in progress. |
+| 12 | Worktree was created from 595189 and is adopting the integrated slice-11 base before topology edits. Architecture review identified additional production all-worker-ready and early-stop lifetime requirements. Source work is starting, not live-validated. |
+
+New local functional slice 6a separates operational retirement retry from
+the ownership safety already implemented in slice 6: bounded attempts with
+indefinite retry of owned pending state and visible pending/error status.
+It is published as draft #7691; 8a, 8b and 8c are drafts #7692, #7693 and #7694.
+
+Planned merge order is 6 -> 6a -> 7 -> 8a -> 8b -> 8c -> 9 -> 10 -> 11 -> 12
+-> helper supplement -> benchmark. The final two follow runtime functionality.
+The initial benchmark b500/78b5 checkpoints are superseded by frozen
+d4fc5320c4ac9c0a587ce3f94077adc71393ca83 (8 files, 1,633 changed lines).
+The package builder classified only two shell files/226 lines as reviewable;
+independent review must cover all eight files. Task-local perf software
+counters and record work, without global installation or host-setting changes,
+but actual CSV reports all five hardware PMU events unsupported despite exit 0.
+Final performance acceptance is blocked pending a user-provided capable host
+or an explicit reduced-scope decision; this is not N/A or acceptance.
+Slice 10 uses a portable
+full-daemon parser-unit seam; this is not live-validation clearance.
+All current published slices 1-8c have valid matching receipts. Only subsequent
+changes/rebases require refreshed exact-candidate checks and digest-bound
+receipts; those receipts do not transfer automatically across rebases.
+Hosted checks, thread decisions
+and final combined broad validation remain separate gates; the stack is not
+overall merge-ready.
+
+### Current receipt and validation audit trail
+
+Read from each source worktree's ignored `.codex/security-review/receipt.json`;
+all rows are passed, with complete reviewed/expected coverage. Digests bind
+the current published deltas, not the older historical tables below.
+
+| Slice | Route | Reviewed/expected | Diff digest |
+| --- | --- | --- | --- |
+| 1 | lead_required | 34/34 | 54b151c42b5dab4f138769eeae3cd815dec138f58a8275cc33b65ea94416a969 |
+| 2 | expanded | 28/28 | 51c1d765d8c13a6f8bda0383fc75c3f0ddab034e725d2cad5793bebbe3e47bd3 |
+| 3 | expanded | 25/25 | 523878255c596a5ace06a167913e38427a9a45c48fe9889ed382878959b4ba0b |
+| 4 | expanded | 42/42 | 3cb07a8e8d9ab71dda346be4e5f4a22550958ac2b71dd28e1690269418e06d5b |
+| 5 | expanded | 17/17 | d476d13d02f31c17bd0c1123a5facca8398c012a11583b2973b3862b88ba56de |
+| 6 | expanded | 34/34 | e48ac0134c84f78a3d864d13a429dcff50e7e5f06f070c419aa182b10756d730 |
+| 6a | lead_required | 9/9 | d82d48ab051a5a2afa66290d86de83a4cd1655e783815564d8b55324a78eaed8 |
+| 7 | lead_required | 22/22 | 978ac133bef1515f1034d1f4ef3b9645fab8e7e8d29074ba847e74e7d5c1d410 |
+| 8a | lead_required | 13/13 | 11521f6abbe254ae799151225055de372b62ee34185a6fef83cefac7ce5bfdfe |
+| 8b | lead_required | 14/14 | 2eed464864eba805e14715f7f66a1dbfea6a207ee7585c2c3fd21c157ba665e8 |
+| 8c | lead_required | 12/12 | 7dd8f74372fb39fc65253b761d78ba1375b9837a0b6b3d4f0897d97f40eada26 |
+
+Representative exact focused commands below run from the matching sibling
+worktree. Common command prefix and configure flags are shared literally by
+the three recorded lanes; TESTS selects the exact lists below. Source summaries:
+S6a `stack06a-validation/final-handoff-summary.md`, S8b
+`final-s6a-cascade/summary.md`, S8c `final-s8b-integration/summary.md`, each
+under the worktree's ignored `.codex/security-review/`.
+
+```bash
+export RSYSLOG_DEV_CONTAINER=sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09
+export CC=gcc CFLAGS=-g CI_CONFIGURE_CACHE=1
+export DOCKER_RUN_EXTRA_OPTS='--cpus=4 -e TESTS'
+export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE='--enable-testbench --enable-imdiag --enable-imtcp --enable-impstats --enable-omstdout --disable-valgrind'
+# S6a final eight controls (31.36s):
+TESTS='runtime_unit_shadow_reload_retirement runtime_unit_module_reload runtime_unit_tcpsrv_fence global-reloadonhup-on-rainerscript.sh global-reloadonhup-on-yaml.sh global-reloadonhup-unnamed-rainerscript.sh global-reloadonhup-unnamed-yaml.sh global-reloadonhup-imtcp-notifications-yaml.sh'
+export TESTS
+devtools/devcontainer.sh --no-pull --rm bash -lc 'if test -f Makefile; then make distclean; fi; devtools/run-configure.sh && make -j4 check TESTS="" && make -C tests -j2 check TESTS="$TESTS"'
+# Combined S8b final nine controls (34.35s), same command/configuration:
+TESTS='runtime_unit_tcpsrv_fence runtime_unit_reload_report runtime_unit_reload_candidate_graph global-reloadonhup-on-rainerscript.sh global-reloadonhup-on-yaml.sh global-reloadonhup-unnamed-rainerscript.sh global-reloadonhup-unnamed-yaml.sh global-reloadonhup-imtcp-allowedsender-rainerscript.sh global-reloadonhup-imtcp-allowedsender-yaml.sh'
+devtools/devcontainer.sh --no-pull --rm bash -lc 'if test -f Makefile; then make distclean; fi; devtools/run-configure.sh && make -j4 check TESTS="" && make -C tests -j2 check TESTS="$TESTS"'
+# S8c final seventeen controls, run separately with explicit yes and no:
+TESTS='runtime_unit_tcpsrv_fence runtime_unit_reload_report runtime_unit_reload_candidate_graph global-reloadonhup-imtcp-maxlisteners-rainerscript.sh global-reloadonhup-imtcp-maxlisteners-yaml.sh global-reloadonhup-imtcp-maxlisteners-validate-rainerscript.sh global-reloadonhup-imtcp-maxlisteners-validate-yaml.sh global-reloadonhup-imtcp-maxsessions-rainerscript.sh global-reloadonhup-imtcp-maxsessions-yaml.sh global-reloadonhup-imtcp-regex-rainerscript.sh global-reloadonhup-imtcp-regex-yaml.sh global-reloadonhup-imtcp-allowedsender-rainerscript.sh global-reloadonhup-imtcp-allowedsender-yaml.sh global-reloadonhup-on-rainerscript.sh global-reloadonhup-on-yaml.sh global-reloadonhup-unnamed-rainerscript.sh global-reloadonhup-unnamed-yaml.sh'
+export RSYSLOG_CONFIGURE_OPTIONS_EXTRA=--enable-imtcp-epoll=yes
+devtools/devcontainer.sh --no-pull --rm bash -lc 'if test -f Makefile; then make distclean; fi; devtools/run-configure.sh && make -j4 check TESTS="" && make -C tests -j2 check TESTS="$TESTS"'
+export RSYSLOG_CONFIGURE_OPTIONS_EXTRA=--enable-imtcp-epoll=no
+devtools/devcontainer.sh --no-pull --rm bash -lc 'if test -f Makefile; then make distclean; fi; devtools/run-configure.sh && make -j4 check TESTS="" && make -C tests -j2 check TESTS="$TESTS"'
+```
+
+The actual commands in persistent logs embed each TESTS list directly; the
+shared-variable presentation above preserves the same flags and test selection.
+S8c yes/no took 40.92s/39.22s and configured the requested backend explicitly.
+S6a/S8b final focused composition is current; their earlier epoll/poll/sanitizer
+runs remain pre-cascade evidence, not repeated current-head backend claims.
+Mock distcheck is packaging-only: shell tests run MOCK-OK, not live coverage.
+All lanes remain targeted, not final-tip broad/analyzer validation. Hosted AI
+review/new checks are awaited and no review threads are claimed resolved.
+The approved intermediate publication override covered the nine pushed refs.
+
+| Later slice | Implementation/source locations |
+| --- | --- |
+| 9 | plugins/imtcp/imtcp-policy-owner.h and plugins/imtcp/imtcp.c own policy handles and listener-local binding state. |
+| 10/11 | runtime/glbl.c, runtime/glbl.h, runtime/rsconf.c, runtime/parser.c, runtime/msg.c, tools/shadow_reload.c and tools/shadow_reload_policy.h implement bounded scalar lowering/publication and parser/message behavior. Real public-API native driver: tools/parser_policy_unit with tests/unit/parser_policy_test.c, invoked by tests/parser-policy-unit.sh; not a copied implementation-only surrogate. |
+
+### Historical published quality batch (previous slices 1-7)
 
 This section records local work after the published correction batch below.
 It does not replace historical published heads, validation results, receipts,
 or incident provenance. Slices 1-7 are published atomically with exact leases
 and the explicitly authorized intermediate-only container-validation override.
 Upstream and fork main remain c62d84ad735404e23990806c53c882b0057b866c.
-All seven have fresh passed receipts. Exact candidate receipts are recorded below;
+At that publication, all seven had fresh passed receipts. Historical exact
+candidate receipts are recorded below;
 older receipts remain historical and are stale for changed candidates. Other
 changed candidates still require rebuilt inputs, fresh independent review and
 matching receipts after their cascade stabilizes.
@@ -323,7 +470,10 @@ commit and original Automake summary; no publication override was needed.
 Current whole-branch security package has 172 reviewable files and 25,406
 changed reviewable lines: needs_human, to be replaced by per-slice review.
 
-## Published dependent stack
+## Historical seven-PR publication checkpoint
+
+This section preserves the earlier seven-PR order and heads. The current
+eleven-PR table and strict order above supersede it.
 
 Merge order: [1 / #7683](https://github.com/rsyslog/rsyslog/pull/7683) ->
 [2 / #7684](https://github.com/rsyslog/rsyslog/pull/7684) ->
@@ -339,9 +489,9 @@ All seven descriptions begin with merge conditions and link the complete 1-7
 published order: parent first, retarget after its merge, verify the delta,
 and pass required checks and review before merging the child.
 
-Current atomically published heads and bases:
+Historical atomically published heads and bases (superseded):
 
-| Slice / PR | Current published head | Base |
+| Slice / PR | Historical published head | Historical base |
 | --- | --- | --- |
 | 1 / #7683 | 8bffa5860639278644459224a256ac1991982477 | main / c62d84ad7 |
 | 2 / #7684 | e33ad9a4d850bdc37c330dcd78ed011c7ea7e283 | #7683 / 8bffa5860 |
