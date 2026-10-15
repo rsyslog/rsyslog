@@ -1,7 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: stack construction in progress, not published.
+Recorded: 2026-10-15. Status: stack construction in progress; umbrella rebase
+published, individual stack PRs not yet published.
 Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 
 ## Method and merge contract
@@ -83,6 +84,37 @@ review found no remaining concrete defect in the reviewed restoration/fix.
 Durable local evidence: .codex/security-review/rebase-20261015.md,
 rebase-range-diff.log, original-merge-resolution.patch,
 rebase-focused-restored.log and rebase-format-final.log.
+
+Rebased umbrella c779824606fb8095c48e52c5ee6f933d72301043 was published with
+an explicit lease against the old head; GitHub reports mergeable. Fresh broad
+Ubuntu 26.04 evidence: 1,667 passes, 70 skips, zero failures/errors (863.94s).
+Production analyzer: no bugs (267.35s). The recorder sealed the actual source
+commit and original Automake summary; no publication override was needed.
+Current whole-branch security package has 172 reviewable files and 25,406
+changed reviewable lines: needs_human, to be replaced by per-slice review.
+
+## Prepared stack checkpoints (not published PRs)
+
+| Slice | Branch / current checkpoint | Functional checks | Review and other evidence |
+| --- | --- | --- | --- |
+| 1 | codex/reload-stack-01-foundation, 0f259088d | No-systemd build; 8/8 policy/unit tests | Fresh independent Luna/high discovery and lead passed; analyzer clean; mock distcheck, HTML and extended docs distribution passed |
+| 2 | codex/reload-stack-02-reports, 589658d1c | 7/7 report/graph/frontend checks; both field-omission negative controls fail, restored control passes | Independent discovery has no security candidate; lead pending; mock distribution passed |
+| 3 | codex/reload-stack-03-candidates, 5cc3d0f6c | 10/10 candidate/graph/frontend/error checks | Independent security and distribution/docs gates pending |
+| 4 | codex/reload-stack-04-ruleset-activation, 0fb1e65db | 12/12 clone/barrier/worker/activation checks | Independent security, sanitizer and distribution/docs gates pending |
+
+These head IDs are reconstruction checkpoints, not permanent PR identities;
+later folded fixes may change them. Each branch is based on its preceding
+slice, not independently on main. Never infer merge readiness from the table
+alone. Published PR links and verified bases must replace these placeholders.
+
+Boundary adjustments already made: benchmark assets are absent from the first
+three slices, retained in the umbrella for later performance/tooling work.
+Unrelated disk-queue checkpoint-residue maintenance is excluded from slice 2,
+retained in the umbrella, and needs a separate test-maintenance boundary.
+The early graph producer is source-spelling-sensitive: case-only names can be
+reported more strictly than runtime's case-insensitive ruleset lookup. This is
+a conservative report limitation, not a security finding or semantic-equivalence
+claim; expose the restriction in the affected PR's support statement.
 
 Open work: construct and validate each adjusted stack boundary, record PR URLs
 and exact source/image evidence, review security per slice, and complete the
