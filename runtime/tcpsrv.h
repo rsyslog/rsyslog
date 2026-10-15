@@ -98,6 +98,39 @@ struct tcpLstnPortList_s {
 };
 
 
+/**
+ * @brief Prepared live and accept-time values published under a TCP fence.
+ * Preparation validates these scalars and pins the resolved ruleset. Commit
+ * copies them without allocation; existing accept-time snapshots remain unchanged.
+ */
+typedef struct tcpsrv_reload_profile_s {
+    int useFlowControl; /**< Live flow-control policy. */
+    unsigned starvationMaxReads; /**< Live receive-dispatch read budget. */
+    unsigned ratelimitInterval; /**< Live unnamed limiter interval, seconds. */
+    unsigned ratelimitBurst; /**< Live unnamed limiter burst allowance. */
+    int notifyOnConnectionClose; /**< Live remote-close notification flag. */
+    int notifyOnConnectionOpen; /**< Live remote-open notification flag. */
+    int preserveCase; /**< Accept-time peer-name case policy. */
+    int keepAlive; /**< Accept-time TCP keepalive enable flag. */
+    int keepAliveInterval; /**< Accept-time keepalive probe interval. */
+    int keepAliveProbes; /**< Accept-time keepalive probe count. */
+    int keepAliveTime; /**< Accept-time keepalive idle time. */
+    int framingFix; /**< Accept-time Cisco framing compatibility flag. */
+    int additionalFrameDelimiter; /**< Accept-time extra delimiter byte. */
+    int maxFrameSize; /**< Accept-time maximum frame size. */
+    int disableLFDelimiter; /**< Accept-time LF-delimiter disable flag. */
+    int discardTruncatedMessage; /**< Accept-time truncation policy. */
+    int supportOctetCountedFraming; /**< Accept-time octet-counted framing flag. */
+    int compressionMode; /**< Accept-time validated compression mode. */
+    int compressionDriver; /**< Accept-time validated compression backend. */
+    uint64_t compressionMaxExpansionRatio; /**< Accept-time decompression expansion bound. */
+    uint64_t compressionMaxDecompressedBytesPerReceive; /**< Accept-time decompressed receive bound. */
+    uint64_t compressionMaxTotalZstdWindowBytes; /**< Accept-time aggregate zstd window bound. */
+    int multiLine; /**< Accept-time multiline framing flag. */
+    uchar defaultTZ[8]; /**< Copied live default timezone. */
+    ruleset_t *ruleset; /**< Borrowed materialized ruleset, pinned by the active generation. */
+} tcpsrv_reload_profile_t;
+
 typedef struct tcpsrvWrkrData_s {
     statsobj_t *stats;
     STATSCOUNTER_DEF(ctrRuns, mutCtrRuns);
@@ -389,8 +422,14 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* added v35 -- update the accept profile while fenced */
     rsRetVal (*SetMultiLineForNewSessions)(tcpsrv_t *pThis, int enabled);
 
+    /** @brief Publish a prepared profile while the caller owns the server fence.
+     * @param pThis Fenced server, pinned through commit and resume.
+     * @param profile Validated values and pinned ruleset; copied synchronously.
+     */
+    void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
+
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 35 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 36 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -456,6 +495,16 @@ int tcpsrvFenceTerminated(void);
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
 /** Update the receive-loop starvation threshold. */
 void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
+/**
+ * @brief Update unnamed listener-local Linux-like limiters under a held fence.
+ * Unchanged interval/burst retain the consumed budget and pending loss state;
+ * changing either value resets those limiters. Named limiters are unaffected.
+ * @param pThis Server whose event loop and all workers are fenced by the caller.
+ * @param interval New Linux-like interval in seconds (zero disables limiting).
+ * @param burst New per-interval message allowance.
+ * Named/shared policies are never modified. No allocation or ownership transfer.
+ */
+void tcpsrvApplyRateLimitLive(tcpsrv_t *pThis, unsigned interval, unsigned burst);
 /** Update subsequent connection-open/close notification decisions. */
 void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
 /** Update hostname case policy for sessions accepted after release only. */

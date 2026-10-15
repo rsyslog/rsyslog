@@ -2371,6 +2371,26 @@ static rsRetVal ATTR_NONNULL(1) SetRuleset(tcpsrv_t *const pThis, ruleset_t *con
 }
 
 
+static void ATTR_NONNULL(1, 2) ApplyReloadProfile(tcpsrv_t *const pThis, const tcpsrv_reload_profile_t *const profile) {
+    tcpsrvApplyFlowControlLive(pThis, profile->useFlowControl);
+    tcpsrvApplyStarvationMaxReadsLive(pThis, profile->starvationMaxReads);
+    tcpsrvApplyRateLimitLive(pThis, profile->ratelimitInterval, profile->ratelimitBurst);
+    tcpsrvApplyNotificationsLive(pThis, profile->notifyOnConnectionOpen, profile->notifyOnConnectionClose);
+    tcpsrvApplyPreserveCaseForNewSessions(pThis, profile->preserveCase);
+    tcpsrvApplyKeepAliveForNewSessions(pThis, profile->keepAlive, profile->keepAliveInterval, profile->keepAliveProbes,
+                                       profile->keepAliveTime);
+    tcpsrvApplyFramingForNewSessions(pThis, profile->framingFix, profile->additionalFrameDelimiter,
+                                     profile->maxFrameSize, profile->disableLFDelimiter,
+                                     profile->discardTruncatedMessage);
+    tcpsrvApplyOctetCountedFramingForNewSessions(pThis, profile->supportOctetCountedFraming);
+    tcpsrvApplyCompressionForNewSessions(
+        pThis, profile->compressionMode, profile->compressionDriver, profile->compressionMaxExpansionRatio,
+        profile->compressionMaxDecompressedBytesPerReceive, profile->compressionMaxTotalZstdWindowBytes);
+    tcpsrvApplyMultiLineForNewSessions(pThis, profile->multiLine);
+    tcpsrvApplyDefaultTZLive(pThis, profile->defaultTZ);
+    tcpsrvApplyRulesetLive(pThis, profile->ruleset);
+}
+
 static rsRetVal ATTR_NONNULL(1) SetbSPFramingFix(tcpsrv_t *pThis, const sbool val) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -2735,6 +2755,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->ReleaseFence = tcpsrvReleaseFence;
     pIf->SetSupportOctetCountedFraming = SetSupportOctetCountedFraming;
     pIf->SetMultiLineForNewSessions = SetMultiLineForNewSessions;
+    pIf->ApplyReloadProfile = ApplyReloadProfile;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

@@ -14,6 +14,8 @@
  * after the producer yields. No elapsed-time performance threshold is used.
  * Poll capacity checks call the production reservation helper at exact and
  * growth boundaries, writing the control descriptor and trailing sentinel.
+ * Nonzero unnamed limiter budget/loss state survives unrelated profile
+ * updates; only changed interval/burst resets it, never named policy state.
  */
 #include "config.h"
 
@@ -28,6 +30,7 @@
 
 #include "rsyslog.h"
 #include "ruleset.h"
+#include "ratelimit.h"
 #include "tcpsrv.h"
 #include "../../runtime/tcpsrv-poll.h"
 
@@ -47,6 +50,24 @@ static int fenceTestMutexDestroy(pthread_mutex_t *mut) {
 #define pthread_mutex_init fenceTestMutexInit
 #define pthread_cond_init fenceTestCondInit
 #define pthread_mutex_destroy fenceTestMutexDestroy
+static ratelimit_t *rateLimitCalls[4];
+static unsigned rateLimitIntervals[4];
+static unsigned rateLimitBursts[4];
+static size_t rateLimitCallCount;
+
+void ratelimitSetLinuxLike(ratelimit_t *const limiter, const unsigned interval, const unsigned burst) {
+    /* Model the setter's reset effect so an unnecessary production-helper
+     * call destroys visible nonzero state, rather than only recording a call. */
+    limiter->done = limiter->missed = 0;
+    limiter->begin = 0;
+    if (rateLimitCallCount < sizeof(rateLimitCalls) / sizeof(rateLimitCalls[0])) {
+        rateLimitCalls[rateLimitCallCount] = limiter;
+        rateLimitIntervals[rateLimitCallCount] = interval;
+        rateLimitBursts[rateLimitCallCount] = burst;
+    }
+    ++rateLimitCallCount;
+}
+
 /* Include the small production state machine so the unit can drive its
  * event-loop and worker safepoints without constructing network objects. */
 #include "../../runtime/tcpsrv-fence.c"
@@ -415,6 +436,57 @@ static int starvationMaxReadsSnapshot(void) {
     return 0;
 }
 
+/* The production helper must retain spent budget and pending loss reports
+ * when an unrelated profile update reapplies the same effective limits.
+ * Changed interval and changed burst each reset unnamed buckets; named
+ * policy objects remain untouched because their ownership is separate. */
+static int rateLimitSnapshot(void) {
+    tcpsrv_t server = {.ratelimitInterval = 60, .ratelimitBurst = 12000};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t namedParams = {.pszRatelimitName = UCHAR_CONSTANT("shared-policy")};
+    tcpLstnParams_t thirdParams = {0};
+    ratelimit_t firstLimiter = {.done = 11, .missed = 7, .begin = 123};
+    ratelimit_t namedLimiter = {.done = 9, .missed = 2, .begin = 789};
+    ratelimit_t thirdLimiter = {.done = 17, .missed = 8, .begin = 456};
+    tcpLstnPortList_t thirdListener = {.cnf_params = &thirdParams, .ratelimiter = &thirdLimiter};
+    tcpLstnPortList_t namedListener = {
+        .cnf_params = &namedParams, .ratelimiter = &namedLimiter, .pNext = &thirdListener};
+    tcpLstnPortList_t firstListener = {
+        .cnf_params = &firstParams, .ratelimiter = &firstLimiter, .pNext = &namedListener};
+    server.pLstnPorts = &firstListener;
+    rateLimitCallCount = 0;
+    tcpsrvApplyStarvationMaxReadsLive(&server, 1);
+    tcpsrvApplyRateLimitLive(&server, 60, 12000);
+    CHECK(server.ratelimitInterval == 60);
+    CHECK(server.ratelimitBurst == 12000);
+    CHECK(rateLimitCallCount == 0);
+    CHECK(firstLimiter.done == 11 && firstLimiter.missed == 7 && firstLimiter.begin == 123);
+    CHECK(thirdLimiter.done == 17 && thirdLimiter.missed == 8 && thirdLimiter.begin == 456);
+    CHECK(namedLimiter.done == 9 && namedLimiter.missed == 2 && namedLimiter.begin == 789);
+
+    tcpsrvApplyRateLimitLive(&server, 90, 12000);
+    CHECK(server.ratelimitInterval == 90 && server.ratelimitBurst == 12000);
+    CHECK(rateLimitCallCount == 2);
+    CHECK(rateLimitCalls[0] == &firstLimiter);
+    CHECK(rateLimitCalls[1] == &thirdLimiter);
+    CHECK(rateLimitIntervals[0] == 90 && rateLimitIntervals[1] == 90);
+    CHECK(rateLimitBursts[0] == 12000 && rateLimitBursts[1] == 12000);
+    CHECK(firstLimiter.done == 0 && firstLimiter.missed == 0 && firstLimiter.begin == 0);
+    CHECK(thirdLimiter.done == 0 && thirdLimiter.missed == 0 && thirdLimiter.begin == 0);
+    firstLimiter.done = thirdLimiter.done = 5;
+    firstLimiter.missed = thirdLimiter.missed = 3;
+    firstLimiter.begin = thirdLimiter.begin = 456;
+    tcpsrvApplyRateLimitLive(&server, 90, 11000);
+    CHECK(server.ratelimitInterval == 90 && server.ratelimitBurst == 11000);
+    CHECK(rateLimitCallCount == 4);
+    CHECK(rateLimitIntervals[2] == 90 && rateLimitIntervals[3] == 90);
+    CHECK(rateLimitBursts[2] == 11000 && rateLimitBursts[3] == 11000);
+    CHECK(firstLimiter.done == 0 && firstLimiter.missed == 0 && firstLimiter.begin == 0);
+    CHECK(thirdLimiter.done == 0 && thirdLimiter.missed == 0 && thirdLimiter.begin == 0);
+    CHECK(namedLimiter.done == 9 && namedLimiter.missed == 2 && namedLimiter.begin == 789);
+    return 0;
+}
+
 static int notificationSnapshot(void) {
     tcpsrv_t server = {.bEmitMsgOnOpen = 0, .bEmitMsgOnClose = 1};
     tcpsrvApplyNotificationsLive(&server, 1, 0);
@@ -596,6 +668,7 @@ int main(void) {
     if (termWhileParked() != 0) return 1;
     if (flowControlSnapshot() != 0) return 1;
     if (starvationMaxReadsSnapshot() != 0) return 1;
+    if (rateLimitSnapshot() != 0) return 1;
     if (notificationSnapshot() != 0) return 1;
     if (preserveCaseNewSessions() != 0) return 1;
     if (keepAliveNewSessions() != 0) return 1;

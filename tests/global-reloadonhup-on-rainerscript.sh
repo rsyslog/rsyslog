@@ -4,6 +4,7 @@
 # to another ruleset while preserving the untouched unnamed action's delivery.
 # Verify RainerScript activation and its fail-closed boundaries. Effective
 # imtcp live/new-session profile changes and an eligible named-ruleset update
+# report both capability dimensions rather than collapsing mixed changes;
 # publish atomically while one TCP session stays open. HUP completion plus
 # exact generation/output checks prove the cutover without timing assumptions.
 # Later-accept multiline framing is proved by a combined continuation record;
@@ -169,7 +170,7 @@ sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(lo
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=9 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=9 added=0 removed=0 modified=1 invalid=0 source_capability=live_and_new_sessions"* ]]; then
 	echo "FAIL: changed RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
@@ -185,7 +186,7 @@ wait_content 'closed by remote peer' "$RSYSLOG_DYNNAME.started"
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=9 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=9 added=0 removed=0 modified=1 invalid=0 source_capability=live_and_new_sessions"* ]]; then
 	echo "FAIL: restored RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
@@ -202,8 +203,8 @@ if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=9 add
 	echo "FAIL: valid imtcp candidate did not activate: $reload_status"
 	error_exit 1
 fi
-if [[ "$reload_status" != *"source_capability=new_sessions"* ]]; then
-	echo "FAIL: changed RainerScript imtcp profile was not classified for new sessions: $reload_status"
+if [[ "$reload_status" != *"source_capability=live_and_new_sessions"* ]]; then
+	echo "FAIL: changed RainerScript imtcp profile was not classified for live and new sessions: $reload_status"
 	error_exit 1
 fi
 # The new accept profile must actually combine continuation lines, while

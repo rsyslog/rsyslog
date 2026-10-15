@@ -107,7 +107,10 @@ typedef enum eModReloadCapability_ {
     eMOD_RELOAD_LIVE_SWAP = 1, /**< Switch existing users to the replacement. */
     eMOD_RELOAD_NEW_SESSIONS = 2, /**< Existing users retain the old configuration. */
     eMOD_RELOAD_DRAIN_REPLACE = 3, /**< Drain old users before using the replacement. */
-    eMOD_RELOAD_REUSE = 4 /**< Effective configuration is unchanged. */
+    eMOD_RELOAD_REUSE = 4, /**< Effective configuration is unchanged. */
+    /** Existing users receive live fields while accept-profile fields apply
+     * only to users created after the same atomic publication. */
+    eMOD_RELOAD_LIVE_AND_NEW_SESSIONS = 5
 } eModReloadCapability_t;
 
 /**

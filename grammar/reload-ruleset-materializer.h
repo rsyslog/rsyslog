@@ -27,7 +27,8 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
  * @param candidate Borrowed immutable syntax; cloned roots become plan-owned.
  * @param report Borrowed source diff; unsupported non-ruleset objects must be unchanged.
  * @param sourceCapability Private effective classifier result authorizing imtcp
- * module/input entries only for REUSE, LIVE_SWAP or NEW_SESSIONS. Other values
+ * module/input entries only for REUSE, LIVE_SWAP, NEW_SESSIONS or
+ * LIVE_AND_NEW_SESSIONS. Other values
  * retain the ruleset-only gate. REUSE may publish a new source baseline without
  * changing runtime objects.
  * @param out Initially NULL output, owned by caller only on success.

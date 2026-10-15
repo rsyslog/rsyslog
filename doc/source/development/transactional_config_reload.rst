@@ -36,7 +36,7 @@ Current implementation boundary
 
 This delivery adds coordinated updates to a fixed set of existing imtcp
 listeners. Flow control, default timezone, existing-ruleset routing, starvation
-limits, and connection notifications can update live; preserve-case,
+limits, unnamed listener rate-limit interval/burst, and connection notifications can update live; preserve-case,
 keepalive, framing, octet framing, compression, and multiline settings apply
 to new sessions while accepted sessions retain their snapshots. Input fences
 and queue barriers protect one publication boundary, and reusable source
@@ -68,9 +68,17 @@ the current condition. A newer signal arriving during those legacy hooks remains
 pending for its own normal HUP cycle.
 
 Detached candidate lowering remains side-effect-free. There is no live
-listener addition, removal, endpoint reconciliation, or TLS/ACL replacement.
+listener addition, removal, replacement, or TLS/ACL replacement.
 Those changes, incompatible dependencies, and unsupported source lowering
 remain fail-closed.
+
+Retained listeners reconcile across source reordering by canonical fixed
+endpoint identity, or by explicit input name for dynamic endpoints. Both sets
+must have the same size and complete unique matching identities; only a
+single unnamed dynamic listener may use positional fallback. A stable name
+never authorizes a changed socket tuple. These checks precede preparation
+in both modes. Mixed live/accept-profile changes report
+``live_and_new_sessions`` and commit together under the same fence.
 
 Any active producer-local queue graph, including mixed local/global
 boundaries, rejects activation before module preparation or input fencing.
@@ -361,9 +369,9 @@ leaving the existing module runtime objects untouched.  This advances the
 configuration generation but requires neither an input fence nor a consumer
 queue barrier.  Repeating that source is then a true report-only no-op instead
 of rediscovering the same effective-equivalent change on every HUP.
-The first imtcp comparator pairs listener instances in source order; a pure
-reorder is therefore conservatively restart-required until endpoint-key
-reconciliation is connected to the runtime registry.
+The imtcp comparator pairs retained listeners by unique endpoint identity
+independently of source order, and preparation resolves the same runtime
+listener. Ambiguous identities and changed endpoint sets require restart.
 
 ``on`` applies a conservative scope gate to that report. Modifications to
 already existing rulesets and the explicitly supported existing-listener fields
@@ -388,9 +396,12 @@ frame size, LF-delimiter disablement, and truncated-message policy—also change
 only for later connections, as do octet-counted framing support and the
 compression mode, driver, and resource limits.  Multiline framing without a
 changed delimiter regex is also an accept-profile update.  Regular expression
-framing, TLS, endpoint, ACL, rate-limit, and
+framing, TLS, endpoint, ACL, named rate-limit, and
 listener-structure fields remain conservatively restart-required until their
 corresponding prepare, ownership, and reconciliation contracts are implemented.
+Unnamed Linux-like interval and burst values are copied and the listener-local
+limiter is reset while event-loop and worker use is fenced. Named policy
+objects are not mutated by this path.
 
 Busy inputs can prevent the worker fence from completing before its absolute
 deadline: a receive worker may repeatedly hand off a still-ready connection
