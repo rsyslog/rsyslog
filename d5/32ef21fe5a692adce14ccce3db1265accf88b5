@@ -1,0 +1,19 @@
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_dfe490381a12fa 107-121,123-125,136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "d532ef21fe5a692adce14ccce3db1265accf88b5",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
