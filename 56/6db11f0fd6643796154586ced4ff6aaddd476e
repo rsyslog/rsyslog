@@ -26,6 +26,7 @@ doc/source/development/transactional_config_reload.rst
   s_f2c089be484e12::t_d483807b75cb61 355-357,362-363
   s_f2c089be484e12::t_04ac09735d7401 358,361
   s_f2c089be484e12::t_36df503ec886c8 359-360
+  s_f2c089be484e12::t_2d882e62edb416 44-49
 runtime/perctile_stats.c
   s_f2c089be484e12::t_56f84f0be628be 158,181
 tools/Makefile.am
@@ -83,6 +84,8 @@ tests/global-reloadonhup-on-rainerscript.sh
   s_f2c089be484e12::t_04ac09735d7401 122
   s_f2c089be484e12::t_4ff8a96a4ac5e7 149-150,160
   s_f2c089be484e12::t_36df503ec886c8 151,159
+  s_f2c089be484e12::t_6e3e62affa1fcb 7-8
+  s_f2c089be484e12::t_58e39dd3468b8d 36-38,59-94
 runtime/glbl.c
   s_f2c089be484e12::t_f27194de1a6832 80,176,1317-1320,1322,1377,1572-1574,1576-1577
   s_f2c089be484e12::t_b34d1f9a5a9697 1563-1571
@@ -247,6 +250,9 @@ tests/global-reloadonhup-on-yaml.sh
   s_f2c089be484e12::t_04ac09735d7401 148-149
   s_f2c089be484e12::t_4ff8a96a4ac5e7 171-172
   s_f2c089be484e12::t_36df503ec886c8 174-175,179
+  s_f2c089be484e12::t_58e39dd3468b8d 84-105,110,112-115
+  s_f2c089be484e12::t_2d882e62edb416 61
+  s_f2c089be484e12::t_2896920aba2104 7-8,118,169
 runtime/module-reload.c
   s_f2c089be484e12::t_96c244597b13f5 3-7,9-16,73,80-84,87-88,91-99
   s_f2c089be484e12::t_f8f6b07f7fd96a 86
@@ -329,6 +335,7 @@ tools/shadow_reload.c
   s_f2c089be484e12::t_e77dc1ccf93989 82,619,689-690,696-697,703-704,714-715,923,951,993
   s_f2c089be484e12::t_abc16b5cdccceb 994-995
   s_f2c089be484e12::t_e289d5373392b5 691-694,706
+  s_f2c089be484e12::t_58e39dd3468b8d 676-688
 runtime/rsconf.c
   s_f2c089be484e12::t_56f84f0be628be 504-505,523
   s_f2c089be484e12::t_b34d1f9a5a9697 305
