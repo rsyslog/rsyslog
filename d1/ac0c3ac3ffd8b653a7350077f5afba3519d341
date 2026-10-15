@@ -95,6 +95,7 @@ tests/Makefile.am
   s_f2c089be484e12::t_bc1e81ecabce79 1154,1913
   s_f2c089be484e12::t_d2005dd27b74b1 1153
   s_f2c089be484e12::t_1c920cae8d672b 1915-1916
+  s_f2c089be484e12::t_526804bcb11ad6 1914
 doc/Makefile.am
   s_f2c089be484e12::t_c953d10e17185b 361
   s_f2c089be484e12::t_f08a8097623380 377
