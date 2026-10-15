@@ -24,6 +24,10 @@ Umbrella: https://github.com/rsyslog/rsyslog/pull/7654 (draft).
 - Every PR description must link parent, child, umbrella, and full merge order;
   state newly supported behavior, retained restrictions, and actual validation.
   Do not carry final-branch capability claims into an earlier stack member.
+- Maintainer-approved validation scope (2026-10-15): focused builds/tests and
+  independent review for each intermediate PR; broad container validation on
+  the final combined tip. Intermediate slices are targeted-tested, not fully
+  PR-ready container-validated. Preserve any earlier broad-run failures.
 
 ## Implementation inventory at the umbrella checkpoint
 
@@ -98,14 +102,39 @@ changed reviewable lines: needs_human, to be replaced by per-slice review.
 | Slice | Branch / current checkpoint | Functional checks | Review and other evidence |
 | --- | --- | --- | --- |
 | 1 | codex/reload-stack-01-foundation, 0f259088d | No-systemd build; 8/8 policy/unit tests | Fresh independent Luna/high discovery and lead passed; analyzer clean; mock distcheck, HTML and extended docs distribution passed |
-| 2 | codex/reload-stack-02-reports, 589658d1c | 7/7 report/graph/frontend checks; both field-omission negative controls fail, restored control passes | Independent discovery has no security candidate; lead pending; mock distribution passed |
-| 3 | codex/reload-stack-03-candidates, 5cc3d0f6c | 10/10 candidate/graph/frontend/error checks | Independent security and distribution/docs gates pending |
+| 2 | codex/reload-stack-02-reports, 589658d1c | 7/7 report/graph/frontend checks; both field-omission negative controls fail, restored control passes | Independent discovery and lead completed; independent validation classified the diagnostic-surface concern as non-blocking hardening; digest-bound receipt passed; mock distribution passed |
+| 3 | codex/reload-stack-03-candidates, 5cc3d0f6c | 10/10 candidate/graph/frontend/error checks | Two bounded independent Luna/high security shards passed, including parser/lexer context; distribution/docs gates pending |
 | 4 | codex/reload-stack-04-ruleset-activation, 0fb1e65db | 12/12 clone/barrier/worker/activation checks | Independent security, sanitizer and distribution/docs gates pending |
 
 These head IDs are reconstruction checkpoints, not permanent PR identities;
 later folded fixes may change them. Each branch is based on its preceding
 slice, not independently on main. Never infer merge readiness from the table
 alone. Published PR links and verified bases must replace these placeholders.
+
+Slice 1's additional broad Ubuntu 26.04 run completed in 789.98 seconds:
+1,595 passes, 70 skips, one failure, zero errors. The failing test is
+segmented-diskqueue-checkpoint-5; its original log is retained. An isolated
+rerun on the same source and pinned image failed identically: 15 physical
+records (three startup records plus 12 injected messages), three periodic
+writes versus the test's expected two. This is reproducible, not an accepted
+flake or a clean broad-run result. Earlier
+focused, analyzer, documentation and distribution results remain separate.
+The image was rsyslog/rsyslog_dev_base_ubuntu:26.04, ID
+sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09;
+the run used devtools/run-ci.sh, GCC -g, build -j20 and checks -j10 with
+default service relevance. Exact command/log provenance remains in the
+worktree's ignored .codex/security-review/ directory. Hosted review has not
+started for these unpublished slices.
+
+The normal branch-push guard rejected slice 1 because it has no broad-pass
+marker. No marker was fabricated. Explicit approval for a narrowly scoped
+intermediate-branch push override has been requested separately from the
+approved focused-test scope; branches remain local pending that decision.
+
+Upstream advanced from the validated rebase base to ed0094984 while slicing;
+refresh the stack before publication and retain the new imtcp regex-framing
+and fuzz-corpus whitespace fixes. Do not reuse old digest-bound receipts as
+fresh review evidence after changing a slice's source or base.
 
 Boundary adjustments already made: benchmark assets are absent from the first
 three slices, retained in the umbrella for later performance/tooling work.
