@@ -99,6 +99,16 @@ EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG) ../benchmarks/queue-con
 	../benchmarks/queue-contention/compare.py
 TESTS_QUEUE_BENCHMARK_THROUGHPUT_LOCAL = queue-benchmark-throughput-local.sh
 EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_LOCAL)
+IMTCP_RULESET_RELOAD_BENCHMARK = \
+	../benchmarks/imtcp-ruleset-reload/.gitignore \
+	../benchmarks/imtcp-ruleset-reload/README.md \
+	../benchmarks/imtcp-ruleset-reload/acceptance.py \
+	../benchmarks/imtcp-ruleset-reload/compare.py \
+	../benchmarks/imtcp-ruleset-reload/run.sh \
+	../benchmarks/imtcp-ruleset-reload/runner.py \
+	../benchmarks/imtcp-ruleset-reload/selftest.py \
+	../benchmarks/imtcp-ruleset-reload/trial.sh
+EXTRA_DIST += $(IMTCP_RULESET_RELOAD_BENCHMARK)
 TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh
 EXTRA_DIST += $(TESTS_WTP_TARGETED_WAKEUP) unit/wtp_wakeup_test.c
 TESTS_OMPIPE_LEGACY_PATH = ompipe-legacy-path-length.sh
