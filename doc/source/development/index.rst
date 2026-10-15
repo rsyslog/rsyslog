@@ -5,4 +5,5 @@ Development
    :glob:
 
    architecture
+   transactional_config_reload
    *

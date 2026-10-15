@@ -68,6 +68,8 @@
 #include "srUtils.h"
 #include "rainerscript.h"
 #include "rsconf.h"
+#include "shadow_reload.h"
+#include "reload-candidate.h"
 #include "translate.h"
 #include "cfsysline.h"
 #include "datetime.h"
@@ -220,15 +222,18 @@ void rsyslogdDoDie(int sig);
 static volatile sig_atomic_t bChildDied = 0;
 static volatile sig_atomic_t bHadHUP = 0;
 static volatile sig_atomic_t bHUPInProgress = 0;
+static volatile sig_atomic_t hupProcessedCount = 0;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
 static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0; /* is this just a config verify run? */
-rsconf_t *ourConf = NULL; /* our config object */
+/* Legacy load-time compatibility pointer. New runtime paths use runConf. */
+rsconf_t *ourConf = NULL;
 int MarkInterval = 20 * 60; /* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar *)PATH_CONFFILE;
+static char *reloadConfFile = NULL;
 int bHaveMainQueue = 0; /* set to 1 if the main queue - in queueing mode - is available
                          * If the main queue is either not yet ready or not running in
                          * queueing mode (mode DIRECT!), then this is set to 0.
@@ -272,6 +277,16 @@ int get_bHadHUP(void) {
     const int ret = PREFER_LOAD_INT(&bHadHUP) || PREFER_LOAD_INT(&bHUPInProgress);
     /* note: at this point ret can already be invalid */
     return ret;
+}
+
+int get_bFinished(void) {
+    return PREFER_LOAD_INT(&bFinished) != 0;
+}
+
+/* Testbench synchronization point. The main thread publishes a new value only
+ * after all legacy HUP hooks and reload-manager accounting have completed. */
+int getHUPProcessedCount(void) {
+    return PREFER_LOAD_INT(&hupProcessedCount);
 }
 
 /* we need a pointer to the conf, because in early startup stage we
@@ -768,6 +783,8 @@ static rsRetVal rsyslogd_InitGlobalClasses(void) {
     CHKiRet(objUse(parser, CORE_COMPONENT));
     pErrObj = "rsconf";
     CHKiRet(objUse(rsconf, CORE_COMPONENT));
+    pErrObj = "shadow reload statistics";
+    CHKiRet(shadowReloadInit());
 
     /* initialize some dummy classes that are not part of the runtime */
     pErrObj = "action";
@@ -913,9 +930,10 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
     }
 
     /* create message queue */
-    CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType,
-                                 ourConf->globals.mainQ.iMainMsgQueueNumWorkers,
-                                 ourConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
+    assert(loadConf != NULL);
+    CHKiRet_Hdlr(qqueueConstruct(ppQueue, loadConf->globals.mainQ.MainMsgQueType,
+                                 loadConf->globals.mainQ.iMainMsgQueueNumWorkers,
+                                 loadConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
         /* no queue is fatal, we need to give up in that case... */
         LogError(0, iRet, "could not create (ruleset) main message queue");
     }
@@ -941,57 +959,58 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
                  iRet);                                                             \
     }
 
-        if (ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
+        if (loadConf->globals.mainQ.pszMainMsgQFName != NULL) {
             /* check if the queue file name is unique, else emit an error */
             for (qfn = queuefilenames; qfn != NULL; qfn = qfn->next) {
-                dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName);
-                if (!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
+                dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, loadConf->globals.mainQ.pszMainMsgQFName);
+                if (!ustrcmp(qfn->name, loadConf->globals.mainQ.pszMainMsgQFName)) {
                     snprintf((char *)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s", ++qfn_renamenum,
-                             ourConf->globals.mainQ.pszMainMsgQFName,
+                             loadConf->globals.mainQ.pszMainMsgQFName,
                              (queueName == NULL) ? "NONAME" : (char *)queueName);
                     qfname = ustrdup(qfrenamebuf);
                     LogError(0, NO_ERRCODE,
                              "Error: queue file name '%s' already in use "
                              " - using '%s' instead",
-                             ourConf->globals.mainQ.pszMainMsgQFName, qfname);
+                             loadConf->globals.mainQ.pszMainMsgQFName, qfname);
                     break;
                 }
             }
-            if (qfname == NULL) qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
+            if (qfname == NULL) qfname = ustrdup(loadConf->globals.mainQ.pszMainMsgQFName);
             qfn = malloc(sizeof(struct queuefilenames_s));
             qfn->name = qfname;
             qfn->next = queuefilenames;
             queuefilenames = qfn;
         }
 
-        setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
-        setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
+        setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", loadConf->globals.mainQ.iMainMsgQueMaxFileSize);
+        setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", loadConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
         setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize",
-                 ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
+                 loadConf->globals.mainQ.iMainMsgQueDeqBatchSize);
         setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", qfname);
         setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval",
-                 ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
+                 loadConf->globals.mainQ.iMainMsgQPersistUpdCnt);
         setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles",
-                 ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
-        setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown);
+                 loadConf->globals.mainQ.bMainMsgQSyncQeueFiles);
+        setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", loadConf->globals.mainQ.iMainMsgQtoQShutdown);
         setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion",
-                 ourConf->globals.mainQ.iMainMsgQtoActShutdown);
+                 loadConf->globals.mainQ.iMainMsgQtoActShutdown);
         setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown",
-                 ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
-        setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
-        setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
-        setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
-        setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
+                 loadConf->globals.mainQ.iMainMsgQtoWrkShutdown);
+        setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", loadConf->globals.mainQ.iMainMsgQtoEnq);
+        setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", loadConf->globals.mainQ.iMainMsgQHighWtrMark);
+        setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", loadConf->globals.mainQ.iMainMsgQLowWtrMark);
+        setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", loadConf->globals.mainQ.iMainMsgQDiscardMark);
         setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity",
-                 ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
+                 loadConf->globals.mainQ.iMainMsgQDiscardSeverity);
         setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages",
-                 ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
+                 loadConf->globals.mainQ.iMainMsgQWrkMinMsgs);
         setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown",
-                 ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
-        setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
+                 loadConf->globals.mainQ.bMainMsgQSaveOnShutdown);
+        setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", loadConf->globals.mainQ.iMainMsgQDeqSlowdown);
         setQPROP(qqueueSetiDeqtWinFromHr, "$MainMsgQueueDequeueTimeBegin",
-                 ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
-        setQPROP(qqueueSetiDeqtWinToHr, "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
+                 loadConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
+        setQPROP(qqueueSetiDeqtWinToHr, "$MainMsgQueueDequeueTimeEnd",
+                 loadConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
 
 #undef setQPROP
 #undef setQPROPstr
@@ -1135,6 +1154,7 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
     size_t lenMsg;
     unsigned i;
     char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
+    rsconf_t *const activeOrLoadConf = (runConf != NULL) ? runConf : loadConf;
     DEFiRet;
 
     /* we first do a path the remove control characters that may have accidently
@@ -1161,21 +1181,24 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
      * permits us to process unmodified config files which otherwise contain a
      * supressor statement.
      */
-    int emit_to_stderr = (ourConf == NULL) ? 1 : (ourConf->globals.bErrMsgToStderr || ourConf->globals.bAllMsgToStderr);
+    int emit_to_stderr = (activeOrLoadConf == NULL)
+                             ? 1
+                             : (activeOrLoadConf->globals.bErrMsgToStderr || activeOrLoadConf->globals.bAllMsgToStderr);
     int emit_supress_msg = 0;
     if (Debug == DEBUG_FULL || !doFork) {
         emit_to_stderr = 1;
     }
-    if (ourConf != NULL && ourConf->globals.maxErrMsgToStderr != -1) {
-        if (emit_to_stderr && ourConf->globals.maxErrMsgToStderr != -1 && ourConf->globals.maxErrMsgToStderr) {
-            --ourConf->globals.maxErrMsgToStderr;
-            if (ourConf->globals.maxErrMsgToStderr == 0) emit_supress_msg = 1;
+    if (activeOrLoadConf != NULL && activeOrLoadConf->globals.maxErrMsgToStderr != -1) {
+        if (emit_to_stderr && activeOrLoadConf->globals.maxErrMsgToStderr != -1 &&
+            activeOrLoadConf->globals.maxErrMsgToStderr) {
+            --activeOrLoadConf->globals.maxErrMsgToStderr;
+            if (activeOrLoadConf->globals.maxErrMsgToStderr == 0) emit_supress_msg = 1;
         } else {
             emit_to_stderr = 0;
         }
     }
     if (emit_to_stderr || iConfigVerify) {
-        if ((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR ||
+        if ((activeOrLoadConf != NULL && activeOrLoadConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR ||
             (iConfigVerify && pri2sev(pri) <= LOG_WARNING))
             fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char *)msg : bufModMsg);
     }
@@ -1419,6 +1442,7 @@ static void hdlr_enable(int sig, void (*hdlr)()) {
 
 static void hdlr_sighup(void) {
     PREFER_STORE_INT(&bHadHUP, 1);
+    shadowReloadRequestFromSignal();
     /* at least on FreeBSD we seem not to necessarily awake the main thread.
      * So let's do it explicitely.
      */
@@ -1464,7 +1488,7 @@ static void rsyslogdDebugSwitch(void) {
  * of a break-in is very low in the startup phase, we decide it is more important
  * to emit error messages.
  */
-static void initAll(int argc, char **argv) {
+static int initAll(int argc, char **argv) {
     rsRetVal localRet;
     int ch;
     int iHelperUOpt;
@@ -1474,6 +1498,7 @@ static void initAll(int argc, char **argv) {
     enum rsconfTranslateFormat iTranslateFmt = RSCONF_TRANSLATE_NONE;
     char cwdbuf[128]; /* buffer to obtain/display current working directory */
     int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
+    int requestedExitCode = 1;
     DEFiRet;
 
     /* prepare internal signaling */
@@ -1535,7 +1560,7 @@ static void initAll(int argc, char **argv) {
                 break;
             case 'v': /* MUST be carried out immediately! */
                 printVersion();
-                exit(0); /* exit for -v option - so this is a "good one" */
+                return 0;
             case 'h':
             case '?':
             default:
@@ -1556,7 +1581,7 @@ static void initAll(int argc, char **argv) {
 
     if ((iRet = modInitIminternal()) != RS_RET_OK) {
         fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n", iRet);
-        exit(1); /* "good" exit, leaving at init for fatal error */
+        FINALIZE;
     }
 
     /* we now can emit error messages "the regular way" */
@@ -1625,7 +1650,7 @@ static void initAll(int argc, char **argv) {
             case 'F':
                 if (arg == NULL) {
                     fprintf(stderr, "rsyslogd: -F requires a format argument\n");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 if (!strcasecmp(arg, "yaml")) {
                     iTranslateFmt = RSCONF_TRANSLATE_YAML;
@@ -1633,7 +1658,7 @@ static void initAll(int argc, char **argv) {
                     iTranslateFmt = RSCONF_TRANSLATE_RAINERSCRIPT;
                 } else {
                     fprintf(stderr, "rsyslogd: unsupported translation format '%s'\n", arg);
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 break;
             case 'o':
@@ -1662,15 +1687,15 @@ static void initAll(int argc, char **argv) {
                      * but we want to keep the static analyzer happy.
                      */
                     fprintf(stderr, "-T options needs a parameter\n");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 if (chroot(arg) != 0) {
                     perror("chroot");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 if (chdir("/") != 0) {
                     perror("chdir");
-                    exit(1);
+                    ABORT_FINALIZE(RS_RET_ERR);
                 }
                 break;
             case 'u': /* misc user settings */
@@ -1755,7 +1780,19 @@ static void initAll(int argc, char **argv) {
     }
 
     resetErrMsgsFlag();
-    localRet = rsconf.Load(&ourConf, ConfFile);
+    free(reloadConfFile);
+    reloadConfFile = NULL;
+    if (ConfFile[0] == '/') {
+        CHKmalloc(reloadConfFile = strdup((const char *)ConfFile));
+    } else {
+        char *cwd = getcwd(NULL, 0);
+        if (cwd == NULL) ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+        if (asprintf(&reloadConfFile, "%s/%s", cwd, ConfFile) < 0) reloadConfFile = NULL;
+        free(cwd);
+        if (reloadConfFile == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    CHKiRet(rsReloadCandidateSourceBegin());
+    localRet = rsconf.Load(&loadConf, ConfFile);
 
 #ifdef ENABLE_LIBCAPNG
     if (loadConf->globals.bCapabilityDropEnabled) {
@@ -1881,6 +1918,7 @@ static void initAll(int argc, char **argv) {
         ABORT_FINALIZE(localRet);
 
     if (hadErrMsgs()) {
+        rsReloadCandidateSourceNoteError();
         if (loadConf->globals.bAbortOnUncleanConfig) {
             fprintf(stderr,
                     "rsyslogd: global(AbortOnUncleanConfig=\"on\") is set, and "
@@ -1888,11 +1926,14 @@ static void initAll(int argc, char **argv) {
                     "Check error log for details, fix errors and restart. As a last\n"
                     "resort, you may want to use global(AbortOnUncleanConfig=\"off\") \n"
                     "to permit a startup with a dirty config.\n");
-            exit(2);
+            requestedExitCode = 2;
+            iRet = RS_RET_CONF_PARSE_ERROR;
+            FINALIZE;
         }
         if (iConfigVerify) {
-            /* a bit dirty, but useful... */
-            exit(1);
+            /* Preserve validation failure without bypassing normal teardown. */
+            iRet = RS_RET_CONF_PARSE_ERROR;
+            FINALIZE;
         }
         localRet = RS_RET_OK;
     }
@@ -1940,7 +1981,28 @@ static void initAll(int argc, char **argv) {
         CHKiRet(writePidFile());
     }
 
-    CHKiRet(rsconf.Activate(ourConf));
+    {
+        rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder = NULL;
+        rsReloadCandidate_t *sourceObjectCatalog = NULL;
+
+        if (localRet == RS_RET_OK) {
+            if (rsReloadCandidateSourceFinish(&sourceGraphBuilder, &sourceObjectCatalog) != RS_RET_OK) {
+                sourceGraphBuilder = NULL;
+                sourceObjectCatalog = NULL;
+            }
+        } else {
+            rsReloadCandidateSourceAbort();
+        }
+        localRet = rsconf.Activate(loadConf);
+        if (localRet != RS_RET_OK) {
+            rsReloadNormalizedGraphBuilderV1Destruct(&sourceGraphBuilder);
+            rsReloadCandidateDestruct(&sourceObjectCatalog);
+            CHKiRet(localRet);
+        }
+
+        CHKiRet(shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf), reloadConfFile, sourceGraphBuilder,
+                                      sourceObjectCatalog));
+    }
 
     if (runConf->globals.bLogStatusMsgs) {
         char bufStartUpMsg[512];
@@ -1967,17 +2029,19 @@ static void initAll(int argc, char **argv) {
     }
 
 finalize_it:
+    rsReloadCandidateSourceAbort();
     rsconfTranslateCleanup();
     if (iRet == RS_RET_VALIDATION_RUN) {
         fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
-        exit(0);
+        return 0;
     } else if (iRet != RS_RET_OK) {
         fprintf(stderr,
                 "rsyslogd: run failed with error %d (see rsyslog.h "
                 "or try https://www.rsyslog.com/e/%d to learn what that number means)\n",
                 iRet, iRet * -1);
-        exit(1);
+        return requestedExitCode;
     }
+    return -1;
 }
 
 
@@ -2084,10 +2148,9 @@ DEFFUNC_llExecFunc(doHUPActions) {
  * @note This function is *called* by the main loop after a signal handler
  * detected SIGHUP. It is NOT the signal handler itself.
  *
- * @note This function **DOES NOT** reload the main configuration (rsyslog.conf).
- * It is primarily used for **Log Rotation** (closing/reopening output files)
- * and notifying modules to refresh internal state (like lookup tables).
- * To reload configuration, a restart is required.
+ * Historic HUP hooks still handle log rotation and module refresh. The reload
+ * coordinator then applies the explicitly supported transactional subset;
+ * unsupported configuration changes remain rejected without publication.
  *
  * There is a VERY slim chance of a data race when the hostname is reset.
  * We prefer to take this risk rather than sync all accesses, because to the best
@@ -2099,7 +2162,7 @@ static void doHUP(void) {
     char buf[512];
 
     DBGPRINTF("doHUP: doing modules\n");
-    if (ourConf != NULL && ourConf->globals.bLogStatusMsgs) {
+    if (runConf != NULL && runConf->globals.bLogStatusMsgs) {
         snprintf(buf, sizeof(buf),
                  "[origin software=\"rsyslogd\" "
                  "swVersion=\"" VERSION "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] rsyslogd was HUPed",
@@ -2108,16 +2171,22 @@ static void doHUP(void) {
         logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
     }
 
-    queryLocalHostname(runConf); /* re-read our name */
-    ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
-    DBGPRINTF("doHUP: doing modules\n");
-    modDoHUP();
-    DBGPRINTF("doHUP: doing lookup tables\n");
-    lookupDoHUP();
-    DBGPRINTF("doHUP: doing ratelimits\n");
-    ratelimitDoHUP();
-    DBGPRINTF("doHUP: doing errmsgs\n");
-    errmsgDoHUP();
+    if (!get_bFinished()) {
+        queryLocalHostname(runConf); /* re-read our name */
+        assert(runConf != NULL);
+        ruleset.IterateAllActions(runConf, doHUPActions, NULL);
+        DBGPRINTF("doHUP: doing modules\n");
+        modDoHUP();
+        DBGPRINTF("doHUP: doing lookup tables\n");
+        lookupDoHUP();
+        DBGPRINTF("doHUP: doing ratelimits\n");
+        ratelimitDoHUP();
+        DBGPRINTF("doHUP: doing errmsgs\n");
+        errmsgDoHUP();
+        shadowReloadLegacyHooksCompleted();
+    }
+    /* Historic hooks retain their order and run unless termination has won. */
+    shadowReloadProcess();
 }
 
 /**
@@ -2206,6 +2275,9 @@ static int mainloopComputeTimeoutMs(uint64_t now_ms, uint64_t next_janitor_run_m
         }
     }
 #endif
+    /* A draining module generation must retire without requiring another
+     * signal. The retry itself remains on the main control path. */
+    if (shadowReloadRetirementPending() && timeout_ms > 100) timeout_ms = 100;
     return rswatchComputeTimeoutMs(now_ms, timeout_ms);
 }
 
@@ -2375,7 +2447,6 @@ static void mainloop(void) {
     uint64_t next_janitor_run_ms;
 
     sigemptyset(&sigblockset);
-    sigaddset(&sigblockset, SIGTERM);
     sigaddset(&sigblockset, SIGCHLD);
     sigaddset(&sigblockset, SIGHUP);
     next_janitor_run_ms = mainloopMonotonicMs() + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
@@ -2390,14 +2461,23 @@ static void mainloop(void) {
             reapChild();
         }
 
+        /* SIGTERM stays unblocked while HUP and SIGCHLD flags are claimed, so
+         * a termination request cannot remain pending behind this check. The
+         * handler publishes bFinished and wakes this thread. */
+        if (bFinished) break;
+
         if (PREFER_LOAD_INT(&bHadHUP)) {
             PREFER_STORE_INT(&bHadHUP, 0);
             PREFER_STORE_INT(&bHUPInProgress, 1);
+            shadowReloadBeginRequest();
             doHUP();
+            PREFER_STORE_INT(&hupProcessedCount, PREFER_LOAD_INT(&hupProcessedCount) + 1);
             PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 
         processImInternal();
+
+        shadowReloadRetryRetirement();
 
         if (bFinished) break; /* exit as quickly as possible */
 
@@ -2546,6 +2626,7 @@ static void deinitAll(void) {
     glbl.SetGlobalInputTermination();
 
     thrdTerminateAll();
+    shadowReloadExit();
 
     /* and THEN send the termination log message (see long comment above) */
     if (bFinished && runConf->globals.bLogStatusMsgs) {
@@ -2580,6 +2661,7 @@ static void deinitAll(void) {
 
     DBGPRINTF("destructing current config...\n");
     rsconf.Destruct(&runConf);
+    shadowReloadExitModuleSnapshots();
 
     modExitIminternal();
 
@@ -2601,6 +2683,8 @@ static void deinitAll(void) {
 
     module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
+    free(reloadConfFile);
+    reloadConfFile = NULL;
     rsrtExit(); /* runtime MUST always be deinitialized LAST (except for debug system) */
     DBGPRINTF("Clean shutdown completed, bye\n");
 
@@ -2626,6 +2710,7 @@ static void deinitAll(void) {
 int rsyslogd_main(int argc, char **argv);
 #endif
 int main(int argc, char **argv) {
+    int initExitCode;
 #if defined(_AIX)
     /* SRC support : fd 0 (stdin) must be the SRC socket
      * startup.  fd 0 is duped to a new descriptor so that stdin can be used
@@ -2673,7 +2758,8 @@ int main(int argc, char **argv) {
 
     dbgClassInit();
 
-    initAll(argc, argv);
+    initExitCode = initAll(argc, argv);
+    if (initExitCode >= 0) return initExitCode;
 #ifdef HAVE_LIBSYSTEMD
     if (rsconfShouldDelayReadyNotify(runConf)) {
         rsconfWaitForModulesReady();

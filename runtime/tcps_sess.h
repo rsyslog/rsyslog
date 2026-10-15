@@ -29,6 +29,7 @@
 
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
+struct tcpsrv_io_descr_s;
 
 #define TCPSRV_COMPRESS_NEVER 0
 #define TCPSRV_COMPRESS_STREAM_ALWAYS 2
@@ -92,6 +93,38 @@ struct tcps_sess_s {
         size_t zstd_frame_header_len;
         sbool zstd_frame_header_processed;
         uint64_t zstd_window_reservation;
+
+        /* Appended to preserve the offsets of the public v4 instance layout.
+         * Frozen at accept time and borrowed from the listener generation,
+         * which must outlive every session accepted from it. Listener counters,
+         * rate limiting, and zstd window accounting intentionally remain
+         * listener-owned runtime state. */
+        ruleset_t *pRuleset;
+        prop_t *pInputName;
+        const uchar *pszInputName;
+        uchar dfltTZ[8];
+        sbool bMultiLine;
+        sbool bDisableLFDelim;
+        int addtlFrameDelim;
+        int maxFrameSize;
+        int discardTruncatedMsg;
+        sbool bUseFlowControl;
+        const uchar *pszOrigin;
+        int iDrvrMode;
+#ifdef FEATURE_REGEXP
+        sbool bHasStartRegex;
+        regex_t *pStartRegex;
+        /* Session-owned compiled delimiter. This is appended so v4 field
+         * offsets remain stable while listener generations can replace their
+         * accept profile without invalidating established sessions. */
+        sbool bOwnStartRegex;
+        regex_t ownedStartRegex;
+#endif
+
+        /* Appended so the public session layout above remains stable. The
+         * tcpsrv event loop owns this reverse association for persistent
+         * epoll descriptors; it is NULL for transient poll descriptors. */
+        struct tcpsrv_io_descr_s *pIODescr;
 };
 
 

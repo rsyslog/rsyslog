@@ -245,6 +245,8 @@ static rsRetVal next_event(yaml_parser_t *parser, yaml_event_t *ev, const char *
     DEFiRet;
     if (!yaml_parser_parse(parser, ev)) {
         yaml_errmsg(parser, fname, NULL);
+        if (parser->error == YAML_MEMORY_ERROR) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (parser->error == YAML_READER_ERROR) ABORT_FINALIZE(RS_RET_IO_ERROR);
         ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
     }
 finalize_it:
@@ -1647,8 +1649,9 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             free(script_str);
             script_str = NULL;
             if (br != RS_RET_OK) ABORT_FINALIZE(br);
-            /* cnfAddConfigBuffer() takes ownership of estr */
-            cnfAddConfigBuffer(estr, fname);
+            /* cnfAddConfigBuffer() consumes estr on both success and failure.
+             * Its only current nonzero result is allocator failure (3). */
+            if (cnfAddConfigBuffer(estr, fname) != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         } else if (actions != NULL) {
             /* Phase 2 structured shortcut: build cnfstmt chain directly.
              * If filter: was given, wrap the action chain in a filter node.
@@ -1937,8 +1940,11 @@ finalize_it:
  * cnfAddConfigBuffer() before this function returns.
  *
  * @param fname  Absolute or relative path to the .yaml/.yml config file.
- * @return RS_RET_OK on success; RS_RET_FILE_NOT_FOUND if @p fname cannot
- *         be opened; RS_RET_CONF_PARSE_ERROR on any YAML or semantic error.
+ * @return RS_RET_OK on success; RS_RET_CONF_FILE_NOT_FOUND if @p fname does
+ *         not exist; RS_RET_FILE_OPEN_ERROR for other open failures;
+ *         RS_RET_IO_ERROR for YAML reader failures; RS_RET_OUT_OF_MEMORY for
+ *         allocation failures; or RS_RET_CONF_PARSE_ERROR for YAML and
+ *         semantic errors.
  */
 rsRetVal yamlconf_load(const char *fname) {
     yaml_parser_t parser;
@@ -1969,13 +1975,15 @@ rsRetVal yamlconf_load(const char *fname) {
 
     fh = fopen(fname, "r");
     if (fh == NULL) {
-        LogError(errno, RS_RET_CONF_FILE_NOT_FOUND, "yamlconf: cannot open config file '%s'", fname);
-        ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
+        const rsRetVal openRet =
+            errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+        LogError(errno, openRet, "yamlconf: cannot open config file '%s'", fname);
+        ABORT_FINALIZE(openRet);
     }
 
     if (!yaml_parser_initialize(&parser)) {
-        LogError(0, RS_RET_INTERNAL_ERROR, "yamlconf: failed to initialize YAML parser");
-        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        LogError(0, RS_RET_OUT_OF_MEMORY, "yamlconf: failed to allocate YAML parser state");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
     parserInit = 1;
     yaml_parser_set_input_file(&parser, fh);

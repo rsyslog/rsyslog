@@ -35,9 +35,11 @@
  *
  * fname   - path to the .yaml / .yml config file
  *
- * Returns RS_RET_OK on success, RS_RET_CONF_FILE_NOT_FOUND if the file cannot
- * be opened, RS_RET_CONF_PARSE_ERROR on YAML or semantic errors.  On error
- * LogError() is called with a descriptive message before returning.
+ * Returns RS_RET_OK on success, RS_RET_CONF_FILE_NOT_FOUND if the file does
+ * not exist, RS_RET_FILE_OPEN_ERROR for other open failures, RS_RET_IO_ERROR
+ * for YAML reader failures, RS_RET_OUT_OF_MEMORY for allocation failures, or
+ * RS_RET_CONF_PARSE_ERROR for YAML and semantic errors. Open, reader, and
+ * parser errors are logged at their detection sites before returning.
  *
  * This function populates the global loadConf object (runtime/rsconf.c) by
  * calling cnfDoObj() / cnfDoScript() / cnfAddConfigBuffer() exactly as the

@@ -2279,11 +2279,27 @@ quit"
 }
 
 
-# wait for HUP to complete. $1 is the instance
-# note: there is a slight chance HUP was not completed. This can happen if it takes
-# the system very long (> 500ms) to receive the HUP and set the internal flag
-# variable. aka "very very low probability".
+# Wait for HUP to complete. $1 is the instance and optional $2 is the exact
+# completion generation. New callers use the generation oracle; the no-target
+# branch remains for compatibility with callers outside this testbench.
 await_HUP_processed() {
+	local instance="${1:-}"
+	local target="${2:-}"
+	local port response
+	if [ "$instance" == "2" ]; then
+		port="$IMDIAG_PORT2"
+	else
+		port="$IMDIAG_PORT"
+	fi
+	if [ -n "$target" ]; then
+		response="$(echo "AwaitHUPComplete $target" | $TESTTOOL_DIR/diagtalker -p"$port")" || error_exit $?
+		printf '%s\n' "$response"
+		if [[ "$response" != *"HUP completed generation $target"* ]]; then
+			echo "FAIL: HUP generation $target was not acknowledged"
+			error_exit 1
+		fi
+		return
+	fi
 	if [ "$1" == "2" ]; then
 		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
 	else
@@ -2486,18 +2502,33 @@ custom_assert_content_missing() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 issue_HUP() {
+	local instance pidfile port response baseline target sleeptime
 	if [ "$1" == "--sleep" ]; then
 		sleeptime="$2"
 		shift 2
 	else
-		sleeptime=1000
+		sleeptime=0
 	fi
-	wait_rsyslog_instance_pid "$1"
-	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
+	instance="${1:-}"
+	wait_rsyslog_instance_pid "$instance"
+	if [ "$instance" == "2" ]; then
+		port="$IMDIAG_PORT2"
+	else
+		port="$IMDIAG_PORT"
+	fi
+	response="$(echo GetHUPProcessedCount | $TESTTOOL_DIR/diagtalker -p"$port")" || error_exit $?
+	baseline="${response##* }"
+	if [[ ! "$baseline" =~ ^[0-9]+$ ]]; then
+		printf 'FAIL: invalid HUP completion counter response: %s\n' "$response"
+		error_exit 1
+	fi
+	target=$((baseline + 1))
+	pidfile="$RSYSLOG_PIDBASE$instance.pid"
+	kill -HUP "$(cat "$pidfile")"
 	printf 'HUP issued to pid %d - waiting for it to become processed\n' \
-		$(cat $RSYSLOG_PIDBASE$1.pid)
-	await_HUP_processed
-	#$TESTTOOL_DIR/msleep $sleeptime
+		"$(cat "$pidfile")"
+	await_HUP_processed "$instance" "$target"
+	$TESTTOOL_DIR/msleep "$sleeptime"
 }
 
 
@@ -2630,21 +2661,29 @@ error_exit() {
 		}'
 	fi
 
-	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
-		touch IN_AUTO_DEBUG
-		# OK, we have the testname and can re-run under valgrind
+	if [[ "${RSTB_IN_AUTO_DEBUG:-}" != '1' && "$USE_AUTO_DEBUG" == 'on' ]]; then
+		# Re-run in a child scope with a fresh test identity.  Reusing the
+		# parent's RSYSLOG_DYNNAME makes diag.sh init reject the diagnostic run,
+		# and a cwd-global marker couples otherwise independent parallel tests.
+		current_test="$srcdir/$(basename "$0")"
 		echo re-running under valgrind control
-		current_test="./$(basename $0)" # this path is probably wrong -- theinric
-		$current_test
+		(
+			unset RSYSLOG_DYNNAME RSYSLOG_OUT_LOG RSYSLOG2_OUT_LOG RSYSLOG_PIDBASE
+			unset RSYSLOG_TESTNAME TB_STARTTEST
+			export RSTB_IN_AUTO_DEBUG=1
+			"$current_test"
+		)
 		# wait a little bit so that valgrind can finish
 		$TESTTOOL_DIR/msleep 4000
 		# next let's try us to get a debug log
-		RSYSLOG_DEBUG_SAVE=$RSYSLOG_DEBUG
-		export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction"
-		$current_test
+		(
+			unset RSYSLOG_DYNNAME RSYSLOG_OUT_LOG RSYSLOG2_OUT_LOG RSYSLOG_PIDBASE
+			unset RSYSLOG_TESTNAME TB_STARTTEST
+			export RSTB_IN_AUTO_DEBUG=1
+			export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction"
+			"$current_test"
+		)
 		$TESTTOOL_DIR/msleep 4000
-		RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
-		rm IN_AUTO_DEBUG
 	fi
 	# output listening ports as a temporary debug measure (2018-09-08 rgerhards), now disables, but not yet removed (2018-10-22)
 	#if [ $(uname) == "Linux" ]; then
@@ -2684,28 +2723,10 @@ error_exit() {
 		fi
 	fi
 
-	# Gather test error logs
-	echo "=== Error Logs Collection ==="
-	# Run gather-check-logs.sh if available; account for being invoked from tests/ dir
-	if [ -f "$srcdir/../devtools/gather-check-logs.sh" ]; then
-		echo "Running gather-check-logs.sh (via srcdir/..)..."
-		( cd "$srcdir/.." && devtools/gather-check-logs.sh )
-	elif [ -f "../devtools/gather-check-logs.sh" ]; then
-		echo "Running gather-check-logs.sh (via ..)..."
-		( cd .. && devtools/gather-check-logs.sh )
-	elif [ -f "devtools/gather-check-logs.sh" ]; then
-		echo "Running gather-check-logs.sh (cwd)..."
-		devtools/gather-check-logs.sh
-	else
-		echo "gather-check-logs.sh not found, collecting available logs manually..."
-	fi
-
-	if [ -f "failed-tests.log" ]; then
-		echo "=== Failed Tests Log ==="
-		cat failed-tests.log
-	else
-		echo "No failed-tests.log found"
-	fi
+	# The top-level runner gathers all completed .log/.trs pairs after make
+	# check returns.  Doing that here races every other test in a parallel run
+	# through the shared failed-tests.log and can classify live logs as aborted.
+	echo "=== Error Logs Collection deferred to the top-level test runner ==="
 
 	# Extended debug output for dependencies started by testbench
 	if [ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ] && [ "$TEST_OUTPUT" == "VERBOSE" ]; then
@@ -5734,12 +5755,9 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		if [ "$TCPFLOOD_EXTRA_OPTS" != '' ] ; then
 		        echo TCPFLOOD_EXTRA_OPTS set: $TCPFLOOD_EXTRA_OPTS
                 fi
-		if [ "$USE_AUTO_DEBUG" != 'on' ] ; then
-			rm -f IN_AUTO_DEBUG
-                fi
-                if [ -e IN_AUTO_DEBUG ]; then
-                        export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --log-fd=1"
-                fi
+		if [ "${RSTB_IN_AUTO_DEBUG:-}" = '1' ]; then
+			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --log-fd=1"
+		fi
                 ;;
 
    'wait-kafka-startup')

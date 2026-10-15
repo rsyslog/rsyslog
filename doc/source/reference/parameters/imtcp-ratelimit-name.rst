@@ -29,6 +29,22 @@ Specifies the name of a rate limiting policy (defined via the top-level :ref:`ra
 If this parameter is set, the named policy is looked up and used. If the policy is not found, an error is reported.
 Using a named policy allows sharing rate limits across multiple inputs or managing them centrally.
 
+When ``global(config.reloadOnHUP="on")`` is active, an imtcp listener can switch
+between unchanged named policies, or between named and unnamed limiting,
+without closing established sessions.  The new listener-local limiter starts
+with a fresh bucket at the transactional reload safepoint.  A new policy that
+uses only ``name``, ``interval``, and ``burst`` can be added and selected by an
+imtcp input in the same HUP; all imtcp inputs in that candidate share its
+prepared policy bucket.  An already active simple definition can also change
+when both generations reference it exclusively from imtcp.  The replacement
+uses a fresh shared bucket at the transactional safepoint.  An exclusively
+imtcp-owned simple definition can also change its ``severity`` threshold or be
+removed when the same candidate
+switches its last listener away from it; the old shared bucket is released only
+after the transactional fence.  Definitions shared with another module or
+action and policies using broader per-source, file, or template settings remain
+restart-required.
+
 .. warning::
    This parameter is mutually exclusive with :ref:`param-imtcp-ratelimit-interval` and :ref:`param-imtcp-ratelimit-burst`.
    If ``RateLimit.Name`` is specified, those parameters must **not** be used. Specifying both will result in a

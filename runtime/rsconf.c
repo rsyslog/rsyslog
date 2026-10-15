@@ -72,6 +72,7 @@
 #include "timezones.h"
 #include "ratelimit.h"
 #include "translate.h"
+#include "reload-candidate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -88,6 +89,10 @@ DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl)
     rsconf_t *runConf = NULL; /* the currently running config */
 rsconf_t *loadConf = NULL; /* the config currently being loaded (no concurrent config load supported!) */
 static const char cfgModRefSrc[] = "cfgmodules";
+
+reloadOnHUPMode_t rsconfGetReloadOnHUPMode(const rsconf_t *cnf) {
+    return cnf == NULL ? RELOAD_ON_HUP_OFF : cnf->globals.reloadOnHUP;
+}
 
 #ifdef HAVE_LIBSYSTEMD
 /* module readiness barrier: modules that need startup time call rsconfRegisterReadiness(),
@@ -297,6 +302,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.compatConfigFormatSyslogd = COMPAT_CONFIGFORMAT_ENABLE;
     pThis->globals.compatConfigFormatProperty = COMPAT_CONFIGFORMAT_ENABLE;
     pThis->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_WARN;
+    pThis->globals.reloadOnHUP = RELOAD_ON_HUP_OFF;
     pThis->globals.bReduceRepeatMsgs = 0;
     pThis->globals.bDebugPrintTemplateList = 1;
     pThis->globals.bDebugPrintModuleList = 0;
@@ -327,9 +333,9 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
     pThis->globals.pszDfltNetstrmDrvr = NULL;
     pThis->globals.oversizeMsgErrorFile = NULL;
-    pThis->globals.reportOversizeMsg = 1;
+    glblSetReportOversizeMessage(pThis, 1);
     pThis->globals.oversizeMsgInputMode = 0;
-    pThis->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    glblSetReportChildProcessExits(pThis, REPORT_CHILD_PROCESS_EXITS_ERRORS);
     pThis->globals.bActionReportSuspension = 1;
     pThis->globals.bActionReportSuspensionCont = 0;
     pThis->globals.janitorInterval = 10;
@@ -413,6 +419,9 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.parser.bPermitSlashInProgramname = 0;
     pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
 
+    pThis->globalParamVals = NULL;
+    pThis->mainqCnfObj = NULL;
+
     pThis->parsers.pDfltParsLst = NULL;
     pThis->parsers.pParsLstRoot = NULL;
 }
@@ -485,11 +494,12 @@ static void freeActionNames(rsconf_t *pThis) {
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
+    glblCnfDestruct(pThis);
     freeCnf(pThis);
     tplDeleteAll(pThis);
     dynstats_destroyAllBuckets(pThis);
-    perctileBucketsDestruct();
-    ochDeleteAll();
+    perctileBucketsDestruct(&pThis->perctile_buckets);
+    ochDeleteAll(pThis);
     freeTimezones(pThis);
     parser.DestructParserList(&pThis->parsers.pDfltParsLst);
     parser.destroyMasterParserList(pThis->parsers.pParsLstRoot);
@@ -507,7 +517,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     stdlog_close(pThis->globals.stdlog_hdl);
     free(pThis->globals.stdlog_chanspec);
 #endif
-    lookupDestroyCnf();
+    lookupDestroyCnf(pThis);
     freeActionNames(pThis);
     llDestroy(&(pThis->rulesets.llRulesets));
     ratelimit_cfgsDestruct(&pThis->ratelimit_cfgs);
@@ -746,6 +756,8 @@ void parser_errmsg(const char *fmt, ...) {
     va_list ap;
     char errBuf[1024];
 
+    rsReloadCandidateNoteParseError();
+    rsReloadCandidateSourceNoteError();
     va_start(ap, fmt);
     if (vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf)) errBuf[sizeof(errBuf) - 1] = '\0';
     if (cnfcurrfn == NULL) {
@@ -759,7 +771,14 @@ void parser_errmsg(const char *fmt, ...) {
 
 int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int yyerror(const char *s) {
-    parser_errmsg("%s on token '%s'", s, yytext);
+    /* At final EOF flex may already have released the backing buffer. The
+     * candidate path therefore must not dereference yytext while reporting a
+     * rejected parse. */
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("%s", s);
+    } else {
+        parser_errmsg("%s on token '%s'", s, yytext);
+    }
     return 0;
 }
 void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
@@ -775,6 +794,22 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
      */
     if (nvlstChkDisabled(o->nvlst)) {
         dbgprintf("object disabled by configuration\n");
+        if (rsReloadCandidateCaptureActive()) cnfobjDestructAll(o);
+        return;
+    }
+
+    /* Capture the same source AST that this normal startup dispatch will
+     * consume. The observer retains canonical graph data plus independent
+     * module/input syntax needed by later control-path classifiers. */
+    rsReloadCandidateSourceCaptureObject(o);
+
+    if (rsReloadCandidateCaptureActive()) {
+        const rsRetVal captureRet = rsReloadCandidateTakeObject(o);
+        if (captureRet != RS_RET_OK) {
+            rsReloadCandidateNoteError(captureRet);
+            rsReloadCandidateNoteParseError();
+            cnfobjDestructAll(o);
+        }
         return;
     }
 
@@ -837,6 +872,16 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
 }
 
 void cnfDoScript(struct cnfstmt *script) {
+    if (rsReloadCandidateCaptureActive()) {
+        const rsRetVal captureRet = rsReloadCandidateTakeDefaultScript(script);
+        if (captureRet != RS_RET_OK) {
+            rsReloadCandidateNoteError(captureRet);
+            rsReloadCandidateNoteParseError();
+            cnfstmtDestructLst(script);
+        }
+        return;
+    }
+    rsReloadCandidateSourceCaptureDefaultScript(script);
     if (rsconfTranslateEnabled()) {
         rsconfTranslateCaptureScript(script, cnfcurrfn, yylineno);
     }
@@ -845,6 +890,11 @@ void cnfDoScript(struct cnfstmt *script) {
 }
 
 void cnfDoCfsysline(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("legacy configuration directives are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno, "legacy $-directive '%s' is not supported by the translator",
                                       ln);
@@ -860,6 +910,11 @@ void cnfDoCfsysline(char *ln) {
 }
 
 void cnfDoBSDTag(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style tag blocks are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style tag block '%s' is not supported by the translator", ln);
@@ -874,6 +929,11 @@ void cnfDoBSDTag(char *ln) {
 }
 
 void cnfDoBSDHost(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style host blocks are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style host block '%s' is not supported by the translator", ln);
@@ -1201,7 +1261,7 @@ static rsRetVal loadMainQueue(void) {
         FINALIZE;
     }
 finalize_it:
-    glblDestructMainqCnfObj();
+    glblDestructMainqCnfObj(loadConf);
     RETiRet;
 }
 
@@ -1402,7 +1462,11 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
 /* legacy config system: reset config variables to default values.  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal) {
     free(loadConf->globals.mainQ.pszMainMsgQFName);
+    loadConf->globals.mainQ.pszMainMsgQFName = NULL;
     freeActionNames(loadConf);
+    /* These objects became rsconf-owned so a reset must release them before
+     * cnfSetDefaults() clears their pointers. */
+    glblCnfDestruct(loadConf);
 
     cnfSetDefaults(loadConf);
 
@@ -1693,6 +1757,8 @@ static rsRetVal validateConf(rsconf_t *cnf) {
 static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     int iNbrActions = 0;
     int r;
+    int parserRan = 0;
+    rsRetVal frontend_iRet = RS_RET_OK;
     rsRetVal delayed_iRet = RS_RET_OK;
     DEFiRet;
 
@@ -1701,6 +1767,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
 
     CHKiRet(loadBuildInModules());
     CHKiRet(initLegacyConf());
+    cnfClearFatalParseError();
 
     /* open the configuration file; route .yaml/.yml to the YAML loader */
     {
@@ -1709,6 +1776,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
 #ifdef HAVE_LIBYAML
         if (is_yaml) {
             rsRetVal yr = yamlconf_load((const char *)confFile);
+            frontend_iRet = yr;
             if (yr == RS_RET_OK) {
                 r = 0;
             } else if (yr == RS_RET_CONF_FILE_NOT_FOUND) {
@@ -1719,12 +1787,16 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
             /* Flush any inline RainerScript script: blocks that were queued
              * into the flex buffer stack by cnfAddConfigBuffer(). */
             if (r == 0 && cnfHasPendingBuffers()) {
+                parserRan = 1;
                 r = yyparse();
             }
         } else {
 #endif
             r = cnfSetLexFile((char *)confFile);
-            if (r == 0) r = yyparse();
+            if (r == 0) {
+                parserRan = 1;
+                r = yyparse();
+            }
 #ifdef HAVE_LIBYAML
         }
 #else
@@ -1738,6 +1810,22 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
         }
 #endif
         if (r == 0) conf.GetNbrActActions(loadConf, &iNbrActions);
+    }
+
+    if (frontend_iRet == RS_RET_OUT_OF_MEMORY || frontend_iRet == RS_RET_IO_ERROR ||
+        frontend_iRet == RS_RET_FILE_OPEN_ERROR) {
+        ABORT_FINALIZE(frontend_iRet);
+    }
+    if (parserRan && r == 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (r == 3) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (r == 4) ABORT_FINALIZE(RS_RET_IO_ERROR);
+
+    {
+        const rsRetVal fatalParseRet = cnfTakeFatalParseError();
+        if (fatalParseRet != RS_RET_OK) {
+            cnfResetParser();
+            ABORT_FINALIZE(fatalParseRet);
+        }
     }
 
     /* we run the optimizer even if we have an error, as it may spit out

@@ -55,16 +55,18 @@ static long long fileSize = 1024 * 1024; /* file size in K, 1MB default */
 /* generate the random file. This code really can be improved (e.g. read /dev/urandom
  * when available)
  */
-static void genFile(void) {
+static int genFile(void) {
     long i;
-    FILE *fp;
+    FILE *fp = NULL;
     FILE *rfp = NULL;
+    int ret = 0;
 
     if (fileName == NULL) {
         fp = stdout;
     } else {
         if ((fp = fopen(fileName, "w")) == NULL) {
             perror(fileName);
+            return 1;
         }
     }
 
@@ -76,7 +78,8 @@ static void genFile(void) {
         for (i = 0; i < fileSize; ++i) {
             if (fputc((char)rand(), fp) == EOF) {
                 perror(fileName);
-                exit(1);
+                ret = 1;
+                break;
             }
         }
     } else {
@@ -85,12 +88,18 @@ static void genFile(void) {
         for (i = 0; i < fileSize; ++i) {
             if (fputc(fgetc(rfp), fp) == EOF) {
                 perror(fileName);
-                exit(1);
+                ret = 1;
+                break;
             }
         }
     }
 
-    if (fileName != NULL) fclose(fp);
+    if (rfp != NULL) fclose(rfp);
+    if (fileName != NULL && fclose(fp) != 0) {
+        perror(fileName);
+        ret = 1;
+    }
+    return ret;
 }
 
 
@@ -116,14 +125,12 @@ int main(int argc, char *argv[]) {
                 break;
             default:
                 printf("invalid option '%c' or value missing - terminating...\n", opt);
-                exit(1);
-                break;
+                return 1;
         }
     }
 
     printf("generating random data file '%s' of %ldkb - may take a short while...\n", fileName,
            (long)(fileSize / 1024));
-    genFile();
-
-    exit(ret);
+    ret = genFile();
+    return ret;
 }

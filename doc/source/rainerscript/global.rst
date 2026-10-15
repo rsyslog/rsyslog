@@ -1,11 +1,51 @@
+.. _global-configuration-object:
+
+.. meta::
+   :description: Global rsyslog configuration parameters and bounded transactional reload behavior.
+   :keywords: rsyslog, global, configuration, parser, transactional reload
+
 global() configuration object
 =============================
+
+.. summary-start
+
+The global configuration object sets process-wide policies, including parser
+behavior and selected parameters eligible for transactional HUP updates.
+
+.. summary-end
 
 The global configuration object permits to set global parameters. Note
 that each parameter can only be set once and cannot be re-set
 thereafter. If a parameter is set multiple times, the behaviour is
 unpredictable. As with other configuration objects, parameters for this
 object are case-insensitive.
+
+Transactional parser-policy updates use operation-local sampling.  Message
+sanitization samples each setting at most once before first use and reuses that
+value thereafter: scan and trailing-character-drop flags are sampled at entry,
+while rewrite-only TAB, C-style, escape-prefix, and maximum-line settings are
+first sampled at rewrite entry.  This is not a coherent global or generation
+snapshot; a commit during scanning may affect rewrite settings not yet sampled.
+Program-name extraction samples the slash policy once at extraction entry and
+keeps that value throughout the extraction.  These values are not pinned to a
+queue generation or enqueue time, and already sanitized or cached properties
+are not recomputed.  Transactional HUP currently supports only a
+bounded set of changes, not full configuration reload; see
+:ref:`transactional-config-reload-adr` for its current capability boundary.
+
+With ``config.reloadOnHUP="on"``, the global-policy lane permits exactly one
+changed supported scalar per candidate, with all other global parameters
+unchanged. The supported set is ``config.reloadOnHUP``,
+``reportChildProcessExits``, ``oversizemsg.report``, ``compactJsonString``,
+``parser.dropTrailingLFOnReception``, ``parser.dropTrailingCROnReception``,
+``parser.escapeControlCharactersOnReceive``, ``parser.spaceLFOnReceive``,
+``parser.escape8BitCharactersOnReceive``, ``parser.escapeControlCharacterTab``,
+``parser.escapeControlCharactersCStyle``,
+``parser.controlCharacterEscapePrefix``, and
+``parser.permitSlashInProgramName``. Multiple changed global scalars or any
+other changed global parameter reject activation; ``validate`` remains
+report-only. This global restriction does not expand the supported ruleset or
+input changes described in the ADR and :ref:`imtcp-hup-listener-addition`.
 
 The following parameters can be set:
 
@@ -267,6 +307,18 @@ The following parameters can be set:
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
 
+- **parser.dropTrailingLFOnReception** [on/off] available 8.6.0+
+
+  **Default:** on
+
+  If "on", remove one line feed (LF) character from the end of each received
+  message before parser control-character handling runs.
+
+  When ``config.reloadOnHUP`` is ``on``, a candidate that changes only this
+  setting can activate it transactionally. Messages parsed after the commit
+  use the new policy. Combining it with another global change remains
+  unsupported and leaves the active parser policy unchanged.
+
 - **parser.dropTrailingCROnReception** [on/off] available 8.2606.0+
 
   **Default:** off
@@ -276,6 +328,11 @@ The following parameters can be set:
   This is useful for senders that include CRLF line endings in the message
   payload. The default is "off" so existing configurations keep the CR
   byte when it is part of the original message.
+
+  When ``config.reloadOnHUP`` is ``on``, a candidate that changes only this
+  setting can activate it transactionally. Messages parsed after the commit
+  use the new policy. Combining it with another global change remains
+  unsupported and leaves the active parser policy unchanged.
 
 - **parser.parseHostnameAndTag** [on/off] available 8.6.0+
 
@@ -309,6 +366,12 @@ The following parameters can be set:
   ``app/foo[1234]`` will result in a ``programname`` value of
   ``app/foo``.
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Program-name extraction operations starting
+  after commit use the new value; an in-progress extraction keeps its initial
+  snapshot, and already cached program names are not recomputed. Combined
+  global changes remain fail-closed.
+
 - **parser.escapeControlCharacterTab** [on/off] available since 8.7.0
 
   **Default:** on
@@ -318,6 +381,10 @@ The following parameters can be set:
   Note that escaping is the traditional behavior and existing scripts
   may get into trouble if this is changed to "off".
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; combined global changes remain fail-closed.
+
 - **parser.controlCharacterEscapePrefix** [char]
 
   **Default:** '#'
@@ -325,6 +392,10 @@ The following parameters can be set:
   This option specifies the prefix character to be used for control
   character escaping (see option
   *parser.escapeControlCharactersOnReceive*).
+
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Escapes produced after the commit use the new
+  prefix; combined global changes remain fail-closed.
 
 - **parser.escape8BitCharactersOnReceive** [on/off]
 
@@ -340,6 +411,10 @@ The following parameters can be set:
   local script. If this option is turned on, all control-characters are
   converted to a 3-digit octal number and be prefixed with the
   *parser.controlCharacterEscapePrefix* character (being '#' by default).
+
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; combined global changes remain fail-closed.
 
   **Warning:**
 
@@ -367,6 +442,11 @@ The following parameters can be set:
   (ctrl-g) is included in the message, it would be converted to '#007'.
   To be compatible to sysklogd, this option must be turned on.
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; a candidate that also changes another global parameter is rejected
+  without partially publishing either change.
+
   **Warning:**
 
   -  turning on this option most probably destroys non-western character
@@ -378,6 +458,23 @@ The following parameters can be set:
      because control characters are already removed upon message
      reception. If you intend to use these property replacer options, you
      must turn off *parser.escapeControlCharactersOnReceive*.
+
+- **parser.escapeControlCharactersCStyle** [on/off]
+
+  **Default:** off
+
+  If enabled, control characters are escaped with C-style sequences such as
+  ``\\a`` instead of the traditional prefixed octal form such as ``#007``.
+  A sole change can be activated transactionally by
+  ``config.reloadOnHUP="on"``; combined global changes remain fail-closed.
+
+- **parser.spaceLFOnReceive** [on/off]
+
+  **Default:** off
+
+  This parameter replaces embedded LF control characters with spaces during
+  message reception. A sole change can be activated transactionally by
+  ``config.reloadOnHUP="on"``; combined global changes remain fail-closed.
 
 
 - **senders.keepTrack** [on/off] available 8.17.0+
@@ -603,6 +700,10 @@ The following parameters can be set:
   This parameter specifies if an error shall be reported when an oversized
   message is seen. The default is "on".
 
+  With ``config.reloadOnHUP="on"``, this flag can be changed transactionally
+  by HUP when it is the only changed base/global setting in that generation.
+  Oversized messages submitted after the commit use the new value.
+
 - **abortOnUncleanConfig** [boolean (on/off)] available 8.37.0+
 
   This parameter permits to prevent rsyslog from running when the
@@ -777,6 +878,12 @@ Historically these options were referenced in source code and change logs as
   message to the process because the pipe is broken, it will report an error
   indicating this). This specific error message (if any) is not affected by this
   global setting.
+
+  With ``config.reloadOnHUP="on"``, this policy can be changed transactionally
+  by HUP when it is the only changed base/global setting in that generation.
+  Child exits observed after the commit use the new value.  A candidate that
+  also changes ``config.reloadOnHUP`` or another global parameter is rejected
+  without changing the active configuration.
 
 
 - **default.ruleset.queue.timeoutshutdown**
@@ -965,3 +1072,9 @@ readability for humans, but needs more resources (disk, transfer, computation)
 in automated pipelines.
 To keep things as compatible as possible, we leave the default as "off" but
 recommend that this option is turned on for use in data pipelines.
+
+When ``config.reloadOnHUP`` is ``on``, a candidate that changes only
+``compactJsonString`` can activate this setting transactionally.  JSON values
+serialized after the commit use the new representation.  A candidate that
+combines this change with another global setting remains unsupported and does
+not partially change the active format.

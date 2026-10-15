@@ -1,0 +1,579 @@
+/*
+ * Exercise the tcpsrv live-reload fence without sockets or a daemon. The
+ * oracle drives the production Request/Wait/Release and event-loop/worker
+ * safepoints directly: single-worker acquisition, multi-worker timeout with
+ * automatic abort/drain followed by a fresh generation, and TERM while all
+ * participants are parked. It also verifies fenced listener snapshot and
+ * ownership swaps, including a prepared rate limiter. Bounded absolute
+ * deadlines prevent a broken fence from hanging the unit test.
+ * Poll capacity checks call the production reservation helper at exact and
+ * growth boundaries, writing the control descriptor and trailing sentinel.
+ */
+#include "config.h"
+
+#include <stdatomic.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "rsyslog.h"
+#include "ruleset.h"
+#include "tcpsrv.h"
+#include "../../runtime/tcpsrv-poll.h"
+
+static ratelimit_t *rateLimitCalls[4];
+static unsigned rateLimitIntervals[4];
+static unsigned rateLimitBursts[4];
+static size_t rateLimitCallCount;
+
+void ratelimitSetLinuxLike(ratelimit_t *const limiter, const unsigned interval, const unsigned burst) {
+    if (rateLimitCallCount < sizeof(rateLimitCalls) / sizeof(rateLimitCalls[0])) {
+        rateLimitCalls[rateLimitCallCount] = limiter;
+        rateLimitIntervals[rateLimitCallCount] = interval;
+        rateLimitBursts[rateLimitCallCount] = burst;
+    }
+    ++rateLimitCallCount;
+}
+
+/* Include the small production state machine so the unit can drive its
+ * event-loop and worker safepoints without constructing network objects. */
+#include "../../runtime/tcpsrv-fence.c"
+
+#define CHECK(condition)                                                                    \
+    do {                                                                                    \
+        if (!(condition)) {                                                                 \
+            fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
+            return 1;                                                                       \
+        }                                                                                   \
+    } while (0)
+
+static atomic_int terminated;
+static atomic_int threadFailure;
+static atomic_int terminateOnOwnerCheck;
+static pthread_t ownerThread;
+
+#define CHECK_THREAD(condition)                                                                    \
+    do {                                                                                           \
+        if (!(condition)) {                                                                        \
+            fprintf(stderr, "thread CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
+            atomic_store_explicit(&threadFailure, 1, memory_order_relaxed);                        \
+            return NULL;                                                                           \
+        }                                                                                          \
+    } while (0)
+
+static int getTermState(void) {
+    if (atomic_load_explicit(&terminateOnOwnerCheck, memory_order_relaxed) &&
+        pthread_equal(pthread_self(), ownerThread)) {
+        atomic_store_explicit(&terminated, 1, memory_order_relaxed);
+    }
+    return atomic_load_explicit(&terminated, memory_order_relaxed);
+}
+
+int tcpsrvFenceTerminated(void) {
+    return getTermState();
+}
+
+static struct timespec deadlineAfterMs(const long milliseconds) {
+    struct timespec deadline;
+    clock_gettime(CLOCK_REALTIME, &deadline);
+    deadline.tv_nsec += (milliseconds % 1000) * 1000000L;
+    deadline.tv_sec += milliseconds / 1000 + deadline.tv_nsec / 1000000000L;
+    deadline.tv_nsec %= 1000000000L;
+    return deadline;
+}
+
+static int initServer(tcpsrv_t *const server, const unsigned workers) {
+    memset(server, 0, sizeof(*server));
+    pthread_mutex_init(&server->fenceMut, NULL);
+    pthread_cond_init(&server->fenceCond, NULL);
+    pthread_mutex_init(&server->workQueue.mut, NULL);
+    pthread_cond_init(&server->workQueue.workRdy, NULL);
+    server->fenceSyncInitialized = 1;
+    server->fenceReady = 1;
+    server->workQueue.numWrkr = workers;
+    if (pipe(server->controlPipe) != 0) return 0;
+    if (fcntl(server->controlPipe[0], F_SETFL, O_NONBLOCK) != 0 ||
+        fcntl(server->controlPipe[1], F_SETFL, O_NONBLOCK) != 0)
+        return 0;
+    if (workers > 1) {
+        server->fenceItems = calloc(workers, sizeof(*server->fenceItems));
+        if (server->fenceItems == NULL) return 0;
+        for (unsigned i = 0; i < workers; ++i) {
+            server->fenceItems[i].pSrv = server;
+            server->fenceItems[i].ptrType = NSD_PTR_TYPE_FENCE;
+        }
+    }
+    return 1;
+}
+
+static void destroyServer(tcpsrv_t *const server) {
+    close(server->controlPipe[0]);
+    close(server->controlPipe[1]);
+    free(server->fenceItems);
+    pthread_cond_destroy(&server->workQueue.workRdy);
+    pthread_mutex_destroy(&server->workQueue.mut);
+    pthread_cond_destroy(&server->fenceCond);
+    pthread_mutex_destroy(&server->fenceMut);
+}
+
+static void *eventLoopOnce(void *const arg) {
+    tcpsrv_t *const server = arg;
+    struct pollfd ready = {.fd = server->controlPipe[0], .events = POLLIN};
+    char byte;
+    CHECK_THREAD(poll(&ready, 1, 1000) == 1 && (ready.revents & POLLIN) != 0);
+    CHECK_THREAD(read(server->controlPipe[0], &byte, 1) == 1);
+    tcpsrvActivateFence(server);
+    return NULL;
+}
+
+static void *workerOnce(void *const arg) {
+    tcpsrv_t *const server = arg;
+    tcpsrv_io_descr_t *item;
+    pthread_mutex_lock(&server->workQueue.mut);
+    while (server->workQueue.head == NULL) pthread_cond_wait(&server->workQueue.workRdy, &server->workQueue.mut);
+    item = server->workQueue.head;
+    server->workQueue.head = item->next;
+    if (server->workQueue.head == NULL) server->workQueue.tail = NULL;
+    pthread_mutex_unlock(&server->workQueue.mut);
+    CHECK_THREAD(item->ptrType == NSD_PTR_TYPE_FENCE);
+    tcpsrvParkAtFence(server);
+    return NULL;
+}
+
+static int waitUntilIdle(tcpsrv_t *const server) {
+    const struct timespec deadline = deadlineAfterMs(1000);
+    pthread_mutex_lock(&server->fenceMut);
+    while (server->fenceActive || server->fenceOwnerValid) {
+        const int ret = pthread_cond_timedwait(&server->fenceCond, &server->fenceMut, &deadline);
+        if (ret == ETIMEDOUT) {
+            pthread_mutex_unlock(&server->fenceMut);
+            return 0;
+        }
+    }
+    pthread_mutex_unlock(&server->fenceMut);
+    return 1;
+}
+
+static int waitUntilActivated(tcpsrv_t *const server, const unsigned outstanding) {
+    const struct timespec deadline = deadlineAfterMs(1000);
+    pthread_mutex_lock(&server->fenceMut);
+    while (!server->fenceActive || !server->fenceEventLoopParked || server->fenceOutstanding != outstanding) {
+        const int ret = pthread_cond_timedwait(&server->fenceCond, &server->fenceMut, &deadline);
+        if (ret == ETIMEDOUT) {
+            pthread_mutex_unlock(&server->fenceMut);
+            return 0;
+        }
+    }
+    pthread_mutex_unlock(&server->fenceMut);
+    return 1;
+}
+
+static void drainWakeups(tcpsrv_t *const server) {
+    char byte;
+    while (read(server->controlPipe[0], &byte, 1) == 1) {
+    }
+}
+
+static int singleWorkerRoundTrip(void) {
+    tcpsrv_t server;
+    pthread_t eventLoop;
+    uint64_t token;
+    struct timespec deadline;
+    int releaseDrained;
+    CHECK(initServer(&server, 1));
+    CHECK(pthread_create(&eventLoop, NULL, eventLoopOnce, &server) == 0);
+    CHECK(tcpsrvRequestFence(&server, &token) == RS_RET_OK);
+    deadline = deadlineAfterMs(1000);
+    CHECK(tcpsrvWaitFence(&server, token, &deadline) == RS_RET_OK);
+    CHECK(tcpsrvReleaseFence(&server, token) == RS_RET_OK);
+    pthread_mutex_lock(&server.fenceMut);
+    releaseDrained = !server.fenceActive && !server.fenceOwnerValid;
+    pthread_mutex_unlock(&server.fenceMut);
+    CHECK(releaseDrained);
+    CHECK(pthread_join(eventLoop, NULL) == 0);
+    CHECK(!atomic_load_explicit(&threadFailure, memory_order_relaxed));
+    CHECK(waitUntilIdle(&server));
+    drainWakeups(&server);
+    destroyServer(&server);
+    return 0;
+}
+
+static int timeoutDrainAndRetry(void) {
+    tcpsrv_t server;
+    pthread_t eventLoop;
+    pthread_t workers[2];
+    uint64_t token;
+    struct timespec deadline;
+    CHECK(initServer(&server, 2));
+    CHECK(pthread_create(&eventLoop, NULL, eventLoopOnce, &server) == 0);
+    CHECK(tcpsrvRequestFence(&server, &token) == RS_RET_OK);
+    CHECK(waitUntilActivated(&server, 2));
+    deadline = deadlineAfterMs(20);
+    CHECK(tcpsrvWaitFence(&server, token, &deadline) == RS_RET_TIMEOUT);
+    CHECK(tcpsrvReleaseFence(&server, token) == RS_RET_PARAM_ERROR);
+    CHECK(tcpsrvRequestFence(&server, &token) == RS_RET_NOT_IMPLEMENTED);
+    for (size_t i = 0; i < 2; ++i) CHECK(pthread_create(&workers[i], NULL, workerOnce, &server) == 0);
+    for (size_t i = 0; i < 2; ++i) CHECK(pthread_join(workers[i], NULL) == 0);
+    CHECK(pthread_join(eventLoop, NULL) == 0);
+    CHECK(!atomic_load_explicit(&threadFailure, memory_order_relaxed));
+    CHECK(waitUntilIdle(&server));
+    drainWakeups(&server);
+
+    CHECK(pthread_create(&eventLoop, NULL, eventLoopOnce, &server) == 0);
+    for (size_t i = 0; i < 2; ++i) CHECK(pthread_create(&workers[i], NULL, workerOnce, &server) == 0);
+    CHECK(tcpsrvRequestFence(&server, &token) == RS_RET_OK);
+    deadline = deadlineAfterMs(1000);
+    CHECK(tcpsrvWaitFence(&server, token, &deadline) == RS_RET_OK);
+    CHECK(tcpsrvReleaseFence(&server, token) == RS_RET_OK);
+    for (size_t i = 0; i < 2; ++i) CHECK(pthread_join(workers[i], NULL) == 0);
+    CHECK(pthread_join(eventLoop, NULL) == 0);
+    CHECK(!atomic_load_explicit(&threadFailure, memory_order_relaxed));
+    CHECK(waitUntilIdle(&server));
+    destroyServer(&server);
+    return 0;
+}
+
+static int termWhileParked(void) {
+    tcpsrv_t server;
+    pthread_t eventLoop;
+    uint64_t token;
+    struct timespec deadline;
+    CHECK(initServer(&server, 1));
+    CHECK(pthread_create(&eventLoop, NULL, eventLoopOnce, &server) == 0);
+    CHECK(tcpsrvRequestFence(&server, &token) == RS_RET_OK);
+    CHECK(waitUntilActivated(&server, 0));
+    ownerThread = pthread_self();
+    atomic_store_explicit(&terminateOnOwnerCheck, 1, memory_order_relaxed);
+    deadline = deadlineAfterMs(1000);
+    CHECK(tcpsrvWaitFence(&server, token, &deadline) == RS_RET_FORCE_TERM);
+    CHECK(pthread_join(eventLoop, NULL) == 0);
+    CHECK(!atomic_load_explicit(&threadFailure, memory_order_relaxed));
+    CHECK(waitUntilIdle(&server));
+    atomic_store_explicit(&terminateOnOwnerCheck, 0, memory_order_relaxed);
+    atomic_store_explicit(&terminated, 0, memory_order_relaxed);
+    destroyServer(&server);
+    return 0;
+}
+
+static int flowControlSnapshot(void) {
+    tcpsrv_t server = {0};
+    tcps_sess_t first = {0};
+    tcps_sess_t second = {0};
+    tcps_sess_t *sessions[] = {&first, NULL, &second};
+    server.iSessMax = 3;
+    server.pSessions = sessions;
+    server.bUseFlowControl = 1;
+    first.bUseFlowControl = 1;
+    second.bUseFlowControl = 1;
+    tcpsrvApplyFlowControlLive(&server, 0);
+    CHECK(server.bUseFlowControl == 0);
+    CHECK(first.bUseFlowControl == 0);
+    CHECK(second.bUseFlowControl == 0);
+    return 0;
+}
+
+static int starvationMaxReadsSnapshot(void) {
+    tcpsrv_t server = {.starvationMaxReads = 500};
+    tcpsrvApplyStarvationMaxReadsLive(&server, 1);
+    CHECK(server.starvationMaxReads == 1);
+    tcpsrvApplyStarvationMaxReadsLive(&server, 0);
+    CHECK(server.starvationMaxReads == 0);
+    return 0;
+}
+
+/* The event-loop/worker fence excludes concurrent limiter use while the
+ * control path resets the unnamed listener buckets. Named policy objects are
+ * intentionally excluded because their ownership/configuration is separate. */
+static int rateLimitSnapshot(void) {
+    tcpsrv_t server = {.ratelimitInterval = 0, .ratelimitBurst = 10000};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t namedParams = {.pszRatelimitName = UCHAR_CONSTANT("shared-policy")};
+    tcpLstnParams_t thirdParams = {0};
+    ratelimit_t firstLimiter = {0};
+    ratelimit_t namedLimiter = {0};
+    ratelimit_t thirdLimiter = {0};
+    tcpLstnPortList_t thirdListener = {.cnf_params = &thirdParams, .ratelimiter = &thirdLimiter};
+    tcpLstnPortList_t namedListener = {
+        .cnf_params = &namedParams, .ratelimiter = &namedLimiter, .pNext = &thirdListener};
+    tcpLstnPortList_t firstListener = {
+        .cnf_params = &firstParams, .ratelimiter = &firstLimiter, .pNext = &namedListener};
+    server.pLstnPorts = &firstListener;
+    rateLimitCallCount = 0;
+    tcpsrvApplyRateLimitLive(&server, 60, 12000);
+    CHECK(server.ratelimitInterval == 60);
+    CHECK(server.ratelimitBurst == 12000);
+    CHECK(rateLimitCallCount == 2);
+    CHECK(rateLimitCalls[0] == &firstLimiter);
+    CHECK(rateLimitCalls[1] == &thirdLimiter);
+    CHECK(rateLimitIntervals[0] == 60 && rateLimitIntervals[1] == 60);
+    CHECK(rateLimitBursts[0] == 12000 && rateLimitBursts[1] == 12000);
+    return 0;
+}
+
+static int rateLimiterSwap(void) {
+    tcpsrv_t server = {0};
+    uchar oldName[] = "old-policy";
+    tcpLstnParams_t params = {.pszRatelimitName = oldName};
+    ratelimit_t oldLimiter = {0};
+    ratelimit_t preparedLimiter = {0};
+    ratelimit_t *retiredLimiter = NULL;
+    uchar *retiredName = NULL;
+    uchar preparedName[] = "new-policy";
+    tcpLstnPortList_t listener = {.cnf_params = &params, .ratelimiter = &oldLimiter};
+    server.pLstnPorts = &listener;
+    server.fenceAcquired = 1;
+    server.fenceOwnerValid = 1;
+    server.fenceOwner = pthread_self();
+
+    tcpsrvSwapRateLimiterLive(&server, &preparedLimiter, preparedName, &retiredLimiter, &retiredName);
+    CHECK(listener.ratelimiter == &preparedLimiter);
+    CHECK(listener.cnf_params->pszRatelimitName == preparedName);
+    CHECK(retiredLimiter == &oldLimiter);
+    CHECK(retiredName == oldName);
+    return 0;
+}
+
+/* Listener capacity reload owns only the pointer arrays. The runtime listener
+ * and descriptor objects stay stable, and each epoll descriptor must point at
+ * the newly published stream array after the fenced transfer. */
+static int listenerTableSwap(void) {
+    tcpsrv_t server = {0};
+    char firstStreamStorage;
+    char secondStreamStorage;
+    netstrm_t *const firstStream = (netstrm_t *)&firstStreamStorage;
+    netstrm_t *const secondStream = (netstrm_t *)&secondStreamStorage;
+    netstrm_t *oldStreams[] = {firstStream, secondStream};
+    tcpLstnPortList_t firstPort = {0};
+    tcpLstnPortList_t secondPort = {0};
+    tcpLstnPortList_t *oldPorts[] = {&firstPort, &secondPort};
+    tcpsrv_io_descr_t firstDescriptor = {0};
+    tcpsrv_io_descr_t secondDescriptor = {0};
+    tcpsrv_io_descr_t *oldDescriptors[] = {&firstDescriptor, &secondDescriptor};
+    netstrm_t *newStreams[3] = {firstStream, secondStream, NULL};
+    tcpLstnPortList_t *newPorts[3] = {&firstPort, &secondPort, NULL};
+    tcpsrv_io_descr_t *newDescriptors[3] = {&firstDescriptor, &secondDescriptor, NULL};
+    tcpsrv_listener_tables_t prepared = {
+        .streams = newStreams, .ports = newPorts, .descriptors = newDescriptors, .capacity = 3};
+    tcpsrv_listener_tables_t retired = {0};
+    server.ppLstn = oldStreams;
+    server.ppLstnPort = oldPorts;
+    server.ppioDescrPtr = oldDescriptors;
+    server.iLstnCurr = 2;
+    server.iLstnMax = 2;
+    server.fenceAcquired = 1;
+    server.fenceOwnerValid = 1;
+    server.fenceOwner = pthread_self();
+    firstDescriptor.ptr.ppLstn = oldStreams;
+    secondDescriptor.ptr.ppLstn = oldStreams;
+
+    CHECK(tcpsrvValidateListenerTableCapacity(&server, 1) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(tcpsrvValidateListenerTableCapacity(&server, 2) == RS_RET_OK);
+    CHECK(tcpsrvValidateListenerTableCapacity(&server, 3) == RS_RET_OK);
+    tcpsrvSwapListenerTablesLive(&server, &prepared, &retired);
+    CHECK(server.ppLstn == newStreams);
+    CHECK(server.ppLstnPort == newPorts);
+    CHECK(server.ppioDescrPtr == newDescriptors);
+    CHECK(server.iLstnMax == 3);
+    CHECK(firstDescriptor.ptr.ppLstn == newStreams);
+    CHECK(secondDescriptor.ptr.ppLstn == newStreams);
+    CHECK(retired.streams == oldStreams && retired.ports == oldPorts && retired.descriptors == oldDescriptors);
+    CHECK(retired.capacity == 2);
+    CHECK(prepared.streams == NULL && prepared.ports == NULL && prepared.descriptors == NULL && prepared.capacity == 0);
+    return 0;
+}
+
+static int notificationSnapshot(void) {
+    tcpsrv_t server = {.bEmitMsgOnOpen = 0, .bEmitMsgOnClose = 1};
+    tcpsrvApplyNotificationsLive(&server, 1, 0);
+    CHECK(server.bEmitMsgOnOpen == 1);
+    CHECK(server.bEmitMsgOnClose == 0);
+    return 0;
+}
+
+static int preserveCaseNewSessions(void) {
+    tcpsrv_t server = {.bPreserveCase = 1};
+    tcpLstnParams_t firstParams = {.bPreserveCase = 1};
+    tcpLstnParams_t secondParams = {.bPreserveCase = 1};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyPreserveCaseForNewSessions(&server, 0);
+    CHECK(server.bPreserveCase == 0);
+    CHECK(firstParams.bPreserveCase == 0);
+    CHECK(secondParams.bPreserveCase == 0);
+    return 0;
+}
+
+static int keepAliveNewSessions(void) {
+    tcpsrv_t server = {0};
+    tcpsrvApplyKeepAliveForNewSessions(&server, 1, 2, 3, 30);
+    CHECK(server.bUseKeepAlive == 1);
+    CHECK(server.iKeepAliveIntvl == 2);
+    CHECK(server.iKeepAliveProbes == 3);
+    CHECK(server.iKeepAliveTime == 30);
+    return 0;
+}
+
+/* Framing fields are copied when a session is accepted. The control-path
+ * helper must update the server profile and the listener-owned Cisco framing
+ * flag without mutating already established sessions. */
+static int framingNewSessions(void) {
+    tcpsrv_t server = {.bSPFramingFix = 0,
+                       .addtlFrameDelim = -1,
+                       .maxFrameSize = 200000,
+                       .bDisableLFDelim = 0,
+                       .discardTruncatedMsg = 0};
+    tcpLstnParams_t firstParams = {.bSPFramingFix = 0};
+    tcpLstnParams_t secondParams = {.bSPFramingFix = 0};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyFramingForNewSessions(&server, 1, 10, 210000, 1, 1);
+    CHECK(server.bSPFramingFix == 1);
+    CHECK(server.addtlFrameDelim == 10);
+    CHECK(server.maxFrameSize == 210000);
+    CHECK(server.bDisableLFDelim == 1);
+    CHECK(server.discardTruncatedMsg == 1);
+    CHECK(firstParams.bSPFramingFix == 1);
+    CHECK(secondParams.bSPFramingFix == 1);
+    tcpsrvApplyOctetCountedFramingForNewSessions(&server, 0);
+    CHECK(firstParams.bSuppOctetFram == 0);
+    CHECK(secondParams.bSuppOctetFram == 0);
+    tcpsrvApplyMultiLineForNewSessions(&server, 1);
+    CHECK(firstParams.bMultiLine == 1);
+    CHECK(secondParams.bMultiLine == 1);
+    return 0;
+}
+
+/* Compression state is copied from the listener into a new session. The
+ * helper updates the complete server/listener profile while existing sessions
+ * remain untouched. */
+static int compressionNewSessions(void) {
+    tcpsrv_t server = {0};
+    tcpLstnPortList_t secondListener = {0};
+    tcpLstnPortList_t firstListener = {.pNext = &secondListener};
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyCompressionForNewSessions(&server, TCPSRV_COMPRESS_STREAM_ALWAYS, TCPSRV_COMPRESS_DRIVER_ZLIB, 2048,
+                                         1024 * 1024, 2 * 1024 * 1024);
+    CHECK(server.compressionMode == TCPSRV_COMPRESS_STREAM_ALWAYS);
+    CHECK(server.compressionDriver == TCPSRV_COMPRESS_DRIVER_ZLIB);
+    CHECK(server.compressionMaxExpansionRatio == 2048);
+    CHECK(server.compressionMaxDecompressedBytesPerReceive == 1024 * 1024);
+    CHECK(server.compressionMaxTotalZstdWindowBytes == 2 * 1024 * 1024);
+    CHECK(firstListener.compressionMode == server.compressionMode);
+    CHECK(firstListener.compressionDriver == server.compressionDriver);
+    CHECK(firstListener.compressionMaxExpansionRatio == server.compressionMaxExpansionRatio);
+    CHECK(firstListener.compressionMaxDecompressedBytesPerReceive == server.compressionMaxDecompressedBytesPerReceive);
+    CHECK(firstListener.compressionMaxTotalZstdWindowBytes == server.compressionMaxTotalZstdWindowBytes);
+    CHECK(secondListener.compressionMode == server.compressionMode);
+    CHECK(secondListener.compressionDriver == server.compressionDriver);
+    CHECK(secondListener.compressionMaxExpansionRatio == server.compressionMaxExpansionRatio);
+    CHECK(secondListener.compressionMaxDecompressedBytesPerReceive == server.compressionMaxDecompressedBytesPerReceive);
+    CHECK(secondListener.compressionMaxTotalZstdWindowBytes == server.compressionMaxTotalZstdWindowBytes);
+    return 0;
+}
+
+static int defaultTZSnapshot(void) {
+    tcpsrv_t server = {0};
+    tcps_sess_t first = {0};
+    tcps_sess_t second = {0};
+    tcps_sess_t *sessions[] = {&first, NULL, &second};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t secondParams = {0};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    server.iSessMax = 3;
+    server.pSessions = sessions;
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyDefaultTZLive(&server, UCHAR_CONSTANT("+02:00"));
+    CHECK(!strcmp((const char *)server.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)firstParams.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)secondParams.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)first.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)second.dfltTZ, "+02:00"));
+    tcpsrvApplyDefaultTZLive(&server, NULL);
+    CHECK(server.dfltTZ[0] == '\0');
+    CHECK(firstParams.dfltTZ[0] == '\0');
+    CHECK(secondParams.dfltTZ[0] == '\0');
+    CHECK(first.dfltTZ[0] == '\0');
+    CHECK(second.dfltTZ[0] == '\0');
+    return 0;
+}
+
+static int rulesetSnapshot(void) {
+    tcpsrv_t server = {0};
+    tcps_sess_t first = {0};
+    tcps_sess_t second = {0};
+    tcps_sess_t *sessions[] = {&first, NULL, &second};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t secondParams = {0};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    ruleset_t target = {0};
+    server.iSessMax = 3;
+    server.pSessions = sessions;
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyRulesetLive(&server, &target);
+    CHECK(firstParams.pRuleset == &target);
+    CHECK(secondParams.pRuleset == &target);
+    CHECK(first.pRuleset == &target);
+    CHECK(second.pRuleset == &target);
+    return 0;
+}
+
+static int pollCapacity(void) {
+    struct pollfd *fds = NULL;
+    uint32_t capacity = 0;
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 0, 1) == RS_RET_OK);
+    CHECK(capacity == 1024);
+    fds[0].fd = 42;
+    /* 1,023 data descriptors plus control exactly fill the logical capacity;
+     * the sentinel remains writable without requiring a spare logical slot. */
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 1023, 1) == RS_RET_OK);
+    CHECK(capacity == 1024);
+    fds[1023].fd = 43;
+    /* Volatile accesses preserve the sanitizer boundary oracle even when
+     * ordinary sentinel stores could be eliminated as dead writes. */
+    ((volatile struct pollfd *)fds)[1024].fd = 0;
+    CHECK(((volatile struct pollfd *)fds)[1024].fd == 0);
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 1024, 1) == RS_RET_OK);
+    CHECK(capacity == 2048 && fds[0].fd == 42 && fds[1023].fd == 43);
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 2047, 1) == RS_RET_OK);
+    CHECK(capacity == 2048);
+    fds[2047].fd = 44;
+    ((volatile struct pollfd *)fds)[2048].fd = 0;
+    CHECK(((volatile struct pollfd *)fds)[2048].fd == 0);
+    CHECK(tcpsrvPollReserve(&fds, &capacity, 2048, 1) == RS_RET_OK);
+    CHECK(capacity == 3072 && fds[2047].fd == 44);
+    ((volatile struct pollfd *)fds)[3072].fd = 0;
+    CHECK(((volatile struct pollfd *)fds)[3072].fd == 0);
+    struct pollfd *const retained = fds;
+    CHECK(tcpsrvPollReserve(&fds, &capacity, UINT32_MAX, 1) == RS_RET_OUT_OF_MEMORY);
+    CHECK(fds == retained && capacity == 3072 && fds[0].fd == 42);
+    free(fds);
+    return 0;
+}
+
+int main(void) {
+    if (pollCapacity() != 0) return 1;
+    if (singleWorkerRoundTrip() != 0) return 1;
+    if (timeoutDrainAndRetry() != 0) return 1;
+    if (termWhileParked() != 0) return 1;
+    if (flowControlSnapshot() != 0) return 1;
+    if (starvationMaxReadsSnapshot() != 0) return 1;
+    if (rateLimitSnapshot() != 0) return 1;
+    if (rateLimiterSwap() != 0) return 1;
+    if (listenerTableSwap() != 0) return 1;
+    if (notificationSnapshot() != 0) return 1;
+    if (preserveCaseNewSessions() != 0) return 1;
+    if (keepAliveNewSessions() != 0) return 1;
+    if (framingNewSessions() != 0) return 1;
+    if (compressionNewSessions() != 0) return 1;
+    if (defaultTZSnapshot() != 0) return 1;
+    if (rulesetSnapshot() != 0) return 1;
+    puts("tcpsrv reload fence tests passed");
+    return 0;
+}

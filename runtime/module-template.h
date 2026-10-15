@@ -540,6 +540,22 @@
         *pEtryPoint = modGetKeepType;           \
     }
 
+/*
+ * Optional transactional reload lifecycle.  Modules opt in explicitly by
+ * appending this block to their queryEtryPt implementation; existing standard
+ * query blocks intentionally do not expose it, preserving restart-required
+ * semantics for all legacy modules.
+ */
+#define CODEqueryEtryPt_RELOAD_V1_QUERIES                \
+    if (!strcmp((char *)name, "getReloadInterfaceV1")) { \
+        *pEtryPoint = getReloadInterfaceV1;              \
+    }
+
+#define CODEqueryEtryPt_RELOAD_SOURCE_V1_QUERIES               \
+    if (!strcmp((char *)name, "getReloadSourceInterfaceV1")) { \
+        *pEtryPoint = getReloadSourceInterfaceV1;              \
+    }
+
 /**
  * \brief Standard block for output modules without transaction support.
  */

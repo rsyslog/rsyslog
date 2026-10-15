@@ -45,6 +45,7 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-escaped-sd \
 	fuzz/corpus/syslog-message/rfc5424-nil
 EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
+EXTRA_DIST += helpers/reload_tcp_port_reserver.py
 
 TESTS_MERMAID_OFFLINE = mermaid-offline.sh
 EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
@@ -174,11 +175,17 @@ TESTS_GSSAPI_LIBYAML = \
 EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
 EXTRA_DIST += unit/impcap_arp_parser_test.c
+EXTRA_DIST += unit/parser_policy_snapshot_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 EXTRA_DIST += unit/mmaitag_gemini_response_test.c
+EXTRA_DIST += unit/module_reload_test.c
+EXTRA_DIST += unit/reload_report_test.c
+EXTRA_DIST += unit/reload_normalized_graph_test.c
+EXTRA_DIST += unit/wtp_quiesce_test.c
+EXTRA_DIST += unit/imtcp_lifecycle_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -234,7 +241,19 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	global-reloadonhup-closed-dequeue-window.sh \
 	record-container-validation.sh \
+	global-reloadonhup-escapeprefix-rainerscript.sh \
+	global-reloadonhup-permitslash-rainerscript.sh \
+	global-reloadonhup-escapecstyle-rainerscript.sh \
+	global-reloadonhup-escapetab-rainerscript.sh \
+	global-reloadonhup-escape8bit-rainerscript.sh \
+	global-reloadonhup-spacelf-rainerscript.sh \
+	global-reloadonhup-escapecontrol-rainerscript.sh \
+	global-reloadonhup-droptrailinglf-rainerscript.sh \
+	global-reloadonhup-droptrailingcr-rainerscript.sh \
+	global-reloadonhup-compactjson-rainerscript.sh \
+	global-reloadonhup-oversizemsg-report-rainerscript.sh \
 	codex-pre-push-container-gate.sh \
 	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
@@ -486,6 +505,20 @@ TESTS_DEFAULT = \
 	imdiag-proper-termination-timeoutguard.sh \
 	tcpflood-proper-termination.sh \
 	global-maxopenfiles-rainerscript.sh \
+	global-reloadonhup-off-hup.sh \
+	global-reloadonhup-dirty-baseline.sh \
+	global-reloadonhup-imtcp-defaulttz-rainerscript.sh \
+	global-reloadonhup-imtcp-allowedsender-rainerscript.sh \
+	global-reloadonhup-imtcp-maxsessions-rainerscript.sh \
+	global-reloadonhup-imtcp-regex-rainerscript.sh \
+	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
+	global-reloadonhup-imtcp-reorder-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-add-rainerscript.sh \
+	global-reloadonhup-imtcp-add-validate-rainerscript.sh \
+	global-reloadonhup-on-rainerscript.sh \
+	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
 	compat-configformat-rainerscript.sh \
 	compat-defaults-secure-dynafile-rainerscript.sh \
@@ -494,6 +527,7 @@ TESTS_DEFAULT = \
 	abort-uncleancfg-continue-nop.sh \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
+	include-abort-if-missing.sh \
 	variable_leading_underscore.sh \
 	gzipwr_hup_multi_file.sh \
 	gzipwr_hup_single_file.sh \
@@ -817,6 +851,17 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	global-reloadonhup-escapeprefix-yaml.sh \
+	global-reloadonhup-permitslash-yaml.sh \
+	global-reloadonhup-escapecstyle-yaml.sh \
+	global-reloadonhup-escapetab-yaml.sh \
+	global-reloadonhup-escape8bit-yaml.sh \
+	global-reloadonhup-spacelf-yaml.sh \
+	global-reloadonhup-escapecontrol-yaml.sh \
+	global-reloadonhup-droptrailinglf-yaml.sh \
+	global-reloadonhup-droptrailingcr-yaml.sh \
+	global-reloadonhup-compactjson-yaml.sh \
+	global-reloadonhup-oversizemsg-report-yaml.sh \
 	config-translate-rs-to-yaml.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
@@ -827,7 +872,9 @@ TESTS_LIBYAML = \
 	compat-configformat-yaml.sh \
 	compat-defaults-secure-dynafile-yaml.sh \
 	global-maxopenfiles-yaml.sh \
+	global-reloadonhup-yaml.sh \
 	global-systemd-notifyreadydelay-yaml.sh \
+	yaml-reload-ruleset-graph-parity.sh \
 	action-ratelimit-drop.sh \
 	action-ratelimit-pace.sh \
 	action-ratelimit-reload.sh \
@@ -890,6 +937,12 @@ TESTS_IMTCP = \
 	imtcp-ruleset-no-queue-warning.sh \
 	imtcp-basic.sh \
 	imtcp-bind-failure.sh \
+	global-reloadonhup-imtcp-add-plain-rainerscript.sh \
+	global-reloadonhup-imtcp-add-plain-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-retire-rainerscript.sh \
+	global-reloadonhup-imtcp-retire-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-plain-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-plain-validate-rainerscript.sh \
 	rscript_parsehostnameandtag_off.sh \
 	imtcp_framing_regex.sh \
 	imtcp_framing_regex_maxmsg_overflow.sh \
@@ -1236,6 +1289,7 @@ TESTS_MMDARWIN_VALGRIND = \
 
 TESTS_OMPROG = \
 	queue-fixedarray-outoforder.sh \
+	global-reloadonhup-reportchild-rainerscript.sh \
 	omprog-defaults.sh \
 	omprog-output-capture.sh \
 	omprog-output-capture-mt.sh \
@@ -1257,6 +1311,9 @@ TESTS_OMPROG = \
 	omprog-if-error.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
+
+TESTS_OMPROG_IMTCP_YAML = \
+	global-reloadonhup-reportchild-yaml.sh
 
 TESTS_OMPROG_VALGRIND = \
 	omprog-defaults-vg.sh \
@@ -1748,6 +1805,26 @@ TESTS_LIBYAML_IMTCP = \
 	config-translate-rs-roundtrip.sh \
 	config-translate-yaml-roundtrip.sh \
 	yaml-queue-mutex-contention-stats.sh \
+	global-reloadonhup-off-yaml.sh \
+	global-reloadonhup-imtcp-defaulttz-yaml.sh \
+	global-reloadonhup-imtcp-allowedsender-yaml.sh \
+	global-reloadonhup-imtcp-maxsessions-yaml.sh \
+	global-reloadonhup-imtcp-regex-yaml.sh \
+	global-reloadonhup-imtcp-ruleset-yaml.sh \
+	global-reloadonhup-imtcp-reorder-yaml.sh \
+	global-reloadonhup-imtcp-replace-yaml.sh \
+	global-reloadonhup-imtcp-replace-validate-yaml.sh \
+	global-reloadonhup-imtcp-add-yaml.sh \
+	global-reloadonhup-imtcp-add-validate-yaml.sh \
+	global-reloadonhup-imtcp-add-plain-yaml.sh \
+	global-reloadonhup-imtcp-add-plain-validate-yaml.sh \
+	global-reloadonhup-imtcp-retire-yaml.sh \
+	global-reloadonhup-imtcp-retire-validate-yaml.sh \
+	global-reloadonhup-imtcp-replace-plain-yaml.sh \
+	global-reloadonhup-imtcp-replace-plain-validate-yaml.sh \
+	global-reloadonhup-on-yaml.sh \
+	global-reloadonhup-ruleset-constructs-yaml.sh \
+	global-reloadonhup-validate-yaml.sh \
 	yaml-include-recursion.sh
 
 TESTS_LIBYAML_IMTCP_OSSL = \
@@ -2565,6 +2642,7 @@ EXTRA_DIST += $(TESTS_IMPROG_VALGRIND)
 EXTRA_DIST += $(TESTS_MMDARWIN)
 EXTRA_DIST += $(TESTS_MMDARWIN_VALGRIND)
 EXTRA_DIST += $(TESTS_OMPROG)
+EXTRA_DIST += $(TESTS_OMPROG_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_OMPROG_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP)
 EXTRA_DIST += $(TESTS_OMHTTP_VALGRIND)
@@ -2712,11 +2790,9 @@ CLEANFILES=\
 	tmp.qi nocert
 
 CLEANFILES+= \
-	IN_AUTO_DEBUG \
 	runtime_unit_imbeats_seq \
-	runtime_unit_mmaitag_gemini_response
-# IN_AUTO_DEBUG should be deleted each time make check is run, but
-# there exists no such hook. Se we at least delete it on make clean.
+	runtime_unit_mmaitag_gemini_response \
+	runtime_unit_imtcp_lifecycle
 # These unit binaries are conditional, but an outer build with their modules
 # enabled can leave them for an inner distcheck configured without them.
 
@@ -2726,13 +2802,24 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_perctile_ringbuf
+	runtime_unit_wtp_wakeup runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
+	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
+	runtime_unit_tcpsrv_fence runtime_unit_tcpsrv_prepared runtime_unit_parser_policy_snapshot
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_perctile_ringbuf
+	runtime_unit_wtp_wakeup runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
+	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
+	runtime_unit_tcpsrv_fence runtime_unit_tcpsrv_prepared runtime_unit_parser_policy_snapshot
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
+
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_imtcp_lifecycle
+TESTS += runtime_unit_imtcp_lifecycle
+runtime_unit_imtcp_lifecycle_SOURCES = \
+	unit/imtcp_lifecycle_test.c
+endif # ENABLE_IMTCP_TESTS
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2746,6 +2833,9 @@ runtime_unit_stringbuf_SOURCES = \
 
 runtime_unit_parser_pri_SOURCES = \
 	unit/parser_pri_test.c
+
+runtime_unit_parser_policy_snapshot_SOURCES = \
+	unit/parser_policy_snapshot_test.c
 
 runtime_unit_msg_replace_SOURCES = \
 	unit/msg_replace_test.c
@@ -2765,6 +2855,77 @@ runtime_unit_omazuredce_utils_SOURCES = \
 runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
 
+runtime_unit_module_reload_SOURCES = \
+	unit/module_reload_test.c \
+	../tools/shadow_reload_lifecycle.h
+
+runtime_unit_reload_report_SOURCES = \
+	unit/reload_report_test.c
+
+runtime_unit_reload_normalized_graph_SOURCES = \
+	unit/reload_normalized_graph_test.c
+
+runtime_unit_reload_candidate_graph_SOURCES = \
+	unit/reload_candidate_graph_test.c
+
+runtime_unit_reload_syntax_clone_SOURCES = \
+	unit/reload_syntax_clone_test.c
+
+runtime_unit_wtp_quiesce_SOURCES = \
+	unit/wtp_quiesce_test.c
+
+runtime_unit_tcpsrv_fence_SOURCES = \
+	unit/tcpsrv_fence_test.c
+
+runtime_unit_tcpsrv_prepared_SOURCES = \
+	unit/tcpsrv_prepared_test.c
+
+# This binary loads production tcpsrv/netstream modules rather than modeling
+# backend readiness. Both epoll and poll configurations execute the same test.
+if ENABLE_TESTBENCH
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_tcpsrv_prepared_backend
+TESTS += runtime_unit_tcpsrv_prepared_backend
+runtime_unit_tcpsrv_prepared_backend_SOURCES = \
+	unit/tcpsrv_prepared_backend_test.c \
+	helpers/tcpsrv_prepared_daemon_link.c \
+	../tools/syslogd.c \
+	../tools/shadow_reload.c \
+	../tools/omshell.c \
+	../tools/omusrmsg.c \
+	../tools/omfwd.c \
+	../tools/omfile.c \
+	../tools/ompipe.c \
+	../tools/omdiscard.c \
+	../tools/pmrfc5424.c \
+	../tools/pmrfc3164.c \
+	../tools/smtradfile.c \
+	../tools/smfile.c \
+	../tools/smfwd.c \
+	../tools/smtradfwd.c \
+	../tools/iminternal.c
+runtime_unit_tcpsrv_prepared_backend_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+# Match tools/rsyslogd's real daemon linkage: rsrtInit intentionally references
+# the full configuration/daemon surface, and loaded modules resolve its symbols.
+runtime_unit_tcpsrv_prepared_backend_LDADD = \
+	$(top_builddir)/grammar/libgrammar.la $(top_builddir)/runtime/librsyslog.la \
+	$(top_builddir)/compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) \
+	$(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) $(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
+if OS_AIX
+runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -brtl -bexpall -lsrc
+else
+runtime_unit_tcpsrv_prepared_backend_LDFLAGS = -export-dynamic
+endif
+if ENABLE_LIBZSTD
+runtime_unit_tcpsrv_prepared_backend_CPPFLAGS += $(ZSTD_CFLAGS)
+runtime_unit_tcpsrv_prepared_backend_LDADD += $(ZSTD_LIBS)
+endif
+if ENABLE_LIBLOGGING_STDLOG
+runtime_unit_tcpsrv_prepared_backend_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_tcpsrv_prepared_backend_LDADD += $(LIBLOGGING_STDLOG_LIBS)
+endif
+endif
+endif
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_omazuredce_utils_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -2843,6 +3004,8 @@ runtime_unit_stringbuf_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_parser_pri_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_parser_policy_snapshot_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_msg_replace_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_ommongodb_date_CPPFLAGS = \
@@ -2856,19 +3019,50 @@ runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-Wno-inline
 
+runtime_unit_module_reload_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_report_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_normalized_graph_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_candidate_graph_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_syntax_clone_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_wtp_quiesce_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_tcpsrv_fence_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_tcpsrv_prepared_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imtcp_lifecycle_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-I$(top_srcdir)/plugins/imtcp
+
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_parser_policy_snapshot_LDADD =
 runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD = $(LIBESTR_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_queue_da_LDADD = $(LIBESTR_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_module_reload_LDADD =
+runtime_unit_reload_report_LDADD =
+runtime_unit_reload_normalized_graph_LDADD =
+runtime_unit_reload_candidate_graph_LDADD = $(LIBESTR_LIBS)
+runtime_unit_reload_syntax_clone_LDADD = $(LIBESTR_LIBS)
+runtime_unit_wtp_quiesce_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_tcpsrv_fence_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_tcpsrv_prepared_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_imtcp_lifecycle_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_stringbuf_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_parser_policy_snapshot_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
@@ -3447,6 +3641,11 @@ endif # ENABLE_IMPROG
 
 if ENABLE_OMPROG
 TESTS += $(TESTS_OMPROG)
+if ENABLE_IMTCP_TESTS
+if HAVE_LIBYAML
+TESTS += $(TESTS_OMPROG_IMTCP_YAML)
+endif
+endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMPROG_VALGRIND)
 endif

@@ -39,7 +39,7 @@
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "usage: journal_print \"message\"\n");
-        exit(1);
+        return 1;
     }
 
     /* First, we need to determine whether journal is running at all */
@@ -48,29 +48,29 @@ int main(int argc, char *argv[]) {
     fd = sd_journal_stream_fd("imjournal_test", LOG_WARNING, 0);
     if (fd < 0) {
         fprintf(stderr, "Failed to create journal fd: %s\n", strerror(-fd));
-        exit(2);
+        return 2;
     }
     log = fdopen(fd, "w");
     if (!log) {
         fprintf(stderr, "Failed to create file object: %m\n");
         close(fd);
-        exit(2);
+        return 2;
     }
 
     /* Now we can try inserting something */
     if (fprintf(log, "%s\n", argv[1]) <= 0) {
         fprintf(stderr, "Failed to write to journal log: %m\n");
         fclose(log);
-        exit(3);
+        return 3;
     }
     if (fflush(log) != 0) {
         fprintf(stderr, "Failed to flush journal log: %m\n");
         fclose(log);
-        exit(3);
+        return 3;
     }
     if (fclose(log) != 0) {
         fprintf(stderr, "Failed to close journal log: %m\n");
-        exit(3);
+        return 3;
     }
 
     return (0);

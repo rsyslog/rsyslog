@@ -104,6 +104,22 @@ struct AllowedSenders {
     struct AllowedSenders *pNext;
 };
 
+struct rsconf_s;
+
+/* Control-path helpers used by private reload preparation.  They deliberately
+ * avoid the load-scoped global configuration pointer and return independently
+ * owned lists so a runtime listener never borrows candidate-config storage. */
+rsRetVal netAddAllowedSenderEntryForConfig(struct rsconf_s *config,
+                                           struct AllowedSenders **root,
+                                           struct AllowedSenders **last,
+                                           uchar *allowedSender);
+rsRetVal netCloneAllowedSenders(const struct AllowedSenders *source,
+                                struct AllowedSenders **root,
+                                struct AllowedSenders **last);
+rsRetVal netAllowedSenderEntryIsNumeric(uchar *allowedSender, int *isNumeric);
+rsRetVal netAllowedSenderEntryIsReloadSafe(struct rsconf_s *config, uchar *allowedSender, int *isReloadSafe);
+void netDestructAllowedSenders(struct AllowedSenders **root);
+
 
 /* this structure is a helper to implement wildcards in permittedPeers_t. It specifies
  * the domain component and the matching mode.
@@ -233,8 +249,14 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
      *          that fd and reset the value to -1.
      */
     rsRetVal (*netns_restore)(int *fd);
+    rsRetVal (*addAllowedSenderEntryForConfig)(struct rsconf_s *config, struct AllowedSenders **root,
+                                               struct AllowedSenders **last, uchar *allowedSender);
+    rsRetVal (*cloneAllowedSenders)(const struct AllowedSenders *source, struct AllowedSenders **root,
+                                    struct AllowedSenders **last);
+    rsRetVal (*allowedSenderEntryIsNumeric)(uchar *allowedSender, int *isNumeric);
+    rsRetVal (*allowedSenderEntryIsReloadSafe)(struct rsconf_s *config, uchar *allowedSender, int *isReloadSafe);
 ENDinterface(net)
-#define netCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

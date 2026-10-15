@@ -122,13 +122,23 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 #define S_CALL_INDIRECT 4011
 #define S_FUNC_EXISTS 4012 /* special case function which must get varname only */
+/* Capture-only nodes. They are destroyed before a candidate can become a
+ * runtime plan and therefore never occur in message processing. */
+#define S_RELOAD_ACT 4013
+#define S_RELOAD_PRIFILT 4014
+#define S_RELOAD_PROPFILT 4015
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char *cnfFiltType2str(const enum cnfFiltType filttype);
 
 
+/* A prepared reload script may borrow an already-active action. Such a node
+ * owns its statement storage but must never destruct the shared action. */
+#define CNFSTMT_FLAG_BORROWED_ACTION 0x0001U
+
 struct cnfstmt {
     unsigned nodetype;
+    unsigned flags;
     struct cnfstmt *next;
     uchar *printable; /* printable text for debugging */
     union {
@@ -170,6 +180,7 @@ struct cnfstmt {
             struct cnfstmt *t_else;
         } s_propfilt;
         struct action_s *act;
+        struct nvlst *reload_action;
         struct {
             struct cnfitr *iter;
             struct cnfstmt *body;
@@ -389,7 +400,7 @@ struct funcData_prifilt {
 
 void varFreeMembers(const struct svar *r);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
-void readConfFile(FILE *fp, es_str_t **str);
+rsRetVal readConfFile(FILE *fp, es_str_t **str);
 struct objlst *objlstNew(struct cnfobj *obj);
 void objlstDestruct(struct objlst *lst);
 void objlstPrint(struct objlst *lst);
@@ -404,6 +415,7 @@ struct nvlst *nvlstFindName(struct nvlst *lst, es_str_t *name);
 int nvlstChkDisabled(struct nvlst *lst);
 struct cnfobj *cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
+void cnfobjDestructAll(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr *cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
@@ -411,6 +423,14 @@ void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr,
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
 struct json_object *cnfexprEvalCollection(struct cnfexpr *const expr, void *const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
+/* Control-path clones for private reload preparation. They retain no parser or
+ * runtime cache pointers, leave *out NULL on failure, and reject constructs
+ * whose executable state cannot yet be rebuilt safely. */
+rsRetVal cnfexprCloneReloadSafe(const struct cnfexpr *src, struct cnfexpr **out);
+rsRetVal nvlstCloneReloadSafe(const struct nvlst *src, struct nvlst **out);
+void cnfarrayDestruct(struct cnfarray *ar);
+void cnffparamlstDestruct(struct cnffparamlst *params);
+void cnfIteratorDestruct(struct cnfitr *itr);
 struct cnfnumval *cnfnumvalNew(long long val);
 struct cnfstringval *cnfstringvalNew(es_str_t *estr);
 struct cnfvar *cnfvarNew(char *name);
@@ -418,6 +438,9 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst);
 struct cnffuncexists *cnffuncexistsNew(const char *varname);
 struct cnffparamlst *cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(const char *name, const int optional);
+void cnfClearFatalParseError(void);
+rsRetVal cnfTakeFatalParseError(void);
+void cnfNoteFatalParseError(rsRetVal error);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals *nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params, struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
@@ -434,6 +457,7 @@ char *rmLeadingSpace(char *s);
 struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 struct cnfstmt *cnfstmtNewAct(struct nvlst *lst);
+struct cnfstmt *cnfstmtNewBorrowedAct(struct action_s *action);
 struct cnfstmt *cnfstmtNewLegaAct(char *actline);
 struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset);
 struct cnfstmt *cnfstmtNewUnset(char *var);
@@ -441,6 +465,10 @@ struct cnfstmt *cnfstmtNewCall(es_str_t *name);
 struct cnfstmt *cnfstmtNewContinue(void);
 struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
+rsRetVal cnfstmtCloneReloadSafe(const struct cnfstmt *src, struct cnfstmt **out);
+/* Convert one capture-only legacy filter into its executable form against an
+ * explicit immutable configuration. The node retains ownership on failure. */
+rsRetVal cnfstmtLowerReloadFilterV1(struct cnfstmt *stmt, rsconf_t *config);
 struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray *cnfarrayNew(es_str_t *val);
 struct cnfarray *cnfarrayDup(struct cnfarray *old);
@@ -452,7 +480,7 @@ void unescapeStr(uchar *s, int len);
 const char *tokenval2str(int tok);
 uchar *var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
 long long var2Number(struct svar *r, int *bSuccess);
-void includeProcessCnf(struct nvlst *const lst);
+int includeProcessCnf(struct nvlst *const lst);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);

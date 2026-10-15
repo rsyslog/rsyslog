@@ -34,6 +34,10 @@
 #include <libestr.h>
 #include "rainerscript.h"
 #include "parserif.h"
+#if defined(__GNUC__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 #define YYDEBUG 1
 extern int yylineno;
 extern char *yytext;
@@ -119,6 +123,20 @@ extern int yyerror(const char*);
 %type <fparams> fparams
 %type <arr> array arrayelt
 
+/* Bison discards partially reduced values during error recovery. Explicit
+ * ownership destructors are required because HUP may parse many rejected
+ * candidates in one daemon lifetime. */
+%destructor { free($$); } LEGACY_ACTION LEGACY_RULESET PRIFILT PROPFILT BSD_TAG_SELECTOR BSD_HOST_SELECTOR VAR
+%destructor { es_deleteStr($$); } NAME FUNC STRING
+%destructor { cnfobjDestructAll($$); } obj property constant
+%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script elseif_tail
+%destructor { nvlstDestruct($$); } nv nvlst value
+%destructor { objlstDestruct($$); } propconst
+%destructor { cnfexprDestruct($$); } expr
+%destructor { cnfarrayDestruct($$); } array arrayelt
+%destructor { cnffparamlstDestruct($$); } fparams
+%destructor { cnfIteratorDestruct($$); } iterator_decl
+
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI CMP_ENDSWITH
 %left '+' '-' '&'
@@ -139,7 +157,14 @@ conf:	/* empty (to end recursion) */
 	| conf LEGACY_RULESET		{ cnfDoCfsysline($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
-include:  BEGIN_INCLUDE nvlst ENDOBJ	{ includeProcessCnf($2); }
+include:  BEGIN_INCLUDE nvlst ENDOBJ	{
+					  /* includeProcessCnf consumes the list on every path. Clear
+					   * the semantic value before YYABORT so bison cannot free it
+					   * a second time while unwinding the parse stack. */
+					  const int includeRet = includeProcessCnf($2);
+					  $2 = NULL;
+					  if(includeRet != 0) YYABORT;
+					}
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
         | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
@@ -239,12 +264,22 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
 	| '(' expr ')'			{ $$ = $2; }
 	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
-	| EXISTS '(' VAR ')'		{ $$ = (struct cnfexpr*) cnffuncexistsNew($3); }
+	| EXISTS '(' VAR ')'		{
+		char *const name = $3;
+		$3 = NULL; /* constructor owns name on success and failure */
+		if(($$ = (struct cnfexpr*) cnffuncexistsNew(name)) == NULL)
+			YYABORT;
+	}
 	| FUNC '(' ')'			{ $$ = (struct cnfexpr*) cnffuncNew($1, NULL); }
 	| FUNC '(' fparams ')'		{ $$ = (struct cnfexpr*) cnffuncNew($1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
-	| VAR				{ $$ = (struct cnfexpr*) cnfvarNew($1); }
+	| VAR				{
+		char *const name = $1;
+		$1 = NULL; /* constructor owns name on success and failure */
+		if(($$ = (struct cnfexpr*) cnfvarNew(name)) == NULL)
+			YYABORT;
+	}
 	| array				{ $$ = (struct cnfexpr*) $1; }
 fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
@@ -254,6 +289,9 @@ arrayelt: STRING			{ $$ = cnfarrayNew($1); }
 	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
 
 %%
+#if defined(__GNUC__)
+# pragma GCC diagnostic pop
+#endif
 /*
 int yyerror(char *s)
 {

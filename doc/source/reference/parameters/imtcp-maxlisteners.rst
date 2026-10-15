@@ -31,6 +31,12 @@ This must be set before the first $InputTCPServerRun directive.
 
 The same-named input parameter can override this module setting.
 
+When transactional reload is enabled, changing this capacity is live if the
+new value still accommodates every socket opened for the input.  The listener
+sockets and established sessions remain active while preallocated pointer
+tables are published at the imtcp reload fence.  A shrink below the current
+number of opened listeners is rejected without changing the active generation.
+
 
 Module usage
 ------------
@@ -65,4 +71,3 @@ Historic names/directives for compatibility. Do not use in new configs.
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.
-

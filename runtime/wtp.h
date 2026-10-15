@@ -39,8 +39,9 @@
 /* possible states of a worker thread pool */
 typedef enum {
     wtpState_RUNNING = 0, /* runs in regular mode */
-    wtpState_SHUTDOWN = 1, /* worker threads shall shutdown when idle */
-    wtpState_SHUTDOWN_IMMEDIATE = 2 /* worker threads shall shutdown ASAP, even if not idle */
+    wtpState_QUIESCE = 1, /* workers park at a batch boundary without terminating */
+    wtpState_SHUTDOWN = 2, /* worker threads shall shutdown when idle */
+    wtpState_SHUTDOWN_IMMEDIATE = 3 /* worker threads shall shutdown ASAP, even if not idle */
 } wtpState_t;
 
 
@@ -59,6 +60,8 @@ struct wtp_s {
         pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
         pthread_cond_t condThrdInitDone; /* signalled when a new thread is ready for work */
         pthread_cond_t condThrdTrm; /* signalled when threads terminate */
+        pthread_cond_t condQuiesced; /* signalled when a worker enters or leaves the quiescent state */
+        int iNumQuiesced; /* workers parked at a batch boundary; protected by mutWtp */
         /* end sync variables */
         /* user objects */
         void *pUsr; /* pointer to user object (in this case, the queue the wtp belongs to) */
@@ -67,7 +70,7 @@ struct wtp_s {
         rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
         rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int *); /* obtains max dequeue count from queue config */
         rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
-        rsRetVal (*pfRateLimiter)(void *pUsr);
+        rsRetVal (*pfRateLimiter)(void *pUsr, wti_t *pWti);
         rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
         rsRetVal (*pfIdleTimeout)(void *pUsr);
         sbool bAllowFirstWorkerToTimeout;
@@ -91,6 +94,13 @@ rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
+/* The request and resume calls serialize with workers through pmutUsr. */
+rsRetVal wtpRequestQuiesce(wtp_t *pThis);
+/* ptTimeout is an absolute CLOCK_REALTIME deadline, matching the default
+ * pthread condition-variable clock. */
+rsRetVal wtpWaitQuiesced(wtp_t *pThis, const struct timespec *ptTimeout);
+rsRetVal wtpResume(wtp_t *pThis);
+void wtpWorkerQuiesce(wtp_t *pThis, pthread_cond_t *pcondBusy);
 /** Wake every existing worker without creating a stopped worker.
  *
  * The caller must hold the pool's pmutUsr mutex so the queue predicate and
@@ -104,7 +114,7 @@ rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEObjClassExit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal (*pVal)(void *, int));
-PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *));
+PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *, wti_t *));
 PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal (*pVal)(void *, int *));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal (*pVal)(void *, void *));
 PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *));

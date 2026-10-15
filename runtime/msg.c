@@ -1126,7 +1126,7 @@ static const char *jsonToString(struct json_object *const json) {
      * - json->_pb is reset/overwritten on every serialization or mutation.
      * - The returned pointer becomes invalid immediately after that.
      */
-    return json_object_to_json_string_ext(json, glblJsonFormatOpt);
+    return json_object_to_json_string_ext(json, glblGetJsonFormatOpt());
 }
 
 /* This method serializes a message object. That means the whole
@@ -1465,42 +1465,7 @@ finalize_it:
 }
 
 
-/* Parse and set the "programname" for a given MSG object. Programname
- * is a BSD concept, it is the tag without any instance-specific information.
- * Precisely, the programname is terminated by either (whichever occurs first):
- * - end of tag
- * - nonprintable character
- * - ':'
- * - '['
- * - '/'
- * The above definition has been taken from the FreeBSD syslogd sources.
- *
- * The program name is not parsed by default, because it is infrequently-used.
- * IMPORTANT: A locked message object must be provided, else a crash will occur.
- * rgerhards, 2005-10-19
- */
-static rsRetVal acquireProgramName(smsg_t *const pM) {
-    int i;
-    uchar *pszTag, *pszProgName;
-    DEFiRet;
-
-    assert(pM != NULL);
-    pszTag = (uchar *)((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
-    for (i = 0; (i < pM->iLenTAG) && isprint((int)pszTag[i]) && (pszTag[i] != '\0') && (pszTag[i] != ':') &&
-                (pszTag[i] != '[') && (runConf->globals.parser.bPermitSlashInProgramname || (pszTag[i] != '/'));
-         ++i); /* just search end of PROGNAME */
-    if (i < CONF_PROGNAME_BUFSIZE) {
-        pszProgName = pM->PROGNAME.szBuf;
-    } else {
-        CHKmalloc(pM->PROGNAME.ptr = malloc(i + 1));
-        pszProgName = pM->PROGNAME.ptr;
-    }
-    memcpy((char *)pszProgName, (char *)pszTag, i);
-    pszProgName[i] = '\0';
-    pM->iLenPROGNAME = i;
-finalize_it:
-    RETiRet;
-}
+#include "msg_programname_helper.h"
 
 
 /* Access methods - dumb & easy, not a comment for each ;)
@@ -5527,6 +5492,9 @@ rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen) {
     propid_t id;
     int offs;
     DEFiRet;
+    pProp->id = PROP_INVALID;
+    pProp->name = NULL;
+    pProp->nameLen = 0;
     if (propNameToID(name, &id) != RS_RET_OK) {
         parser_errmsg("invalid property '%s'", name);
         /* now try to find some common error causes */
@@ -5626,7 +5594,7 @@ rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen) {
         /* in these cases, we need the field name for later processing */
         /* normalize name: remove $ if present */
         offs = (name[0] == '$') ? 1 : 0;
-        pProp->name = ustrdup(name + offs);
+        CHKmalloc(pProp->name = ustrdup(name + offs));
         pProp->nameLen = nameLen - offs;
         /* we patch the root name, so that support functions do not need to
          * check for different root chars. */

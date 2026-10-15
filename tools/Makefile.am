@@ -8,6 +8,8 @@ sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
 	syslogd.c \
 	rsyslogd.c \
+	shadow_reload.c \
+	shadow_reload.h \
 	syslogd.h \
 	omshell.c \
 	omshell.h \

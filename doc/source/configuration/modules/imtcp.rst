@@ -162,6 +162,116 @@ Sender:
        queue.type="linkedList"
    )
 
+.. _imtcp-hup-listener-addition:
+
+Listeners during bounded HUP reload
+===================================
+
+With ``global(config.reloadOnHUP="on")``, the bounded reload path can add a
+plain-TCP ``imtcp`` listener while retaining existing listeners and their TCP
+sessions. This is not a full configuration reload: other changed configuration
+objects must also satisfy their reload contracts.
+
+An added listener must use the effective ``ptcp`` driver, mode ``0``, and a
+numeric port from 1 through 65535. It cannot use ``listenPortFileName``, a
+network namespace, permitted-peer settings, ``gnutlsPriorityString``, or a
+named rate-limit profile. Retained listeners must have unambiguous identities;
+an existing named port-0 listener can be retained, but cannot be newly added.
+Uniquely identified plain-TCP listeners can also be removed. This includes
+existing named port-0 listeners; anonymous dynamic listeners cannot be matched
+safely and remain restart-required. Removal closes the listening sockets at
+commit, but established sessions keep their server generation and continue
+delivering messages until they disconnect. The runtime is reclaimed after its
+worker drains. There is no forced drain timeout.
+
+A replacement at a different endpoint is prepared as an addition plus removal.
+The added endpoint must satisfy the restrictions above. A bind conflict,
+including overlapping wildcard and specific addresses, rejects preparation
+without closing the old listener. Incompatible changes requiring a new server
+on the same occupied endpoint remain restart-required; supported profile
+updates use the existing server instead.
+
+While removed sessions are draining, reload status reports
+``retirement_pending=1``. Further reload requests cannot activate until that
+retirement completes; the main control loop retries reclamation automatically.
+Close long-lived clients if another reload is needed. Shutdown still joins and
+destroys the remaining input runtimes safely.
+
+The reload prepares and listens on private sockets before starting their gated
+backends. A TCP handshake can therefore complete and data can enter the kernel
+backlog before commit, but the new input does not accept sessions or dispatch
+messages until commit. Preparation failure closes the private sockets and
+leaves the active generation, existing sessions and old accepts unchanged.
+Clients of an uncommitted listener must tolerate a connection being dropped if
+the candidate is rejected.
+
+``config.reloadOnHUP="validate"`` only reports the candidate's classification;
+it does not bind a socket or start an input worker. Unsupported changes report
+``restart_required``. Correct the candidate configuration or perform a full
+restart rather than assuming that an unsupported change was applied.
+
+Existing-listener parameter updates
+-----------------------------------
+
+The classifier compares effective values, including inherited module defaults.
+The following summarizes the current contracts, not every startup parameter:
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Contract
+     - Parameters and limits
+   * - Live at the fence
+     - ``ruleset``, ``flowControl``, ``defaultTZ``,
+       ``starvationProtection.maxReads``, ``notifyOnConnectionOpen``,
+       ``notifyOnConnectionClose``, and supported ``rateLimit.*`` changes.
+       ``allowedSender`` changes support numeric entries and textual hostname
+       wildcards; bare hostnames require unchanged
+       ``net.aclResolveHostname="off"``. Newly denied sessions close.
+   * - Live capacity resize
+     - ``maxSessions`` only with unchanged effective ``socketBacklog``;
+       shrinking must retain every occupied session slot. ``maxListeners``
+       must retain every opened socket. Preparation/fence checks can reject
+       a structurally eligible resize before publication.
+   * - New sessions only
+     - ``preserveCase``, ``keepAlive`` and ``keepAlive.*``,
+       ``framingFix.Cisco.ASA``, ``addtlFrameDelimiter``, ``maxFrameSize``,
+       ``disableLFDelimiter``, ``discardTruncatedMsg``,
+       ``supportOctetCountedFraming``, ``multiLine``, ``framing.delimiter.regex``,
+       ``compression.mode``, ``compression.driver``, and compression limits.
+       Established sessions keep their accept-time profile.
+   * - Restart required
+     - Incompatible same-endpoint transport/TLS or permitted-peer changes,
+       ``workerThreads``, input ``name``, backlog changes, and unclassified
+       listener-structure changes. Different endpoints follow the bounded
+       lifecycle restrictions above.
+
+Named rate-limit definition changes are limited to simple policies with ``name``,
+``interval``, ``burst``, and ``severity``. Changing or removing an active
+definition requires source evidence that its participating references belong
+only to ``imtcp``; cross-module/action sharing and broader per-source, file, or
+template contracts remain unsupported.
+
+Rejection diagnostics
+---------------------
+
+For an unsupported input change, classification reports the first failing
+``imtcp`` input, for example:
+
+.. code-block:: text
+
+   imtcp: reload requires restart for candidate input #2 name="added": unsupported addition
+
+The ordinal is one-based ``imtcp`` configuration order on the stated side,
+not a port number or an ordinal across all input modules. Unsupported removal
+identifies the ``active`` input. Names default to ``imtcp`` when omitted;
+quotes, backslashes, non-ASCII and control bytes are escaped, and names are
+truncated after 64 source bytes with ``...``. These messages identify an input,
+not every differing parameter. A module load-identity mismatch instead reports
+``imtcp: reload requires restart: module load identity changed``. This is not
+a general per-instance diagnostic contract for rulesets or other modules.
+
 Configuration Parameters
 ========================
 

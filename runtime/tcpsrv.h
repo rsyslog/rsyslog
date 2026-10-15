@@ -21,6 +21,8 @@
 #ifndef INCLUDED_TCPSRV_H
 #define INCLUDED_TCPSRV_H
 
+#include <time.h>
+
 #if defined(ENABLE_IMTCP_EPOLL) && defined(HAVE_SYS_EPOLL_H)
     #include <sys/epoll.h>
 #endif
@@ -66,6 +68,8 @@ struct tcpLstnParams_s {
     uchar *pszRatelimitName; /**< name of rate limit configuration */
     struct AllowedSenders *pAllowedSenderRoot; /**< source-address ACL list */
     sbool bUseLegacyAllowedSender; /**< if true, use protocol-global legacy ACLs */
+    sbool bDeferListen; /**< control-path prepare binds without accepting connections */
+    sbool bOwnAllowedSenderRoot; /**< listener owns and destroys its private ACL clone */
 };
 
 /* list of tcp listen ports */
@@ -93,7 +97,58 @@ struct tcpLstnPortList_s {
     sbool bHasStartRegex;
 #endif
     tcpLstnPortList_t *pNext; /**< next port or NULL */
+#ifdef FEATURE_REGEXP
+    /* Whether start_preg itself owns compiled state. bHasStartRegex describes
+     * the accept profile and may remain true after a reload transfers only a
+     * prevalidated pattern for session-local compilation. */
+    sbool bStartRegexCompiled;
+#endif
 };
+
+/* Fully validated control-path values applied while a reload fence is held.
+ * The operation is deliberately infallible: preparation owns validation and
+ * resolution, while commit only copies scalars and stable runtime pointers. */
+typedef struct tcpsrv_reload_profile_s {
+    int useFlowControl;
+    unsigned starvationMaxReads;
+    int applyRateLimitScalars;
+    unsigned ratelimitInterval;
+    unsigned ratelimitBurst;
+    int notifyOnConnectionClose;
+    int notifyOnConnectionOpen;
+    int preserveCase;
+    int keepAlive;
+    int keepAliveInterval;
+    int keepAliveProbes;
+    int keepAliveTime;
+    int framingFix;
+    int additionalFrameDelimiter;
+    int maxFrameSize;
+    int disableLFDelimiter;
+    int discardTruncatedMessage;
+    int supportOctetCountedFraming;
+    int compressionMode;
+    int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    int multiLine;
+    uchar *startRegex; /* prepared ownership transfers during commit */
+    uchar defaultTZ[8];
+    ruleset_t *ruleset;
+} tcpsrv_reload_profile_t;
+
+/* Listener table storage prepared off-path and transferred while the event
+ * loop and workers are parked at the reload fence. The table entries remain
+ * borrowed runtime objects; only the three pointer arrays are owned here. */
+typedef struct tcpsrv_listener_tables_s {
+    netstrm_t **streams;
+    tcpLstnPortList_t **ports;
+    tcpsrv_io_descr_t **descriptors;
+    int capacity;
+} tcpsrv_listener_tables_t;
+
+typedef rsRetVal (*tcpsrv_reload_session_policy_eval_t)(tcps_sess_t *session, void *context, int *allowed);
 
 
 typedef struct tcpsrvWrkrData_s {
@@ -113,6 +168,7 @@ typedef struct workQueue_s {
     unsigned numWrkr; /* how many workers to spawn */
     pthread_t *wrkr_tids; /* array of thread IDs */
     tcpsrvWrkrData_t *wrkr_data;
+    int stop; /* server-local worker shutdown, independent of global TERM */
 } workQueue_t;
 
 /**
@@ -123,7 +179,7 @@ struct tcpsrv_io_descr_s {
     int id; /* index into listener or session table, depending on ptrType */
     int sock; /* socket descriptor we need to "monitor" */
     unsigned ioDirection;
-    enum { NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS } ptrType;
+    enum { NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS, NSD_PTR_TYPE_FENCE, NSD_PTR_TYPE_CONTROL } ptrType;
     union {
         tcps_sess_t *pSess;
         netstrm_t **ppLstn; /**<  accept listener's netstream */
@@ -226,6 +282,28 @@ struct tcpsrv_s {
         /* work queue */
         workQueue_t workQueue;
         int currWrkrs;
+        /* Append-only control-path state. Existing instance-field offsets stay stable. */
+        int controlPipe[2]; /**< nonblocking self-pipe used to wake poll/epoll */
+        tcpsrv_io_descr_t controlDescr;
+        tcpsrv_io_descr_t *fenceItems; /**< stable FIFO sentinels, one per worker */
+        pthread_mutex_t fenceMut;
+        pthread_cond_t fenceCond;
+        uint64_t fenceGeneration;
+        unsigned fenceAcks;
+        unsigned fenceParked;
+        unsigned fenceOutstanding;
+        sbool fenceEventLoopParked;
+        pthread_t fenceOwner;
+        sbool fenceOwnerValid;
+        sbool fenceRequested;
+        sbool fenceActive;
+        sbool fenceRelease;
+        sbool fenceAcquired;
+        sbool fenceReleaseCommitted;
+        sbool fenceSyncInitialized;
+        sbool fenceReady;
+        sbool strictListenerInit; /**< candidate prepare requires every resolved socket */
+        sbool retireWhenDrained; /**< accept is disabled; stop after the last session closes */
 };
 
 
@@ -236,6 +314,10 @@ struct tcpsrv_workset_s {
     void *pUsr;
 };
 
+
+/* Private control-path callback invoked after backend/listener registration,
+ * before any accept or dispatch. Its context lives until RunPrepared returns. */
+typedef rsRetVal (*tcpsrv_activation_gate_t)(void *context);
 
 /* interfaces */
 BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
@@ -356,9 +438,41 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      */
     rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
                                     const char *const networkNamespace);
+    /* added v33 -- live-reload activation control-path fence */
+    rsRetVal (*RequestFence)(tcpsrv_t *pThis, uint64_t *token);
+    rsRetVal (*WaitFence)(tcpsrv_t *pThis, uint64_t token, const struct timespec *deadline);
+    rsRetVal (*ReleaseFence)(tcpsrv_t *pThis, uint64_t token);
+    /* added v34 -- update the accept profile while fenced */
+    rsRetVal (*SetSupportOctetCountedFraming)(tcpsrv_t *pThis, int enabled);
+    /* added v35 -- update the accept profile while fenced */
+    rsRetVal (*SetMultiLineForNewSessions)(tcpsrv_t *pThis, int enabled);
+    /* added v36 -- prepare and activate fixed listener sockets in two phases */
+    rsRetVal (*ConstructFinalizePrepared)(tcpsrv_t *pThis);
+    rsRetVal (*ActivatePreparedListeners)(tcpsrv_t *pThis);
+    /* added v37 -- infallibly stop accepts while the reload fence is held */
+    void (*DisableAcceptWhileFenced)(tcpsrv_t *pThis);
+    /* added v38 -- infallibly publish a validated live/accept profile */
+    void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
+    /* v39 extends the reload profile with a prevalidated session regex */
+    /* v40 adds fenced ACL evaluation and infallible policy publication. */
+    rsRetVal (*EvaluateSessionPolicyWhileFenced)(tcpsrv_t *server, tcpsrv_reload_session_policy_eval_t evaluate,
+                                                 void *context, unsigned char *allowed, size_t allowedCount);
+    /* v43 closes newly denied sessions synchronously while the fence is held. */
+    void (*ApplySessionPolicyLive)(tcpsrv_t *server, const unsigned char *allowed, size_t allowedCount);
+    void (*SwapAllowedSendersLive)(tcpsrv_t *server, struct AllowedSenders *preparedRoot, int useLegacy,
+                                   struct AllowedSenders **retiredRoot, int *retiredOwned);
+    /* v41 swaps a fully prepared listener-local rate limiter while fenced. */
+    void (*SwapRateLimiterLive)(tcpsrv_t *server, ratelimit_t *preparedLimiter, uchar *preparedName,
+                                ratelimit_t **retiredLimiter, uchar **retiredName);
+    /* v42 validates and transfers listener pointer-table capacity. */
+    rsRetVal (*ValidateListenerTableCapacity)(const tcpsrv_t *server, int capacity);
+    void (*SwapListenerTablesLive)(tcpsrv_t *server, tcpsrv_listener_tables_t *prepared,
+                                   tcpsrv_listener_tables_t *retired);
+    /* v44 proves prepared backend readiness, then gates dispatch until commit. */
+    rsRetVal (*RunPrepared)(tcpsrv_t *server, tcpsrv_activation_gate_t gate, void *context);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 32 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 44 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -371,6 +485,77 @@ ENDinterface(tcpsrv)
 /* prototypes */
 PROTOTYPEObjFull(tcpsrv);
 PROTOTYPEObjDebugPrint(tcpsrv);
+
+/*
+ * Request an exclusive event-loop/worker fence. The requesting thread owns
+ * the token and must also Wait and Release it. A successful Wait guarantees
+ * that the complete ready-I/O batch observed before the request and all work
+ * queued ahead of the fence have finished, and that both the event loop and
+ * every worker remain parked until Release.
+ *
+ * The Wait deadline is absolute CLOCK_REALTIME. A Wait error (including
+ * timeout or termination) aborts and resumes the
+ * fence automatically; the caller must not Release that token. While aborted
+ * sentinels drain, a new Request fails closed. The caller must pin the tcpsrv
+ * object and its Run lifetime through the final Wait/Release return. These are
+ * control-path operations; normal TCP message processing never calls them.
+ */
+rsRetVal tcpsrvRequestFence(tcpsrv_t *pThis, uint64_t *token);
+rsRetVal tcpsrvWaitFence(tcpsrv_t *pThis, uint64_t token, const struct timespec *deadline);
+rsRetVal tcpsrvReleaseFence(tcpsrv_t *pThis, uint64_t token);
+void tcpsrvActivateFence(tcpsrv_t *pThis);
+void tcpsrvParkAtFence(tcpsrv_t *pThis);
+void tcpsrvAbortFenceLocked(tcpsrv_t *pThis);
+int tcpsrvFenceTerminated(void);
+
+/* Live control-path mutations. The caller must hold a successfully acquired
+ * tcpsrv fence whenever the server is running. Snapshot-bearing settings also
+ * update listener/session copies before the fence is released. */
+void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
+void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
+void tcpsrvApplyRateLimitLive(tcpsrv_t *pThis, unsigned interval, unsigned burst);
+void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
+void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *pThis, int preserveCase);
+void tcpsrvApplyKeepAliveForNewSessions(tcpsrv_t *pThis, int enabled, int interval, int probes, int time);
+void tcpsrvApplyFramingForNewSessions(tcpsrv_t *pThis,
+                                      int spFramingFix,
+                                      int additionalDelimiter,
+                                      int maxFrameSize,
+                                      int disableLFDelimiter,
+                                      int discardTruncatedMessage);
+void tcpsrvApplyOctetCountedFramingForNewSessions(tcpsrv_t *pThis, int enabled);
+void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *pThis,
+                                          int mode,
+                                          int driver,
+                                          uint64_t maxExpansionRatio,
+                                          uint64_t maxDecompressedBytesPerReceive,
+                                          uint64_t maxTotalZstdWindowBytes);
+void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *pThis, int enabled);
+void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *pThis, uchar *preparedRegex);
+void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
+void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
+rsRetVal tcpsrvEvaluateSessionPolicyWhileFenced(tcpsrv_t *server,
+                                                tcpsrv_reload_session_policy_eval_t evaluate,
+                                                void *context,
+                                                unsigned char *allowed,
+                                                size_t allowedCount);
+/* Closes newly denied established sessions while the caller-owned fence is held. */
+void tcpsrvApplySessionPolicyLive(tcpsrv_t *server, const unsigned char *allowed, size_t allowedCount);
+void tcpsrvSwapAllowedSendersLive(tcpsrv_t *server,
+                                  struct AllowedSenders *preparedRoot,
+                                  int useLegacy,
+                                  struct AllowedSenders **retiredRoot,
+                                  int *retiredOwned);
+void tcpsrvSwapRateLimiterLive(tcpsrv_t *server,
+                               ratelimit_t *preparedLimiter,
+                               uchar *preparedName,
+                               ratelimit_t **retiredLimiter,
+                               uchar **retiredName);
+rsRetVal tcpsrvValidateListenerTableCapacity(const tcpsrv_t *server, int capacity);
+void tcpsrvSwapListenerTablesLive(tcpsrv_t *server,
+                                  tcpsrv_listener_tables_t *prepared,
+                                  tcpsrv_listener_tables_t *retired);
+
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

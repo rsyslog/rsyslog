@@ -31,12 +31,14 @@ librsyslog_la_SOURCES = \
 	rsconf.c \
 	rsconf.h \
 	parser.h \
+	parser_sanitize_helper.h \
 	parser.c \
 	strgen.h \
 	strgen.c \
 	msg.c \
 	msg.h \
 	msg_replace_helper.h \
+	msg_programname_helper.h \
 	linkedlist.c \
 	linkedlist.h \
 	objomsr.c \
@@ -57,6 +59,15 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
+	module-reload.c \
+	reload-candidate.c \
+	reload-candidate.h \
+	reload-normalized-graph.c \
+	reload-normalized-graph.h \
+	reload-ruleset-graph.c \
+	reload-ruleset-graph.h \
+	reload-report.c \
+	reload-report.h \
 	statsobj.c \
 	statsobj.h \
 	compat_queue.h \
@@ -73,10 +84,12 @@ librsyslog_la_SOURCES = \
 	var.h \
 	wtp.c \
 	wtp.h \
+	wtp-quiesce.c \
 	wti.c \
 	wti.h \
 	queue.c \
 	queue.h \
+	queue-barrier.c \
 	queue_da.c \
 	queue_da.h \
 	segdisk_codec.c \
@@ -326,6 +339,9 @@ pkglib_LTLIBRARIES += lmtcpsrv.la lmtcpclt.la
 lmtcpsrv_la_SOURCES = \
 	tcps_sess.c \
 	tcps_sess.h \
+	tcpsrv-fence.c \
+	tcpsrv-poll.h \
+	tcpsrv-prepared.h \
 	tcpsrv.c \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)

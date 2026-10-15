@@ -35,6 +35,7 @@
 #ifndef MODULES_H_INCLUDED
 #define MODULES_H_INCLUDED 1
 
+#include <time.h>
 #include "objomsr.h"
 #include "rainerscript.h"
 
@@ -91,6 +92,114 @@ struct dlhandle_s {
 
 /* should this module be kept linked? */
 typedef enum eModKeepType_ { eMOD_NOKEEP, eMOD_KEEP } eModKeepType_t;
+
+/*
+ * Reload capability declared by a module for a particular old/new
+ * configuration pair.  A module must never return a less restrictive class
+ * unless it can preserve the stated lifecycle guarantee.
+ *
+ * The enum deliberately describes a capability, not a request to reload. No
+ * current caller acts on it; a future configuration-diff manager may use it
+ * to decide whether a running process can apply a change.
+ */
+typedef enum eModReloadCapability_ {
+    eMOD_RELOAD_RESTART_REQUIRED = 0, /* the conservative zero/default */
+    eMOD_RELOAD_LIVE_SWAP = 1, /* switch existing users to the replacement */
+    eMOD_RELOAD_NEW_SESSIONS = 2, /* existing users retain the old configuration */
+    eMOD_RELOAD_DRAIN_REPLACE = 3, /* drain old users before using the replacement */
+    eMOD_RELOAD_REUSE = 4, /* effective configuration is unchanged */
+    /* Existing users receive live fields while accept-profile fields apply
+     * only to users created after the same atomic publication. */
+    eMOD_RELOAD_LIVE_AND_NEW_SESSIONS = 5
+} eModReloadCapability_t;
+
+/*
+ * Optional module reload lifecycle, version 1.  The configuration pointers
+ * are core-owned, opaque module configuration objects; they are const because
+ * classification and preparation must not mutate either configuration.
+ * pReloadState is module-owned
+ * state allocated by reloadPrepare and consumed by reloadAbort, or by
+ * reloadCommit followed by reloadRetire.
+ *
+ * reloadCommit must be infallible: it has no return value and may not leave
+ * the module in a state that requires rollback.  Any fallible work belongs in
+ * reloadPrepare, which returns an rsRetVal and leaves pReloadState NULL on
+ * failure.  reloadRetire reports failure so a future controller can retain
+ * state and retry retirement.  The hooks are intentionally optional so that
+ * modules built for the established module interface remain supported.
+ */
+typedef rsRetVal (*modReloadClassifyV1_t)(const void *pOldCnf,
+                                          const void *pNewCnf,
+                                          eModReloadCapability_t *pCapability);
+typedef rsRetVal (*modReloadPrepareV1_t)(const void *pOldCnf, const void *pNewCnf, void **pReloadState);
+typedef void (*modReloadCommitV1_t)(void *pReloadState);
+typedef void (*modReloadAbortV1_t)(void *pReloadState);
+typedef rsRetVal (*modReloadRetireV1_t)(void *pReloadState);
+typedef rsRetVal (*modReloadQuiesceV1_t)(void *pReloadState, const struct timespec *deadline);
+typedef rsRetVal (*modReloadResumeV1_t)(void *pReloadState);
+typedef enum eModReloadCapabilityFlags_ {
+    eMOD_RELOAD_CAP_VALIDATE_PRIVATE = 1U << 0,
+    eMOD_RELOAD_CAP_PREPARE = 1U << 1,
+    eMOD_RELOAD_CAP_REUSE = 1U << 2,
+    eMOD_RELOAD_CAP_COMMIT = 1U << 3,
+    eMOD_RELOAD_CAP_RETIRE = 1U << 4,
+    eMOD_RELOAD_CAP_QUIESCE = 1U << 5
+} eModReloadCapabilityFlags_t;
+typedef struct modReloadInterfaceV1_s {
+    unsigned version;
+    size_t structSize;
+    unsigned capabilityFlags;
+    modReloadClassifyV1_t classify;
+    modReloadPrepareV1_t prepare;
+    modReloadCommitV1_t commit;
+    modReloadAbortV1_t abort;
+    modReloadRetireV1_t retire;
+    /* Optional append-only input/runtime safepoint hooks. */
+    modReloadQuiesceV1_t quiesce;
+    modReloadResumeV1_t resume;
+} modReloadInterfaceV1_t;
+#define eMOD_RELOAD_INTERFACE_V1 1
+typedef rsRetVal (*modReloadGetInterfaceV1_t)(modReloadInterfaceV1_t *pInterface);
+
+/* Optional source-lowering companion for modules whose effective
+ * configuration cannot be reconstructed generically by the core. */
+struct rsReloadCandidate_s;
+typedef enum modReloadSourceBuildFlagsV1_e {
+    /* The controller proved that globals/base settings used by the module did
+     * not change. V1 lowerers may therefore consult activeBase. */
+    MOD_RELOAD_SOURCE_BASE_UNCHANGED = 1U << 0
+} modReloadSourceBuildFlagsV1_t;
+typedef struct modReloadSourceBuildContextV1_s {
+    unsigned version;
+    size_t structSize;
+    unsigned flags;
+    const struct rsReloadCandidate_s *sourceCatalog;
+    const rsconf_t *activeBase;
+} modReloadSourceBuildContextV1_t;
+#define MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1 1
+/* buildCandidate borrows the context and catalog and publishes output only on
+ * success. The controller owns that effective source snapshot and keeps the
+ * module referenced. It lowers both the published active source catalog and
+ * the candidate catalog for comparison, so consumed runtime module configs are
+ * never used as baselines. Classification and preparation only borrow these
+ * snapshots; preparation must deep-own anything retained. The controller
+ * destroys both snapshots after prepare and atomically publishes the candidate
+ * source catalog only if commit succeeds. */
+typedef rsRetVal (*modReloadSourceBuildV1_t)(const modReloadSourceBuildContextV1_t *context, void **pCandidateCnf);
+typedef void (*modReloadSourceDestructV1_t)(void **pCandidateCnf);
+typedef rsRetVal (*modReloadSourceClassifyV1_t)(const void *pOldCnf,
+                                                const void *pNewCnf,
+                                                eModReloadCapability_t *pCapability);
+typedef struct modReloadSourceInterfaceV1_s {
+    unsigned version;
+    size_t structSize;
+    modReloadSourceBuildV1_t buildCandidate;
+    modReloadSourceDestructV1_t destructCandidate;
+    /* Optional exact comparison of two independently lowered snapshots. */
+    modReloadSourceClassifyV1_t classifyCandidate;
+} modReloadSourceInterfaceV1_t;
+#define eMOD_RELOAD_SOURCE_INTERFACE_V1 1
+typedef rsRetVal (*modReloadSourceGetInterfaceV1_t)(modReloadSourceInterfaceV1_t *pInterface);
 
 struct modInfo_s {
     struct modInfo_s *pPrev; /* support for creating a double linked module list */
@@ -169,7 +278,43 @@ struct modInfo_s {
     /* we add some home-grown support to track our users (and detect who does not free us). */
     modUsr_t *pModUsrRoot;
 #endif
+    /* Optional reload lifecycle; unavailable hooks mean restart required. */
+    modReloadInterfaceV1_t reloadV1;
+    /* Optional private source lowerer used before reload classification. */
+    modReloadSourceInterfaceV1_t reloadSourceV1;
 };
+
+/*
+ * A future diff manager must use this predicate before accepting any
+ * non-restart capability.  It also makes partially implemented optional
+ * interfaces conservative.
+ */
+sbool modReloadHasLifecycleHooks(const modInfo_t *pMod);
+sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
+sbool modReloadHasValidSourceInterfaceV1(const modInfo_t *pMod);
+rsRetVal modReloadBuildSourceCandidateV1(const modInfo_t *pMod,
+                                         const modReloadSourceBuildContextV1_t *context,
+                                         void **pCandidateCnf);
+void modReloadDestructSourceCandidateV1(const modInfo_t *pMod, void **pCandidateCnf);
+rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *pMod,
+                                            const void *pOldCnf,
+                                            const void *pNewCnf,
+                                            eModReloadCapability_t *pCapability);
+
+/*
+ * Classify a module change without enabling reload.  Legacy modules and
+ * missing, failing, or invalid classifiers are deliberately classified as
+ * restart-required.  Callers that need the classifier's exact failure can
+ * invoke the validated pMod->reloadV1.classify callback directly after this
+ * conservative preflight.
+ */
+eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
+rsRetVal modReloadPrepare(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf, void **pReloadState);
+void modReloadCommit(const modInfo_t *pMod, void *pReloadState);
+void modReloadAbort(const modInfo_t *pMod, void *pReloadState);
+rsRetVal modReloadRetire(const modInfo_t *pMod, void *pReloadState);
+rsRetVal modReloadQuiesce(const modInfo_t *pMod, void *pReloadState, const struct timespec *deadline);
+rsRetVal modReloadResume(const modInfo_t *pMod, void *pReloadState);
 
 
 /* interfaces */

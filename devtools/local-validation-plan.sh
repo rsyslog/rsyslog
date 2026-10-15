@@ -301,7 +301,9 @@ run_shellcheck() {
 	fi
 	if command -v shellcheck >/dev/null 2>&1; then
 		while IFS= read -r file; do
-			shellcheck -S warning "$file"
+			if ! shellcheck -S warning "$file"; then
+				echo "warning: shellcheck reported advisory findings in $file" >&2
+			fi
 		done < "$tmp_shell"
 	else
 		echo "warning: shellcheck not installed; skipping shell lint" >&2
@@ -311,7 +313,9 @@ run_shellcheck() {
 			read -r first_line < "$file" || first_line=
 			case "$first_line" in
 			'#!/bin/sh' | '#!/usr/bin/sh' | '#!/usr/bin/env sh')
-				checkbashisms -p "$file"
+				if ! checkbashisms -p "$file"; then
+					echo "warning: checkbashisms reported advisory findings in $file" >&2
+				fi
 				;;
 			esac
 		done < "$tmp_shell"
@@ -392,9 +396,7 @@ run_test_antipattern_scan() {
 	found_tests=0
 	while IFS= read -r file; do
 		case "$file" in
-		tests/*/*.sh)
-			;;
-		tests/*.sh)
+		tests/*.sh | tests/*.c | tests/*.cc | tests/*.cpp | tests/*.h)
 			[ -f "$file" ] || continue
 			found_tests=1
 			;;
@@ -407,9 +409,7 @@ run_test_antipattern_scan() {
 		# This helper is advisory and exits successfully even with findings.
 		while IFS= read -r file; do
 			case "$file" in
-			tests/*/*.sh)
-				;;
-			tests/*.sh)
+			tests/*.sh | tests/*.c | tests/*.cc | tests/*.cpp | tests/*.h)
 				[ -f "$file" ] || continue
 				devtools/check-test-antipatterns.sh "$file"
 				;;

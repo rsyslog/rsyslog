@@ -38,6 +38,10 @@ collection, and process orchestration).
   - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
+- Prepared TCP backend coverage lives in `runtime_unit_tcpsrv_prepared_backend`:
+  real listener/control registration, gated traffic, commit/abort cleanup, and
+  OS-level setup failure. Run it in both epoll and `--disable-imtcp-epoll` builds;
+  poll coerces configured multi-worker inputs to its single-worker backend.
 
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in
