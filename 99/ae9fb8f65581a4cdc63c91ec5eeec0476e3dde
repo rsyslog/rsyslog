@@ -1,0 +1,96 @@
+tests/unit/tcpsrv_fence_test.c
+  s_f2c089be484e12::t_3d27ce2852859d 50-63,432-460,642
+runtime/tcpsrv-fence.c
+  s_f2c089be484e12::t_e6f372a37f3749 338-339
+  s_f2c089be484e12::t_2f416502a3847c 14,328-337
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_fd93b216273237 425-430
+  s_f2c089be484e12::t_ed1bd4a9eca04c 104
+  s_f2c089be484e12::t_fd5723de23fc91 432
+  s_f2c089be484e12::t_0c71f933b01121 498-504
+  s_f2c089be484e12::t_70e5828889aad9 107-131
+  s_f2c089be484e12::t_2f416502a3847c 505
+  s_f2c089be484e12::t_a076fc86aa727a 101-103,105-106,132-133
+tests/unit/module_reload_test.c
+  s_f2c089be484e12::t_51402b329050a2 78-84,263-264
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_62a8b0da44cc00 2758
+  s_f2c089be484e12::t_fe1df9744732d2 2374-2376,2378-2393
+  s_f2c089be484e12::t_2f416502a3847c 2377
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_128cb3fc461f98 6-8,48-50,77-115
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_2a1c93e3c0d66c 2011
+  s_f2c089be484e12::t_b4a6eb9432493b 1651-1675,1708
+  s_f2c089be484e12::t_40dccc2f3e652e 1914-1916
+  s_f2c089be484e12::t_4784a0c8b19ece 2131-2132
+  s_f2c089be484e12::t_0c71f933b01121 1750,1775,1813
+  s_f2c089be484e12::t_e435a243a87570 2128-2130,2133-2155
+  s_f2c089be484e12::t_57c2d9e9fc2bc3 1695-1696
+  s_f2c089be484e12::t_e2dcde8059f8e2 2035-2036
+  s_f2c089be484e12::t_72550e0905ed1d 2-6
+  s_f2c089be484e12::t_e6edfbe5e04900 1751-1774,1776-1812,1814-1838,1861-1865,1869,1875-1876,1884,1886-1891,1896-1913,1920,1925-1928,1984-1994,2024-2028
+  s_f2c089be484e12::t_6d84bf925b0bce 1839-1860,1866-1868,1870-1874
+  s_f2c089be484e12::t_9095b42495f7ae 1935-1936
+  s_f2c089be484e12::t_22c3138f7f5657 1995
+  s_f2c089be484e12::t_3db76bd3fcecda 52,121,124-126,139-147,151-152
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_a2f0bb0a4f2f68 39,48,52-59,349-351,376,379-381
+grammar/reload-ruleset-materializer.c
+  s_f2c089be484e12::t_86c0594544eb6e 375
+tests/Makefile.am
+  s_f2c089be484e12::t_f6d52e27924b15 1888-1889
+  s_f2c089be484e12::t_1d1866dae49163 999-1001
+  s_f2c089be484e12::t_c2817d6cb74986 1887
+tests/global-reloadonhup-imtcp-topology-rainerscript.sh
+  s_f2c089be484e12::t_50992d3d41ac1b 1-24,26-46
+  s_f2c089be484e12::t_0c71f933b01121 25
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_a2f0bb0a4f2f68 167-168
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_72550e0905ed1d 5
+  s_f2c089be484e12::t_28f4da4ee6cdc3 163,176,190
+tests/global-reloadonhup-imtcp-reorder-yaml.sh
+  s_f2c089be484e12::t_f33116609e7b3e 1-97
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_00e6fd3494c46e 128,144,161
+  s_f2c089be484e12::t_72550e0905ed1d 5,162
+tests/global-reloadonhup-imtcp-topology-validate-yaml.sh
+  s_f2c089be484e12::t_e461c7ab0a6129 1-5
+tools/shadow_reload.c
+  s_f2c089be484e12::t_86c0594544eb6e 217-218,698-699
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_44066c49ccdfa1 5-8,14-16,58-60,86-123
+tests/global-reloadonhup-imtcp-topology-validate-rainerscript.sh
+  s_f2c089be484e12::t_c8c563529261f5 1-5
+tests/global-reloadonhup-imtcp-reorder-rainerscript.sh
+  s_f2c089be484e12::t_5577269aa72838 1-82
+tests/global-reloadonhup-imtcp-topology-yaml.sh
+  s_f2c089be484e12::t_3e85c20e0aa335 1-57
+runtime/modules.h
+  s_f2c089be484e12::t_51402b329050a2 112-113
+  s_f2c089be484e12::t_1d1866dae49163 110-111
+runtime/module-reload.c
+  s_f2c089be484e12::t_51402b329050a2 67-68,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "99ae9fb8f65581a4cdc63c91ec5eeec0476e3dde",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}
