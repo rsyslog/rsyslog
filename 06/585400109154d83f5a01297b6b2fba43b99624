@@ -1,0 +1,22 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_8f4541cad1cb86 277-281
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_e9996714307362 877-917,923-924,927,1000,1003,1005,1012-1013,1021-1022,1025-1026,1028-1029,1031-1032,1034-1037
+  s_f2c089be484e12::t_c557cfec19db41 1040,1052
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "06585400109154d83f5a01297b6b2fba43b99624",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
