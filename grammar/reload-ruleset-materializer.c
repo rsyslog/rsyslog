@@ -381,7 +381,8 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
         return RS_RET_PARAM_ERROR;
     unsigned authorizations = baseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
     if (sourceCapability == eMOD_RELOAD_REUSE || sourceCapability == eMOD_RELOAD_LIVE_SWAP ||
-        sourceCapability == eMOD_RELOAD_NEW_SESSIONS || sourceCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS)
+        sourceCapability == eMOD_RELOAD_NEW_SESSIONS || sourceCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS ||
+        sourceCapability == eMOD_RELOAD_DRAIN_REPLACE)
         authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
     CHKiRet(rsReloadCandidateCheckAuthorizedReportV1(activeSourceCatalog, candidate, report, authorizations));
     for (size_t i = 0; i < report->entryCount; ++i) {

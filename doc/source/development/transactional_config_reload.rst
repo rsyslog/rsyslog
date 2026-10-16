@@ -445,7 +445,8 @@ queue barrier.  Repeating that source is then a true report-only no-op instead
 of rediscovering the same effective-equivalent change on every HUP.
 The imtcp comparator pairs retained listeners by unique endpoint identity
 independently of source order, and preparation resolves the same runtime
-listener. Ambiguous identities and changed endpoint sets require restart.
+listener. Ambiguous identities require restart. Changed endpoint sets use the
+bounded prepared plain TCP lifecycle described below.
 
 ``on`` applies a conservative scope gate to that report. Modifications to
 already existing rulesets and the explicitly supported existing-listener fields
@@ -586,3 +587,43 @@ The primary trade-off is temporary duplication of generation-owned resources
 and delayed reclamation while consumers drain.  That cost is accepted to keep
 reload coordination out of the steady-state ``smsg_t`` dispatch path and to
 preserve compatible TCP service continuity.
+
+Prepared plain TCP listener lifecycle
+-------------------------------------
+
+The bounded imtcp lifecycle supports adding numeric fixed-port plain TCP
+listeners, removing uniquely identified plain TCP listeners, and replacing an
+endpoint with a different numeric endpoint. Retained endpoints preserve their
+existing live and new-session profile behavior. Removal stops new accepts while
+established sessions keep their server and drain normally; retirement remains
+pending until those sessions close. Existing named dynamic listeners can be
+removed because removal performs no bind or port-file rewrite.
+
+Additions require a numeric address and fixed nonzero port, the ``ptcp`` driver
+in mode zero, no network namespace, no permitted-peer or TLS priority settings,
+and no named rate policy. TLS additions, dynamic/service ports, port files and
+incompatible same-endpoint replacements require a restart. An addition binds
+and listens privately before publication: kernel handshakes and backlog may
+exist during preparation, but its ready owner cannot accept or dispatch until
+commit. Any preparation failure cancels, stops and joins every private owner,
+closes its sockets and leaves the active listeners unchanged. Validate mode
+classifies these changes without opening sockets or starting owners.
+
+For example, changing only the numeric port in either configuration prepares a
+different endpoint and drains the previous endpoint after publication::
+
+    module(load="imtcp")
+    input(type="imtcp" address="127.0.0.1" port="15140" name="application")
+
+The equivalent YAML input uses the same lifecycle::
+
+    modules:
+      - load: imtcp
+    inputs:
+      - type: imtcp
+        address: "127.0.0.1"
+        port: "15140"
+        name: application
+
+Both examples assume ``global(config.reloadOnHUP="on")`` or its equivalent YAML global
+setting and otherwise unchanged supported configuration.

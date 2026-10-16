@@ -21,6 +21,8 @@
  * fenceMut protects stop requests and queue synchronization lifetime; nested
  * locking is fenceMut -> workQueue.mut. The caller pins the server through
  * RunPrepared completion and join, and releases its own gate on abort.
+ * Fenced accept retirement preserves session/listener metadata through drain;
+ * close wakes the owner so a fully drained backend can finish and be joined.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -717,6 +719,13 @@ static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
 }
 #endif
 
+static int ATTR_NONNULL() tcpsrvHasSessions(tcpsrv_t *const pThis) {
+    if (pThis->pSessions == NULL) return 0;
+    for (int i = 0; i < pThis->iSessMax; ++i)
+        if (TCPSessTblLoad(pThis, i) != NULL) return 1;
+    return 0;
+}
+
 
 /* De-Initialize TCP listener sockets.
  * This function deinitializes everything, including freeing the
@@ -732,17 +741,29 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
     if (pThis->pSessions != NULL) {
-#if !defined(ENABLE_IMTCP_EPOLL)
-        /* close all TCP connections! */
-        i = TCPSessGetNxtSess(pThis, -1);
-        while (i != -1) {
+        /* Workers have joined before object destruction. A removed listener
+         * may still have live sessions when global shutdown interrupts drain;
+         * neither closing the epoll fd nor freeing the slot table owns those
+         * objects. Release sessions before their listener-owned metadata. */
+        for (i = 0; i < pThis->iSessMax; ++i) {
             tcps_sess_t *pSess = TCPSessTblLoad(pThis, i);
+            if (pSess == NULL) continue;
+#if defined(ENABLE_IMTCP_EPOLL)
+            tcpsrv_io_descr_t *const descriptor = pSess->pIODescr;
+            pSess->pIODescr = NULL;
+#endif
             tcps_sess.Destruct(&pSess);
             TCPSessTblStore(pThis, i, NULL);
-            /* now get next... */
-            i = TCPSessGetNxtSess(pThis, i);
-        }
+#if defined(ENABLE_IMTCP_EPOLL)
+            /* The backend is stopped, so no readiness batch or worker can
+             * still reference this heap-owned session descriptor. Poll uses
+             * stack workset descriptors and must not free them here. */
+            if (descriptor != NULL) {
+                DESTROY_ATOMIC_HELPER_MUT(descriptor->mut_isInError);
+                free(descriptor);
+            }
 #endif
+        }
 
         /* we are done with the session table - so get rid of it...  */
         free(pThis->pSessions);
@@ -1077,6 +1098,11 @@ static rsRetVal closeSessWithMode(tcpsrv_t *const pThis,
     if (pSess->pIODescr == pioDescr) pSess->pIODescr = NULL;
     tcps_sess.Destruct(&pSess);
     TCPSessTblStore(pThis, sessionSlot, NULL);
+    if (pThis->retireWhenDrained && pThis->controlPipe[1] >= 0) {
+        const unsigned char wake = 1;
+        const ssize_t writeRet = write(pThis->controlPipe[1], &wake, sizeof(wake));
+        (void)writeRet;
+    }
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
     if (pioDescr != NULL) {
@@ -1959,6 +1985,7 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL(1) rsRetVal
     if ((iRet = tcpsrvBackendReady(pThis, gate, context)) != RS_RET_OK) return iRet;
 
     while (1) {
+        if (pThis->retireWhenDrained && !tcpsrvHasSessions(pThis)) break;
         pThis->evtdata.poll.currfds = pThis->iLstnCurr; /* listeners are "fixed" */
         /* do the sessions */
         iTCPSess = TCPSessGetNxtSess(pThis, -1);
@@ -2141,6 +2168,7 @@ static rsRetVal ATTR_NONNULL(1) RunEpoll(tcpsrv_t *const pThis, tcpsrv_activatio
     CHKiRet(tcpsrvBackendReady(pThis, gate, context));
 
     while (!tcpsrvShouldStop(pThis)) {
+        if (pThis->retireWhenDrained && !tcpsrvHasSessions(pThis)) break;
         numEntries = sizeof(workset) / sizeof(tcpsrv_io_descr_t *);
         localRet = epoll_Wait(pThis, -1, &numEntries, workset, &haveControl);
         if (tcpsrvShouldStop(pThis)) {
@@ -2404,6 +2432,23 @@ static rsRetVal ATTR_NONNULL() tcpsrvActivatePreparedListeners(tcpsrv_t *pThis) 
 
 finalize_it:
     RETiRet;
+}
+
+
+static void ATTR_NONNULL() tcpsrvDisableAcceptWhileFenced(tcpsrv_t *pThis) {
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pthread_mutex_lock(&pThis->fenceMut);
+    const int validOwner =
+        pThis->fenceAcquired && pThis->fenceOwnerValid && pthread_equal(pThis->fenceOwner, pthread_self());
+    assert(validOwner);
+    if (!validOwner) {
+        pthread_mutex_unlock(&pThis->fenceMut);
+        return;
+    }
+    for (int i = 0; i < pThis->iLstnCurr; ++i) netstrm.Destruct(pThis->ppLstn + i);
+    pThis->iLstnCurr = 0;
+    pThis->retireWhenDrained = 1;
+    pthread_mutex_unlock(&pThis->fenceMut);
 }
 
 
@@ -3143,6 +3188,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->ActivatePreparedListeners = tcpsrvActivatePreparedListeners;
     pIf->RunPrepared = RunPrepared;
     pIf->RequestStop = tcpsrvRequestStop;
+    pIf->DisableAcceptWhileFenced = tcpsrvDisableAcceptWhileFenced;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

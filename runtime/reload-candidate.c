@@ -1626,13 +1626,24 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
             if (ret != RS_RET_OK) return ret;
             continue;
         }
-        if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
-        if (entry->objectKind == RS_RELOAD_OBJ_RULESET) continue;
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET) {
+            if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
+            continue;
+        }
+        /* Only a classified imtcp input may change topology. Module lifecycle
+         * remains fixed; removals resolve identity against the active catalog. */
+        if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED &&
+            !(entry->objectKind == RS_RELOAD_OBJ_INPUT &&
+              (entry->diffKind == RS_RELOAD_DIFF_ADDED || entry->diffKind == RS_RELOAD_DIFF_REMOVED)))
+            return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {
             if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
             int found;
             if (entry->identity == NULL) return RS_RET_PARAM_ERROR;
-            const rsRetVal ret = candidateHasImtcpIdentity(candidate, entry->objectKind, entry->identity, &found);
+            const rsReloadCandidate_t *const catalog =
+                entry->diffKind == RS_RELOAD_DIFF_REMOVED ? activeSourceCatalog : candidate;
+            if (catalog == NULL) return RS_RET_NOT_IMPLEMENTED;
+            const rsRetVal ret = candidateHasImtcpIdentity(catalog, entry->objectKind, entry->identity, &found);
             if (ret != RS_RET_OK) return ret;
             if (found) continue;
         }

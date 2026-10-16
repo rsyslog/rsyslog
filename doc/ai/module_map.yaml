@@ -174,6 +174,15 @@ tools_shadow_reload:
     - Observer-only retirement snapshots and last published candidate status are copied under statusMut; blocked HUP accounting never replaces a published activation result.
     - Final shutdown alone bypasses the retry deadline once after input joins; runtime-generation guards prevent stale endpoint dereferences.
 
+imtcp_listener_lifecycle:
+  paths: ["plugins/imtcp/imtcp.c", "plugins/imtcp/imtcp-lifecycle.h", "plugins/imtcp/tcpsrv-prepared.h"]
+  requires_serialization: true
+  notes:
+    - endpointLifecycle serializes initial owner publication, reload registry borrows and shutdown traversal.
+    - Private owners prepare real backends and complete worker startup before acknowledging readiness; commit alone authorizes dispatch.
+    - Abort cancels gates, requests server-local stop and joins every private owner before destruction.
+    - Runtime listener parameters are independently cloned; removals close accepts while sessions retain the old server until drain.
+
 imtcp_named_policy_owners:
   paths: ["plugins/imtcp/imtcp.c", "plugins/imtcp/imtcp-policy-owner.h"]
   requires_serialization: true
@@ -193,7 +202,7 @@ runtime_tcpsrv:
   requires_serialization: false
   notes:
     - imtcp sessions own independent decompressor state.
-    - Dormant prepared-backend API gates user-space dispatch after backend registration and complete worker initialization; listener activation may already permit kernel handshakes and backlog.
+    - Prepared-backend API gates user-space dispatch after backend registration and complete worker initialization; listener activation may already permit kernel handshakes and backlog.
     - Prepared callers pin servers through run completion and join and release their own gates on abort; cooperative stop protects queue synchronization lifetime under fenceMut before workQueue.mut.
     - Live fences lock fenceMut before workQueue.mut; ready descriptor handoffs use only workQueue.mut and remain FIFO before active fence markers. Abort clears priority before waking participants so pending markers can drain.
     - Reload profiles publish copied live and accept-time values only while the event-loop and worker fence is held.
