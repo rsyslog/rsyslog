@@ -394,7 +394,55 @@ static rsRetVal observeObject(const struct cnfobj *const object, const size_t pa
     return parseOrdinal == observed->failAt ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
 }
 
+/* Additions need explicit complete-row authorization; the flag cannot relax
+ * attributes, action lifecycle, partial rows or metadata modifications. */
+static int testRulesetAdditionAuthorization(void) {
+    rsReloadCandidate_t *added = calloc(1, sizeof(*added));
+    char identity[] = "ruleset:new";
+    char actionIdentity[] = "action:new";
+    rsReloadReportEntryV1_t entries[3] = {
+        {.objectKind = RS_RELOAD_OBJ_RULESET, .diffKind = RS_RELOAD_DIFF_ADDED, .identity = identity},
+        {.objectKind = RS_RELOAD_OBJ_RULESET_METADATA, .diffKind = RS_RELOAD_DIFF_ADDED, .identity = identity},
+        {.objectKind = RS_RELOAD_OBJ_ACTION, .diffKind = RS_RELOAD_DIFF_ADDED, .identity = actionIdentity}};
+    rsReloadReportV1_t report = {.version = RS_RELOAD_REPORT_V1,
+                                 .structSize = sizeof(report),
+                                 .entryStride = sizeof(entries[0]),
+                                 .entryCount = 2,
+                                 .entries = entries};
+    CHECK(added != NULL);
+    addObject(added, object(CNFOBJ_RULESET, parameter("name", "NeW"), NULL));
+    CHECK(!constructionFailed);
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, 0) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) ==
+          RS_RET_OK);
+    report.entryCount = 1;
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) ==
+          RS_RET_NOT_IMPLEMENTED);
+    report.entryCount = 2;
+    entries[1].diffKind = RS_RELOAD_DIFF_MODIFIED;
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) ==
+          RS_RET_NOT_IMPLEMENTED);
+    entries[1].diffKind = RS_RELOAD_DIFF_ADDED;
+    added->head->object->nvlst->next = parameter("queue.type", "LinkedList");
+    CHECK(added->head->object->nvlst->next != NULL);
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) ==
+          RS_RET_NOT_IMPLEMENTED);
+    nvlstDestruct(added->head->object->nvlst->next);
+    added->head->object->nvlst->next = NULL;
+    report.entryCount = 3;
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) ==
+          RS_RET_NOT_IMPLEMENTED);
+    report.entryCount = 2;
+    addObject(added, object(CNFOBJ_RULESET, parameter("name", "NEW"), NULL));
+    CHECK(!constructionFailed);
+    CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, added, &report, RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) ==
+          RS_RET_NOT_IMPLEMENTED);
+    rsReloadCandidateDestruct(&added);
+    return 0;
+}
+
 int main(void) {
+    CHECK(testRulesetAdditionAuthorization() == 0);
     rsReloadCandidate_t *candidate = calloc(1, sizeof(*candidate));
     rsReloadNormalizedGraphBuilderV1_t *builder = NULL;
     rsReloadNormalizedGraphV1_t graph;

@@ -93,3 +93,13 @@ atomic cutover, missing-target rejection, and timeout rollback/retry. The
 production materializer activation fixture in
 `tests/unit/reload_callgraph_fence_test.c` covers cancellation, complete queue
 enumeration, Direct-entry rejection, and atomic root/action publication.
+
+Ruleset additions use immutable name blocks built before activation in
+`ruleset-name-index.c`; after baseline publication lookup never searches the
+mutable owning list. Only serialized control code splices detached shell nodes.
+`tests/unit/ruleset_name_index_test.c` covers concurrent publication and balanced
+block ownership; its unsupported-atomic companion retains the legacy contract.
+`tests/unit/ruleset_addition_owner_test.c` fault-injects detached ownership.
+Real RainerScript/YAML forward-reference, repeated-addition and rejection
+coverage lives in `tests/global-reloadonhup-ruleset-additions-rainerscript.sh`
+and its YAML wrapper.

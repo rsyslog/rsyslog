@@ -4837,3 +4837,28 @@ TESTS += runtime_unit_reload_callgraph_fence
 runtime_unit_reload_callgraph_fence_SOURCES = unit/reload_callgraph_fence_test.c
 runtime_unit_reload_callgraph_fence_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_reload_callgraph_fence_LDADD = $(LIBESTR_LIBS)
+
+check_PROGRAMS += runtime_unit_ruleset_name_index runtime_unit_ruleset_name_index_unsupported
+TESTS += runtime_unit_ruleset_name_index runtime_unit_ruleset_name_index_unsupported
+runtime_unit_ruleset_name_index_SOURCES = unit/ruleset_name_index_test.c
+runtime_unit_ruleset_name_index_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_ruleset_name_index_LDADD = $(PTHREADS_LIBS)
+runtime_unit_ruleset_name_index_unsupported_SOURCES = unit/ruleset_name_index_unsupported_test.c
+runtime_unit_ruleset_name_index_unsupported_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_ruleset_name_index_unsupported_LDADD =
+
+EXTRA_DIST += global-reloadonhup-ruleset-additions-rainerscript.sh global-reloadonhup-ruleset-additions-yaml.sh
+if ENABLE_OMPROG
+if ENABLE_IMTCP_TESTS
+TESTS += global-reloadonhup-ruleset-additions-rainerscript.sh
+if HAVE_LIBYAML
+TESTS += global-reloadonhup-ruleset-additions-yaml.sh
+endif
+endif
+endif
+
+check_PROGRAMS += runtime_unit_ruleset_addition_owner
+TESTS += runtime_unit_ruleset_addition_owner
+runtime_unit_ruleset_addition_owner_SOURCES = unit/ruleset_addition_owner_test.c ../runtime/ruleset-addition.h
+runtime_unit_ruleset_addition_owner_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_ruleset_addition_owner_LDADD =

@@ -107,6 +107,8 @@ librsyslog_la_SOURCES = \
 	segdisk_store.c \
 	segdisk_store.h \
 	ruleset.c \
+	ruleset-name-index.c \
+	ruleset-name-index.h \
 	ruleset.h \
 	rswatch.c \
 	rswatch.h \
@@ -395,4 +397,4 @@ if ENABLE_KSI_LS12
    lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version $(GT_KSI_LS12_LIBS)
 endif
 
-EXTRA_DIST = ruleset-call.h
+EXTRA_DIST = ruleset-call.h ruleset-addition.h

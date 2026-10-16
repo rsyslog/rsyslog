@@ -1596,14 +1596,51 @@ finalize_it:
     RETiRet;
 }
 
+/* This authorization is only granted after private shell/root preparation.
+ * Require complete added program+metadata rows and a name-only declaration;
+ * metadata modification/removal remains outside every authorization flag. */
+static rsRetVal authorizeRulesetAddition(const rsReloadCandidate_t *candidate,
+                                         const rsReloadReportV1_t *report,
+                                         const rsReloadReportEntryV1_t *entry) {
+    size_t program = 0, metadata = 0, declarations = 0;
+    if (entry->identity == NULL || !strcmp(entry->identity, "ruleset:default")) return RS_RET_NOT_IMPLEMENTED;
+    for (size_t i = 0; i < report->entryCount; ++i) {
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *row = (const rsReloadReportEntryV1_t *)(const void *)address;
+        if (row->diffKind != RS_RELOAD_DIFF_ADDED || row->identity == NULL || strcmp(row->identity, entry->identity))
+            continue;
+        if (row->objectKind == RS_RELOAD_OBJ_RULESET) ++program;
+        if (row->objectKind == RS_RELOAD_OBJ_RULESET_METADATA) ++metadata;
+    }
+    if (program != 1 || metadata != 1) return RS_RET_NOT_IMPLEMENTED;
+    for (const rsReloadCandidateObject_t *source = candidate->head; source != NULL; source = source->next) {
+        const struct cnfobj *object = source->object;
+        char *identity = NULL;
+        rsRetVal ret;
+        if (object->objType != CNFOBJ_RULESET || object->nvlst == NULL) continue;
+        ret = makeIdentity(object, 0, &identity);
+        if (ret != RS_RET_OK) return ret;
+        lowerRulesetIdentity(identity);
+        const int matches = !strcmp(identity, entry->identity);
+        free(identity);
+        if (!matches) continue;
+        if (object->subobjs != NULL || object->nvlst->next != NULL ||
+            findNvlst(object->nvlst, "name") != object->nvlst || object->nvlst->val.datatype != 'S')
+            return RS_RET_NOT_IMPLEMENTED;
+        ++declarations;
+    }
+    return declarations == 1 ? RS_RET_OK : RS_RET_NOT_IMPLEMENTED;
+}
+
 rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
                                                   const rsReloadCandidate_t *const candidate,
                                                   const rsReloadReportV1_t *const report,
                                                   const unsigned authorizations) {
     size_t i;
-    if ((authorizations & ~(RS_RELOAD_AUTHORIZE_IMTCP_V1 | RS_RELOAD_AUTHORIZE_BASE_V1)) != 0 || candidate == NULL ||
-        report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report) ||
-        report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
+    if ((authorizations & ~(RS_RELOAD_AUTHORIZE_IMTCP_V1 | RS_RELOAD_AUTHORIZE_BASE_V1 |
+                            RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1)) != 0 ||
+        candidate == NULL || report == NULL || report->version != RS_RELOAD_REPORT_V1 ||
+        report->structSize < sizeof(*report) || report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0 ||
         (uintptr_t)(const void *)report->entries % _Alignof(rsReloadReportEntryV1_t) != 0 ||
         (report->entryCount != 0 && report->entries == NULL) || report->entryCount > SIZE_MAX / report->entryStride ||
@@ -1623,6 +1660,13 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
         if (entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
             if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
             const rsRetVal ret = authorizeRateChange(activeSourceCatalog, candidate, entry);
+            if (ret != RS_RET_OK) return ret;
+            continue;
+        }
+        if ((entry->objectKind == RS_RELOAD_OBJ_RULESET || entry->objectKind == RS_RELOAD_OBJ_RULESET_METADATA) &&
+            entry->diffKind == RS_RELOAD_DIFF_ADDED &&
+            (authorizations & RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1) != 0) {
+            const rsRetVal ret = authorizeRulesetAddition(candidate, report, entry);
             if (ret != RS_RET_OK) return ret;
             continue;
         }
