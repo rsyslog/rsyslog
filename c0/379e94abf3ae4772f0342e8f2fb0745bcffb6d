@@ -1,0 +1,36 @@
+configure.ac
+  s_f2c089be484e12::t_455b1c2cd653a8 2736-2738
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_455b1c2cd653a8 72,170-172,308-317,329-332,496-504,507
+tests/Makefile.am
+  s_f2c089be484e12::t_455b1c2cd653a8 2953-2983
+tests/helpers/tcpsrv_prepared_daemon_link.c
+  s_f2c089be484e12::t_7d54e9a6b55ff6 1-19
+runtime/nsd_ptcp.c
+  s_f2c089be484e12::t_455b1c2cd653a8 704,722-723,742,756-758,868,912,926
+  s_f2c089be484e12::t_8d314a556f5afb 927
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_058cfb3f0204a4 196-197
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_058cfb3f0204a4 18-24
+  s_f2c089be484e12::t_455b1c2cd653a8 157-195,262,828,1420,1423-1425,1442-1444,1460-1463,1473-1475,1483-1510,1515-1524,1569-1573,1600,1662-1667,1731,1741-1760,1785,1838-1839,1871-1872,1875-1876,1879-1889,1929,2044,2070-2072,2075,2092,2104-2111,2114,2127,2133-2135,2138,2154,2163,2166,2188-2197,2234,2240-2243,2291-2328,3061-3063
+  s_f2c089be484e12::t_d7720e28cb22ac 3064
+tests/unit/tcpsrv_prepared_backend_test.c
+  s_f2c089be484e12::t_d22778e7c22744 1-645
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0379e94abf3ae4772f0342e8f2fb0745bcffb6d",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
