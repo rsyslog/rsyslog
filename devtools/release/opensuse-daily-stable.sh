@@ -206,6 +206,24 @@ for entry in main_files:
     if count != 1:
         raise SystemExit(f"could not add supplemental main file: {path}")
 
+# Preserve the native feature set when new optional modules auto-enable.
+for entry in policy.get("disabled_optional_modules", []):
+    module = entry.get("module", "")
+    if not re.fullmatch(r"[a-z][a-z0-9]*", module) or not entry.get("reason", "").strip():
+        raise SystemExit("disabled optional module requires a valid module and reason")
+    if re.search(rf"--enable-{re.escape(module)}(?:[=\s]|$)", spec):
+        raise SystemExit(f"native spec explicitly enables optional module: {module}")
+    flag = f"--disable-{module}"
+    if flag not in spec:
+        spec, count = re.subn(
+            r"(?m)^(\s*--enable-omhttp\s*\\)$",
+            lambda match: match.group(1) + f"\n\t\t{flag} \\",
+            spec,
+            count=1,
+        )
+        if count != 1:
+            raise SystemExit(f"could not disable optional module: {module}")
+
 spec, macro_count = re.subn(
     r"(?m)^# drop this with next release when doc tarball version lines up\n"
     r"%define rsyslog_major .*\n%define rsyslog_patch .*\n",

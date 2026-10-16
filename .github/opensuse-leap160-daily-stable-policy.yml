@@ -17,6 +17,12 @@
       "reason": "Current upstream impstats push support uses Snappy compression."
     }
   ],
+  "disabled_optional_modules": [
+    {
+      "module": "omkinesis",
+      "reason": "Current upstream auto-enables omkinesis with libcurl, but the native Leap spec has no package for this optional module."
+    }
+  ],
   "supplemental_core_files": [
     "%{rsyslog_module_dir_nodeps}/mmleefparse.so"
   ],
