@@ -1,16 +1,171 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-16. Latest status: all fourteen intermediate branches through
-slice 11 were atomically published after refreshing onto upstream main
-332da35217b3ead9fdf95436d6b4790657f9015b. New draft PRs are slice 10/#7701 and
-slice 11/#7702. Slice 12a/#7703 is now published from the fork at
-c0379e94abf3ae4772f0342e8f2fb0745bcffb6d; all fifteen descriptions retain
-the complete merge order and
-prominently retain merge requirements. Ordinary introducing fixes are folded
-into slices 2, 4, 6, 8a and 10. Existing merge holds remain; further review is
-deferred at the user's request. No new review clearance or merge readiness is
-claimed. Focused validation is not final-tip broad validation.
+Recorded: 2026-10-16. Latest publication is nineteen draft stack PRs through
+slice 13a. Ordinary introducing fixes are folded into their owning slices and
+children are recascaded with backup refs and own-patch range-diffs preserved.
+The full nine-milestone implementation plan continues; security work remains
+explicitly deferred. No merge readiness or hardware performance acceptance is
+claimed. The broad runtime and corrected full analyzer gate are running on the
+assembled bounded tip; source-only call-graph work continues separately.
+
+## Published continuation checkpoint (2026-10-16)
+
+The introducing fixes for the analyzer allocation representation (slice 2),
+old-GCC initialization and portable fixture edits (slice 4), accepted-session
+publication/cleanup (slice 8b), and prepared-backend busy stop/session cleanup
+(slice 12a) are folded locally and cascaded through coherent slice 12b.
+All original heads are preserved by dated backup refs. The cascade's own-patch
+range-diffs are unchanged except the documented merge resolutions: slice 6
+retains both portable guard initialization and input pause accounting; slice
+12a deduplicates ADD-error propagation and the daemon-link helper already added
+by slice 8b; slice 12b retains both native test registrations and the atomic
+stop contract. Exact old/new heads: `.ordinary-validation/cascade-20261016.json`.
+These heads are now published. The older published-head table farther below is
+a historical checkpoint and must not be mistaken for this current state.
+
+### Current draft PR order and exact heads
+
+| Slice | PR | Published head |
+| --- | --- | --- |
+| 1 | #7683 | 8a239d6b92c95825cec06fe921e066f768ec86a3 |
+| 02 | #7684 | bb52fbe414586fa2ca46c63da8c0ce18cb07c146 |
+| 03 | #7685 | 58744ade952662666e96ab06c41fa45988d53fa9 |
+| 04 | #7686 | 53a26ffde293b084bf4120336e386990fccc9bcf |
+| 05 | #7687 | 6d77d8586a938c5098801d92dad3953cf0ffcc97 |
+| 06 | #7689 | 1aed1f767d5d890ab5a66a704a6b97782ee9e1ce |
+| 06a | #7691 | c8e6f6aa0717630617f47b84d07f850b41912d6c |
+| 07 | #7690 | 7c063c28a647368c668a16ff2182635b7d11715b |
+| 08a | #7692 | ada382461ce4f6531660a0b75bf5fc2d6940a5a2 |
+| 08b | #7693 | 920c5423065c1aadb68fd32cf5d32c1198102b9d |
+| 08c | #7694 | 48071c2e6685984b3653295ce091b6cef834c432 |
+| 09 | #7695 | f8e6b92d19d3bd5a584394c6a5650e2de13d731c |
+| 10 | #7701 | 9368b71ff74c26af621c4ff3ad05a80cac64c43a |
+| 11 | #7702 | 408f8455cfdc0dcf2ae274e8269cf58c7e943af6 |
+| 12a | #7703 | 0a4f9df050f5fa4ac76c4bb24f2c1063c7969151 |
+| 12b | #7704 | 3670dbfb367be2c6d02baa55cb5dd4c91ab11a54 |
+| helper-integration | #7705 | a1002ea6de4b574a4caf165678ea74ce960ec609 |
+| benchmark-integration | #7706 | 96411a585f2816ffb99e50cd6430fb6800faa31d |
+| 13a | #7707 | 38477ae248ade77c9e8617105d768e3a6c1acb3d |
+
+Slices 1–11 retain their existing upstream PR heads. Slice 12a and new children
+use fork PR heads. Matching upstream parent-base refs exist through the benchmark
+checkpoint so every child can target its exact immediate predecessor; those
+base refs must stay synchronized during future cascades. No PR was merged and
+no reserved thread was resolved. All four new PRs are assigned to rgerhards,
+use milestone v8.2610 and appropriate configuration/core/QA labels.
+
+The first fork publication attempt used a local unpublished 12b head as its
+expected lease and was atomically rejected without changing any ref. A fresh
+remote-ref check established the new refs were absent; the corrected exact-
+lease atomic publication then passed. This was a normal Git lease rejection,
+not a security or approval block. Intermediate publication used the previously
+expressly authorized SKIP_CONTAINER_VALIDATION=1 override.
+
+The full analyzer first reported one native-test initialization model warning;
+slice 11 now explicitly queries/checks its required object interface and fails
+setup cleanly if the postcondition is absent. The actual unit and targeted
+Clang scan pass; no production crash is inferred. This correction is folded at
+408f8455c and all children are recascaded unchanged. Current assembled tip is
+96411a585f2816ffb99e50cd6430fb6800faa31d; its full analyzer rerun and
+change-gated runtime check run in separate clean worktrees. Runtime uses the
+pinned image defaults and machine build/check60; all relevance gates retained
+service families because shared runtime/testbench changes are relevant. The
+image's default disabled service-test options remain unchanged. The analyzer
+uses the skill's documented service/module exclusions and build20. Earlier
+63f25c567 passed both compile-portability lanes, mock distcheck (1691 pass,
+10 skips, zero failures) and clean strict docs; only the native setup differs.
+
+Post-cascade actual poll compilation exposed epoll-only native callback/static
+interface definitions outside their backend guard. That test omission is folded
+into slice 8b, then cleanly recascaded. Combined epoll on 044cf2a6e passed 30/30;
+poll on 94fa76b75 passed 29 with one expected epoll-only skip (77), zero failures.
+Their only source-tree difference is the three-line backend guard, so the epoll
+compiled source is identical. Original failed poll output is preserved.
+
+The assembled helper and benchmark tip is
+63f25c567392dca3ac2072882e1e804210c0bd67, with helper parent
+b065cec46830e61ff88245b154e714ea00c379c2 and lifecycle parent
+94fa76b7582d6e7759deb5fe90e8369037f0c70c. Original helper/benchmark
+checkpoints are untouched. Independent review cleared the benchmark path
+contract correction; its software selftests pass. Whitespace, exact C format
+and Python style checks pass. Shellcheck finds 57 warnings in existing portions
+of changed shell files, zero in changed hunks; those warnings are recorded,
+not described as a whole-file pass. Static analyzer, mock distcheck and compile
+portability are running in separate clean validation worktrees. No hardware
+performance acceptance has passed.
+
+Milestone-4 representation-only slice 13a is locally committed at
+5a4e0c17509421ad4405e428ac74faf2aab2e61e on that assembled tip.
+Independent ordinary review, seven focused tests, explicit missing-target
+rejection and distribution inventory passed. A shared private dispatch unit
+checks root replacement/empty roots, async selection and error propagation;
+it does not exercise a complete live reload. Slice 13b is implementing existing-
+membership static/indirect call graphs with complete execution fences. Membership
+reclamation and later milestones remain open. Slice 13a is now published as draft #7707; slice 13b remains in progress.
+
+Slice 12b implements bounded numeric fixed plain-TCP listener additions,
+different-endpoint replacement and draining removal, including rollback and
+backend-owner health propagation. Its initial focused epoll/poll, compatibility,
+distribution and strict docs checks passed; combined post-cascade backend checks
+are in progress. This does not implement arbitrary listener/TLS reload.
+The helper and benchmark source checkpoints are being assembled onto this tip.
+The benchmark artifact-path correction passed independent ordinary review and
+software controls; no hardware performance campaign has passed.
+
+A new milestone-4 preparatory slice replaces static-call cached statement roots
+with stable ruleset references while retaining the existing conservative
+activation/membership restrictions. Complete membership needs explicit coverage
+for persisted-message name resolution, parser/module routing bindings, input
+batches, rate-limiter history and queue-held batches; session counts and apparent
+queue emptiness alone are insufficient. The remaining milestones remain open.
+
+The platform cybersecurity content classifier interrupted one ordinary runtime
+repair worker after corrected-code ASan tests passed. The saved work was
+independently reviewed and preserved. Its proposed original-code negative
+control did not run; no such result or security clearance is claimed. This UI
+restriction is separate from execution approval and the Git push validation hook.
+
+## Full implementation plan and continuation contract
+
+The maintainer requested continuation of the full nine-milestone plan recovered
+from the original HUP session (2026-10-07 and reaffirmed 2026-10-15), not only
+completion of the current PR stack. The target is transactional configuration
+reload without a daemon restart or unnecessary disconnection of established
+TCP sessions. Failed candidates leave the active configuration intact. A narrow,
+explicit restart-only list remains permissible; unsupported changes cannot be
+silently accepted.
+
+| Milestone | Required functional outcome | Current work |
+| --- | --- | --- |
+| 1 | Close the bounded foundation with real epoll/poll, cleanup, distribution and focused regression coverage | Stack through 12a is published; a new ordinary busy-stop correction is being folded into 12a before its child depends on it |
+| 2 | Add fixed plain-TCP listeners privately and publish only after commit; setup failures preserve active listeners/sessions | Historical umbrella implementation exists; reconstructing the coherent slice-12b candidate on current 12a |
+| 3 | Stop new accepts on removal, drain sessions, handle replacement conflicts and eventually reclaim owners | Included with 12b; original mixed WIP is preserved for comparison |
+| 4 | Add/remove rulesets and update complete supported call/dependency graphs with safe old-message/session ownership | Planned after the bounded foundation is assembled and its functional checks pass |
+| 5 | Reload templates, parsers and stateless processing definitions coherently with rulesets | Planned; immutable generation ownership and old-consumer lifetime required |
+| 6 | Prepare, publish and retire actions, outputs and their files/connections/workers with rollback | Planned; no blanket module capability acceptance |
+| 7 | Define supported queue drains/migrations and preserve delivery/persistent state across transitions | Planned; retain explicit rejection of unsupported changes |
+| 8 | Extend lifecycle contracts beyond plain-TCP, cover TLS and coherent compatible global transactions, classify every configuration category | Planned; restart-only categories must be explicit |
+| 9 | Prove mixed changes compose, repeated traffic reloads, rollback/shutdown, resource cleanup, performance and release validation/documentation | Final acceptance remains open; deferred review is not a pass |
+
+Finish the helper-contract and activation-benchmark source checkpoints after
+12b, then validate the combined bounded tip. Keep all intermediate PRs draft,
+individually coherent after their predecessor, and linked in strict merge order.
+Fold ordinary corrections into the slice introducing the behavior and rebase
+children without losing their own functional delta. Do not merge any PR or
+resolve human-reserved threads without the maintainer's instruction.
+
+Security work remains explicitly deferred. Continue implementation, ordinary
+correctness review and functional validation without starting security scans or
+switching to Daybreak. Final release/readiness claims retain the outstanding
+review and performance requirements.
+
+Fresh host preflight on 2026-10-16 reconfirmed that the task-local perf tool
+reports all five required hardware PMU events as `<not supported>` despite
+exit status zero: cycles, instructions, branches, branch misses and cache misses.
+No host settings were changed. A benchmark-host question is pending with the
+maintainer while implementation and deterministic local validation continue.
+Software counters or harness self-tests cannot satisfy this hardware evidence.
 
 ### 2026-10-16 ordinary integration checkpoint
 
