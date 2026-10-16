@@ -57,18 +57,63 @@ fallback-atomic native fixture passed, and TSAN native plus real lease checks
 passed2/2. Initial startup failures remain preserved. This does not prove
 backend emptiness or enable ruleset reclamation. A fresh assembled checkpoint
 at e95f42e2b7c36609443f16f44377120a7f6c1e9e is running sequential Ubuntu
-runtime60 and clean analyzer20 in rsyslog-reload-m4-default-checkpoint; results
-are pending. A separate actual CentOS7 all-check_PROGRAMS compile is pending.
+runtime60 and clean analyzer20 in rsyslog-reload-m4-default-checkpoint.
+The analyzer passed with zero reports. The broad runtime result was1857 total,
+1786 passed,70 skipped,one failure,zero errors: imptcp-bind-failure.sh terminated
+its best-effort case before healthy-listener readiness and recorded bind EINTR.
+An unchanged isolated rerun passed1/1 with both frontends enabled; the original
+cause remains unresolved, and this is not a clean broad-suite pass. Runtime and
+test-suite logs retain collected failure output; distclean removed individual
+per-test/fixture files before triage, and that artifact limitation is recorded.
 
-Slice15 input-reader fencing remains under implementation in a separate tree.
-Its append-only optional module interface tail and separate manager reader-owner
-array avoid ordinary module publication hooks. Real imtcp endpoint pins include
-draining servers; timeout, partial unwind, release retry and joined afterRun
-invalidation have focused native evidence. Final integration, sanitizers,
-ordinary review and reparenting are pending. This covers input readers only;
-it does not establish private asynchronous output/parser coverage. General
-removal, parser assignment consumers and subsequent milestones remain open.
-Security work remains explicitly deferred.
+The actual CentOS7 GCC4.8.5 all-check_PROGRAMS compile found concrete later
+portability failures: the08b address-getter pointer type, unavailable C11 atomic
+header in a06 test, nested aggregate fixture initializers and a13b cancellation
+callback return type. The reviewed aggregate repairs preserve all test oracles
+and atomic orders. All55 native programs compiled/linked and11 affected units
+passed on CentOS7. Exact clang-format18 normalization is whitespace only;
+formatted patch SHA256 is
+2bf82c1d7f4143150f43115a398774e07f0a46911d9a41f3b87babc6d0a0ee6a.
+The additive local portability commit is5d806ed88a820b3125a5d5b3baf971466e213f10;
+its two affected threaded fixtures also passed Clang21 O0 TSAN2/2 in the pinned
+Ubuntu image with CI ignorelist/suppressions and seccomp unconfined. Original
+failures, owner-hunk inventory and source/image evidence remain preserved.
+
+Automatic approval review rejected the batch owning-slice amendments and
+strict descendant rebases before execution, citing insufficient explicit
+permission for that history rewrite. No stack history changed. A specific user
+choice is pending. Prepared owner patches are in
+/tmp/reload-centos-owner-fold-20261017; publication remains provisional. Work
+continues additively on a new integration branch, preserving every stack ref.
+
+Slice15 is locally committed at863df16091cd514dcacbb57cc67862391107e313 on its
+preserved historical parent da5c4383; no rebase or push. Its optional append-only
+module tail and separate reader-owner array avoid normal module commit/retire.
+Real imtcp pins cover draining endpoints and joined teardown invalidation.
+Ordinary review identified and verified a correction: reader-only requests now
+reject all global/profile changes after classification and before preparation
+or publication. Real parsed regression controls preserve baseline, generation
+and parser settings, and retain ordinary global/body-only positive paths.
+Original focused14/14, subsequent ABI3/3 and corrected-scope5/5 passed. Original
+ASan/UBSan3/3 and TSAN3/3, followed by affected-manager refreshes1/1 each,
+passed; final ordinary review is clear for diff7f8d5ef4374c281eb9813c0c3f69a88c5fc8af172206fbb7f722af66a76d790f.
+
+Additive integration14921d8752f1b2b2ed4685372e29c7b3261fb509 combines current
+14d, the reviewed portability fixes and15. Every added/deleted15 feature line
+matches the reviewed source; only inherited context and additive test-block
+placement differ. Combined focused native/runtime tests passed15/15, no skips,
+including default programs, legacy routing controls, ordinary parser-LF reload,
+queue slot/lease checks and actual reader ownership. Formatting passed110 C/H
+files. This is targeted container evidence, not a new broad/analyzer pass.
+
+Separate16 imdiag reader coverage is under implementation: protect injection
+through limiter cleanup while copied status commands stay available, classify
+helper ownership conservatively, and prove actual worker retirement before gate
+teardown. Separate17 adds owned parser-assignment profiles without enabling
+activation or changing existing object visitors. Both remain in progress.
+Input reader coverage does not establish asynchronous output/private parser
+coverage. General removal, parser activation consumers and later milestones
+remain open. Security work remains explicitly deferred.
 
 ## Published continuation checkpoint (2026-10-16)
 
