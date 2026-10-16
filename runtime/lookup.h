@@ -127,7 +127,7 @@ rsRetVal lookupTableDefProcessCnf(struct cnfobj *o);
 lookup_ref_t *lookupFindTable(uchar *name);
 es_str_t *lookupKey(lookup_ref_t *pThis, lookup_key_t key);
 es_str_t *lookupKeyLocked(lookup_ref_t *pThis, lookup_key_t key);
-void lookupDestroyCnf(void);
+void lookupDestroyCnf(rsconf_t *cnf);
 void lookupClassExit(void);
 void lookupDoHUP(void);
 rsRetVal lookupReload(lookup_ref_t *pThis, const uchar *stub_value_if_reload_fails);

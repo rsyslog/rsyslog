@@ -45,6 +45,12 @@
 #define COMPAT_DEFAULTS_SECURE_BACKWARD_COMPATIBLE 1
 #define COMPAT_DEFAULTS_SECURE_WARN 2
 
+typedef enum reloadOnHUPMode_e {
+    RELOAD_ON_HUP_OFF,
+    RELOAD_ON_HUP_VALIDATE,
+    RELOAD_ON_HUP_ON,
+} reloadOnHUPMode_t;
+
 #ifndef DFLT_INT_MSGS_SEV_FILTER
     #define DFLT_INT_MSGS_SEV_FILTER 6 /* Warning level and more important */
 #endif
@@ -117,6 +123,7 @@ struct globals_s {
     int compatConfigFormatProperty; /* policy for classic property-based selector filters */
     int compatDefaultsSecure; /* policy for defaults that affect secure-by-default behavior */
     int systemdNotifyReadyDelay; /* delay sd_notify READY=1 until opt-in modules report ready */
+    reloadOnHUPMode_t reloadOnHUP; /* policy for transactional configuration reload on SIGHUP */
     int uidDropPriv; /* user-id to which priveleges should be dropped to */
     int gidDropPriv; /* group-id to which priveleges should be dropped to */
     int gidDropPrivKeepSupplemental; /* keep supplemental groups when dropping? */
@@ -300,6 +307,15 @@ struct rsconf_s {
         timezones_t timezones;
         qqueue_t *pMsgQueue; /* the main message queue */
         ratelimit_cfgs_t ratelimit_cfgs;
+        /*
+         * Load-scoped global() parser state. Global configuration objects are
+         * destroyed as they are processed, while their converted parameter
+         * values and the deferred main_queue() object must survive until the
+         * configuration load has completed. Keeping both here prevents a
+         * subsequent load from observing state owned by an earlier one.
+         */
+        struct cnfparamvals *globalParamVals;
+        struct cnfobj *mainqCnfObj;
 };
 
 
@@ -322,6 +338,7 @@ extern rsconf_t *loadConf; /* the config currently being loaded (no concurrent c
 
 
 int rsconfNeedDropPriv(rsconf_t *const cnf);
+reloadOnHUPMode_t rsconfGetReloadOnHUPMode(const rsconf_t *cnf);
 
 /* module readiness barrier (see rsconf.c for details).
  * Only meaningful when rsyslog is managed by systemd; stubs compile away
