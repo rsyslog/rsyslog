@@ -1006,6 +1006,7 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 
 TESTS_IMTCP = \
 	global-reloadonhup-ruleset-metadata-rainerscript.sh \
+	global-reloadonhup-imtcp-named-rainerscript.sh \
 	global-reloadonhup-imtcp-regex-rainerscript.sh \
 	global-reloadonhup-imtcp-maxsessions-rainerscript.sh \
 	global-reloadonhup-imtcp-maxsessions-explicit-rainerscript.sh \
@@ -1903,6 +1904,7 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
 	global-reloadonhup-imtcp-defaulttz-yaml.sh \
+	global-reloadonhup-imtcp-named-yaml.sh \
 	global-reloadonhup-imtcp-reorder-yaml.sh \
 	global-reloadonhup-imtcp-regex-yaml.sh \
 	global-reloadonhup-imtcp-maxsessions-yaml.sh \
@@ -2907,6 +2909,15 @@ TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri r
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
 	runtime_unit_tcpsrv_fence
+
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_imtcp_policy_owner
+TESTS += runtime_unit_imtcp_policy_owner
+endif
+runtime_unit_imtcp_policy_owner_SOURCES = unit/imtcp_policy_owner_test.c
+runtime_unit_imtcp_policy_owner_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imtcp_policy_owner_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+EXTRA_DIST += testsuites/imtcp-named-policy-driver.sh
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime

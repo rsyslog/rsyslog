@@ -728,14 +728,15 @@ void shadowReloadBeginRequest(void) {
                                                   pendingSourceModuleCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
-                    pendingCandidateResult =
-                        sourceReloadable ? rsReloadCandidateCheckRulesetImtcpReportV1(pendingCandidate, pendingReport)
-                                         : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                    pendingCandidateResult = sourceReloadable
+                                                 ? rsReloadCandidateCheckRulesetImtcpReportV1(
+                                                       activeSourceObjectCatalog, pendingCandidate, pendingReport)
+                                                 : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
-                            runConf, pendingCandidate, pendingReport,
+                            runConf, activeSourceObjectCatalog, pendingCandidate, pendingReport,
                             sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
                             &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;

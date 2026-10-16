@@ -43,7 +43,76 @@ struct rsReloadCandidate_s {
     size_t objectCount;
     int parseError;
     rsRetVal captureError;
+    struct nvlst *otherRateReferences; /* owned reference names from omitted source objects/scripts */
 };
+
+static int isImtcpInput(const struct cnfobj *object);
+
+static int rateReferenceParameter(const struct nvlst *parameter) {
+    if (parameter == NULL || parameter->name == NULL) return 0;
+    const size_t length = es_strlen(parameter->name);
+    static const char suffix[] = "ratelimit.name";
+    if (length < sizeof(suffix) - 1) return 0;
+    const unsigned char *name = es_getBufAddr(parameter->name) + length - (sizeof(suffix) - 1);
+    for (size_t i = 0; i < sizeof(suffix) - 1; ++i) {
+        const unsigned char folded = name[i] >= 'A' && name[i] <= 'Z' ? name[i] + ('a' - 'A') : name[i];
+        if (folded != (unsigned char)suffix[i]) return 0;
+    }
+    return 1;
+}
+
+/** @brief Retain only owned reference values, never the omitted object's syntax. */
+static rsRetVal captureOtherRateReferences(rsReloadCandidate_t *catalog, const struct nvlst *parameters) {
+    DEFiRet;
+    for (; parameters != NULL; parameters = parameters->next) {
+        struct nvlst *copy = NULL;
+        struct nvlst parameter;
+        if (!rateReferenceParameter(parameters)) continue;
+        parameter = *parameters;
+        parameter.next = NULL;
+        CHKiRet(nvlstCloneReloadSafe(&parameter, &copy));
+        copy->next = catalog->otherRateReferences;
+        catalog->otherRateReferences = copy;
+    }
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal captureStatementRateReferences(rsReloadCandidate_t *catalog, const struct cnfstmt *statement) {
+    DEFiRet;
+    for (; statement != NULL; statement = statement->next) {
+        switch (statement->nodetype) {
+            case S_ACT:
+                if (statement->d.act != NULL)
+                    CHKiRet(captureOtherRateReferences(catalog, statement->d.act->pSyntaxLst));
+                break;
+            case S_RELOAD_ACT:
+                CHKiRet(captureOtherRateReferences(catalog, statement->d.reload_action));
+                break;
+            case S_IF:
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_if.t_then));
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_if.t_else));
+                break;
+            case S_FOREACH:
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_foreach.body));
+                break;
+            case S_RELOAD_PRIFILT:
+            case S_PRIFILT:
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_prifilt.t_then));
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_prifilt.t_else));
+                break;
+            case S_RELOAD_PROPFILT:
+            case S_PROPFILT:
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_propfilt.t_then));
+                CHKiRet(captureStatementRateReferences(catalog, statement->d.s_propfilt.t_else));
+                break;
+            default:
+                break;
+        }
+    }
+finalize_it:
+    RETiRet;
+}
 
 static rsReloadCandidate_t *captureCandidate = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *sourceBuilder = NULL;
@@ -71,7 +140,10 @@ static rsRetVal appendObjectCatalogClone(rsReloadCandidate_t *const catalog, con
     DEFiRet;
 
     if (catalog == NULL || object == NULL) return RS_RET_PARAM_ERROR;
-    if (object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT) return RS_RET_OK;
+    if (!isImtcpInput(object)) CHKiRet(captureOtherRateReferences(catalog, object->nvlst));
+    CHKiRet(captureStatementRateReferences(catalog, object->script));
+    if (object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT && object->objType != CNFOBJ_RATELIMIT)
+        return RS_RET_OK;
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &parameters));
     copy = cnfobjNew(object->objType, parameters);
     if (copy == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -717,6 +789,11 @@ finalize_it:
     RETiRet;
 }
 
+rsRetVal rsReloadObjectSyntaxFingerprintV1(const struct cnfobj *const object, char **const ownedFingerprint) {
+    if (object == NULL || ownedFingerprint == NULL || *ownedFingerprint != NULL) return RS_RET_PARAM_ERROR;
+    return objectFingerprint(object, ownedFingerprint);
+}
+
 static rsRetVal defaultRulesetFingerprint(const rsReloadCandidate_t *candidate, char **fingerprint) {
     const rsReloadCandidateObject_t *entry;
     es_str_t *serialized = NULL;
@@ -1357,7 +1434,82 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const candidate,
+typedef struct rateUsage_s {
+    int declaration;
+    int imtcp;
+    int other;
+} rateUsage_t;
+
+static int rateListReferences(const struct nvlst *parameters, const char *name) {
+    for (; parameters != NULL; parameters = parameters->next) {
+        if (!rateReferenceParameter(parameters)) continue;
+        /* A nonliteral reference cannot establish exclusive ownership. */
+        if (parameters->val.datatype != 'S' || parameters->val.d.estr == NULL) return 1;
+        if (es_strlen(parameters->val.d.estr) == strlen(name) &&
+            !memcmp(es_getBufAddr(parameters->val.d.estr), name, strlen(name)))
+            return 1;
+    }
+    return 0;
+}
+
+/** @brief Prove source usage after reduction has discarded action and ruleset ASTs. */
+static rsRetVal rateUsage(const rsReloadCandidate_t *candidate, const char *name, rateUsage_t *usage) {
+    rsReloadCandidate_t references = {0};
+    DEFiRet;
+    memset(usage, 0, sizeof(*usage));
+    if (candidate == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    usage->other = rateListReferences(candidate->otherRateReferences, name);
+    for (rsReloadCandidateObject_t *entry = candidate->head; entry != NULL; entry = entry->next) {
+        const struct cnfobj *object = entry->object;
+        if (object->objType == CNFOBJ_RATELIMIT) {
+            size_t length = 0;
+            const char *declared = nvlstString(object->nvlst, "name", &length);
+            if (declared != NULL && length == strlen(name) && !memcmp(declared, name, length)) ++usage->declaration;
+        }
+        if (rateListReferences(object->nvlst, name)) {
+            if (isImtcpInput(object))
+                usage->imtcp = 1;
+            else
+                usage->other = 1;
+        }
+        CHKiRet(captureStatementRateReferences(&references, object->script));
+    }
+    usage->other |= rateListReferences(references.otherRateReferences, name);
+finalize_it:
+    nvlstDestruct(references.otherRateReferences);
+    RETiRet;
+}
+
+static rsRetVal authorizeRateChange(const rsReloadCandidate_t *active,
+                                    const rsReloadCandidate_t *candidate,
+                                    const rsReloadReportEntryV1_t *entry) {
+    rateUsage_t oldUsage = {0}, newUsage = {0};
+    DEFiRet;
+    char *end;
+    if (entry->identity == NULL || strncmp(entry->identity, "ratelimit:named:", 16)) return RS_RET_PARAM_ERROR;
+    errno = 0;
+    const unsigned long length = strtoul(entry->identity + 16, &end, 10);
+    if (errno != 0 || end == entry->identity + 16 || *end != ':' || strlen(end + 1) != length)
+        return RS_RET_PARAM_ERROR;
+    CHKiRet(rateUsage(active, end + 1, &oldUsage));
+    CHKiRet(rateUsage(candidate, end + 1, &newUsage));
+    if (oldUsage.other || newUsage.other) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (entry->diffKind == RS_RELOAD_DIFF_ADDED && oldUsage.declaration == 0 && newUsage.declaration == 1 &&
+        newUsage.imtcp)
+        FINALIZE;
+    if (entry->diffKind == RS_RELOAD_DIFF_MODIFIED && oldUsage.declaration == 1 && oldUsage.imtcp &&
+        newUsage.declaration == 1 && newUsage.imtcp)
+        FINALIZE;
+    if (entry->diffKind == RS_RELOAD_DIFF_REMOVED && oldUsage.declaration == 1 && oldUsage.imtcp &&
+        newUsage.declaration == 0 && !newUsage.imtcp)
+        FINALIZE;
+    iRet = RS_RET_NOT_IMPLEMENTED;
+finalize_it:
+    RETiRet;
+}
+
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
+                                                    const rsReloadCandidate_t *const candidate,
                                                     const rsReloadReportV1_t *const report) {
     size_t i;
     if (candidate == NULL || report == NULL || report->version != RS_RELOAD_REPORT_V1 ||
@@ -1371,6 +1523,11 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *c
         const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
         const rsReloadReportEntryV1_t *entry = (const rsReloadReportEntryV1_t *)(const void *)address;
         if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
+        if (entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
+            const rsRetVal ret = authorizeRateChange(activeSourceCatalog, candidate, entry);
+            if (ret != RS_RET_OK) return ret;
+            continue;
+        }
         if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_RULESET) continue;
         if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {
@@ -1416,11 +1573,9 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
     rsRetVal ret;
 
     if (sourceBuilder == NULL || sourceError || object == NULL) return;
-    if (object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT) {
-        if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
-            sourceError = 1;
-            return;
-        }
+    if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
+        sourceError = 1;
+        return;
     }
     ++sourceOrdinal;
     if (object->objType == CNFOBJ_RULESET && object->nvlst == NULL) {
@@ -1585,6 +1740,7 @@ void rsReloadCandidateDestruct(rsReloadCandidate_t **const ppCandidate) {
         objectDestruct(entry->object);
         free(entry);
     }
+    nvlstDestruct((*ppCandidate)->otherRateReferences);
     free(*ppCandidate);
     *ppCandidate = NULL;
 }
@@ -1677,6 +1833,7 @@ rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *const 
     for (entry = candidate->head; entry != NULL; entry = entry->next) {
         CHKiRet(appendObjectCatalogClone(catalog, entry->object));
     }
+    CHKiRet(captureOtherRateReferences(catalog, candidate->otherRateReferences));
     *ppCatalog = catalog;
     catalog = NULL;
 

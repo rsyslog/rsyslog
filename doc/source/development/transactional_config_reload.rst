@@ -80,6 +80,28 @@ A shrink cannot discard an opened socket or any occupied listener-table slot.
 Old array storage remains owned until resume and retirement succeed; referenced
 listener and session objects are not replaced. Endpoint topology is unchanged.
 
+Simple named rate policies support selection, addition, scalar replacement and
+removal for existing listeners. The supported definition fields are ``name``,
+``interval``, ``burst`` and ``severity``. Definition mutation requires exclusive
+imtcp use in both source generations; removal additionally requires every
+candidate consumer to switch away. Action/non-imtcp sharing, missing or malformed
+definitions and broader per-source, file or template policies remain fail-closed.
+Unchanged definitions preserve their shared policy configuration and owner,
+including while temporarily unused. Continuously bound listeners retain their
+independent local budgets; changed definitions give each consumer a fresh local
+limiter backed by one common configuration owner. Unbinding and later rebinding
+an unchanged declaration normally starts a fresh local budget.
+
+Registry lifetime is independent of source-snapshot lifetime. A module-owned
+metadata map deep-copies policy names and fingerprints and retains explicit
+owner handles, as do prepared, runtime and retired bindings. Startup handles
+borrow the active configuration's registry and never destroy it. New simple
+policies own private single-policy registries containing copied names/scalars
+only. Retirement destroys old limiter instances before releasing their owner
+handles. Source snapshots retain no runtime registry borrow, so unlike the
+historical snapshot-retention approach no extra controller snapshot pin or
+generation chain is needed to preserve unchanged policy configurations.
+
 Delimiter-regex changes are accept-profile updates: existing sessions own
 their compiled old pattern, and later accepts compile the new prevalidated
 pattern. Invalid patterns fail preparation without advancing the generation.

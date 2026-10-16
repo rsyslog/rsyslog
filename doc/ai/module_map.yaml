@@ -161,6 +161,15 @@ tools_shadow_reload:
     - Observer-only retirement snapshots and last published candidate status are copied under statusMut; blocked HUP accounting never replaces a published activation result.
     - Final shutdown alone bypasses the retry deadline once after input joins; runtime-generation guards prevent stale endpoint dereferences.
 
+imtcp_named_policy_owners:
+  paths: ["plugins/imtcp/imtcp.c", "plugins/imtcp/imtcp-policy-owner.h"]
+  requires_serialization: true
+  notes:
+    - Owner references and metadata maps are control-thread-only; no new message-path lock or reference operation is used.
+    - Commit transfers bindings while all affected listener fences are held; unchanged declarations retain one shared owner even while unused.
+    - Retirement destroys limiter instances before releasing registry owners; startup registries are borrowed and private simple-policy registries are owned.
+    - Effective source snapshots contain copied metadata only and never own or lend runtime policy registry lifetimes.
+
 runtime_tcpsrv:
   paths:
     - "runtime/tcpsrv.c"
