@@ -884,7 +884,6 @@ static rsRetVal makeImtcpEndpointIdentity(const struct cnfobj *object, char **id
     snprintf(cursor, totalLen + 1 - (size_t)(cursor - *identity), "p%u", portNumber);
     return RS_RET_OK;
 }
-
 static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, char **identity) {
     const char *value = NULL;
     const char *type = cnfobjType2str(object->objType);
@@ -1298,6 +1297,90 @@ rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *con
          * fails closed. */
         if (entry->objectKind != RS_RELOAD_OBJ_RULESET || entry->diffKind != RS_RELOAD_DIFF_MODIFIED)
             return RS_RET_NOT_IMPLEMENTED;
+    }
+    return RS_RET_OK;
+}
+
+static int isImtcpModuleLoad(const struct cnfobj *const object) {
+    const char *load;
+    const char *base;
+    size_t length;
+
+    if (object->objType != CNFOBJ_MODULE) return 0;
+    load = nvlstString(object->nvlst, "load", &length);
+    if (load == NULL) return 0;
+    base = load;
+    for (size_t i = 0; i < length; ++i) {
+        if (load[i] == '/') base = load + i + 1;
+    }
+    length -= (size_t)(base - load);
+    if (length > 3 && equalFoldedString(base + length - 3, 3, ".so", 3)) length -= 3;
+    return equalFoldedString(base, length, "imtcp", sizeof("imtcp") - 1);
+}
+
+static int isImtcpInput(const struct cnfobj *const object) {
+    size_t length;
+    const char *const type = object->objType == CNFOBJ_INPUT ? nvlstString(object->nvlst, "type", &length) : NULL;
+    return type != NULL && equalFoldedString(type, length, "imtcp", sizeof("imtcp") - 1);
+}
+
+static rsRetVal candidateHasImtcpIdentity(const rsReloadCandidate_t *const candidate,
+                                          const rsReloadObjectKind_t kind,
+                                          const char *const wantedIdentity,
+                                          int *const found) {
+    const rsReloadCandidateObject_t *candidateEntry;
+    char *identity = NULL;
+    size_t ordinal = 0;
+    DEFiRet;
+
+    *found = 0;
+    for (candidateEntry = candidate->head; candidateEntry != NULL; candidateEntry = candidateEntry->next) {
+        ++ordinal;
+        const struct cnfobj *const object = candidateEntry->object;
+        if ((kind == RS_RELOAD_OBJ_MODULE && !isImtcpModuleLoad(object)) ||
+            (kind == RS_RELOAD_OBJ_INPUT && !isImtcpInput(object)))
+            continue;
+        CHKiRet(makeIdentity(object,
+                             object->objType == CNFOBJ_INPUT ? inputTypeOrdinal(candidate, candidateEntry) : ordinal,
+                             &identity));
+        if (strcmp(identity, wantedIdentity) == 0) {
+            *found = 1;
+            free(identity);
+            return RS_RET_OK;
+        }
+        free(identity);
+        identity = NULL;
+    }
+
+finalize_it:
+    free(identity);
+    RETiRet;
+}
+
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const candidate,
+                                                    const rsReloadReportV1_t *const report) {
+    size_t i;
+    if (candidate == NULL || report == NULL || report->version != RS_RELOAD_REPORT_V1 ||
+        report->structSize < sizeof(*report) || report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
+        report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0 ||
+        (uintptr_t)(const void *)report->entries % _Alignof(rsReloadReportEntryV1_t) != 0 ||
+        (report->entryCount != 0 && report->entries == NULL) || report->entryCount > SIZE_MAX / report->entryStride ||
+        (uintptr_t)(const void *)report->entries > UINTPTR_MAX - report->entryCount * report->entryStride)
+        return RS_RET_PARAM_ERROR;
+    for (i = 0; i < report->entryCount; ++i) {
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *entry = (const rsReloadReportEntryV1_t *)(const void *)address;
+        if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
+        if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET) continue;
+        if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {
+            int found;
+            if (entry->identity == NULL) return RS_RET_PARAM_ERROR;
+            const rsRetVal ret = candidateHasImtcpIdentity(candidate, entry->objectKind, entry->identity, &found);
+            if (ret != RS_RET_OK) return ret;
+            if (found) continue;
+        }
+        return RS_RET_NOT_IMPLEMENTED;
     }
     return RS_RET_OK;
 }

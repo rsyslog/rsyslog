@@ -128,6 +128,8 @@ rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **bor
  * changes, or RS_RET_PARAM_ERROR for a NULL/incompatible report header.
  */
 rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *report);
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *candidate,
+                                                    const rsReloadReportV1_t *report);
 
 /**
  * @brief Begin single-threaded startup observation, discarding any prior capture.

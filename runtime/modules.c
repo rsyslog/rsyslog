@@ -595,9 +595,7 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
     } else {
         getReloadInterfaceV1 = (modReloadGetInterfaceV1_t)reloadEntryPoint;
         CHKiRet(getReloadInterfaceV1(&pNew->reloadV1));
-        if (pNew->reloadV1.version != eMOD_RELOAD_INTERFACE_V1 || pNew->reloadV1.structSize < sizeof(pNew->reloadV1)) {
-            ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
-        }
+        if (!modReloadHasValidInterfaceV1(pNew)) ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
     }
 
     /* A source lowerer is separate from the lifecycle interface: a module may

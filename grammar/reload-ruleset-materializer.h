@@ -25,7 +25,11 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 /** @brief Prepare supported existing named-ruleset body changes privately.
  * @param active Borrowed live configuration, kept alive until plan destruction.
  * @param candidate Borrowed immutable syntax; cloned roots become plan-owned.
- * @param report Borrowed source diff; every non-ruleset object must be unchanged.
+ * @param report Borrowed source diff; unsupported non-ruleset objects must be unchanged.
+ * @param sourceCapability Private effective classifier result authorizing imtcp
+ * module/input entries only for REUSE, LIVE_SWAP or NEW_SESSIONS. Other values
+ * retain the ruleset-only gate. REUSE may publish a new source baseline without
+ * changing runtime objects.
  * @param out Initially NULL output, owned by caller only on success.
  * @return RS_RET_OK or a fail-closed capability/allocation error. No live state
  * changes on failure. Takes no locks; caller serializes configuration mutation.
@@ -34,6 +38,7 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
+                                      eModReloadCapability_t sourceCapability,
                                       rsReloadRulesetPlanV1_t **out);
 /** @brief Free private plan resources and NULL the caller's pointer.
  * Before commit, borrowed actions are not destroyed. After commit, roots and

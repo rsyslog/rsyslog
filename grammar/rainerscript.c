@@ -5589,6 +5589,33 @@ struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
     return cnfstmt;
 }
 
+rsRetVal cnfstmtLowerReloadFilterV1(struct cnfstmt *const stmt, rsconf_t *const config) {
+    DEFiRet;
+
+    if (stmt == NULL || config == NULL || stmt->printable == NULL) return RS_RET_PARAM_ERROR;
+    switch (stmt->nodetype) {
+        case S_RELOAD_PRIFILT:
+            if (!glblPermitSyslogdConfigFilter(config, (const char *)stmt->printable))
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            stmt->nodetype = S_PRIFILT;
+            CHKiRet(DecodePRIFilter(stmt->printable, stmt->d.s_prifilt.pmask));
+            break;
+        case S_RELOAD_PROPFILT:
+            if (!glblPermitPropertyConfigFilter(config, (const char *)stmt->printable))
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            /* Select the owning executable destructor before decoding so a
+             * partial property/regex allocation remains abort-safe. */
+            stmt->nodetype = S_PROPFILT;
+            CHKiRet(DecodePropFilter(stmt->printable, stmt));
+            break;
+        default:
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
     struct cnfstmt *cnfstmt;
     char namebuf[256];
@@ -6400,6 +6427,7 @@ struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root) {
                 break;
             case S_PROPFILT:
                 stmt->d.s_propfilt.t_then = cnfstmtOptimize(stmt->d.s_propfilt.t_then);
+                stmt->d.s_propfilt.t_else = cnfstmtOptimize(stmt->d.s_propfilt.t_else);
                 break;
             case S_SET:
                 stmt->d.s_set.expr = cnfexprOptimize(stmt->d.s_set.expr);

@@ -60,7 +60,6 @@ librsyslog_la_SOURCES = \
 	module-reload.c \
 	reload-candidate.c \
 	reload-candidate.h \
-	reload-ruleset-materializer.h \
 	reload-normalized-graph.c \
 	reload-normalized-graph.h \
 	reload-ruleset-graph.c \
@@ -349,6 +348,8 @@ pkglib_LTLIBRARIES += lmtcpsrv.la lmtcpclt.la
 lmtcpsrv_la_SOURCES = \
 	tcps_sess.c \
 	tcps_sess.h \
+	tcpsrv-fence.c \
+	tcpsrv-poll.h \
 	tcpsrv.c \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)

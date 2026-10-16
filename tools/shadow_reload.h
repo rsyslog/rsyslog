@@ -82,4 +82,10 @@ void shadowReloadLegacyHooksCompleted(void);
  */
 void shadowReloadProcess(void);
 
+/* Main-thread-only retry driver. Failed resume retains state even when the
+ * candidate was rejected before publication; never start another candidate
+ * until the owned state can be safely aborted or retired. */
+int shadowReloadRetirementPending(void);
+void shadowReloadRetryRetirement(void);
+
 #endif /* INCLUDED_SHADOW_RELOAD_H */

@@ -63,6 +63,7 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "tcpsrv.h"
+#include "imtcp-reload-resume.h"
 #include "ruleset.h"
 #include "rainerscript.h"
 #include "parserif.h"
@@ -86,6 +87,7 @@ typedef struct tcpsrv_etry_s {
     tcpsrv_t *tcpsrv;
     char *endpoint_key; /**< Owned canonical socket identity; NULL for unkeyable endpoints. */
     char *config_name; /**< Owned inputname copy for diagnostics, never socket identity. */
+    size_t source_ordinal; /**< Stable startup order for unkeyable dynamic endpoints. */
     enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
@@ -99,6 +101,10 @@ static struct {
     tcpsrv_etry_t *head;
     int count;
 } endpoint_registry = {0};
+
+/* Main-thread lifecycle-owned: reload callbacks run before input shutdown;
+ * afterRun executes from thrdDestruct after joining the input/worker threads. */
+static uint64_t runtimeGeneration = 1;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
 
@@ -153,6 +159,7 @@ static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
     }
     if (configName != NULL) CHKmalloc(entry->config_name = strdup((const char *)configName));
     entry->tcpsrv = server;
+    entry->source_ordinal = (size_t)endpoint_registry.count;
     entry->state = IMTCP_ENDPOINT_ACTIVE;
     entry->next = endpoint_registry.head;
     endpoint_registry.head = entry;
@@ -1010,6 +1017,214 @@ finalize_it:
 }
 
 
+static rsRetVal applyInputEndpointParam(const char *const name,
+                                        const struct cnfparamvals *const value,
+                                        instanceConf_t *const inst,
+                                        int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "port")) {
+        CHKmalloc(inst->cnf_params->pszPort = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "networknamespace")) {
+        CHKmalloc(inst->pszNetworkNamespace = es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "address")) {
+        CHKmalloc(inst->cnf_params->pszAddr = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "name")) {
+        CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "defaulttz")) {
+        CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "ruleset")) {
+        CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "maxsessions")) {
+        inst->iTCPSessMax = (int)value->val.d.n;
+    } else if (!strcmp(name, "maxlisteners")) {
+        inst->iTCPLstnMax = (int)value->val.d.n;
+    } else if (!strcmp(name, "workerthreads")) {
+        inst->numWrkr = (int)value->val.d.n;
+    } else if (!strcmp(name, "starvationprotection.maxreads")) {
+        inst->starvationMaxReads = (unsigned)value->val.d.n;
+    } else if (!strcmp(name, "socketbacklog")) {
+        inst->iSynBacklog = (int)value->val.d.n;
+    } else if (!strcmp(name, "listenportfilename")) {
+        CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputStreamStringParam(const char *const name,
+                                            const struct cnfparamvals *const value,
+                                            instanceConf_t *const inst,
+                                            int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "streamdriver.authmode")) {
+        CHKmalloc(inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.permitexpiredcerts")) {
+        CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.cafile")) {
+        CHKmalloc(inst->pszStrmDrvrCAFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.crlfile")) {
+        CHKmalloc(inst->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.keyfile")) {
+        CHKmalloc(inst->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.certfile")) {
+        CHKmalloc(inst->pszStrmDrvrCertFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.name")) {
+        CHKmalloc(inst->pszStrmDrvrName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "gnutlsprioritystring")) {
+        CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "permittedpeer")) {
+        for (int j = 0; j < value->val.d.ar->nmemb; ++j) {
+            uchar *const peer = (uchar *)es_str2cstr(value->val.d.ar->arr[j], NULL);
+            CHKmalloc(peer);
+            const rsRetVal entryRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
+            free(peer);
+            CHKiRet(entryRet);
+        }
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputStreamScalarParam(const char *const name,
+                                            const struct cnfparamvals *const value,
+                                            instanceConf_t *const inst,
+                                            const sbool emitDiagnostics,
+                                            int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "streamdriver.mode")) {
+        inst->iStrmDrvrMode = (int)value->val.d.n;
+        inst->bStrmDrvrModeSet = 1;
+    } else if (!strcmp(name, "streamdriver.CheckExtendedKeyPurpose")) {
+        inst->iStrmDrvrExtendedCertCheck = (int)value->val.d.n;
+    } else if (!strcmp(name, "streamdriver.PrioritizeSAN")) {
+        inst->iStrmDrvrSANPreference = (int)value->val.d.n;
+    } else if (!strcmp(name, "streamdriver.TlsVerifyDepth")) {
+        if (value->val.d.n >= 2) {
+            inst->iStrmTlsVerifyDepth = (int)value->val.d.n;
+        } else if (emitDiagnostics) {
+            parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)value->val.d.n);
+        } else {
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    } else if (!strcmp(name, "streamdriver.TlsRevocationCheck")) {
+        inst->iStrmTlsRevocationCheck = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive")) {
+        inst->bKeepAlive = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive.probes")) {
+        inst->iKeepAliveProbes = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive.time")) {
+        inst->iKeepAliveTime = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive.interval")) {
+        inst->iKeepAliveIntvl = (int)value->val.d.n;
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputMessageParam(const char *const name,
+                                       const struct cnfparamvals *const value,
+                                       instanceConf_t *const inst,
+                                       const sbool emitDiagnostics,
+                                       int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "framingfix.cisco.asa")) {
+        inst->bSPFramingFix = (int)value->val.d.n;
+    } else if (!strcmp(name, "flowcontrol")) {
+        inst->bUseFlowControl = (int)value->val.d.n;
+    } else if (!strcmp(name, "disablelfdelimiter")) {
+        inst->bDisableLFDelim = (int)value->val.d.n;
+    } else if (!strcmp(name, "discardtruncatedmsg")) {
+        inst->discardTruncatedMsg = (int)value->val.d.n;
+    } else if (!strcmp(name, "notifyonconnectionclose")) {
+        inst->bEmitMsgOnClose = (int)value->val.d.n;
+    } else if (!strcmp(name, "notifyonconnectionopen")) {
+        inst->bEmitMsgOnOpen = (int)value->val.d.n;
+    } else if (!strcmp(name, "addtlframedelimiter")) {
+        inst->iAddtlFrameDelim = (int)value->val.d.n;
+    } else if (!strcmp(name, "maxframesize")) {
+        const int max = (int)value->val.d.n;
+        CHKiRet(validateMaxFrameSize(max, emitDiagnostics));
+        inst->maxFrameSize = max;
+    } else if (!strcmp(name, "supportoctetcountedframing")) {
+        inst->cnf_params->bSuppOctetFram = (int)value->val.d.n;
+    } else if (!strcmp(name, "preservecase")) {
+        inst->bPreserveCase = (int)value->val.d.n;
+    } else if (!strcmp(name, "multiline")) {
+        inst->cnf_params->bMultiLine = (int)value->val.d.n;
+    } else if (!strcmp(name, "framing.delimiter.regex")) {
+        CHKmalloc(inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputRateCompressionParam(const char *const name,
+                                               const struct cnfparamvals *const value,
+                                               instanceConf_t *const inst,
+                                               const sbool emitDiagnostics,
+                                               int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "allowedsender")) {
+        if (value->val.d.ar == NULL || value->val.d.ar->nmemb == 0) {
+            if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+        inst->bAllowedSendersSet = 1;
+        for (int j = 0; j < value->val.d.ar->nmemb; ++j) {
+            uchar *sender = (uchar *)es_str2cstr(value->val.d.ar->arr[j], NULL);
+            CHKmalloc(sender);
+            const rsRetVal entryRet =
+                net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
+            free(sender);
+            CHKiRet(entryRet);
+        }
+    } else if (!strcmp(name, "ratelimit.burst")) {
+        inst->ratelimitBurst = (int)value->val.d.n;
+    } else if (!strcmp(name, "ratelimit.interval")) {
+        inst->ratelimitInterval = (int)value->val.d.n;
+    } else if (!strcmp(name, "ratelimit.name")) {
+        CHKmalloc(inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "compression.mode")) {
+        CHKiRet(parseCompressionMode(value->val.d.estr, &inst->compressionMode, emitDiagnostics));
+    } else if (!strcmp(name, "compression.driver")) {
+        CHKiRet(parseCompressionDriver(value->val.d.estr, &inst->compressionDriver, emitDiagnostics));
+    } else if (!strcmp(name, "compression.maxexpansionratio")) {
+        inst->compressionMaxExpansionRatio = (uint64_t)value->val.d.n;
+    } else if (!strcmp(name, "compression.maxdecompressedbytesperreceive")) {
+        inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)value->val.d.n;
+    } else if (!strcmp(name, "compression.maxtotalzstdwindowbytes")) {
+        inst->compressionMaxTotalZstdWindowBytes = (uint64_t)value->val.d.n;
+        inst->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Apply the parsed input parameter block to an already initialized, owned
  * instance.  The caller controls whether that instance is detached or linked
  * into the normal load configuration. */
@@ -1023,144 +1238,18 @@ static rsRetVal applyInputParams(const modConfData_t *const moduleConfig,
     if (moduleConfig == NULL || inst == NULL || inst->cnf_params == NULL || pvals == NULL) return RS_RET_PARAM_ERROR;
 
     for (i = 0; i < inppblk.nParams; ++i) {
+        int handled;
         if (!pvals[i].bUsed) continue;
-        if (!strcmp(inppblk.descr[i].name, "port")) {
-            CHKmalloc(inst->cnf_params->pszPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "networknamespace")) {
-            CHKmalloc(inst->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "address")) {
-            CHKmalloc(inst->cnf_params->pszAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "defaulttz")) {
-            CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
-            inst->bSPFramingFix = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.mode")) {
-            inst->iStrmDrvrMode = (int)pvals[i].val.d.n;
-            inst->bStrmDrvrModeSet = 1;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
-            inst->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
-            inst->iStrmDrvrSANPreference = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
-            if (pvals[i].val.d.n >= 2) {
-                inst->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
-            } else {
-                if (emitDiagnostics)
-                    parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
-                else
-                    ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
-            inst->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.authmode")) {
-            CHKmalloc(inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.cafile")) {
-            CHKmalloc(inst->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.crlfile")) {
-            CHKmalloc(inst->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.keyfile")) {
-            CHKmalloc(inst->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.certfile")) {
-            CHKmalloc(inst->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
-            CHKmalloc(inst->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "starvationprotection.maxreads")) {
-            inst->starvationMaxReads = (unsigned)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
-            CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKmalloc(peer);
-                const rsRetVal peerRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
-                free(peer);
-                CHKiRet(peerRet);
-            }
-        } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
-            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
-                if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
-                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-            inst->bAllowedSendersSet = 1;
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKmalloc(sender);
-                const rsRetVal entryRet =
-                    net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
-                free(sender);
-                CHKiRet(entryRet);
-            }
-        } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
-            inst->bUseFlowControl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
-            inst->bDisableLFDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
-            inst->discardTruncatedMsg = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
-            inst->bEmitMsgOnClose = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "notifyonconnectionopen")) {
-            inst->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "addtlframedelimiter")) {
-            inst->iAddtlFrameDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "maxframesize")) {
-            const int max = (int)pvals[i].val.d.n;
-            CHKiRet(validateMaxFrameSize(max, emitDiagnostics));
-            inst->maxFrameSize = max;
-        } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
-            inst->iTCPSessMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "maxlisteners")) {
-            inst->iTCPLstnMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "workerthreads")) {
-            inst->numWrkr = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
-            inst->cnf_params->bSuppOctetFram = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive")) {
-            inst->bKeepAlive = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
-            inst->iKeepAliveProbes = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive.time")) {
-            inst->iKeepAliveTime = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
-            inst->iKeepAliveIntvl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            CHKmalloc(inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "preservecase")) {
-            inst->bPreserveCase = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
-            inst->iSynBacklog = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
-            CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "compression.mode")) {
-            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &inst->compressionMode, emitDiagnostics));
-        } else if (!strcmp(inppblk.descr[i].name, "compression.driver")) {
-            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &inst->compressionDriver, emitDiagnostics));
-        } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
-            inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
-            inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
-            inst->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
-            inst->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
-        } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
-            inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
-            CHKmalloc(inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else {
-            dbgprintf(
-                "imtcp: program error, non-handled "
-                "param '%s'\n",
-                inppblk.descr[i].name);
-        }
+        CHKiRet(applyInputEndpointParam(inppblk.descr[i].name, &pvals[i], inst, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputStreamStringParam(inppblk.descr[i].name, &pvals[i], inst, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputStreamScalarParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputMessageParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputRateCompressionParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        if (!handled) dbgprintf("imtcp: program error, non-handled param '%s'\n", inppblk.descr[i].name);
     }
 
     if (inst->cnf_params->pszRatelimitName != NULL) {
@@ -1545,7 +1634,9 @@ static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instance
 static int reloadInstanceEqual(const instanceConf_t *const left,
                                const modConfData_t *const leftModule,
                                const instanceConf_t *const right,
-                               const modConfData_t *const rightModule) {
+                               const modConfData_t *const rightModule,
+                               const int ignoreLiveFields,
+                               const int ignoreNewSessionFields) {
     int leftLegacyAcl;
     int rightLegacyAcl;
     const struct AllowedSenders *const leftAllowed = reloadEffectiveAllowedSenders(left, leftModule, &leftLegacyAcl);
@@ -1556,17 +1647,22 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
 
     if (leftParams == NULL || rightParams == NULL) return 0;
     return left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax &&
-           left->numWrkr == right->numWrkr && reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+           left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
-           reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
-                              right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ) &&
-           left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
-           left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
-           left->maxFrameSize == right->maxFrameSize && left->bUseFlowControl == right->bUseFlowControl &&
-           left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
-           left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
-           left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
+           left->ratelimitInterval == right->ratelimitInterval && left->ratelimitBurst == right->ratelimitBurst &&
+           (ignoreNewSessionFields ||
+            (left->bSPFramingFix == right->bSPFramingFix && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
+             left->maxFrameSize == right->maxFrameSize && left->bDisableLFDelim == right->bDisableLFDelim &&
+             left->discardTruncatedMsg == right->discardTruncatedMsg)) &&
+           (ignoreLiveFields ||
+            (reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+             left->bUseFlowControl == right->bUseFlowControl && left->starvationMaxReads == right->starvationMaxReads &&
+             left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
+             reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
+                                right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
+           (ignoreNewSessionFields || left->bPreserveCase == right->bPreserveCase) &&
+           left->iSynBacklog == right->iSynBacklog &&
            reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
                              reloadEffectiveNamespace(right, rightModule)) &&
            reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrName, leftModule->pszStrmDrvrName),
@@ -1591,19 +1687,21 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->iStrmDrvrExtendedCertCheck == right->iStrmDrvrExtendedCertCheck &&
            left->iStrmDrvrSANPreference == right->iStrmDrvrSANPreference &&
            left->iStrmTlsVerifyDepth == right->iStrmTlsVerifyDepth &&
-           left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck && left->bKeepAlive == right->bKeepAlive &&
-           left->iKeepAliveIntvl == right->iKeepAliveIntvl && left->iKeepAliveProbes == right->iKeepAliveProbes &&
-           left->iKeepAliveTime == right->iKeepAliveTime && left->starvationMaxReads == right->starvationMaxReads &&
-           left->compressionMode == right->compressionMode && left->compressionDriver == right->compressionDriver &&
-           left->compressionMaxExpansionRatio == right->compressionMaxExpansionRatio &&
-           left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
-           left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
-           left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet &&
+           left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck &&
+           (ignoreNewSessionFields ||
+            (left->bKeepAlive == right->bKeepAlive && left->iKeepAliveIntvl == right->iKeepAliveIntvl &&
+             left->iKeepAliveProbes == right->iKeepAliveProbes && left->iKeepAliveTime == right->iKeepAliveTime)) &&
+           (ignoreNewSessionFields ||
+            (left->compressionMode == right->compressionMode && left->compressionDriver == right->compressionDriver &&
+             left->compressionMaxExpansionRatio == right->compressionMaxExpansionRatio &&
+             left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
+             left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
+             left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet)) &&
            reloadUStringEqual(leftParams->pszPort, rightParams->pszPort) &&
            reloadUStringEqual(leftParams->pszAddr, rightParams->pszAddr) &&
-           leftParams->bSuppOctetFram == rightParams->bSuppOctetFram &&
+           (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            reloadUStringEqual(leftParams->pszLstnPortFileName, rightParams->pszLstnPortFileName) &&
-           leftParams->bMultiLine == rightParams->bMultiLine &&
+           (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
            reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
            leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
@@ -1618,6 +1716,7 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     const modConfData_t *const newConfig = pNewCnf;
     const instanceConf_t *oldInst;
     const instanceConf_t *newInst;
+    eModReloadCapability_t capability = eMOD_RELOAD_REUSE;
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
     *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
@@ -1625,11 +1724,261 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
-        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig)) return RS_RET_OK;
+        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) {
+            if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0)) {
+                if (capability == eMOD_RELOAD_REUSE) capability = eMOD_RELOAD_LIVE_SWAP;
+            } else if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) {
+                capability = eMOD_RELOAD_NEW_SESSIONS;
+            } else {
+                return RS_RET_OK;
+            }
+        }
         oldInst = oldInst->next;
         newInst = newInst->next;
     }
-    if (oldInst == NULL && newInst == NULL) *pCapability = eMOD_RELOAD_REUSE;
+    if (oldInst == NULL && newInst == NULL) *pCapability = capability;
+    return RS_RET_OK;
+}
+
+typedef struct imtcpReloadEntryV1_s {
+    tcpsrv_etry_t *runtime;
+    int flowControl;
+    unsigned starvationMaxReads;
+    int notifyOnConnectionClose;
+    int notifyOnConnectionOpen;
+    int preserveCase;
+    int keepAlive;
+    int keepAliveInterval;
+    int keepAliveProbes;
+    int keepAliveTime;
+    int framingFix;
+    int additionalFrameDelimiter;
+    int maxFrameSize;
+    int disableLFDelimiter;
+    int discardTruncatedMessage;
+    int supportOctetCountedFraming;
+    int compressionMode;
+    int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    int multiLine;
+    uchar defaultTZ[8];
+    ruleset_t *ruleset;
+    uint64_t fenceToken;
+    int fenceAcquired;
+} imtcpReloadEntryV1_t;
+
+typedef struct imtcpReloadStateV1_s {
+    size_t count;
+    uint64_t runtimeGeneration; /**< Captured registry lifetime, not a configuration generation. */
+    imtcpReloadEntryV1_t entries[];
+} imtcpReloadStateV1_t;
+
+static tcpsrv_etry_t *findRuntimeEndpoint(const char *const key) {
+    tcpsrv_etry_t *entry;
+    if (key == NULL) return NULL;
+    for (entry = endpoint_registry.head; entry != NULL; entry = entry->next)
+        if (entry->endpoint_key != NULL && !strcmp(entry->endpoint_key, key)) return entry;
+    return NULL;
+}
+
+static tcpsrv_etry_t *findRuntimeEndpointBySourceOrdinal(const size_t ordinal, const size_t count) {
+    tcpsrv_etry_t *entry;
+    if (endpoint_registry.count < 0 || (size_t)endpoint_registry.count != count || ordinal >= count) return NULL;
+    for (entry = endpoint_registry.head; entry != NULL; entry = entry->next)
+        if (entry->source_ordinal == ordinal) return entry;
+    return NULL;
+}
+
+static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNewCnf, void **const pReloadState) {
+    const modConfData_t *const oldConfig = pOldCnf;
+    const modConfData_t *const newConfig = pNewCnf;
+    const instanceConf_t *newInst;
+    imtcpReloadStateV1_t *state = NULL;
+    eModReloadCapability_t capability;
+    size_t count = 0;
+    size_t index = 0;
+    DEFiRet;
+
+    if (oldConfig == NULL || newConfig == NULL || newConfig->pConf == NULL || pReloadState == NULL ||
+        *pReloadState != NULL)
+        return RS_RET_PARAM_ERROR;
+    CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
+    if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE &&
+        capability != eMOD_RELOAD_NEW_SESSIONS)
+        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++count;
+    if (count > (SIZE_MAX - sizeof(*state)) / sizeof(state->entries[0])) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(state = calloc(1, sizeof(*state) + count * sizeof(state->entries[0])));
+    state->count = count;
+    state->runtimeGeneration = runtimeGeneration;
+    for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) {
+        char *key = NULL;
+        const rsRetVal keyRet =
+            endpointKeyBuild(newInst->cnf_params, reloadEffectiveNamespace(newInst, newConfig), &key);
+        if (keyRet == RS_RET_OK)
+            state->entries[index].runtime = findRuntimeEndpoint(key);
+        else if (keyRet == RS_RET_NOT_IMPLEMENTED)
+            state->entries[index].runtime = findRuntimeEndpointBySourceOrdinal(index, count);
+        else
+            ABORT_FINALIZE(keyRet);
+        free(key);
+        if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        state->entries[index].flowControl = newInst->bUseFlowControl;
+        state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
+        state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
+        state->entries[index].notifyOnConnectionOpen = newInst->bEmitMsgOnOpen;
+        state->entries[index].preserveCase = newInst->bPreserveCase;
+        state->entries[index].keepAlive = newInst->bKeepAlive;
+        state->entries[index].keepAliveInterval = newInst->iKeepAliveIntvl;
+        state->entries[index].keepAliveProbes = newInst->iKeepAliveProbes;
+        state->entries[index].keepAliveTime = newInst->iKeepAliveTime;
+        state->entries[index].framingFix = newInst->bSPFramingFix;
+        state->entries[index].additionalFrameDelimiter = newInst->iAddtlFrameDelim;
+        state->entries[index].maxFrameSize = newInst->maxFrameSize;
+        state->entries[index].disableLFDelimiter = newInst->bDisableLFDelim;
+        state->entries[index].discardTruncatedMessage = newInst->discardTruncatedMsg;
+        state->entries[index].supportOctetCountedFraming = newInst->cnf_params->bSuppOctetFram;
+        state->entries[index].compressionMode = newInst->compressionMode;
+        state->entries[index].compressionDriver = newInst->compressionDriver;
+        state->entries[index].compressionMaxExpansionRatio = newInst->compressionMaxExpansionRatio;
+        state->entries[index].compressionMaxDecompressedBytesPerReceive =
+            newInst->compressionMaxDecompressedBytesPerReceive;
+        state->entries[index].compressionMaxTotalZstdWindowBytes = newInst->compressionMaxTotalZstdWindowBytes;
+        state->entries[index].multiLine = newInst->cnf_params->bMultiLine;
+        u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
+                    sizeof(state->entries[index].defaultTZ));
+        if (newInst->pszBindRuleset == NULL) {
+            state->entries[index].ruleset = newConfig->pConf->rulesets.pDflt;
+        } else {
+            CHKiRet(rulesetGetRuleset(newConfig->pConf, &state->entries[index].ruleset, newInst->pszBindRuleset));
+        }
+        if (state->entries[index].ruleset == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        ++index;
+    }
+    *pReloadState = state;
+    state = NULL;
+
+finalize_it:
+    free(state);
+    RETiRet;
+}
+
+static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec *const deadline) {
+    imtcpReloadStateV1_t *const state = pReloadState;
+    size_t acquired = 0;
+    rsRetVal ret = RS_RET_OK;
+    if (state == NULL || deadline == NULL) return RS_RET_PARAM_ERROR;
+    if (state->runtimeGeneration != runtimeGeneration) return RS_RET_NOT_IMPLEMENTED;
+    for (size_t i = 0; i < state->count; ++i) {
+        ret = tcpsrv.RequestFence(state->entries[i].runtime->tcpsrv, &state->entries[i].fenceToken);
+        if (ret != RS_RET_OK) break;
+        ret = tcpsrv.WaitFence(state->entries[i].runtime->tcpsrv, state->entries[i].fenceToken, deadline);
+        if (ret != RS_RET_OK) break;
+        state->entries[i].fenceAcquired = 1;
+        ++acquired;
+    }
+    if (ret != RS_RET_OK) {
+        while (acquired != 0) {
+            --acquired;
+            const rsRetVal releaseRet =
+                tcpsrv.ReleaseFence(state->entries[acquired].runtime->tcpsrv, state->entries[acquired].fenceToken);
+            if (releaseRet == RS_RET_OK) state->entries[acquired].fenceAcquired = 0;
+        }
+    }
+    return ret;
+}
+
+static rsRetVal releaseRuntimeFenceV1(void *const runtime, const uint64_t token) {
+    tcpsrv_etry_t *const entry = runtime;
+    return tcpsrv.ReleaseFence(entry->tcpsrv, token);
+}
+
+static rsRetVal resumeReloadV1(void *const pReloadState) {
+    imtcpReloadStateV1_t *const state = pReloadState;
+    rsRetVal ret = RS_RET_OK;
+    if (state == NULL) return RS_RET_PARAM_ERROR;
+    for (size_t i = state->count; i != 0; --i) {
+        imtcpReloadEntryV1_t *const entry = &state->entries[i - 1];
+        /* Pass the endpoint opaquely: the generation guard must run before
+         * releaseRuntimeFenceV1 can dereference a possibly stopped endpoint. */
+        const rsRetVal releaseRet =
+            imtcpReloadResumeHeldV1(state->runtimeGeneration, runtimeGeneration, entry->runtime, entry->fenceToken,
+                                    &entry->fenceAcquired, releaseRuntimeFenceV1);
+        if (state->runtimeGeneration != runtimeGeneration) entry->runtime = NULL;
+        if (ret == RS_RET_OK && releaseRet != RS_RET_OK) ret = releaseRet;
+    }
+    return ret;
+}
+
+static void commitReloadV1(void *const pReloadState) {
+    /* Core serialization keeps this prepared runtime generation live through
+     * infallible publication; shutdown cannot start midway through commit. */
+    imtcpReloadStateV1_t *const state = pReloadState;
+    for (size_t i = 0; i < state->count; ++i) {
+        tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
+        tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
+        tcpsrv.SetStarvationMaxReads(server, state->entries[i].starvationMaxReads);
+        (void)tcpsrv.SetNotificationOnRemoteOpen(server, state->entries[i].notifyOnConnectionOpen);
+        (void)tcpsrv.SetNotificationOnRemoteClose(server, state->entries[i].notifyOnConnectionClose);
+        (void)tcpsrv.SetPreserveCase(server, state->entries[i].preserveCase);
+        (void)tcpsrv.SetKeepAlive(server, state->entries[i].keepAlive);
+        (void)tcpsrv.SetKeepAliveIntvl(server, state->entries[i].keepAliveInterval);
+        (void)tcpsrv.SetKeepAliveProbes(server, state->entries[i].keepAliveProbes);
+        (void)tcpsrv.SetKeepAliveTime(server, state->entries[i].keepAliveTime);
+        (void)tcpsrv.SetbSPFramingFix(server, state->entries[i].framingFix);
+        (void)tcpsrv.SetAddtlFrameDelim(server, state->entries[i].additionalFrameDelimiter);
+        (void)tcpsrv.SetMaxFrameSize(server, state->entries[i].maxFrameSize);
+        (void)tcpsrv.SetbDisableLFDelim(server, state->entries[i].disableLFDelimiter);
+        (void)tcpsrv.SetDiscardTruncatedMsg(server, state->entries[i].discardTruncatedMessage);
+        (void)tcpsrv.SetSupportOctetCountedFraming(server, state->entries[i].supportOctetCountedFraming);
+        (void)tcpsrv.SetCompressionMode(server, state->entries[i].compressionMode);
+        (void)tcpsrv.SetCompressionDriver(server, state->entries[i].compressionDriver);
+        (void)tcpsrv.SetCompressionMaxExpansionRatio(server, state->entries[i].compressionMaxExpansionRatio);
+        (void)tcpsrv.SetCompressionMaxDecompressedBytesPerReceive(
+            server, state->entries[i].compressionMaxDecompressedBytesPerReceive);
+        (void)tcpsrv.SetCompressionMaxTotalZstdWindowBytes(server,
+                                                           state->entries[i].compressionMaxTotalZstdWindowBytes);
+        (void)tcpsrv.SetMultiLineForNewSessions(server, state->entries[i].multiLine);
+        (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
+        (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
+    }
+}
+
+static void abortReloadV1(void *const pReloadState) {
+    if (pReloadState == NULL) return;
+    (void)resumeReloadV1(pReloadState);
+    free(pReloadState);
+}
+
+static rsRetVal retireReloadV1(void *const pReloadState) {
+    rsRetVal ret;
+    if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
+    ret = resumeReloadV1(pReloadState);
+    if (ret != RS_RET_OK) return ret;
+    free(pReloadState);
+    return RS_RET_OK;
+}
+
+static rsRetVal getReloadInterfaceV1(modReloadInterfaceV1_t *const interface) {
+    const size_t minimumSize = offsetof(modReloadInterfaceV1_t, retire) + sizeof(interface->retire);
+    const size_t quiesceSize = offsetof(modReloadInterfaceV1_t, resume) + sizeof(interface->resume);
+    if (interface == NULL || interface->version != eMOD_RELOAD_INTERFACE_V1 || interface->structSize < minimumSize)
+        return RS_RET_MISSING_INTERFACE;
+    interface->capabilityFlags = eMOD_RELOAD_CAP_VALIDATE_PRIVATE | eMOD_RELOAD_CAP_PREPARE | eMOD_RELOAD_CAP_REUSE |
+                                 eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
+    interface->classify = classifyReloadSourceCandidateV1;
+    interface->prepare = prepareReloadV1;
+    interface->commit = commitReloadV1;
+    interface->abort = abortReloadV1;
+    interface->retire = retireReloadV1;
+    if (interface->structSize >= quiesceSize) {
+        interface->capabilityFlags |= eMOD_RELOAD_CAP_QUIESCE;
+        interface->quiesce = quiesceReloadV1;
+        interface->resume = resumeReloadV1;
+    }
     return RS_RET_OK;
 }
 
@@ -2008,6 +2357,10 @@ BEGINafterRun
     CODESTARTafterRun;
     tcpsrv_etry_t *etry = endpoint_registry.head;
     tcpsrv_etry_t *del;
+    /* thrdDestruct has joined the input thread; runInput has joined its
+     * workers. Invalidate retained reload borrows before destroying servers
+     * or freeing registry entries, even if an earlier fence release failed. */
+    if (++runtimeGeneration == 0) ++runtimeGeneration;
     while (etry != NULL) {
         iRet = tcpsrv.Destruct(&etry->tcpsrv);
         del = etry;
@@ -2078,6 +2431,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
     CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
     CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+    CODEqueryEtryPt_RELOAD_V1_QUERIES;
     CODEqueryEtryPt_RELOAD_SOURCE_V1_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt

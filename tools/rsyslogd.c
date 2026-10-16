@@ -2281,6 +2281,7 @@ static int mainloopComputeTimeoutMs(uint64_t now_ms, uint64_t next_janitor_run_m
         }
     }
 #endif
+    if (shadowReloadRetirementPending() && timeout_ms > 100) timeout_ms = 100;
     return rswatchComputeTimeoutMs(now_ms, timeout_ms);
 }
 
@@ -2483,6 +2484,8 @@ static void mainloop(void) {
         processImInternal();
 
         if (bFinished) break; /* exit as quickly as possible */
+
+        shadowReloadRetryRetirement();
 
         now_ms = mainloopMonotonicMs();
         wait_timeout(&origmask, mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms));

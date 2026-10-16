@@ -9,7 +9,8 @@ libgrammar_la_SOURCES = \
 	lexer.l \
 	rainerscript.c \
 	reload-syntax-clone.c \
-	../runtime/reload-ruleset-materializer.c \
+	reload-ruleset-materializer.c \
+	reload-ruleset-materializer.h \
 	rainerscript.h \
 	parserif.h \
 	grammar.h

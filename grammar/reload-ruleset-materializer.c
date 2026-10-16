@@ -167,10 +167,56 @@ static rsRetVal validatePreparedStatements(const struct cnfstmt *stmt) {
                 CHKiRet(validatePreparedStatements(stmt->d.s_if.t_then));
                 CHKiRet(validatePreparedStatements(stmt->d.s_if.t_else));
                 break;
+            case S_FOREACH:
+                CHKiRet(validatePreparedStatements(stmt->d.s_foreach.body));
+                break;
+            case S_RELOAD_PRIFILT:
+                CHKiRet(validatePreparedStatements(stmt->d.s_prifilt.t_then));
+                CHKiRet(validatePreparedStatements(stmt->d.s_prifilt.t_else));
+                break;
+            case S_RELOAD_PROPFILT:
+                CHKiRet(validatePreparedStatements(stmt->d.s_propfilt.t_then));
+                break;
             default:
                 ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         }
     }
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal lowerPreparedFilters(struct cnfstmt *stmt, rsconf_t *const active) {
+    DEFiRet;
+
+    for (; stmt != NULL; stmt = stmt->next) {
+        switch (stmt->nodetype) {
+            case S_NOP:
+            case S_STOP:
+            case S_SET:
+            case S_UNSET:
+            case S_RELOAD_ACT:
+                break;
+            case S_IF:
+                CHKiRet(lowerPreparedFilters(stmt->d.s_if.t_then, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_if.t_else, active));
+                break;
+            case S_FOREACH:
+                CHKiRet(lowerPreparedFilters(stmt->d.s_foreach.body, active));
+                break;
+            case S_RELOAD_PRIFILT:
+                CHKiRet(cnfstmtLowerReloadFilterV1(stmt, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_prifilt.t_then, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_prifilt.t_else, active));
+                break;
+            case S_RELOAD_PROPFILT:
+                CHKiRet(cnfstmtLowerReloadFilterV1(stmt, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_propfilt.t_then, active));
+                break;
+            default:
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        }
+    }
+
 finalize_it:
     RETiRet;
 }
@@ -187,6 +233,16 @@ static rsRetVal lowerPreparedStatements(struct cnfstmt *stmt, prepareContextV1_t
             case S_IF:
                 CHKiRet(lowerPreparedStatements(stmt->d.s_if.t_then, prepare));
                 CHKiRet(lowerPreparedStatements(stmt->d.s_if.t_else, prepare));
+                break;
+            case S_FOREACH:
+                CHKiRet(lowerPreparedStatements(stmt->d.s_foreach.body, prepare));
+                break;
+            case S_PRIFILT:
+                CHKiRet(lowerPreparedStatements(stmt->d.s_prifilt.t_then, prepare));
+                CHKiRet(lowerPreparedStatements(stmt->d.s_prifilt.t_else, prepare));
+                break;
+            case S_PROPFILT:
+                CHKiRet(lowerPreparedStatements(stmt->d.s_propfilt.t_then, prepare));
                 break;
             case S_RELOAD_ACT: {
                 char *fingerprint = NULL;
@@ -247,6 +303,7 @@ static rsRetVal prepareFragment(
     entry->runtime = runtime;
     CHKiRet(cnfstmtCloneReloadSafe(fragment, &entry->root));
     CHKiRet(validatePreparedStatements(entry->root));
+    CHKiRet(lowerPreparedFilters(entry->root, prepare->active));
     /* Match startup's runtime-required expression canonicalization before
      * binding borrowed actions. In particular, array equality relies on the
      * optimizer to move arrays to the RHS and sort them for bsearch(). */
@@ -301,9 +358,11 @@ static rsRetVal requireEveryActiveActionTransfer(const prepareContextV1_t *const
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
+                                      const eModReloadCapability_t sourceCapability,
                                       rsReloadRulesetPlanV1_t **out) {
     prepareContextV1_t prepare = {0};
     rsReloadRulesetPlanV1_t *plan = NULL;
+    size_t modifiedRulesets = 0;
     DEFiRet;
     if (active == NULL || candidate == NULL || report == NULL || out == NULL || *out != NULL) return RS_RET_PARAM_ERROR;
     /* Local and mixed graphs have producer-owned FE workers and cached routes
@@ -318,9 +377,20 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     if (report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
         return RS_RET_PARAM_ERROR;
-    CHKiRet(rsReloadCandidateCheckRulesetOnlyReportV1(report));
+    if (sourceCapability == eMOD_RELOAD_REUSE || sourceCapability == eMOD_RELOAD_LIVE_SWAP ||
+        sourceCapability == eMOD_RELOAD_NEW_SESSIONS) {
+        CHKiRet(rsReloadCandidateCheckRulesetImtcpReportV1(candidate, report));
+    } else {
+        CHKiRet(rsReloadCandidateCheckRulesetOnlyReportV1(report));
+    }
+    for (size_t i = 0; i < report->entryCount; ++i) {
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *const entry = (const rsReloadReportEntryV1_t *)(const void *)address;
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET && entry->diffKind == RS_RELOAD_DIFF_MODIFIED)
+            ++modifiedRulesets;
+    }
     CHKmalloc(plan = calloc(1, sizeof(*plan)));
-    if (report->modifiedCount == 0) {
+    if (modifiedRulesets == 0) {
         *out = plan;
         plan = NULL;
         FINALIZE;
@@ -331,7 +401,7 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     plan->active = active;
     CHKiRet(rulesetVisitAllActionsV1(active, collectActiveAction, &prepare));
     CHKiRet(rsReloadCandidateVisitRulesetFragmentsV1(candidate, prepareFragment, &prepare));
-    if (plan->count != report->modifiedCount) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (plan->count != modifiedRulesets) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     /* The private optimizer may remove unreachable syntax. Do not let that
      * silently retire an active action (and its queue) while the normalized
      * action node is otherwise reported unchanged. Action replacement/removal

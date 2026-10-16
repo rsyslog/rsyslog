@@ -34,14 +34,26 @@ is already available in a released rsyslog version.
 Current implementation boundary
 -------------------------------
 
-This delivery adds detached effective imtcp source configurations and
-conservative reuse/restart-required classification. Candidate lowering reuses
-normal module/input parameter handling without creating listeners or changing
-active endpoints. Stable fixed-listener identities, endpoint registry
-ownership, and accepted-session setting snapshots prepare later lifecycle
-work; none enables live input changes in this slice. New, removed, reordered,
-or incompatible inputs remain fail-closed for activation. ACL source lowering
-also remains unsupported.
+This delivery adds coordinated updates to a fixed set of existing imtcp
+listeners. Flow control, default timezone, existing-ruleset routing, starvation
+limits, and connection notifications can update live; preserve-case,
+keepalive, framing, octet framing, compression, and multiline settings apply
+to new sessions while accepted sessions retain their snapshots. Input fences
+and queue barriers protect one publication boundary, and reusable source
+baselines are published with the generation. Failed resume retains ownership
+for automatic main-loop retry before state is aborted or retired; an already
+published generation is never retroactively reported as rejected.
+
+Detached candidate lowering remains side-effect-free. There is no live
+listener addition, removal, endpoint reconciliation, or TLS/ACL replacement.
+Those changes, incompatible dependencies, and unsupported source lowering
+remain fail-closed.
+
+Any active producer-local queue graph, including mixed local/global
+boundaries, rejects activation before module preparation or input fencing.
+This restriction also covers input-only policy changes with unchanged
+ruleset bodies. No-op and ``validate`` requests remain report-only; restart
+rsyslog to apply configuration changes in those queue graphs.
 
 This delivery adds activation of supported body changes to existing named rulesets,
 using private syntax clones and unchanged named actions. Preparation owns all
@@ -59,9 +71,9 @@ validation are not constructed. Dirty startup configurations cannot become a
 trusted baseline.
 
 ``on`` follows the private parse/report path and activates only supported
-changes to existing named ruleset bodies; default-ruleset body changes are not
-supported at this stage. Action definitions, input profiles,
-global settings, queues, and other non-ruleset objects must remain unchanged;
+changes to existing named ruleset bodies and the existing-listener fields above.
+Default-ruleset body changes remain unsupported at this stage.
+Action definitions, global settings, queues, and other non-supported objects must remain unchanged;
 unsupported statement dependencies or action ownership changes fail closed.
 Active local-queue graphs, including mixed local/global graphs, are unsupported
 for activation: producer-owned frontend workers are outside the legacy queue
@@ -74,7 +86,7 @@ HUP hooks still run in every mode. The active runtime graph covers ruleset
 program structure, not complete action configuration, queues, or parser chains.
 
 The lifecycle and mode descriptions below specify the staged target design,
-not functionality available at this existing-ruleset activation boundary.
+not functionality available at this existing-listener policy boundary.
 
 Context
 -------
@@ -320,17 +332,52 @@ The status field ``source_capability`` distinguishes an exact effective
 ``reuse`` comparison from a conservative ``restart_required`` result and from
 ``not_evaluated`` when parsing, lowering, legacy syntax, or an unsupported
 side-effectful setting prevented comparison.
+In ``on`` mode, a source change classified ``reuse`` publishes the candidate
+graph and owned source catalog as the next active comparison baseline while
+leaving the existing module runtime objects untouched.  This advances the
+configuration generation but requires neither an input fence nor a consumer
+queue barrier.  Repeating that source is then a true report-only no-op instead
+of rediscovering the same effective-equivalent change on every HUP.
 The first imtcp comparator pairs listener instances in source order; a pure
 reorder is therefore conservatively restart-required until endpoint-key
 reconciliation is connected to the runtime registry.
 
-``on`` applies a conservative scope gate to that report. Only modifications to
-already existing rulesets pass this report gate. Private preparation additionally
-requires named rulesets: default-ruleset body changes remain unsupported.
-Added or removed rulesets and every change to actions, inputs, parsers, queues,
+``on`` applies a conservative scope gate to that report. Modifications to
+already existing rulesets and the explicitly supported existing-listener fields
+pass this report gate. Private ruleset preparation additionally requires named
+rulesets: default-ruleset body changes remain unsupported. Added or removed
+rulesets and unsupported changes to actions, inputs, parsers, queues,
 templates, modules, or global settings are rejected as
 ``candidate_scope_unsupported``. Passing the report gate alone does not prove
 that the ruleset syntax can be semantically prepared or activated.
+
+The first Release E foundation coordinates that ruleset plan with an ``imtcp``
+event-loop/worker fence.  Compatible existing listeners and sessions are kept
+open while effective ``flowControl``, ``defaultTZ``, ruleset binding, and
+``starvationProtection.maxReads`` values and connection-open/close notification
+policy are published at the safepoint.  An effective ``preserveCase`` change is
+classified ``new_sessions``: established sessions retain their already
+resolved peer identity and socket options, while the listener accept profile
+changes atomically for later connections.  TCP keepalive enablement, interval,
+probe count, and idle time use the same ``new_sessions`` contract.  The scalar
+framing profile—Cisco framing correction, the additional delimiter, maximum
+frame size, LF-delimiter disablement, and truncated-message policy—also changes
+only for later connections, as do octet-counted framing support and the
+compression mode, driver, and resource limits.  Multiline framing without a
+changed delimiter regex is also an accept-profile update.  Regular expression
+framing, TLS, endpoint, ACL, rate-limit, and
+listener-structure fields remain conservatively restart-required until their
+corresponding prepare, ownership, and reconciliation contracts are implemented.
+
+Busy inputs can prevent the worker fence from completing before its absolute
+deadline: a receive worker may repeatedly hand off a still-ready connection
+ahead of the remaining fence markers. The reload then times out, resumes
+processing and retains the old active graph; it does not publish a partial
+generation. Abort removes handoff priority so residual markers can drain and
+a later reload can retry after the producer yields. The default positive
+``starvationProtection.maxReads`` limit bounds each receive batch. Setting it
+to ``0`` removes that bound, so cleanup after timeout may depend on the sender
+yielding or disconnecting before the worker returns to its safepoint.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
