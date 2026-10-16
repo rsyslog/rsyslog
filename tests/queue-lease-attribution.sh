@@ -6,7 +6,9 @@
 # The fixture invokes that consumer with both shutdown flag values while it
 # holds the BE mutex, so the empty/first-worker regression is deterministic
 # rather than a worker-scheduling race. Clean shutdown proves the fixture
-# restored the real queue state.
+# restored the real queue state. Opt-in completion barriers also invoke the
+# real batchProcessed path, prove successful source completion and propagate a
+# store callback error repeatedly while retaining every failed lease field.
 
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"

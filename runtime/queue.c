@@ -4145,6 +4145,70 @@ finalize_it:
     RETiRet;
 }
 
+/* Exercise the production boundary against the real batchProcessed callback,
+ * not an imitation of store retirement. The existing qCompleteBatch fault
+ * seam retains an opaque source lease on failure. Both success and failure
+ * run on a joined owner before any stack fixture can be reclaimed. */
+static void *qqueueLeaseTestBoundaryWorker(void *const arg) {
+    wti_t *const worker = arg;
+    int saved;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &saved);
+    d_pthread_mutex_lock(worker->pWtp->pmutUsr);
+    wtpWorkerQuiesceAtBoundary(worker->pWtp, worker);
+    d_pthread_mutex_unlock(worker->pWtp->pmutUsr);
+    pthread_setcancelstate(saved, NULL);
+    return NULL;
+}
+
+static rsRetVal qqueueLeaseTestCompletionBarrier(qqueue_t *const source, wti_t *const worker, const rsRetVal expected) {
+    wtp_t *const pool = worker->pWtp;
+    wti_t *workers[] = {worker};
+    qqueue_batch_barrier_t *barrier = NULL;
+    struct timespec deadline;
+    pthread_t thread;
+    int started = 0;
+    rsRetVal result;
+    pthread_mutex_init(&pool->mutWtp, NULL);
+    pthread_cond_init(&pool->condQuiesced, NULL);
+    pthread_cond_init(&worker->pcondBusy, NULL);
+    INIT_ATOMIC_HELPER_MUT(pool->mutWtpState);
+    INIT_ATOMIC_HELPER_MUT(pool->mutCurNumWrkThrd);
+    pool->pWrkr = workers;
+    pool->iNumWorkerThreads = pool->iCurNumWrkThrd = 1;
+    pool->pfObjProcessed = (rsRetVal(*)(void *, wti_t *))batchProcessed;
+    source->pWtpReg = pool;
+    result = qqueueCompletionBarrierBegin(source, &barrier);
+    if (result != RS_RET_OK) goto done;
+    if (pthread_create(&thread, NULL, qqueueLeaseTestBoundaryWorker, worker) != 0) {
+        result = RS_RET_ERR;
+        goto done;
+    }
+    started = 1;
+    if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) {
+        result = RS_RET_ERR;
+        goto done;
+    }
+    deadline.tv_sec += 5;
+    result = qqueueBatchBarrierWait(barrier, &deadline);
+    if (result != expected)
+        result = RS_RET_INTERNAL_ERROR;
+    else if (qqueueBatchBarrierWait(barrier, &deadline) != expected)
+        result = RS_RET_INTERNAL_ERROR;
+    else
+        result = RS_RET_OK;
+done:
+    if (barrier != NULL) qqueueBatchBarrierRelease(&barrier);
+    if (started) pthread_join(thread, NULL);
+    source->pWtpReg = NULL;
+    pool->pWrkr = NULL;
+    pthread_cond_destroy(&worker->pcondBusy);
+    pthread_cond_destroy(&pool->condQuiesced);
+    pthread_mutex_destroy(&pool->mutWtp);
+    DESTROY_ATOMIC_HELPER_MUT(pool->mutWtpState);
+    DESTROY_ATOMIC_HELPER_MUT(pool->mutCurNumWrkThrd);
+    return result;
+}
+
 /* Exercise the real terminal completion path with a source queue distinct
  * from the callback owner, then calls the empty local-BE ConsumerReg fixture
  * against the initialized daemon queue. */
@@ -4186,9 +4250,7 @@ rsRetVal qqueue_test_lease_completion_paths(qqueue_t *const owner) {
     CHKmalloc(worker.p_deferred_msgs = calloc(1, sizeof(smsg_t *)));
 
     source.qCompleteBatch = qqueueLeaseTestCompleteOK;
-    d_pthread_mutex_lock(&source_mut);
-    iRet = batchProcessed(&callback_owner, &worker);
-    d_pthread_mutex_unlock(&source_mut);
+    iRet = qqueueLeaseTestCompletionBarrier(&source, &worker, RS_RET_OK);
     /* The synthetic source is not registered with the daemon. Compensate the
      * diagnostic aggregate that normal physical completion updates so this
      * isolated fixture cannot perturb the initialized main queue's oracle. */
@@ -4224,6 +4286,15 @@ rsRetVal qqueue_test_lease_completion_paths(qqueue_t *const owner) {
         goto finalize_it;
     }
 
+    iRet = qqueueLeaseTestCompletionBarrier(&source, &worker, RS_RET_IO_ERROR);
+    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 2 || source.iQueueSize != 1 || source.nLogDeq != 1 ||
+        worker.source_queue != &source || worker.logical_owner != &callback_owner ||
+        worker.batch.storeData != &store_context || worker.batch.nElem != 1 || worker.batch.nElemDeq != 1 ||
+        retained_element.pMsg != &retained_message || worker.n_deferred_msgs != 0) {
+        iRet = RS_RET_INTERNAL_ERROR;
+        goto finalize_it;
+    }
+
     /* Restore a consuming completion callback and retire the retained opaque
      * context through the same terminal path before dismantling the fixture. */
     source.qCompleteBatch = qqueueLeaseTestCompleteOK;
@@ -4234,7 +4305,7 @@ rsRetVal qqueue_test_lease_completion_paths(qqueue_t *const owner) {
     iRet = batchProcessed(&callback_owner, &worker);
     d_pthread_mutex_unlock(&source_mut);
     if (iRet == RS_RET_OK) qqueueAddOverallQueueSize(1);
-    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 2 || source.iQueueSize != 0 || source.nLogDeq != 0 ||
+    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 3 || source.iQueueSize != 0 || source.nLogDeq != 0 ||
         worker.source_queue != NULL || worker.logical_owner != NULL || worker.batch.storeData != NULL ||
         worker.batch.nElemDeq != 0 || worker.n_deferred_msgs != 0) {
         iRet = RS_RET_INTERNAL_ERROR;

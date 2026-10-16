@@ -64,6 +64,10 @@ struct wtp_s {
         sbool monotonicTermination; /* local queue family waits use CLOCK_MONOTONIC */
         pthread_cond_t condQuiesced; /* signalled when a worker enters or leaves the quiescent state */
         int iNumQuiesced; /* workers parked at a batch boundary; protected by mutWtp */
+        uint64_t quiesceGeneration; /* request generation; pmutUsr then mutWtp */
+        sbool completionQuiesce; /* opt-in preceding-batch completion request */
+        int iNumCompletionQuiesced; /* completion acknowledgments under mutWtp */
+        rsRetVal completionQuiesceResult; /* first exact callback failure, mutWtp */
         /* end sync variables */
         /* user objects */
         void *pUsr; /* pointer to user object (in this case, the queue the wtp belongs to) */
@@ -102,6 +106,15 @@ rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
  * caller must hold neither. Success requires resume even if waiting fails.
  */
 rsRetVal wtpRequestQuiesce(wtp_t *pThis);
+/** Opt-in completion boundary, not queue emptiness or retirement permission.
+ * Current workers complete owned batches through pfObjProcessed before
+ * acknowledging; idle WTIs skip completion. Caller owns the
+ * returned generation through wait/resume and pins the pool throughout. */
+rsRetVal wtpRequestCompletionQuiesce(wtp_t *pThis, uint64_t *generation);
+rsRetVal wtpWaitCompletionQuiesced(wtp_t *pThis, uint64_t generation, const struct timespec *deadline);
+rsRetVal wtpResumeCompletion(wtp_t *pThis, uint64_t generation);
+/* Worker holds pmutUsr; completion may drop/reacquire it internally. */
+void wtpWorkerQuiesceAtBoundary(wtp_t *pThis, wti_t *worker);
 /** @brief Wait until every current worker has acknowledged the pause.
  * @param pThis Borrowed pool with an outstanding quiesce request.
  * @param ptTimeout Absolute CLOCK_REALTIME deadline.

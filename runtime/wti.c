@@ -1,6 +1,10 @@
 /* wti.c
  *
  * This file implements the worker thread instance (wti) class.
+ * Concurrency & Locking: optional completion quiescence uses the existing
+ * queue-held callback contract before acknowledging its request generation.
+ * Callback disposal can drop the queue mutex, so the generation and pool
+ * state are revalidated afterward; failed completion never clears the lease.
  *
  * File begun on 2008-01-20 by RGerhards based on functions from the
  * previous queue object class (the wti functions have been extracted)
@@ -526,9 +530,10 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         /* first check if we are in shutdown process (but evaluate a bit later) */
         terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
         if (terminateRet == RS_RET_QUIESCE) {
-            /* The preceding pfDoWork(), including actionCommitAllDirect(), has
-             * returned. Park before dequeuing the next batch. */
-            wtpWorkerQuiesce(pWtp, &pThis->pcondBusy);
+            /* Ordinary barriers park after the consumer returns. The opt-in
+             * completion barrier additionally retires this WTI's preceding
+             * batch through pfObjProcessed before acknowledging. */
+            wtpWorkerQuiesceAtBoundary(pWtp, pThis);
             continue;
         }
         if (terminateRet == RS_RET_TERMINATE_NOW) {

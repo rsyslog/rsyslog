@@ -15,6 +15,16 @@ runtime_reload_global_scalars:
     - Sanitizer samples each independent policy before first use, retaining scan samples through rewrite; no atomic generation snapshot.
     - Main thread alone owns controller mode and pending scalar publication under the existing commit guard.
     - Prefix uses int-sized atomic storage; program-name slash policy is sampled once per locked lazy TAG scan, retaining already cached values until TAG replacement.
+runtime_queue_completion_quiescence:
+  paths: ["runtime/queue-barrier.c", "runtime/wtp-quiesce.c", "runtime/wti.c"]
+  requires_serialization: true
+  notes:
+    - Opt-in completion barriers finish the preceding live-worker batch through pfObjProcessed before acknowledging; ordinary barriers do not.
+    - Completion callbacks hold the queue mutex but may drop it for deferred destruction; generation and shutdown state are checked again before acknowledgment.
+    - Exact callback errors remain visible to waiters and never authorize clearing source leases or storeData.
+    - Completion mode includes regular consumers, DA transfer workers and disk-child consumers; success is not an empty or retirement proof.
+    - Exiting-worker completion errors and all backend physical/logical/deletion/lease/deferred inventories remain the next prerequisite before membership removal.
+
 runtime_queue:
   operator_docs:
     - "doc/source/concepts/queues.rst#local-queue-operation"
