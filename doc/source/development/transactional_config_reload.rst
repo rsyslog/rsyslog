@@ -3,16 +3,18 @@
 .. _transactional-config-reload-adr:
 
 .. meta::
-   :description: Staged transactional reload design; the foundation provides policy and accounting only, rejecting enabled HUP requests without loading candidates.
-   :keywords: rsyslog, ADR, configuration reload, generation, ruleset, imtcp, transactional, performance
+   :description: Staged transactional reload design; the current delivery adds
+                 private candidate parsing and source reports without activation.
+   :keywords: rsyslog, ADR, configuration reload, generation, ruleset, imtcp,
+              transactional, performance
 
 Transactional configuration reload
 ==================================
 
 .. summary-start
 
-The current foundation provides policy parsing and request accounting only;
-enabled transactional requests fail closed without loading a candidate.
+The current delivery privately parses candidate syntax and reports source-level
+differences; semantic preparation and activation remain fail-closed.
 This ADR defines the staged target contract: private validation
 and capability reporting precede activation; live changes commit atomically;
 and retiring work drains only after consumers quiesce at a batch boundary.
@@ -31,25 +33,27 @@ is already available in a released rsyslog version.
 Current implementation boundary
 -------------------------------
 
-This delivery provides policy parsing, request accounting, dormant module
-capability contracts, deterministic report APIs, and an owned snapshot of the
-active normalized ruleset-program graph. Report APIs compare supplied graphs;
-they do not load or validate candidate configuration. The active snapshot
-covers ruleset program structure, not the complete effective configuration:
-action configuration, queues, and parser chains require separate producers.
-Both ``validate`` and ``on`` are accepted
-configuration values, but their transactional HUP requests fail closed with
-``rejected_reason=unsupported_release_b``. No candidate configuration is
-loaded, validated, prepared, or activated. The active generation remains
-unchanged, and the established legacy HUP hooks still run in every mode.
-This preserves the active configuration graph, not all external state:
-unconditional legacy hooks can still reopen or rotate outputs. Their effects
-are outside the transactional rollback guarantee.
+This delivery adds side-effect-free candidate parsing and source-level diff
+reports to policy accounting and the owned active ruleset-program graph.
+``validate`` parses and structurally normalizes a private candidate, compares
+it with the captured startup source, and reports the result without invoking
+module preparation or configuration activation. This is not a full semantic
+validation or proof that a candidate can run: objects requiring module runtime
+validation are not constructed. Dirty startup configurations cannot become a
+trusted baseline.
+
+``on`` follows the same private parse/report path, rejects unsupported
+non-ruleset scope, and fails closed with
+``rejected_reason=activation_not_implemented`` for both an unchanged candidate
+and an otherwise scope-eligible ruleset change. No new generation is activated.
+The active configuration
+remains unchanged, and the established legacy HUP hooks still run in every
+mode. The active runtime graph covers ruleset program structure, not complete
+action configuration, queues, or parser chains.
 
 The lifecycle and mode descriptions below specify the staged target design,
-not functionality available at this foundation boundary. In particular,
-``validate`` does not yet validate a candidate, and ``on`` does not yet reload
-configuration.
+not functionality available at this candidate/report boundary. In particular,
+``on`` does not yet reload configuration.
 
 Context
 -------
@@ -274,14 +278,31 @@ a candidate was rejected, which consumers still prevent retirement, and whether
 listener, session, or module state was preserved or replaced.
 
 The Release B foundation additionally exposes request-, mode-, rejection-, and
-duration-accounting counters while ``validate`` and ``on`` remain fail-closed.
-Those foundation counters are not a promise that candidate validation or
-activation has occurred; later releases retain or refine them alongside the
-target outcome counters above.
+duration-accounting counters.  Its first implementation parses RainerScript and
+YAML candidates into owned source-syntax objects without invoking module
+constructors, global setters, queue construction, or input activation.  It
+compares that graph with a mirror captured during the original startup parse and
+reports a successful comparison as ``reported_only``.  This result is a
+conservative source-syntactic diff, not semantic validation: effective defaults,
+module capability classification, preparation, and ``on`` activation remain
+fail-closed until their later gates are complete.  Later releases retain or
+refine these counters alongside the target outcome counters above.
+
+Before private compilation is enabled, ``on`` applies a conservative scope
+gate to that report.  Only modifications to already existing rulesets pass to
+the unavailable activation phase; added or removed rulesets and every change
+to actions, inputs, parsers, queues, templates, modules, or global settings are
+rejected as ``candidate_scope_unsupported``.  This is a capability boundary,
+not yet a claim that the accepted ruleset syntax has been semantically prepared.
+An unchanged candidate also passes this scope gate, but ``on`` still rejects it
+as ``activation_not_implemented``; it is not reported as a successful activation.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
 for configuration provenance or audit logging.
+The deterministic ``report_hash`` is likewise a non-cryptographic diagnostic
+correlation value (FNV-1a-64), not a security check, configuration provenance
+record, or proof of semantic equivalence.
 
 Delivery plan and gates
 -----------------------
@@ -291,9 +312,9 @@ reuse is enabled.
 
 Release A
   Publish this ADR and establish the terminology, state machine, atomicity
-  contract, and required test/performance gates. The foundation delivered with
-  this ADR also adds policy parsing and request accounting; enabled requests
-  fail closed as described in the current implementation boundary above.
+  contract, and required test/performance gates. That foundation also introduced
+  policy parsing and request accounting; enabled requests failed closed without
+  loading candidates at that earlier boundary.
 
 Release B
   Introduce only private shadow construction and validation plus a deterministic

@@ -8,6 +8,8 @@
 #ifndef RELOAD_REPORT_H_INCLUDED
 #define RELOAD_REPORT_H_INCLUDED 1
 
+#include <stdint.h>
+
 #include "reload-normalized-graph.h"
 
 /** @file reload-report.h
@@ -109,5 +111,21 @@ rsRetVal rsReloadReportBuildV1(const rsReloadNormalizedGraphV1_t *oldGraph,
  * The owner is reset to NULL and borrowed entry pointers become invalid.
  */
 void rsReloadReportDestructV1(rsReloadReportV1_t **ppReport);
+
+/**
+ * @brief Compute the deterministic, non-cryptographic V1 report diagnostic.
+ * @param report Borrowed, well-formed report from rsReloadReportBuildV1(), or
+ * an equivalent V1 view with valid entries and entryStride. No ownership moves.
+ * @return FNV-1a-64 over the V1 diagnostic encoding, or zero for NULL.
+ *
+ * This is only an operational correlation value, not a security check,
+ * configuration fingerprint, provenance record, or proof of equivalence.
+ * Entries are read through entryStride, which must be at least
+ * sizeof(rsReloadReportEntryV1_t). Storage must cover entryCount valid rows;
+ * each non-NULL identity must be a valid NUL-terminated string. The caller owns
+ * this storage and must keep the entire view valid during the call. No
+ * allocation or mutation occurs. Malformed views are outside this API's contract.
+ */
+uint64_t rsReloadReportDiagnosticHashV1(const rsReloadReportV1_t *report);
 
 #endif /* RELOAD_REPORT_H_INCLUDED */

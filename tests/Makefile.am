@@ -601,6 +601,7 @@ TESTS_DEFAULT = \
 	tcpflood-proper-termination.sh \
 	global-maxopenfiles-rainerscript.sh \
 	global-reloadonhup-off-hup.sh \
+	global-reloadonhup-dirty-baseline.sh \
 	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
@@ -611,6 +612,7 @@ TESTS_DEFAULT = \
 	abort-uncleancfg-continue-nop.sh \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
+	include-abort-if-missing.sh \
 	variable_leading_underscore.sh \
 	gzipwr_hup_multi_file.sh \
 	gzipwr_hup_single_file.sh \
@@ -2853,10 +2855,12 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
+	runtime_unit_reload_candidate_graph
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
+	runtime_unit_reload_candidate_graph
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
@@ -2911,6 +2915,9 @@ TESTS += runtime_unit_imdiag_response
 runtime_unit_imdiag_response_SOURCES = unit/imdiag_response_test.c
 runtime_unit_imdiag_response_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_imdiag_response_LDADD =
+
+runtime_unit_reload_candidate_graph_SOURCES = \
+	unit/reload_candidate_graph_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -3013,6 +3020,8 @@ runtime_unit_reload_report_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_reload_normalized_graph_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_candidate_graph_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3027,6 +3036,7 @@ runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_module_reload_LDADD =
 runtime_unit_reload_report_LDADD =
 runtime_unit_reload_normalized_graph_LDADD = $(LIBESTR_LIBS)
+runtime_unit_reload_candidate_graph_LDADD = $(LIBESTR_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)

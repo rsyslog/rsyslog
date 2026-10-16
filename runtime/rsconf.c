@@ -72,13 +72,13 @@
 #include "timezones.h"
 #include "ratelimit.h"
 #include "translate.h"
+#include "reload-candidate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
 
 extern char *yytext;
 extern int yylineno;
-extern int yyparse(void);
 /* static data */
 DEFobjStaticHelpers;
 DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl) DEFobjCurrIf(parser)
@@ -758,6 +758,8 @@ void parser_errmsg(const char *fmt, ...) {
     va_list ap;
     char errBuf[1024];
 
+    rsReloadCandidateNoteParseError();
+    rsReloadCandidateSourceNoteError();
     va_start(ap, fmt);
     if (vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf)) errBuf[sizeof(errBuf) - 1] = '\0';
     if (cnfcurrfn == NULL) {
@@ -771,7 +773,14 @@ void parser_errmsg(const char *fmt, ...) {
 
 int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int yyerror(const char *s) {
-    parser_errmsg("%s on token '%s'", s, yytext);
+    /* At final EOF flex may already have released the backing buffer. The
+     * candidate path therefore must not dereference yytext while reporting a
+     * rejected parse. */
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("%s", s);
+    } else {
+        parser_errmsg("%s on token '%s'", s, yytext);
+    }
     return 0;
 }
 void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
@@ -787,6 +796,21 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
      */
     if (nvlstChkDisabled(o->nvlst)) {
         dbgprintf("object disabled by configuration\n");
+        if (rsReloadCandidateCaptureActive()) cnfobjDestructAll(o);
+        return;
+    }
+
+    /* Capture the same source AST that this normal startup dispatch will
+     * consume. The observer retains only canonical control-plane data. */
+    rsReloadCandidateSourceCaptureObject(o);
+
+    if (rsReloadCandidateCaptureActive()) {
+        const rsRetVal captureRet = rsReloadCandidateTakeObject(o);
+        if (captureRet != RS_RET_OK) {
+            rsReloadCandidateNoteError(captureRet);
+            rsReloadCandidateNoteParseError();
+            cnfobjDestructAll(o);
+        }
         return;
     }
 
@@ -852,6 +876,16 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
 }
 
 void cnfDoScript(struct cnfstmt *script) {
+    if (rsReloadCandidateCaptureActive()) {
+        const rsRetVal captureRet = rsReloadCandidateTakeDefaultScript(script);
+        if (captureRet != RS_RET_OK) {
+            rsReloadCandidateNoteError(captureRet);
+            rsReloadCandidateNoteParseError();
+            cnfstmtDestructLst(script);
+        }
+        return;
+    }
+    rsReloadCandidateSourceCaptureDefaultScript(script);
     if (rsconfTranslateEnabled()) {
         rsconfTranslateCaptureScript(script, cnfcurrfn, yylineno);
     }
@@ -860,6 +894,11 @@ void cnfDoScript(struct cnfstmt *script) {
 }
 
 void cnfDoCfsysline(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("legacy configuration directives are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno, "legacy $-directive '%s' is not supported by the translator",
                                       ln);
@@ -875,6 +914,11 @@ void cnfDoCfsysline(char *ln) {
 }
 
 void cnfDoBSDTag(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style tag blocks are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style tag block '%s' is not supported by the translator", ln);
@@ -889,6 +933,11 @@ void cnfDoBSDTag(char *ln) {
 }
 
 void cnfDoBSDHost(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style host blocks are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style host block '%s' is not supported by the translator", ln);
@@ -1713,6 +1762,8 @@ static rsRetVal validateConf(rsconf_t *cnf) {
 static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     int iNbrActions = 0;
     int r;
+    int parserRan = 0;
+    rsRetVal frontend_iRet = RS_RET_OK;
     rsRetVal delayed_iRet = RS_RET_OK;
     DEFiRet;
 
@@ -1721,6 +1772,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
 
     CHKiRet(loadBuildInModules());
     CHKiRet(initLegacyConf());
+    cnfClearFatalParseError();
 
     /* open the configuration file; route .yaml/.yml to the YAML loader */
     {
@@ -1729,6 +1781,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
 #ifdef HAVE_LIBYAML
         if (is_yaml) {
             rsRetVal yr = yamlconf_load((const char *)confFile);
+            frontend_iRet = yr;
             if (yr == RS_RET_OK) {
                 r = 0;
             } else if (yr == RS_RET_CONF_FILE_NOT_FOUND) {
@@ -1739,12 +1792,16 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
             /* Flush any inline RainerScript script: blocks that were queued
              * into the flex buffer stack by cnfAddConfigBuffer(). */
             if (r == 0 && cnfHasPendingBuffers()) {
-                r = yyparse();
+                parserRan = 1;
+                r = cnfParse();
             }
         } else {
 #endif
             r = cnfSetLexFile((char *)confFile);
-            if (r == 0) r = yyparse();
+            if (r == 0) {
+                parserRan = 1;
+                r = cnfParse();
+            }
 #ifdef HAVE_LIBYAML
         }
 #else
@@ -1758,6 +1815,22 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
         }
 #endif
         if (r == 0) conf.GetNbrActActions(loadConf, &iNbrActions);
+    }
+
+    if (frontend_iRet == RS_RET_OUT_OF_MEMORY || frontend_iRet == RS_RET_IO_ERROR ||
+        frontend_iRet == RS_RET_FILE_OPEN_ERROR) {
+        ABORT_FINALIZE(frontend_iRet);
+    }
+    if (parserRan && r == 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (r == 3) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (r == 4) ABORT_FINALIZE(RS_RET_IO_ERROR);
+
+    {
+        const rsRetVal fatalParseRet = cnfTakeFatalParseError();
+        if (fatalParseRet != RS_RET_OK) {
+            cnfResetParser();
+            ABORT_FINALIZE(fatalParseRet);
+        }
     }
 
     /* we run the optimizer even if we have an error, as it may spit out
