@@ -1,4 +1,7 @@
 #!/bin/bash
+# Nested static calls preserve empty-callee return and STOP propagation.
+# The exact output sequence proves each message reaches the nested action once;
+# the sentinel after rs1 must never execute because rs2 stops processing.
 # added 2012-10-29 by rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
@@ -20,12 +23,18 @@ ruleset(name="rs2") {
 	stop
 }
 
-# this time we make sure a single statement is properly supported
+ruleset(name="empty") {}
+
+# this time we make sure nested calls are properly supported
 ruleset(name="rs1") {
+	call empty
 	call rs2
 }
 
-if $msg contains "msgnum" then call rs1
+if $msg contains "msgnum" then {
+    call rs1
+    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+}
 '
 startup
 injectmsg  0 5000

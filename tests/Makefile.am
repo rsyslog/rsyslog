@@ -4814,3 +4814,10 @@ runtime_unit_imtcp_lifecycle_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_tcpsrv_prepared_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 endif
 endif
+
+# Exercise the production static-call dispatch without daemon lifecycle setup.
+check_PROGRAMS += runtime_unit_ruleset_call
+TESTS += runtime_unit_ruleset_call
+runtime_unit_ruleset_call_SOURCES = unit/ruleset_call_test.c ../runtime/ruleset-call.h
+runtime_unit_ruleset_call_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_ruleset_call_LDADD = $(LIBESTR_LIBS)

@@ -493,8 +493,10 @@ static rsRetVal rejectCachedSynchronousCall(ruleset_t __attribute__((unused)) *c
      * would race such a caller. */
     if (stmt->nodetype == S_CALL_INDIRECT) return RS_RET_NOT_IMPLEMENTED;
     if (stmt->nodetype != S_CALL || stmt->d.s_call.ruleset != NULL) return RS_RET_OK;
+    /* Shell indirection removes stale root caches, but does not yet bring
+     * unchanged callers into the replacement barrier. Keep rejecting them. */
     for (entry = plan->head; entry != NULL; entry = entry->next) {
-        if (stmt->d.s_call.stmt == entry->runtime->root) return RS_RET_NOT_IMPLEMENTED;
+        if (stmt->d.s_call.target == entry->runtime) return RS_RET_NOT_IMPLEMENTED;
     }
     return RS_RET_OK;
 }

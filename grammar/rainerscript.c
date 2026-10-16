@@ -5437,6 +5437,7 @@ struct cnfstmt *cnfstmtNewCall(es_str_t *name) {
     struct cnfstmt *cnfstmt;
     if ((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
         cnfstmt->d.s_call.name = name;
+        cnfstmt->d.s_call.target = NULL;
         cnfstmt->d.s_call.ruleset = NULL;
     }
     return cnfstmt;
@@ -6399,11 +6400,11 @@ static void cnfstmtOptimizeCall(struct cnfstmt *stmt) {
     }
     DBGPRINTF("CALL obtained ruleset ptr %p for ruleset '%s' [hasQueue:%d]\n", pRuleset, rsName,
               rulesetHasQueue(pRuleset));
+    stmt->d.s_call.target = pRuleset;
     if (rulesetHasQueue(pRuleset)) {
         stmt->d.s_call.ruleset = pRuleset;
     } else {
         stmt->d.s_call.ruleset = NULL;
-        stmt->d.s_call.stmt = pRuleset->root;
     }
 done:
     free(rsName);

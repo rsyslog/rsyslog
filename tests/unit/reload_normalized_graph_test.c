@@ -87,6 +87,7 @@ int main(void) {
     struct cnfstmt ifStmt = {.nodetype = S_IF};
     struct cnfstmt propStmt = {.nodetype = S_PROPFILT};
     ruleset_t fixtureRuleset = {0};
+    ruleset_t targetShell = {.root = &stop};
     char *controlFingerprint = NULL;
     char *changedFingerprint = NULL;
     struct cnfstmt callStmt = {.nodetype = S_CALL};
@@ -108,6 +109,13 @@ int main(void) {
     free(changedFingerprint);
     changedFingerprint = NULL;
     callStmt.d.s_call.ruleset = NULL;
+    /* Binding a shell and changing its root must not alter call identity. */
+    callStmt.d.s_call.target = &targetShell;
+    CHECK(rsReloadRulesetFingerprintV1(&fixtureRuleset, &changedFingerprint) == RS_RET_OK);
+    CHECK(!strcmp(controlFingerprint, changedFingerprint));
+    free(changedFingerprint);
+    changedFingerprint = NULL;
+    targetShell.root = NULL;
     CHECK(rsReloadRulesetFingerprintV1(&fixtureRuleset, &changedFingerprint) == RS_RET_OK);
     CHECK(!strcmp(controlFingerprint, changedFingerprint));
     free(controlFingerprint);

@@ -76,6 +76,10 @@ collection, and process orchestration).
 - Leave `ChangeLog` and `NEWS` edits to the maintainers; do not modify those
   files in routine patches.
 
+Static ruleset-call dispatch has bounded production-body coverage in
+`tests/unit/ruleset_call_test.c`: shell root replacement, empty roots,
+synchronous errors, queued dispatch, and duplicate allocation failure.
+
 ## Debugging tips
 - Enable extra runtime logging with `export RSYSLOG_DEBUG="..."` in tests (see
   `tests/diag.sh`) when chasing race conditions.

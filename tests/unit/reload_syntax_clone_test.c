@@ -459,6 +459,8 @@ static int testStatementClone(void) {
     tail->next = statement(S_CALL);
     tail = tail->next;
     CHECK(tail != NULL);
+    tail->d.s_call.target = (ruleset_t *)1;
+    tail->d.s_call.ruleset = (ruleset_t *)1;
     tail->d.s_call.name = es_newStrFromCStr("target", 6);
     CHECK(tail->d.s_call.name != NULL);
 
@@ -496,6 +498,9 @@ static int testStatementClone(void) {
     CHECK(strcmp(clone->next->d.s_foreach.iter->var, "$.item") == 0);
     CHECK(clone->next->next->nodetype == S_CALL);
     CHECK(estrEquals(clone->next->next->d.s_call.name, "target"));
+    /* Syntax clones must bind against their own candidate configuration. */
+    CHECK(clone->next->next->d.s_call.target == NULL);
+    CHECK(clone->next->next->d.s_call.ruleset == NULL);
     CHECK(clone->next->next->next->nodetype == S_UNSET);
     CHECK(strcmp((char *)clone->next->next->next->d.s_unset.varname, "$.old") == 0);
     CHECK(clone->next->next->next->next->nodetype == S_RELOAD_PROPFILT);
