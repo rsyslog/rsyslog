@@ -277,6 +277,23 @@ EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES) $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh imfifo-startup-failure.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
+TESTS_RELOAD_LISTENER_LIFECYCLE = \
+	global-reloadonhup-imtcp-retire-rainerscript.sh \
+	global-reloadonhup-imtcp-retire-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-add-plain-rainerscript.sh \
+	global-reloadonhup-imtcp-add-plain-validate-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-plain-rainerscript.sh \
+	global-reloadonhup-imtcp-replace-plain-validate-rainerscript.sh
+TESTS_RELOAD_LISTENER_LIFECYCLE_YAML = \
+	global-reloadonhup-imtcp-retire-yaml.sh \
+	global-reloadonhup-imtcp-retire-validate-yaml.sh \
+	global-reloadonhup-imtcp-add-plain-yaml.sh \
+	global-reloadonhup-imtcp-add-plain-validate-yaml.sh \
+	global-reloadonhup-imtcp-replace-plain-yaml.sh \
+	global-reloadonhup-imtcp-replace-plain-validate-yaml.sh
+EXTRA_DIST += $(TESTS_RELOAD_LISTENER_LIFECYCLE) $(TESTS_RELOAD_LISTENER_LIFECYCLE_YAML) \
+	helpers/reload_tcp_port_reserver.py
+
 TESTS_RELOAD_LISTENER_CAPACITY = \
 	global-reloadonhup-imtcp-maxlisteners-rainerscript.sh \
 	global-reloadonhup-imtcp-maxlisteners-validate-rainerscript.sh
@@ -3291,9 +3308,9 @@ endif
 if ENABLE_IMTCP_TESTS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
-TESTS += $(TESTS_RELOAD_LISTENER_CAPACITY)
+TESTS += $(TESTS_RELOAD_LISTENER_CAPACITY) $(TESTS_RELOAD_LISTENER_LIFECYCLE)
 if HAVE_LIBYAML
-TESTS += $(TESTS_RELOAD_LISTENER_CAPACITY_YAML)
+TESTS += $(TESTS_RELOAD_LISTENER_CAPACITY_YAML) $(TESTS_RELOAD_LISTENER_LIFECYCLE_YAML)
 endif
 endif
 if ENABLE_IMPSTATS
@@ -4772,5 +4789,18 @@ if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_tcpsrv_accept_publication_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_tcpsrv_accept_publication_LDADD += $(LIBLOGGING_STDLOG_LIBS)
 endif
+endif
+endif
+
+if ENABLE_TESTBENCH
+if ENABLE_IMTCP_TESTS
+check_PROGRAMS += runtime_unit_imtcp_lifecycle runtime_unit_tcpsrv_prepared
+TESTS += runtime_unit_imtcp_lifecycle runtime_unit_tcpsrv_prepared
+runtime_unit_imtcp_lifecycle_SOURCES = unit/imtcp_lifecycle_test.c
+runtime_unit_tcpsrv_prepared_SOURCES = unit/tcpsrv_prepared_test.c
+runtime_unit_imtcp_lifecycle_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_tcpsrv_prepared_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imtcp_lifecycle_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_tcpsrv_prepared_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 endif
 endif

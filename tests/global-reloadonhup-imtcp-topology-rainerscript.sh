@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# Topology must be rejected before prepare in both on and validate modes.
-# Add/remove/replace attempts retain generation one and the established stream's
+# Dynamic-port additions and replacements require restart in on/validate modes.
+# These attempts retain generation one and the established stream's
 # routing. Absent candidate port files prove no prepared socket was published;
 # acknowledged status plus output markers avoid timing-based negative oracles.
 # Require the exact on-mode scope rejection, or validate-mode report-only result,
@@ -20,14 +20,11 @@ add_conf 'ruleset(name="main") { action(type="omfile" name="sink" file="'$RSYSLO
 startup
 exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
 cp "$CONF_FILE" "$CONF_FILE.base"
-for change in add remove replace; do
+for change in add replace; do
     case "$change" in
         add)
             cp "$CONF_FILE.base" "$CONF_FILE"
             printf 'input(type="imtcp" name="added" port="0" listenPortFileName="%s.added.port" ruleset="main")\n' "$RSYSLOG_DYNNAME" >>"$CONF_FILE"
-            ;;
-        remove)
-            sed 's/input(type="imtcp"[^)]*)//' "$CONF_FILE.base" >"$CONF_FILE"
             ;;
         replace)
             sed -e 's/address="127.0.0.1"/address="127.0.0.2"/' \

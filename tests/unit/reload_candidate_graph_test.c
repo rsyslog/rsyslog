@@ -1246,9 +1246,9 @@ int main(void) {
     CHECK(builder == NULL);
     rsReloadCandidateDestruct(&candidate);
 
-    /* The broadened materializer gate is authorized only for candidate-side
-     * imtcp objects already classified LIVE_SWAP. Other modules/inputs and
-     * every add/remove operation must remain fail-closed. */
+    /* Source authorization permits classified imtcp input topology changes.
+     * Added inputs resolve against candidate ownership; removed inputs need
+     * the active catalog. Other modules, inputs and module topology fail closed. */
     candidate = calloc(1, sizeof(*candidate));
     CHECK(candidate != NULL);
     addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
@@ -1269,6 +1269,25 @@ int main(void) {
           RS_RET_NOT_IMPLEMENTED);
     CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:named:4:tcp1") ==
           RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_ADDED, "input:named:4:tcp1") == RS_RET_OK);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_ADDED, "input:named:4:udp1") ==
+          RS_RET_NOT_IMPLEMENTED);
+    {
+        rsReloadReportEntryV1_t removed = {.objectKind = RS_RELOAD_OBJ_INPUT,
+                                           .diffKind = RS_RELOAD_DIFF_REMOVED,
+                                           .identity = (char *)"input:named:4:tcp1"};
+        rsReloadReportV1_t report = {.version = RS_RELOAD_REPORT_V1,
+                                     .structSize = sizeof(report),
+                                     .entryCount = 1,
+                                     .entryStride = sizeof(removed),
+                                     .entries = &removed};
+        CHECK(rsReloadCandidateCheckAuthorizedReportV1(candidate, candidate, &report, RS_RELOAD_AUTHORIZE_IMTCP_V1) ==
+              RS_RET_OK);
+        CHECK(rsReloadCandidateCheckAuthorizedReportV1(candidate, candidate, &report, 0) == RS_RET_NOT_IMPLEMENTED);
+        removed.identity = (char *)"input:named:4:udp1";
+        CHECK(rsReloadCandidateCheckAuthorizedReportV1(candidate, candidate, &report, RS_RELOAD_AUTHORIZE_IMTCP_V1) ==
+              RS_RET_NOT_IMPLEMENTED);
+    }
     rsReloadCandidateDestruct(&candidate);
     /* Named definition mutation requires exclusive imtcp ownership in both
      * generations, including nested actions whose ASTs the catalog discards.

@@ -307,6 +307,7 @@ struct tcpsrv_s {
         tcpsrv_io_descr_t *fenceWorkTail; /**< workQueue.mut: last normal item before markers, borrowed */
         sbool strictListenerInit; /**< Prepared construction requires every supported socket. */
         sbool preparedRun; /**< Run-owned: preparation requires complete worker startup. */
+        sbool retireWhenDrained; /**< fenced publication; owner exits after final session closes */
         sbool stopRequested; /**< Atomic reads or fenceMut: server-local cooperative stop. */
         sbool queueSyncInitialized; /**< fenceMut: queue mutex and condition may be accessed. */
 #ifdef ENABLE_TESTBENCH
@@ -502,9 +503,13 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* Caller pins the server through join; safe before queue init/after teardown.
      * Wakes the backend/workers, not the caller-owned activation gate. */
     void (*RequestStop)(tcpsrv_t *server);
+    /* v41: caller owns a complete fence. Close accepts without touching live
+     * sessions; Run/RunPrepared returns after the final session drains. */
+    void (*DisableAcceptWhileFenced)(tcpsrv_t *pThis);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 40 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 41 /* increment whenever you change the interface structure! */
+/* v41 adds fenced accept retirement with session drain. */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

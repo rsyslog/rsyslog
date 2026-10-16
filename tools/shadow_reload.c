@@ -1125,7 +1125,8 @@ void shadowReloadBeginRequest(void) {
                                                  (pendingSourceModuleCapability == eMOD_RELOAD_REUSE ||
                                                   pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP ||
                                                   pendingSourceModuleCapability == eMOD_RELOAD_NEW_SESSIONS ||
-                                                  pendingSourceModuleCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS);
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS ||
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_DRAIN_REPLACE);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
                     unsigned authorizations = pendingBaseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
@@ -1145,11 +1146,13 @@ void shadowReloadBeginRequest(void) {
                                 modReloadPrepare(pendingSourceModule, pendingActiveSourceModuleCnf,
                                                  pendingSourceModuleCnf, &pendingModuleReloadState);
                             if (pendingCandidateResult != RS_RET_OK) {
-                                /* An invalid prepared regex is an activation
-                                 * failure after accepted source capability.
+                                /* Invalid prepared regexes and unavailable
+                                 * listener endpoints are activation failures
+                                 * after accepted source capability.
                                  * Unsupported constraints and unexpected
                                  * errors retain their existing classification. */
-                                pendingFailurePhase = pendingCandidateResult == RS_RET_INVALID_VALUE
+                                pendingFailurePhase = (pendingCandidateResult == RS_RET_INVALID_VALUE ||
+                                                       pendingCandidateResult == RS_RET_COULD_NOT_BIND)
                                                           ? SHADOW_RELOAD_FAILURE_ACTIVATION
                                                           : SHADOW_RELOAD_FAILURE_CAPABILITY;
                             }
@@ -1214,7 +1217,8 @@ static int rejectedResult(void) {
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_ACTIVATION &&
             (pendingCandidateResult == RS_RET_NO_RUN || pendingCandidateResult == RS_RET_TIMED_OUT ||
              pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
-             pendingCandidateResult == RS_RET_INVALID_VALUE || pendingCandidateResult == RS_RET_ERR);
+             pendingCandidateResult == RS_RET_INVALID_VALUE || pendingCandidateResult == RS_RET_COULD_NOT_BIND ||
+             pendingCandidateResult == RS_RET_ERR);
         if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure &&
             !expectedActivationFailure)
             return SHADOW_RELOAD_REJECTED_INTERNAL;
