@@ -1,0 +1,41 @@
+grammar/rainerscript.c
+  s_f8a738e4bdfaee::t_a11da7293766ee 5440,6403
+grammar/rainerscript.h
+  s_f8a738e4bdfaee::t_a493356bd4f1cc 162
+grammar/reload-ruleset-materializer.c
+  s_f8a738e4bdfaee::t_8a88ce86f05cd0 496-497,499
+runtime/AGENTS.md
+  s_f8a738e4bdfaee::t_c449deb107b579 79-82
+runtime/Makefile.am
+  s_f8a738e4bdfaee::t_0968ac581b7331 397-398
+runtime/ruleset-call.h
+  s_f8a738e4bdfaee::t_4978d764983cb2 1-23
+runtime/ruleset.c
+  s_f8a738e4bdfaee::t_8433be624909b3 420
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_e4c476ee4065d7 4805-4811
+tests/rscript_ruleset_call.sh
+  s_f8a738e4bdfaee::t_1566c62c09f05c 2-4,26-28,30,34-37
+tests/unit/reload_normalized_graph_test.c
+  s_f8a738e4bdfaee::t_7595c92b26c63f 90,112-118
+tests/unit/reload_syntax_clone_test.c
+  s_f8a738e4bdfaee::t_cfe0d6ae7b0dd7 462-463,501-503
+tests/unit/ruleset_call_test.c
+  s_f8a738e4bdfaee::t_5791c30efcc263 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f19fae4df6878d2b12c579da7672764056b5e914",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
