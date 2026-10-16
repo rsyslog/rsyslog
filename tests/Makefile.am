@@ -289,6 +289,7 @@ EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 EXTRA_DIST += unit/mmaitag_gemini_response_test.c
 EXTRA_DIST += unit/module_reload_test.c
+EXTRA_DIST += unit/shadow_reload_retirement_test.c
 EXTRA_DIST += unit/reload_report_test.c
 EXTRA_DIST += unit/reload_normalized_graph_test.c
 EXTRA_DIST += unit/imdiag_response_test.c
@@ -1879,6 +1880,7 @@ TESTS_OMSTDOUT = \
 	omstdout-empty-template.sh
 
 TESTS_LIBYAML_IMTCP = \
+	global-reloadonhup-imtcp-notifications-yaml.sh \
 	config-translate-rs-roundtrip.sh \
 	config-translate-yaml-roundtrip.sh \
 	yaml-queue-mutex-contention-stats.sh \
@@ -2918,6 +2920,12 @@ runtime_unit_omazuredce_utils_SOURCES = \
 
 runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
+
+check_PROGRAMS += runtime_unit_shadow_reload_retirement
+TESTS += runtime_unit_shadow_reload_retirement
+runtime_unit_shadow_reload_retirement_SOURCES = unit/shadow_reload_retirement_test.c ../tools/shadow_reload_retirement.h
+runtime_unit_shadow_reload_retirement_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_shadow_reload_retirement_LDADD =
 
 runtime_unit_module_reload_SOURCES = \
 	unit/module_reload_test.c \

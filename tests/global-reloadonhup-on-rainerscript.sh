@@ -6,6 +6,8 @@
 # imtcp live/new-session profile changes and an eligible named-ruleset update
 # publish atomically while one TCP session stays open. HUP completion plus
 # exact generation/output checks prove the cutover without timing assumptions.
+# Later-accept multiline framing is proved by a combined continuation record;
+# the held pre-HUP stream remains independently LF-delimited.
 # Local/mixed controls reject policy and ruleset-body changes without
 # advancing the generation; old-route delivery proves runtime retention.
 . ${srcdir:=.}/diag.sh init
@@ -204,6 +206,16 @@ if [[ "$reload_status" != *"source_capability=new_sessions"* ]]; then
 	echo "FAIL: changed RainerScript imtcp profile was not classified for new sessions: $reload_status"
 	error_exit 1
 fi
+# The new accept profile must actually combine continuation lines, while
+# the pre-HUP stream still submits a single LF-delimited frame immediately.
+# Default parser escaping renders the embedded newline as #012 in one record.
+printf '<167>Mar 10 01:00:00 host app: msgnum:multiline-old\n' >&9 || error_exit 1
+wait_content 'msgnum:multiline-old' "$RSYSLOG_OUT_LOG"
+exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+printf '<167>Mar 10 01:00:00 host app: msgnum:multiline-new\ncontinued-body\n<167>Mar 10 01:00:00 host app: msgnum:multiline-flush\n' >&7 || error_exit 1
+wait_content 'msgnum:multiline-new#012continued-body' "$RSYSLOG_OUT_LOG"
+exec 7>&-
+
 cp "$CONF_FILE.base" "$CONF_FILE"
 
 fi

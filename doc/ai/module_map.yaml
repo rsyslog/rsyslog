@@ -153,6 +153,14 @@ runtime_ratelimit:
     - perSourceMaxStates is enforced approximately through shard-local caps; values below the shard count keep one active state per shard, and per_source_evicted reports source-state evictions.
     - HUP snapshots named configs under shard read locks, then reloads policy files without holding registry locks.
 
+tools_shadow_reload:
+  paths: ["tools/shadow_reload.c", "tools/shadow_reload.h", "tools/shadow_reload_retirement.h"]
+  requires_serialization: true
+  notes:
+    - The main thread exclusively owns retirement state and monotonic capped retry deadlines; callbacks run without statusMut.
+    - Observer-only retirement snapshots and last published candidate status are copied under statusMut; blocked HUP accounting never replaces a published activation result.
+    - Final shutdown alone bypasses the retry deadline once after input joins; runtime-generation guards prevent stale endpoint dereferences.
+
 runtime_tcpsrv:
   paths:
     - "runtime/tcpsrv.c"

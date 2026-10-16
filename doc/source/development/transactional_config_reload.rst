@@ -44,6 +44,29 @@ baselines are published with the generation. Failed resume retains ownership
 for automatic main-loop retry before state is aborted or retired; an already
 published generation is never retroactively reported as rejected.
 
+Retained cleanup retries use monotonic exponential backoff from 100 milliseconds
+to a five-second cap. The main loop may still wake every 100 milliseconds for
+other work, but expensive resume/retirement callbacks run only when due.
+Unavailable monotonic time defers pending retries without a wall-clock fallback
+or busy loop; recovery resumes deadline checks. Final shutdown may make one
+guarded cleanup attempt after input threads have joined, bypassing the deadline.
+
+``getreloadstatus`` appends ``retirement_pending``, ``retirement_last_error``,
+and ``retirement_retry_count``. The error is the last actual callback result,
+not a deferred poll's ``RS_RET_RETRY``. The count includes actual retry cleanup
+attempts (each may resume then retire), excluding the initial failure; it
+remains visible after successful cleanup and
+resets on the next failed retirement episode. These observer fields are copied
+under the status mutex independently of callbacks.
+
+A HUP received during pending retirement is explicitly rejected and accounted,
+but its legacy hooks still execute once. Its log records
+``rejected_reason=retirement_pending``; no candidate is parsed or queued.
+The status result/report still describe the last published candidate, including
+an already activated generation, while the additive retirement fields describe
+the current condition. A newer signal arriving during those legacy hooks remains
+pending for its own normal HUP cycle.
+
 Detached candidate lowering remains side-effect-free. There is no live
 listener addition, removal, endpoint reconciliation, or TLS/ACL replacement.
 Those changes, incompatible dependencies, and unsupported source lowering
