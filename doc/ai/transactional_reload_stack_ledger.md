@@ -6,9 +6,69 @@ slice 14b. Ordinary introducing fixes are folded into their owning slices and
 children are recascaded with backup refs and own-patch range-diffs preserved.
 The full nine-milestone implementation plan continues; security work remains
 explicitly deferred. No merge readiness or hardware performance acceptance is
-claimed. The published bounded tip passed the broad runtime and corrected full
-analyzer gate. New metadata, call-graph and ruleset-addition changes are being
-validated separately; older passing receipts do not validate their new heads.
+claimed. Historical bounded-tip broad and analyzer passes remain separate from
+the latest assembled candidates; older passing receipts do not validate new heads.
+
+## Continuing implementation checkpoint (2026-10-17)
+
+The published22-link stack remains open and draft. The latest local correction
+cascade ends at14b fbc8471312d149545fdf983b53b34be027510d41 and is not yet
+republished. Owning02 is5f218c01346f9e29e8a09cb198c1faa6914718c4; owning03
+is f9e5e6c8044488dda824c188ece9727870e6cd8b. The03 fix treats NULL grammar
+include reductions as no program fragment, while preserving real empty syntax
+objects. Its length-aware native clone fixture repair is folded into03;
+portable explicit struct initialization is folded into02/03. Descendants were
+recascaded with backups and range-diffs;06 adapts the inherited test to its
+source-catalog output API. Actual CentOS7 GCC4.8.5 report/graph/candidate units
+passed3/3; the hosted-equivalent Debian i386 candidate unit passed, including
+the previously failing fingerprint assertion. Original failures remain saved.
+
+Published14b e9845c2c7005ca15c2ada4c11c22ac3be3e7bee2 passed its full
+analyzer with zero reports. Its broad runtime result was1851 total,1779 passed,
+70 skipped,2 failed,zero errors. The failures were an imtcp max-listeners test
+startup timeout before HUP and the imczmq startup-failure harness deadline.
+Both passed unchanged isolated reruns2/2; causes remain unresolved. This is
+not a clean broad-suite pass. Image Ubuntu26.04 ID
+sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09,
+run-ci.sh build/check60, analyzer20, default relevance retained all service
+families. Exact logs and failure triage are in the dedicated
+rsyslog-reload-m4-checkpoint-validation .ordinary-validation directory.
+
+Local14c b49f49e5dc741a7987c4a20dc07fc202082a4213 implements default-program
+activation with separate synthetic identity, ordered fragment aggregation,
+empty transitions, named/default atomic publication and explicit legacy-routing
+and unnamed-action ownership restrictions. Its corrected-parent focused suite
+passed8/8 with no skips, including real RainerScript includes and hybrid YAML
+(native named bodies plus included RainerScript default statements). Native
+ASan/UBSan with leak checking2/2 and Clang21 O0 native2/2 passed; the fence
+fixture linked under O0 TSAN. Exact formatting passed107 C/H files. Clean HTML,
+YAML docs and mock distribution evidence carries forward across unchanged doc
+and distribution inputs. Independent ordinary correctness review is clear for
+diff SHA256 c1bbe689799e63c45fef66ceb6efcee4b164821317fa0184155aef0979b89d57.
+Native YAML top-level statements remain a future frontend proposal.
+
+Local14d e95f42e2b7c36609443f16f44377120a7f6c1e9e is reparented onto14c;
+its own patch is unchanged from da5c4383a5d68dd4f06903144f57d8ce051b28a6.
+It adds nonblocking inspection of every worker slot after completion Wait,
+including exited-worker retained responsibility, and denies starts while
+QUIESCE is active. Contention, invalid generations and retained work remain
+distinct outcomes. Normal targeted tests passed in isolated selections, the
+fallback-atomic native fixture passed, and TSAN native plus real lease checks
+passed2/2. Initial startup failures remain preserved. This does not prove
+backend emptiness or enable ruleset reclamation. A fresh assembled checkpoint
+at e95f42e2b7c36609443f16f44377120a7f6c1e9e is running sequential Ubuntu
+runtime60 and clean analyzer20 in rsyslog-reload-m4-default-checkpoint; results
+are pending. A separate actual CentOS7 all-check_PROGRAMS compile is pending.
+
+Slice15 input-reader fencing remains under implementation in a separate tree.
+Its append-only optional module interface tail and separate manager reader-owner
+array avoid ordinary module publication hooks. Real imtcp endpoint pins include
+draining servers; timeout, partial unwind, release retry and joined afterRun
+invalidation have focused native evidence. Final integration, sanitizers,
+ordinary review and reparenting are pending. This covers input readers only;
+it does not establish private asynchronous output/parser coverage. General
+removal, parser assignment consumers and subsequent milestones remain open.
+Security work remains explicitly deferred.
 
 ## Published continuation checkpoint (2026-10-16)
 
