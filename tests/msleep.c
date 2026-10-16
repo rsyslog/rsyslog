@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
     if (argc != 2) {
         fprintf(stderr, "usage: msleep <milliseconds>\n");
-        exit(1);
+        return 1;
     }
 
     sleepTime = atoi(argv[1]);
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     tvSelectTimeout.tv_usec = (sleepTime % 1000) * 1000; /* micro seconds */
     if (select(0, NULL, NULL, NULL, &tvSelectTimeout) == -1) {
         perror("select");
-        exit(1);
+        return 1;
     }
 
     return 0;
