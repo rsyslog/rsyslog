@@ -998,6 +998,9 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 
 TESTS_IMTCP = \
 	global-reloadonhup-ruleset-metadata-rainerscript.sh \
+	global-reloadonhup-imtcp-reorder-rainerscript.sh \
+	global-reloadonhup-imtcp-topology-rainerscript.sh \
+	global-reloadonhup-imtcp-topology-validate-rainerscript.sh \
 	global-reloadonhup-imtcp-defaulttz-rainerscript.sh \
 	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
 	global-reloadonhup-closed-dequeue-window.sh \
@@ -1886,6 +1889,9 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
 	global-reloadonhup-imtcp-defaulttz-yaml.sh \
+	global-reloadonhup-imtcp-reorder-yaml.sh \
+	global-reloadonhup-imtcp-topology-yaml.sh \
+	global-reloadonhup-imtcp-topology-validate-yaml.sh \
 	global-reloadonhup-imtcp-ruleset-yaml.sh \
 	global-reloadonhup-on-local-yaml.sh \
 	global-reloadonhup-on-mixed-yaml.sh \

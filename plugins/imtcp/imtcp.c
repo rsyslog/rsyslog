@@ -1,4 +1,9 @@
 /* imtcp.c
+ * Concurrency & Locking: retained listener reconciliation is control-path only.
+ * A reload profile contains copied scalars and a generation-pinned ruleset.
+ * Commit runs with every affected event-loop/worker fence held; it neither
+ * allocates nor changes listener topology. Unnamed limiter reset shares that
+ * exclusion; accepted sessions retain their accept-time snapshots.
  * This is the implementation of the TCP input module.
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
@@ -44,6 +49,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <signal.h>
@@ -112,8 +118,12 @@ static rsRetVal endpointKeyBuild(const tcpLstnParams_t *const params,
                                  const char *const networkNamespace,
                                  char **const key) {
     const char *const address = params->pszAddr == NULL ? "*" : (const char *)params->pszAddr;
+    const char *identityAddress = address;
     const char *const port = params->pszPort == NULL ? "" : (const char *)params->pszPort;
     const char *const ns = networkNamespace == NULL ? "" : networkNamespace;
+    char canonicalAddress[INET6_ADDRSTRLEN];
+    struct in_addr ipv4;
+    struct in6_addr ipv6;
     char *end = NULL;
     unsigned long numericPort;
     int printed;
@@ -126,13 +136,20 @@ static rsRetVal endpointKeyBuild(const tcpLstnParams_t *const params,
     numericPort = strtoul(port, &end, 10);
     if (errno != 0 || end == port || *end != '\0' || numericPort == 0 || numericPort > UINT16_MAX)
         return RS_RET_NOT_IMPLEMENTED;
-    printed = snprintf(NULL, 0, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(address), address,
-                       (unsigned)numericPort);
+    if (inet_pton(AF_INET, address, &ipv4) == 1) {
+        if (inet_ntop(AF_INET, &ipv4, canonicalAddress, sizeof(canonicalAddress)) == NULL) return RS_RET_ERR;
+        identityAddress = canonicalAddress;
+    } else if (inet_pton(AF_INET6, address, &ipv6) == 1) {
+        if (inet_ntop(AF_INET6, &ipv6, canonicalAddress, sizeof(canonicalAddress)) == NULL) return RS_RET_ERR;
+        identityAddress = canonicalAddress;
+    }
+    printed = snprintf(NULL, 0, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(identityAddress),
+                       identityAddress, (unsigned)numericPort);
     if (printed < 0) return RS_RET_PARAM_ERROR;
     required = (size_t)printed;
     if ((*key = malloc(required + 1)) == NULL) return RS_RET_OUT_OF_MEMORY;
-    snprintf(*key, required + 1, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(address), address,
-             (unsigned)numericPort);
+    snprintf(*key, required + 1, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(identityAddress),
+             identityAddress, (unsigned)numericPort);
     return RS_RET_OK;
 }
 
@@ -1631,6 +1648,31 @@ static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instance
     return NULL;
 }
 
+static int reloadEndpointConfigEqual(const instanceConf_t *const left,
+                                     const modConfData_t *const leftModule,
+                                     const instanceConf_t *const right,
+                                     const modConfData_t *const rightModule) {
+    char *leftKey = NULL;
+    char *rightKey = NULL;
+    const rsRetVal leftRet = endpointKeyBuild(left->cnf_params, reloadEffectiveNamespace(left, leftModule), &leftKey);
+    const rsRetVal rightRet =
+        endpointKeyBuild(right->cnf_params, reloadEffectiveNamespace(right, rightModule), &rightKey);
+    int equal = 0;
+
+    if (leftRet == RS_RET_OK && rightRet == RS_RET_OK) {
+        equal = !strcmp(leftKey, rightKey);
+    } else if (leftRet == RS_RET_NOT_IMPLEMENTED && rightRet == RS_RET_NOT_IMPLEMENTED) {
+        equal = reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
+                                  reloadEffectiveNamespace(right, rightModule)) &&
+                reloadUStringEqual(left->cnf_params->pszPort, right->cnf_params->pszPort) &&
+                reloadUStringEqual(left->cnf_params->pszAddr, right->cnf_params->pszAddr) &&
+                reloadUStringEqual(left->cnf_params->pszLstnPortFileName, right->cnf_params->pszLstnPortFileName);
+    }
+    free(leftKey);
+    free(rightKey);
+    return equal;
+}
+
 static int reloadInstanceEqual(const instanceConf_t *const left,
                                const modConfData_t *const leftModule,
                                const instanceConf_t *const right,
@@ -1650,7 +1692,8 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
-           left->ratelimitInterval == right->ratelimitInterval && left->ratelimitBurst == right->ratelimitBurst &&
+           ((ignoreLiveFields && leftParams->pszRatelimitName == NULL && rightParams->pszRatelimitName == NULL) ||
+            (left->ratelimitInterval == right->ratelimitInterval && left->ratelimitBurst == right->ratelimitBurst)) &&
            (ignoreNewSessionFields ||
             (left->bSPFramingFix == right->bSPFramingFix && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
              left->maxFrameSize == right->maxFrameSize && left->bDisableLFDelim == right->bDisableLFDelim &&
@@ -1662,9 +1705,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
                                 right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            (ignoreNewSessionFields || left->bPreserveCase == right->bPreserveCase) &&
-           left->iSynBacklog == right->iSynBacklog &&
-           reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
-                             reloadEffectiveNamespace(right, rightModule)) &&
+           left->iSynBacklog == right->iSynBacklog && reloadEndpointConfigEqual(left, leftModule, right, rightModule) &&
            reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrName, leftModule->pszStrmDrvrName),
                               reloadEffectiveString(right->pszStrmDrvrName, rightModule->pszStrmDrvrName)) &&
            left->iStrmDrvrMode == right->iStrmDrvrMode &&
@@ -1697,16 +1738,140 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
              left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
              left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet)) &&
-           reloadUStringEqual(leftParams->pszPort, rightParams->pszPort) &&
-           reloadUStringEqual(leftParams->pszAddr, rightParams->pszAddr) &&
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
-           reloadUStringEqual(leftParams->pszLstnPortFileName, rightParams->pszLstnPortFileName) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
            reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
            leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
            reloadPermittedPeersEqual(reloadEffectivePermittedPeers(left, leftModule),
                                      reloadEffectivePermittedPeers(right, rightModule));
+}
+
+/** @brief Own a canonical fixed-endpoint or explicit dynamic-name identity. */
+static rsRetVal reloadEndpointIdentity(const instanceConf_t *const inst,
+                                       const modConfData_t *const module,
+                                       char **const identity) {
+    rsRetVal ret;
+    char *key = NULL;
+    int printed;
+    size_t required;
+
+    if (inst == NULL || inst->cnf_params == NULL || module == NULL || identity == NULL || *identity != NULL)
+        return RS_RET_PARAM_ERROR;
+    ret = endpointKeyBuild(inst->cnf_params, reloadEffectiveNamespace(inst, module), &key);
+    if (ret == RS_RET_OK) {
+        *identity = key;
+        return RS_RET_OK;
+    }
+    if (ret != RS_RET_NOT_IMPLEMENTED || inst->pszInputName == NULL) return ret;
+    printed = snprintf(NULL, 0, "config-name|%zu:%s", ustrlen(inst->pszInputName), inst->pszInputName);
+    if (printed < 0) return RS_RET_PARAM_ERROR;
+    required = (size_t)printed;
+    if ((*identity = malloc(required + 1)) == NULL) return RS_RET_OUT_OF_MEMORY;
+    snprintf(*identity, required + 1, "config-name|%zu:%s", ustrlen(inst->pszInputName), inst->pszInputName);
+    return RS_RET_OK;
+}
+
+/** @brief Require complete collision-free identity coverage without runtime effects. */
+static rsRetVal reloadConfigHasUniqueIdentities(const modConfData_t *const config, int *const usable) {
+    const instanceConf_t *current;
+    const instanceConf_t *previous;
+    char *currentIdentity = NULL;
+    char *previousIdentity = NULL;
+    DEFiRet;
+
+    *usable = 0;
+    for (current = config->root; current != NULL; current = current->next) {
+        iRet = reloadEndpointIdentity(current, config, &currentIdentity);
+        if (iRet == RS_RET_NOT_IMPLEMENTED) {
+            iRet = RS_RET_OK;
+            FINALIZE;
+        }
+        CHKiRet(iRet);
+        for (previous = config->root; previous != current; previous = previous->next) {
+            iRet = reloadEndpointIdentity(previous, config, &previousIdentity);
+            if (iRet == RS_RET_NOT_IMPLEMENTED) {
+                iRet = RS_RET_OK;
+                FINALIZE;
+            }
+            CHKiRet(iRet);
+            if (!strcmp(currentIdentity, previousIdentity)) FINALIZE;
+            free(previousIdentity);
+            previousIdentity = NULL;
+        }
+        free(currentIdentity);
+        currentIdentity = NULL;
+    }
+    *usable = 1;
+
+finalize_it:
+    free(currentIdentity);
+    free(previousIdentity);
+    RETiRet;
+}
+
+/** @brief Resolve a borrowed instance after uniqueness has been established. */
+static rsRetVal reloadFindInstanceByIdentity(const modConfData_t *const config,
+                                             const char *const identity,
+                                             const instanceConf_t **const match) {
+    const instanceConf_t *inst;
+    char *candidateIdentity = NULL;
+    DEFiRet;
+
+    *match = NULL;
+    for (inst = config->root; inst != NULL; inst = inst->next) {
+        CHKiRet(reloadEndpointIdentity(inst, config, &candidateIdentity));
+        if (!strcmp(identity, candidateIdentity)) {
+            *match = inst;
+            free(candidateIdentity);
+            candidateIdentity = NULL;
+            break;
+        }
+        free(candidateIdentity);
+        candidateIdentity = NULL;
+    }
+
+finalize_it:
+    free(candidateIdentity);
+    RETiRet;
+}
+
+/** @brief Merge independently classified policy dimensions. */
+static void mergeReloadCapability(eModReloadCapability_t *const capability,
+                                  const int liveChanged,
+                                  const int newSessionsChanged,
+                                  const int drainReplace) {
+    int haveLive;
+    int haveNewSessions;
+
+    if (drainReplace || *capability == eMOD_RELOAD_DRAIN_REPLACE) {
+        *capability = eMOD_RELOAD_DRAIN_REPLACE;
+        return;
+    }
+    haveLive = liveChanged || *capability == eMOD_RELOAD_LIVE_SWAP || *capability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS;
+    haveNewSessions = newSessionsChanged || *capability == eMOD_RELOAD_NEW_SESSIONS ||
+                      *capability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS;
+    if (haveLive && haveNewSessions)
+        *capability = eMOD_RELOAD_LIVE_AND_NEW_SESSIONS;
+    else if (haveLive)
+        *capability = eMOD_RELOAD_LIVE_SWAP;
+    else if (haveNewSessions)
+        *capability = eMOD_RELOAD_NEW_SESSIONS;
+}
+static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
+                                         const modConfData_t *const oldConfig,
+                                         const instanceConf_t *const newInst,
+                                         const modConfData_t *const newConfig,
+                                         eModReloadCapability_t *const capability) {
+    int liveChanged;
+    int newSessionsChanged;
+
+    if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
+    if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) return 0;
+    liveChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 1);
+    newSessionsChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0);
+    mergeReloadCapability(capability, liveChanged, newSessionsChanged, 0);
+    return 1;
 }
 
 static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
@@ -1716,34 +1881,59 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     const modConfData_t *const newConfig = pNewCnf;
     const instanceConf_t *oldInst;
     const instanceConf_t *newInst;
+    const instanceConf_t *matchedInst;
     eModReloadCapability_t capability = eMOD_RELOAD_REUSE;
+    int oldIdentitiesUsable;
+    int newIdentitiesUsable;
+    char *identity = NULL;
+    size_t oldCount = 0;
+    size_t newCount = 0;
+    DEFiRet;
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
     *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
     if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
+    for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
+    for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
+    if (oldCount != newCount) return RS_RET_OK;
+    CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
+    CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
+    if (oldIdentitiesUsable && newIdentitiesUsable) {
+        for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) {
+            CHKiRet(reloadEndpointIdentity(oldInst, oldConfig, &identity));
+            CHKiRet(reloadFindInstanceByIdentity(newConfig, identity, &matchedInst));
+            free(identity);
+            identity = NULL;
+            if (matchedInst == NULL ||
+                !mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability))
+                FINALIZE;
+        }
+        *pCapability = capability;
+        FINALIZE;
+    }
+    /* Only a singleton has an unambiguous positional fallback. Reject
+     * unidentified or duplicate multi-listener sets before preparation. */
+    if (oldCount > 1) FINALIZE;
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
-        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) {
-            if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0)) {
-                if (capability == eMOD_RELOAD_REUSE) capability = eMOD_RELOAD_LIVE_SWAP;
-            } else if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) {
-                capability = eMOD_RELOAD_NEW_SESSIONS;
-            } else {
-                return RS_RET_OK;
-            }
-        }
+        if (!mergeReloadInstanceCapability(oldInst, oldConfig, newInst, newConfig, &capability)) FINALIZE;
         oldInst = oldInst->next;
         newInst = newInst->next;
     }
     if (oldInst == NULL && newInst == NULL) *pCapability = capability;
-    return RS_RET_OK;
+
+finalize_it:
+    free(identity);
+    RETiRet;
 }
 
 typedef struct imtcpReloadEntryV1_s {
     tcpsrv_etry_t *runtime;
     int flowControl;
     unsigned starvationMaxReads;
+    unsigned ratelimitInterval;
+    unsigned ratelimitBurst;
     int notifyOnConnectionClose;
     int notifyOnConnectionOpen;
     int preserveCase;
@@ -1791,6 +1981,18 @@ static tcpsrv_etry_t *findRuntimeEndpointBySourceOrdinal(const size_t ordinal, c
     return NULL;
 }
 
+static tcpsrv_etry_t *findRuntimeEndpointByConfigName(const uchar *const name) {
+    tcpsrv_etry_t *entry;
+    tcpsrv_etry_t *match = NULL;
+    if (name == NULL) return NULL;
+    for (entry = endpoint_registry.head; entry != NULL; entry = entry->next) {
+        if (entry->config_name == NULL || strcmp(entry->config_name, (const char *)name)) continue;
+        if (match != NULL) return NULL;
+        match = entry;
+    }
+    return match;
+}
+
 static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNewCnf, void **const pReloadState) {
     const modConfData_t *const oldConfig = pOldCnf;
     const modConfData_t *const newConfig = pNewCnf;
@@ -1806,7 +2008,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         return RS_RET_PARAM_ERROR;
     CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
     if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE &&
-        capability != eMOD_RELOAD_NEW_SESSIONS)
+        capability != eMOD_RELOAD_NEW_SESSIONS && capability != eMOD_RELOAD_LIVE_AND_NEW_SESSIONS)
         ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++count;
     if (count > (SIZE_MAX - sizeof(*state)) / sizeof(state->entries[0])) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1819,15 +2021,19 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             endpointKeyBuild(newInst->cnf_params, reloadEffectiveNamespace(newInst, newConfig), &key);
         if (keyRet == RS_RET_OK)
             state->entries[index].runtime = findRuntimeEndpoint(key);
-        else if (keyRet == RS_RET_NOT_IMPLEMENTED)
-            state->entries[index].runtime = findRuntimeEndpointBySourceOrdinal(index, count);
-        else
+        else if (keyRet == RS_RET_NOT_IMPLEMENTED) {
+            state->entries[index].runtime = newInst->pszInputName == NULL
+                                                ? findRuntimeEndpointBySourceOrdinal(index, count)
+                                                : findRuntimeEndpointByConfigName(newInst->pszInputName);
+        } else
             ABORT_FINALIZE(keyRet);
         free(key);
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
+        state->entries[index].ratelimitInterval = (unsigned)newInst->ratelimitInterval;
+        state->entries[index].ratelimitBurst = (unsigned)newInst->ratelimitBurst;
         state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
         state->entries[index].notifyOnConnectionOpen = newInst->bEmitMsgOnOpen;
         state->entries[index].preserveCase = newInst->bPreserveCase;
@@ -1919,31 +2125,34 @@ static void commitReloadV1(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
     for (size_t i = 0; i < state->count; ++i) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
-        tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
-        tcpsrv.SetStarvationMaxReads(server, state->entries[i].starvationMaxReads);
-        (void)tcpsrv.SetNotificationOnRemoteOpen(server, state->entries[i].notifyOnConnectionOpen);
-        (void)tcpsrv.SetNotificationOnRemoteClose(server, state->entries[i].notifyOnConnectionClose);
-        (void)tcpsrv.SetPreserveCase(server, state->entries[i].preserveCase);
-        (void)tcpsrv.SetKeepAlive(server, state->entries[i].keepAlive);
-        (void)tcpsrv.SetKeepAliveIntvl(server, state->entries[i].keepAliveInterval);
-        (void)tcpsrv.SetKeepAliveProbes(server, state->entries[i].keepAliveProbes);
-        (void)tcpsrv.SetKeepAliveTime(server, state->entries[i].keepAliveTime);
-        (void)tcpsrv.SetbSPFramingFix(server, state->entries[i].framingFix);
-        (void)tcpsrv.SetAddtlFrameDelim(server, state->entries[i].additionalFrameDelimiter);
-        (void)tcpsrv.SetMaxFrameSize(server, state->entries[i].maxFrameSize);
-        (void)tcpsrv.SetbDisableLFDelim(server, state->entries[i].disableLFDelimiter);
-        (void)tcpsrv.SetDiscardTruncatedMsg(server, state->entries[i].discardTruncatedMessage);
-        (void)tcpsrv.SetSupportOctetCountedFraming(server, state->entries[i].supportOctetCountedFraming);
-        (void)tcpsrv.SetCompressionMode(server, state->entries[i].compressionMode);
-        (void)tcpsrv.SetCompressionDriver(server, state->entries[i].compressionDriver);
-        (void)tcpsrv.SetCompressionMaxExpansionRatio(server, state->entries[i].compressionMaxExpansionRatio);
-        (void)tcpsrv.SetCompressionMaxDecompressedBytesPerReceive(
-            server, state->entries[i].compressionMaxDecompressedBytesPerReceive);
-        (void)tcpsrv.SetCompressionMaxTotalZstdWindowBytes(server,
-                                                           state->entries[i].compressionMaxTotalZstdWindowBytes);
-        (void)tcpsrv.SetMultiLineForNewSessions(server, state->entries[i].multiLine);
-        (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
-        (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
+        tcpsrv_reload_profile_t profile = {
+            .useFlowControl = state->entries[i].flowControl,
+            .starvationMaxReads = state->entries[i].starvationMaxReads,
+            .ratelimitInterval = state->entries[i].ratelimitInterval,
+            .ratelimitBurst = state->entries[i].ratelimitBurst,
+            .notifyOnConnectionClose = state->entries[i].notifyOnConnectionClose,
+            .notifyOnConnectionOpen = state->entries[i].notifyOnConnectionOpen,
+            .preserveCase = state->entries[i].preserveCase,
+            .keepAlive = state->entries[i].keepAlive,
+            .keepAliveInterval = state->entries[i].keepAliveInterval,
+            .keepAliveProbes = state->entries[i].keepAliveProbes,
+            .keepAliveTime = state->entries[i].keepAliveTime,
+            .framingFix = state->entries[i].framingFix,
+            .additionalFrameDelimiter = state->entries[i].additionalFrameDelimiter,
+            .maxFrameSize = state->entries[i].maxFrameSize,
+            .disableLFDelimiter = state->entries[i].disableLFDelimiter,
+            .discardTruncatedMessage = state->entries[i].discardTruncatedMessage,
+            .supportOctetCountedFraming = state->entries[i].supportOctetCountedFraming,
+            .compressionMode = state->entries[i].compressionMode,
+            .compressionDriver = state->entries[i].compressionDriver,
+            .compressionMaxExpansionRatio = state->entries[i].compressionMaxExpansionRatio,
+            .compressionMaxDecompressedBytesPerReceive = state->entries[i].compressionMaxDecompressedBytesPerReceive,
+            .compressionMaxTotalZstdWindowBytes = state->entries[i].compressionMaxTotalZstdWindowBytes,
+            .multiLine = state->entries[i].multiLine,
+            .ruleset = state->entries[i].ruleset,
+        };
+        u_cstr_copy(profile.defaultTZ, state->entries[i].defaultTZ, sizeof(profile.defaultTZ));
+        tcpsrv.ApplyReloadProfile(server, &profile);
     }
 }
 

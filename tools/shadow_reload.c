@@ -233,6 +233,8 @@ static const char *sourceCapabilityName(const eModReloadCapability_t capability,
             return "live_swap";
         case eMOD_RELOAD_NEW_SESSIONS:
             return "new_sessions";
+        case eMOD_RELOAD_LIVE_AND_NEW_SESSIONS:
+            return "live_and_new_sessions";
         case eMOD_RELOAD_DRAIN_REPLACE:
             return "drain_replace";
         case eMOD_RELOAD_RESTART_REQUIRED:
@@ -722,7 +724,8 @@ void shadowReloadBeginRequest(void) {
                     const int sourceReloadable = pendingSourceModuleCapabilityEvaluated &&
                                                  (pendingSourceModuleCapability == eMOD_RELOAD_REUSE ||
                                                   pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP ||
-                                                  pendingSourceModuleCapability == eMOD_RELOAD_NEW_SESSIONS);
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_NEW_SESSIONS ||
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
                     pendingCandidateResult =

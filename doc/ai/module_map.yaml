@@ -172,6 +172,8 @@ runtime_tcpsrv:
   notes:
     - imtcp sessions own independent decompressor state.
     - Live fences lock fenceMut before workQueue.mut; ready descriptor handoffs use only workQueue.mut and remain FIFO before active fence markers. Abort clears priority before waking participants so pending markers can drain.
+    - Reload profiles publish copied live and accept-time values only while the event-loop and worker fence is held.
+    - Unnamed listener-local Linux-like limiter resets occur under that fence; named policy objects are excluded.
     - A finite zstd aggregate-window limit uses a listener-local 64-bit atomic reservation counter; only platforms without 64-bit atomics use the helper-mutex fallback.
 
 runtime_msg:
