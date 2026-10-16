@@ -65,7 +65,8 @@ typedef struct prepareContextV1_s {
     rsReloadRulesetPlanV1_t *plan;
 } prepareContextV1_t;
 
-static rsRetVal rejectCachedSynchronousCall(ruleset_t *ruleset, struct cnfstmt *stmt, void *context);
+static rsRetVal validateActiveCall(ruleset_t *ruleset, struct cnfstmt *stmt, void *context);
+static rsRetVal collectAffectedQueues(const rsReloadRulesetPlanV1_t *plan, qqueue_t ***queuesOut, size_t *countOut);
 
 static const rsReloadReportEntryV1_t *reportEntryAt(const rsReloadReportV1_t *report, const size_t index) {
     const uintptr_t address = (uintptr_t)(const void *)report->entries + index * report->entryStride;
@@ -161,7 +162,9 @@ static rsRetVal validatePreparedStatements(const struct cnfstmt *stmt) {
             case S_STOP:
             case S_SET:
             case S_UNSET:
+            case S_CALL_INDIRECT:
             case S_RELOAD_ACT:
+            case S_CALL:
                 break;
             case S_IF:
                 CHKiRet(validatePreparedStatements(stmt->d.s_if.t_then));
@@ -194,7 +197,9 @@ static rsRetVal lowerPreparedFilters(struct cnfstmt *stmt, rsconf_t *const activ
             case S_STOP:
             case S_SET:
             case S_UNSET:
+            case S_CALL_INDIRECT:
             case S_RELOAD_ACT:
+            case S_CALL:
                 break;
             case S_IF:
                 CHKiRet(lowerPreparedFilters(stmt->d.s_if.t_then, active));
@@ -229,6 +234,10 @@ static rsRetVal lowerPreparedStatements(struct cnfstmt *stmt, prepareContextV1_t
             case S_STOP:
             case S_SET:
             case S_UNSET:
+            case S_CALL_INDIRECT:
+                break;
+            case S_CALL:
+                CHKiRet(validateActiveCall(NULL, stmt, prepare->active));
                 break;
             case S_IF:
                 CHKiRet(lowerPreparedStatements(stmt->d.s_if.t_then, prepare));
@@ -280,6 +289,8 @@ finalize_it:
     RETiRet;
 }
 
+#include "reload-call-binding.h"
+
 static rsRetVal prepareFragment(
     const char *identity, const struct cnfstmt *fragment, int firstForIdentity, int isSyntheticDefault, void *context) {
     prepareContextV1_t *const prepare = (prepareContextV1_t *)context;
@@ -304,6 +315,7 @@ static rsRetVal prepareFragment(
     CHKiRet(cnfstmtCloneReloadSafe(fragment, &entry->root));
     CHKiRet(validatePreparedStatements(entry->root));
     CHKiRet(lowerPreparedFilters(entry->root, prepare->active));
+    CHKiRet(bindPreparedCalls(entry->root, prepare->active));
     /* Match startup's runtime-required expression canonicalization before
      * binding borrowed actions. In particular, array equality relies on the
      * optimizer to move arrays to the RHS and sort them for bsearch(). */
@@ -409,11 +421,16 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
      * action node is otherwise reported unchanged. Action replacement/removal
      * belongs to a later lifecycle-capable release. */
     CHKiRet(requireEveryActiveActionTransfer(&prepare));
-    /* Cached direct calls from unchanged rulesets and all indirect calls can
-     * execute a root being replaced from a queue outside this plan. Keep this
-     * deterministic limitation in the capability/prepare phase, before any
-     * queue is paused. */
-    CHKiRet(rulesetVisitAllStatementsV1(active, rejectCachedSynchronousCall, plan));
+    /* Every potential entry queue participates, including unchanged callers.
+     * Reject unsupported entry paths before any live queue is paused. */
+    CHKiRet(rulesetVisitAllStatementsV1(active, validateActiveCall, active));
+    {
+        qqueue_t **queues = NULL;
+        size_t count = 0;
+        iRet = collectAffectedQueues(plan, &queues, &count);
+        free(queues);
+        CHKiRet(iRet);
+    }
     *out = plan;
     plan = NULL;
 
@@ -455,50 +472,73 @@ static struct cnfstmt *lastStatement(struct cnfstmt *stmt) {
     return stmt;
 }
 
-static rsRetVal collectAffectedQueues(const rsReloadRulesetPlanV1_t *const plan,
-                                      qqueue_t ***const queuesOut,
-                                      size_t *const countOut) {
+typedef struct reloadQueueSetV1_s {
     qqueue_t **queues;
-    reloadPlanEntryV1_t *entry;
-    size_t count = 0;
+    size_t count;
+} reloadQueueSetV1_t;
 
-    if (plan == NULL || queuesOut == NULL || *queuesOut != NULL || countOut == NULL) return RS_RET_PARAM_ERROR;
-    if (plan->count == 0) return RS_RET_OK;
-    if ((queues = calloc(plan->count, sizeof(*queues))) == NULL) return RS_RET_OUT_OF_MEMORY;
-    for (entry = plan->head; entry != NULL; entry = entry->next) {
-        qqueue_t *const queue = entry->runtime->pQueue != NULL ? entry->runtime->pQueue : plan->active->pMsgQueue;
-        size_t i;
-
-        if (queue == NULL || queue->qType == QUEUETYPE_DIRECT) {
-            free(queues);
-            return RS_RET_NOT_IMPLEMENTED;
-        }
-        for (i = 0; i < count && queues[i] != queue; ++i) {
-        }
-        if (i == count) queues[count++] = queue;
-    }
-    *queuesOut = queues;
-    *countOut = count;
+static rsRetVal addEntryQueue(reloadQueueSetV1_t *set, qqueue_t *queue) {
+    qqueue_t **grown;
+    if (queue == NULL || queue->qType == QUEUETYPE_DIRECT) return RS_RET_NOT_IMPLEMENTED;
+    for (size_t i = 0; i < set->count; ++i)
+        if (set->queues[i] == queue) return RS_RET_OK;
+    if (set->count == SIZE_MAX / sizeof(*grown)) return RS_RET_OUT_OF_MEMORY;
+    grown = realloc(set->queues, (set->count + 1) * sizeof(*grown));
+    if (grown == NULL) return RS_RET_OUT_OF_MEMORY;
+    set->queues = grown;
+    set->queues[set->count++] = queue;
     return RS_RET_OK;
 }
 
-static rsRetVal rejectCachedSynchronousCall(ruleset_t __attribute__((unused)) *const ruleset,
-                                            struct cnfstmt *const stmt,
-                                            void *const context) {
-    const rsReloadRulesetPlanV1_t *const plan = context;
-    reloadPlanEntryV1_t *entry;
+DEFFUNC_llExecFunc(collectRulesetEntryQueue) {
+    ruleset_t *const shell = pData;
+    /* A shell without its own queue enters through the main queue. */
+    return shell->pQueue == NULL ? RS_RET_OK : addEntryQueue(pParam, shell->pQueue);
+}
 
-    /* An indirect call can resolve any active ruleset at execution time. Until
-     * all possible caller queues join the barrier, retiring any swapped root
-     * would race such a caller. */
-    if (stmt->nodetype == S_CALL_INDIRECT) return RS_RET_NOT_IMPLEMENTED;
-    if (stmt->nodetype != S_CALL || stmt->d.s_call.ruleset != NULL) return RS_RET_OK;
-    /* Shell indirection removes stale root caches, but does not yet bring
-     * unchanged callers into the replacement barrier. Keep rejecting them. */
-    for (entry = plan->head; entry != NULL; entry = entry->next) {
-        if (stmt->d.s_call.target == entry->runtime) return RS_RET_NOT_IMPLEMENTED;
+static rsRetVal collectActionEntryQueue(ruleset_t *ruleset, struct cnfstmt *owner, action_t *action, void *context) {
+    (void)ruleset;
+    (void)owner;
+    /* Ordinary Direct actions run under the enclosing script worker. Other
+     * action workers may invoke module callbacks that resubmit messages. */
+    if (action->pQueue == NULL || action->pQueue->qType == QUEUETYPE_DIRECT) return RS_RET_OK;
+    return addEntryQueue(context, action->pQueue);
+}
+
+static rsRetVal collectAffectedQueues(const rsReloadRulesetPlanV1_t *const plan,
+                                      qqueue_t ***const queuesOut,
+                                      size_t *const countOut) {
+    reloadQueueSetV1_t set = {0};
+    rsRetVal ret;
+    if (plan == NULL || queuesOut == NULL || *queuesOut != NULL || countOut == NULL) return RS_RET_PARAM_ERROR;
+    if (plan->count == 0) return RS_RET_OK;
+    ret = addEntryQueue(&set, plan->active->pMsgQueue);
+    if (ret == RS_RET_OK) ret = llExecFunc(&plan->active->rulesets.llRulesets, collectRulesetEntryQueue, &set);
+    if (ret == RS_RET_OK) ret = rulesetVisitAllActionsV1(plan->active, collectActionEntryQueue, &set);
+    if (ret != RS_RET_OK) {
+        free(set.queues);
+        return ret;
     }
+    *queuesOut = set.queues;
+    *countOut = set.count;
     return RS_RET_OK;
+}
+
+static rsRetVal validateActiveCall(ruleset_t *ruleset, struct cnfstmt *stmt, void *context) {
+    ruleset_t *target = NULL;
+    char *name;
+    rsRetVal ret;
+    (void)ruleset;
+    if (stmt->nodetype != S_CALL) return RS_RET_OK;
+    if (stmt->d.s_call.name == NULL || stmt->d.s_call.target == NULL) return RS_RET_NOT_IMPLEMENTED;
+    name = es_str2cstr(stmt->d.s_call.name, NULL);
+    if (name == NULL) return RS_RET_OUT_OF_MEMORY;
+    ret = rulesetGetRuleset(context, &target, (uchar *)name);
+    free(name);
+    if (ret != RS_RET_OK) return ret;
+    return target == stmt->d.s_call.target && stmt->d.s_call.ruleset == (rulesetHasQueue(target) ? target : NULL)
+               ? RS_RET_OK
+               : RS_RET_NOT_IMPLEMENTED;
 }
 
 static int compareTimespec(const struct timespec *const left, const struct timespec *const right) {

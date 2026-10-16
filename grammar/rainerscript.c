@@ -6385,6 +6385,8 @@ static void cnfstmtOptimizeReloadLookupTable(struct cnfstmt *stmt) {
  * all rulesets are only known later in the process (now!).
  */
 static void cnfstmtOptimizeCall(struct cnfstmt *stmt) {
+    /* Private reload preparation binds against its explicit active catalog. */
+    if (stmt->d.s_call.target != NULL) return;
     ruleset_t *pRuleset;
     rsRetVal localRet;
     uchar *rsName;

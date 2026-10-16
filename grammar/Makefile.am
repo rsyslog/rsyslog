@@ -21,3 +21,5 @@ libgrammar_la_LIBADD =
 #testdriver_CPPFLAGS =  $(RSRT_CFLAGS)
 #testdriver_LDADD = libgrammar.la
 #testdriver_LDFLAGS = -lestr
+
+EXTRA_DIST = reload-call-binding.h

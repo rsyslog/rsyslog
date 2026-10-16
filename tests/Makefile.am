@@ -1441,6 +1441,7 @@ TESTS_MMDARWIN_VALGRIND = \
 	mmdarwin_errmsg_no_sock-vg.sh
 
 TESTS_OMPROG = \
+	global-reloadonhup-callgraph-rainerscript.sh \
 	queue-fixedarray-outoforder.sh \
 	global-reloadonhup-reportchild-rainerscript.sh \
 	omprog-defaults.sh \
@@ -1466,6 +1467,7 @@ TESTS_OMPROG = \
 	omprog-transactions-failed-commits.sh
 
 TESTS_OMPROG_IMTCP_YAML = \
+	global-reloadonhup-callgraph-yaml.sh \
 	global-reloadonhup-reportchild-yaml.sh
 
 TESTS_OMPROG_VALGRIND = \
@@ -4821,3 +4823,17 @@ TESTS += runtime_unit_ruleset_call
 runtime_unit_ruleset_call_SOURCES = unit/ruleset_call_test.c ../runtime/ruleset-call.h
 runtime_unit_ruleset_call_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_ruleset_call_LDADD = $(LIBESTR_LIBS)
+
+EXTRA_DIST += testsuites/reload-callgraph-latch.sh
+
+check_PROGRAMS += runtime_unit_reload_call_binding
+TESTS += runtime_unit_reload_call_binding
+runtime_unit_reload_call_binding_SOURCES = unit/reload_call_binding_test.c ../grammar/reload-call-binding.h
+runtime_unit_reload_call_binding_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_call_binding_LDADD = $(LIBESTR_LIBS)
+
+check_PROGRAMS += runtime_unit_reload_callgraph_fence
+TESTS += runtime_unit_reload_callgraph_fence
+runtime_unit_reload_callgraph_fence_SOURCES = unit/reload_callgraph_fence_test.c
+runtime_unit_reload_callgraph_fence_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_callgraph_fence_LDADD = $(LIBESTR_LIBS)
