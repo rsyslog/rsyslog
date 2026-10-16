@@ -66,7 +66,10 @@ size_t rsReloadRulesetPlanCountV1(const rsReloadRulesetPlanV1_t *plan);
  * @param publishContext Borrowed publication context.
  * @param pauseUsec Optional output measuring queue pause time, including abort.
  * @return RS_RET_OK or an error with roots/action ownership unchanged. All
- * acquired barriers are released on timeout, cancellation, and failure. Success
+ * Main, every existing ruleset queue, and non-Direct action queues are
+ * conservatively fenced; Direct entry queues and local graphs are unsupported.
+ * All barriers begin before any wait, including disk-assisted child workers.
+ * Acquired barriers are released on timeout, cancellation, and failure. Success
  * transfers roots/action ownership to active rulesets and retires old roots.
  * Caller serializes reloads and holds no queue/pool mutex; this function owns
  * barriers on its calling thread and acquires their mutexes internally.

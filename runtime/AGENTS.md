@@ -85,3 +85,11 @@ synchronous errors, queued dispatch, and duplicate allocation failure.
   `tests/diag.sh`) when chasing race conditions.
 - Use the testbench Valgrind helpers by running the corresponding `*-vg.sh`
   scripts to flush out memory and threading regressions.
+
+Existing-membership callgraph reload coverage lives in
+`tests/global-reloadonhup-callgraph-rainerscript.sh` and its YAML wrapper.
+They latch two old callee executions from unchanged caller queues and verify
+atomic cutover, missing-target rejection, and timeout rollback/retry. The
+production materializer activation fixture in
+`tests/unit/reload_callgraph_fence_test.c` covers cancellation, complete queue
+enumeration, Direct-entry rejection, and atomic root/action publication.
