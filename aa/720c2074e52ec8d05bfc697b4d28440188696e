@@ -1,0 +1,85 @@
+doc/ai/module_map.yaml
+  s_f8a738e4bdfaee::t_1e1567cd2b9e74 177-185,205
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_65dead2e182f0d 448-449,590-629
+grammar/reload-ruleset-materializer.c
+  s_f8a738e4bdfaee::t_29bac0e80d3ae4 384-385
+plugins/imtcp/Makefile.am
+  s_f8a738e4bdfaee::t_33fefa93ec75b8 3
+plugins/imtcp/imtcp-lifecycle.h
+  s_f8a738e4bdfaee::t_80356d7d433d5c 1-45
+plugins/imtcp/imtcp.c
+  s_f8a738e4bdfaee::t_49c50f163601ea 4-11,87-88,105,121-123,127-129,138,181-186,189,191,194-195,198-199,204-205,207,209,221-248,250,253-255,1015-1064,1069-1070,1073-1075,1148,1151,1153,1160-1161,1169-1170,1173-1178,1180-1186,1188-1196,1199-1201,1211-1229,2254-2313,2328,2333-2336,2339-2342,2351-2361,2363-2382,2387-2397,2402-2405,2418-2420,2464,2471-2489,2532-2553,2559-2560,2568,2577-2580,2588-2605,2610,2614-2615,2617-2618,2624-2625,2628-2629,2632-2638,2644-2645,2650,2652,2654,2657-2681,2685,2687,2691-2694,2697-2703,2705-2713,2716-2717,2722-2723,2769-2786,2791,2794,2802-2806,2808,2848,2857-2861,2864,2873,2890-2896,2901-2904,2907,2918,2957-2970,2975-2978,2981,2985,2988-3026,3028,3353-3361,3367,3387-3388,3399-3429,3440-3444,3455-3460,3462,3465-3466,3468-3487,3489-3494,3499-3500,3513,3521-3522,3531,3550-3551,3614
+plugins/imtcp/tcpsrv-prepared.h
+  s_f8a738e4bdfaee::t_99a51ce6a25764 1-124
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_8d8d44dc36ff95 1583-1592,1597-1600
+runtime/tcpsrv.c
+  s_f8a738e4bdfaee::t_a8d42324f4bf19 24-25,706-712,728-732,734-738,741-748,750,1085-1089,1917,2100,2357-2373,3110
+runtime/tcpsrv.h
+  s_f8a738e4bdfaee::t_c63f57b56488a6 310,506-508,511-512
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_bc285b1d67e945 280-296,3309,3311,4760-4772
+tests/global-reloadonhup-imtcp-add-plain-rainerscript.sh
+  s_f8a738e4bdfaee::t_3537e1f79194c7 1-370
+tests/global-reloadonhup-imtcp-add-plain-validate-rainerscript.sh
+  s_f8a738e4bdfaee::t_52a1ca5d99f780 1-6
+tests/global-reloadonhup-imtcp-add-plain-validate-yaml.sh
+  s_f8a738e4bdfaee::t_0eced9dfc3e49a 1-7
+tests/global-reloadonhup-imtcp-add-plain-yaml.sh
+  s_f8a738e4bdfaee::t_0fbe1f4b2ef380 1-6
+tests/global-reloadonhup-imtcp-replace-plain-rainerscript.sh
+  s_f8a738e4bdfaee::t_59f820433dcaf0 1-292
+tests/global-reloadonhup-imtcp-replace-plain-validate-rainerscript.sh
+  s_f8a738e4bdfaee::t_fcfc3377f8b0c6 1-5
+tests/global-reloadonhup-imtcp-replace-plain-validate-yaml.sh
+  s_f8a738e4bdfaee::t_3a0203a4b05901 1-6
+tests/global-reloadonhup-imtcp-replace-plain-yaml.sh
+  s_f8a738e4bdfaee::t_e2179b2ec8ab80 1-5
+tests/global-reloadonhup-imtcp-retire-rainerscript.sh
+  s_f8a738e4bdfaee::t_4f924cc61778d6 1-241
+tests/global-reloadonhup-imtcp-retire-validate-rainerscript.sh
+  s_f8a738e4bdfaee::t_f6a3907a347c0b 1-5
+tests/global-reloadonhup-imtcp-retire-validate-yaml.sh
+  s_f8a738e4bdfaee::t_a057416c43e32b 1-6
+tests/global-reloadonhup-imtcp-retire-yaml.sh
+  s_f8a738e4bdfaee::t_d23087ea36eb2d 1-5
+tests/global-reloadonhup-imtcp-topology-rainerscript.sh
+  s_f8a738e4bdfaee::t_318d18934aba30 3-4,23
+tests/global-reloadonhup-imtcp-topology-yaml.sh
+  s_f8a738e4bdfaee::t_784e5a02e08f8b 3-4,36
+tests/unit/reload_candidate_graph_test.c
+  s_f8a738e4bdfaee::t_7d63d8ddd89531 1165-1167,1188-1206
+tests/unit/tcpsrv_prepared_test.c
+  s_f8a738e4bdfaee::t_aadf451a28ff1b 1-129
+tools/shadow_reload.c
+  s_f8a738e4bdfaee::t_279fa247c04b07 1128-1129,1149-1151,1154-1155,1220-1221
+tests/helpers/reload_tcp_port_reserver.py
+  s_822feb36c6445d::t_4536278617c94c 1-48
+tests/unit/imtcp_lifecycle_test.c
+  s_822feb36c6445d::t_1fae33961bdc78 1-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa720c2074e52ec8d05bfc697b4d28440188696e",
+  "prompts": {},
+  "sessions": {
+    "s_822feb36c6445d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1467f-6996-7c10-a975-79870ab9688d",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
