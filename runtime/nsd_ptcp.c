@@ -701,7 +701,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
     DEFiRet;
     netstrm_t *pNewStrm = NULL;
     nsd_t *pNewNsd = NULL;
-    int error, maxs, on = 1;
+    int error, maxs, expectedSocks, on = 1;
     int isIPv6 = 0;
     int sock = -1;
     int numSocks;
@@ -718,6 +718,8 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
     assert(fAddLstn != NULL);
     assert(cnf_params->pszPort != NULL);
     assert(iSessMax >= 0);
+
+    if (cnf_params->bDeferListen && cnf_params->pszLstnPortFileName != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 
     dbgprintf("creating tcp listen socket on port %s\n", cnf_params->pszPort);
 
@@ -737,6 +739,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
     /* Count max number of sockets we may open */
     for (maxs = 0, r = res; r != NULL; r = r->ai_next, maxs++) /* EMPTY */
         ;
+    expectedSocks = maxs;
 
     numSocks = 0; /* num of sockets counter at start of array */
     for (r = res; r != NULL; r = r->ai_next) {
@@ -750,7 +753,9 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         }
         sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         if (sock < 0) {
-            if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
+            if (r->ai_family == PF_INET6 && errno == EAFNOSUPPORT) {
+                --expectedSocks;
+            } else {
                 dbgprintf("error %d creating tcp listen socket", errno);
                 /* it is debatable if PF_INET with EAFNOSUPPORT should
                  * also be ignored...
@@ -860,7 +865,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         }
 
         const int iSynBacklog = (pNS->iSynBacklog == 0) ? iSessMax / 10 + 5 : pNS->iSynBacklog;
-        if (listen(sock, iSynBacklog) < 0) {
+        if (!cnf_params->bDeferListen && listen(sock, iSynBacklog) < 0) {
             /* If the listen fails, it most probably fails because we ask
              * for a too-large backlog. So in this case we first set back
              * to a fixed, reasonable, limit that should work. Only if
@@ -904,6 +909,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         }
         CHKiRet(fAddLstn(pUsr, pNewStrm));
         pNewStrm = NULL;
+        pNewNsd = NULL;
         /* sock has been handed over by SetSock() above, so invalidate it here
          * coverity scan falsely identifies this as ressource leak
          */
@@ -916,6 +922,8 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
             "We could initialize %d TCP listen sockets out of %d we received "
             "- this may or may not be an error indication.\n",
             numSocks, maxs);
+
+    if (cnf_params->bDeferListen && numSocks != expectedSocks) ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 
     if (numSocks == 0) {
         dbgprintf("No TCP listen sockets could successfully be initialized\n");

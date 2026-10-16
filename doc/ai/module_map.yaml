@@ -193,6 +193,8 @@ runtime_tcpsrv:
   requires_serialization: false
   notes:
     - imtcp sessions own independent decompressor state.
+    - Dormant prepared-backend API gates user-space dispatch after backend registration and complete worker initialization; listener activation may already permit kernel handshakes and backlog.
+    - Prepared callers pin servers through run completion and join and release their own gates on abort; cooperative stop protects queue synchronization lifetime under fenceMut before workQueue.mut.
     - Live fences lock fenceMut before workQueue.mut; ready descriptor handoffs use only workQueue.mut and remain FIFO before active fence markers. Abort clears priority before waking participants so pending markers can drain.
     - Reload profiles publish copied live and accept-time values only while the event-loop and worker fence is held.
     - Accepted sessions own immutable compiled delimiter regexes; a fenced reload transfers only the next accept pattern.

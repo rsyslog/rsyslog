@@ -2733,6 +2733,9 @@ AM_CONDITIONAL(ENABLE_IMBEATS, test x$enable_imbeats = xyes)
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
 AM_CONDITIONAL(ENABLE_IMPSTATS_PUSH, test x$enable_impstats_push = xyes)
+if test "x$enable_testbench" = "xyes"; then
+	AC_DEFINE([ENABLE_TESTBENCH], [1], [Enable testbench-only runtime instrumentation.])
+fi
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 

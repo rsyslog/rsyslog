@@ -69,6 +69,7 @@ struct tcpLstnParams_s {
     struct AllowedSenders *pAllowedSenderRoot; /**< source-address ACL list */
     sbool bUseLegacyAllowedSender; /**< if true, use protocol-global legacy ACLs */
     sbool bOwnAllowedSenderRoot; /**< Listener owns its independent ACL clone. */
+    sbool bDeferListen; /**< Prepare binds sockets without enabling accept. */
 };
 
 /* list of tcp listen ports */
@@ -166,6 +167,9 @@ typedef struct workQueue_s {
     unsigned numWrkr; /* how many workers to spawn */
     pthread_t *wrkr_tids; /* array of thread IDs */
     tcpsrvWrkrData_t *wrkr_data;
+    int stop; /**< mut: cooperative server-local stop, independent of global TERM. */
+    unsigned ready; /**< mut: workers initialized and entering the dequeue boundary. */
+    rsRetVal startupResult; /**< mut: first required worker initialization failure. */
 } workQueue_t;
 
 /**
@@ -301,6 +305,16 @@ struct tcpsrv_s {
         sbool fenceReady; /**< fenceMut: running event loop accepts fence requests */
         sbool fenceOrdering; /**< workQueue.mut: normal work precedes queued fence markers */
         tcpsrv_io_descr_t *fenceWorkTail; /**< workQueue.mut: last normal item before markers, borrowed */
+        sbool strictListenerInit; /**< Prepared construction requires every supported socket. */
+        sbool preparedRun; /**< Run-owned: preparation requires complete worker startup. */
+        sbool stopRequested; /**< Atomic reads or fenceMut: server-local cooperative stop. */
+        sbool queueSyncInitialized; /**< fenceMut: queue mutex and condition may be accessed. */
+#ifdef ENABLE_TESTBENCH
+        unsigned testFailWorkerCreate; /**< One-based per-server fault injection; zero disables. */
+        unsigned testFailWorkerInit; /**< One-based worker initialization failure. */
+        unsigned testHoldWorkerReady; /**< One-based worker waits for stop instead of readiness. */
+        unsigned testStartupTimeoutMs; /**< Shortens the production readiness deadline for controls. */
+#endif
 };
 
 
@@ -311,6 +325,10 @@ struct tcpsrv_workset_s {
     void *pUsr;
 };
 
+
+/* Private control callback after backend registration and all worker startup,
+ * before user-space accept/dispatch. Context remains owned until RunPrepared returns. */
+typedef rsRetVal (*tcpsrv_activation_gate_t)(void *context);
 
 /* interfaces */
 /** @brief Evaluate a borrowed session without mutation under the caller-owned fence.
@@ -475,9 +493,18 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     void (*SwapListenerTablesLive)(tcpsrv_t *server, tcpsrv_listener_tables_t *prepared,
                                    tcpsrv_listener_tables_t *retired);
     void (*DestructListenerTables)(tcpsrv_listener_tables_t *tables);
+    /* v40: caller owns prepared resources through RunPrepared completion and join.
+     * Activation permits kernel handshakes/backlog, not user-space dispatch.
+     * Errors require abort/join/destruction; no prepared fallback exists. */
+    rsRetVal (*ConstructFinalizePrepared)(tcpsrv_t *server);
+    rsRetVal (*ActivatePreparedListeners)(tcpsrv_t *server);
+    rsRetVal (*RunPrepared)(tcpsrv_t *server, tcpsrv_activation_gate_t gate, void *context);
+    /* Caller pins the server through join; safe before queue init/after teardown.
+     * Wakes the backend/workers, not the caller-owned activation gate. */
+    void (*RequestStop)(tcpsrv_t *server);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 39 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 40 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
