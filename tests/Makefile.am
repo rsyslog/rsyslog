@@ -292,6 +292,7 @@ EXTRA_DIST += unit/module_reload_test.c
 EXTRA_DIST += unit/reload_report_test.c
 EXTRA_DIST += unit/reload_normalized_graph_test.c
 EXTRA_DIST += unit/imdiag_response_test.c
+EXTRA_DIST += unit/wtp_quiesce_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -602,7 +603,6 @@ TESTS_DEFAULT = \
 	global-maxopenfiles-rainerscript.sh \
 	global-reloadonhup-off-hup.sh \
 	global-reloadonhup-dirty-baseline.sh \
-	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
 	compat-configformat-rainerscript.sh \
@@ -996,6 +996,12 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 	yaml-statements-complex.sh
 
 TESTS_IMTCP = \
+	global-reloadonhup-ruleset-metadata-rainerscript.sh \
+	global-reloadonhup-closed-dequeue-window.sh \
+	global-reloadonhup-on-rainerscript.sh \
+	global-reloadonhup-unnamed-rainerscript.sh \
+	global-reloadonhup-on-local-rainerscript.sh \
+	global-reloadonhup-on-mixed-rainerscript.sh \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
 	fromhost-port-async-ruleset.sh \
@@ -1097,6 +1103,7 @@ TESTS_IMTCP_STREAM_ALWAYS_OSSL = \
 	imtcp-stream-always-zlib-tls-ossl.sh
 
 TESTS_IMTCP_YAML = \
+	global-reloadonhup-ruleset-metadata-yaml.sh \
 	yaml-parser-drop-trailing-cr.sh \
 	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
@@ -1874,13 +1881,15 @@ TESTS_LIBYAML_IMTCP = \
 	config-translate-yaml-roundtrip.sh \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
+	global-reloadonhup-on-local-yaml.sh \
+	global-reloadonhup-on-mixed-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \
 	yaml-include-recursion.sh
 
 TESTS_LIBYAML_IMTCP_OSSL = \
 	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
 
-TESTS_LIBYAML_IMTCP_IMPSTATS = global-reloadonhup-on-yaml.sh
+TESTS_LIBYAML_IMTCP_IMPSTATS = global-reloadonhup-on-yaml.sh global-reloadonhup-unnamed-yaml.sh
 
 TESTS_LIBYAML_OSSL = \
 	yaml-omfwd-tls-ossl-pkcs11-module-defaults.sh
@@ -2856,11 +2865,11 @@ check_LTLIBRARIES =
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
-	runtime_unit_reload_candidate_graph
+	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
-	runtime_unit_reload_candidate_graph
+	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
@@ -2918,6 +2927,12 @@ runtime_unit_imdiag_response_LDADD =
 
 runtime_unit_reload_candidate_graph_SOURCES = \
 	unit/reload_candidate_graph_test.c
+
+runtime_unit_reload_syntax_clone_SOURCES = \
+	unit/reload_syntax_clone_test.c
+
+runtime_unit_wtp_quiesce_SOURCES = \
+	unit/wtp_quiesce_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -3022,6 +3037,10 @@ runtime_unit_reload_normalized_graph_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_reload_candidate_graph_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_reload_syntax_clone_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_wtp_quiesce_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3037,6 +3056,8 @@ runtime_unit_module_reload_LDADD =
 runtime_unit_reload_report_LDADD =
 runtime_unit_reload_normalized_graph_LDADD = $(LIBESTR_LIBS)
 runtime_unit_reload_candidate_graph_LDADD = $(LIBESTR_LIBS)
+runtime_unit_reload_syntax_clone_LDADD = $(LIBESTR_LIBS)
+runtime_unit_wtp_quiesce_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)

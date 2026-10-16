@@ -1649,7 +1649,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             free(script_str);
             script_str = NULL;
             if (br != RS_RET_OK) ABORT_FINALIZE(br);
-            /* cnfAddConfigBuffer() takes ownership of estr */
+            /* cnfAddConfigBuffer() consumes estr on both success and failure.
+             * Its only current nonzero result is allocator failure (3). */
             if (cnfAddConfigBuffer(estr, fname) != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         } else if (actions != NULL) {
             /* Phase 2 structured shortcut: build cnfstmt chain directly.
@@ -1939,8 +1940,11 @@ finalize_it:
  * cnfAddConfigBuffer() before this function returns.
  *
  * @param fname  Absolute or relative path to the .yaml/.yml config file.
- * @return RS_RET_OK on success; RS_RET_FILE_NOT_FOUND if @p fname cannot
- *         be opened; RS_RET_CONF_PARSE_ERROR on any YAML or semantic error.
+ * @return RS_RET_OK on success; RS_RET_CONF_FILE_NOT_FOUND if @p fname does
+ *         not exist; RS_RET_FILE_OPEN_ERROR for other open failures;
+ *         RS_RET_IO_ERROR for YAML reader failures; RS_RET_OUT_OF_MEMORY for
+ *         allocation failures; or RS_RET_CONF_PARSE_ERROR for YAML and
+ *         semantic errors.
  */
 rsRetVal yamlconf_load(const char *fname) {
     yaml_parser_t parser;

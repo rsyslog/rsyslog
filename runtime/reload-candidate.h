@@ -15,8 +15,20 @@
 
 struct cnfobj;
 struct cnfstmt;
+struct nvlst;
 /** @brief Opaque owner of private parser objects, never an active runtime. */
 typedef struct rsReloadCandidate_s rsReloadCandidate_t;
+/** @brief Visit borrowed immutable syntax in effective parse order.
+ * Identity and fragment are valid only during the callback; neither may be
+ * mutated or retained. A non-OK result stops traversal and propagates unchanged.
+ * firstForCanonicalIdentity distinguishes repeated fragments of one ruleset;
+ * isSyntheticDefault identifies top-level statements, not a named ruleset.
+ */
+typedef rsRetVal (*rsReloadCandidateRulesetFragmentVisitorV1_t)(const char *canonicalIdentity,
+                                                                const struct cnfstmt *fragment,
+                                                                int firstForCanonicalIdentity,
+                                                                int isSyntheticDefault,
+                                                                void *context);
 
 /**
  * @brief Parse a regular RainerScript or YAML file without runtime dispatch.
@@ -35,6 +47,16 @@ rsRetVal rsReloadCandidateParse(const char *path, rsReloadCandidate_t **ppCandid
 void rsReloadCandidateDestruct(rsReloadCandidate_t **ppCandidate);
 /** @brief Return captured object count without transferring ownership; NULL yields zero. */
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
+/** @brief Traverse candidate ruleset fragments without consuming the candidate.
+ * @param candidate Immutable candidate, kept alive by the caller throughout.
+ * @param visitor Callback with borrowed syntax; must not alter candidate state.
+ * @param context Caller-owned callback context.
+ * @return RS_RET_OK, or the first callback/argument error. No internal lock is
+ * taken; callers must serialize destruction and mutation against traversal.
+ */
+rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *candidate,
+                                                  rsReloadCandidateRulesetFragmentVisitorV1_t visitor,
+                                                  void *context);
 
 /**
  * @brief Build a structural graph from a borrowed, successfully parsed candidate.
@@ -44,7 +66,8 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
  * produced by either frontend. Cross-frontend semantic equivalence still
  * requires integration-level parity tests before activation. The graph is
  * structural evidence only, not semantic validation or an activation
- * decision.
+ * decision. Explicit named rulesets emit separate program and metadata rows;
+ * metadata records immutable attributes using the case-folded registry name.
  * @param candidate Borrowed capture, unchanged by this call.
  * @param ppBuilder Non-NULL output, initially NULL; receives caller-owned
  * builder on success, to free with rsReloadNormalizedGraphBuilderV1Destruct().
@@ -55,6 +78,21 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
  */
 rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
                                                  rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
+/** @brief Serialize and hash action source parameters without instantiation.
+ * @param syntax Borrowed immutable parameter list.
+ * @param ownedFingerprint Initially NULL output; caller frees the returned hash.
+ * @return RS_RET_OK or a serialization/allocation error; output stays NULL on
+ * failure. Caller serializes access to syntax; no runtime/module locks are used.
+ */
+rsRetVal rsReloadActionSyntaxFingerprintV1(const struct nvlst *syntax, char **ownedFingerprint);
+/** @brief Borrow an explicit action name from immutable source parameters.
+ * @param syntax Borrowed parameter list, which must outlive the returned bytes.
+ * @param borrowedName Output bytes, not necessarily NUL terminated.
+ * @param nameLength Output byte length.
+ * @return RS_RET_NOT_IMPLEMENTED for an unnamed action, otherwise argument status
+ * or RS_RET_OK. No allocation, ownership transfer, or internal locking occurs.
+ */
+rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **borrowedName, size_t *nameLength);
 
 /**
  * @brief Check a borrowed V1 report against the initial ruleset-only scope.

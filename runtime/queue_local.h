@@ -92,7 +92,7 @@ int qqueueLocalGetFrontendSnapshot(const qqueue_t *owner, uint32_t index, qqueue
 
 /* BE accounting calls are serialized by owner->mut; snapshot readers use
  * atomic loads only. These are lifetime totals, not resettable impstats data. */
-rsRetVal qqueueLocalRateLimiter(void *source);
+rsRetVal qqueueLocalRateLimiter(void *source, wti_t *worker);
 void qqueueLocalBackendShutdownDiscarded(qqueue_t *owner);
 void qqueueLocalRetryFailed(qqueue_t *owner);
 void qqueueLocalDiskRestored(qqueue_t *owner, uint64_t count);

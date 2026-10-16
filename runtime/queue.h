@@ -77,6 +77,15 @@ typedef enum {
     QUEUE_ON_CORRUPTION_IGNORE = 2
 } queueOnCorruption_t;
 
+/** @brief Opaque calling-thread-owned token for a consumer batch barrier.
+ * The queue and its worker pools must outlive the token. In DA mode the parent
+ * transfer pool deliberately continues moving records; only pools that can
+ * invoke the configured message consumer are quiesced. The thread that begins
+ * the barrier exclusively owns the token and must serialize wait and release;
+ * calls from another thread fail without consuming the token. Always release
+ * the token after a successful begin, including on wait failure. */
+typedef struct qqueue_batch_barrier_s qqueue_batch_barrier_t;
+
 /* list member definition for linked list types of queues: */
 typedef struct qLinkedList_S {
     struct qLinkedList_S *pNext;
@@ -324,6 +333,28 @@ rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
 void qqueue_activate_graph_node(qqueue_t *queue);
 rsRetVal qqueue_finalize_graph_node(qqueue_t *queue, uint64_t *global_memory_residual);
 rsRetVal qqueue_shutdown_graph_node(qqueue_t *queue, const struct timespec *graceful, const struct timespec *action);
+/** @brief Request batch-boundary quiescence for a legacy queue and DA child.
+ * @param pThis Borrowed queue, kept alive until release; local/direct unsupported.
+ * @param ppBarrier Initially NULL output, owned by the calling thread on success.
+ * @return RS_RET_OK or an error after rolling back partial requests. Acquires
+ * queue/pool mutexes internally; caller must hold none. Successful begin always
+ * requires release, including when wait subsequently times out or is aborted.
+ */
+rsRetVal qqueueBatchBarrierBegin(qqueue_t *pThis, qqueue_batch_barrier_t **ppBarrier);
+/** @brief Wait for all affected workers to stop between batches.
+ * @param pBarrier Barrier owned by this calling thread.
+ * @param ptTimeout Absolute CLOCK_REALTIME deadline, shared across pools.
+ * @return RS_RET_OK or wait/argument error. Internally waits under pool mutexes;
+ * timeout does not release the barrier or transfer its ownership.
+ */
+rsRetVal qqueueBatchBarrierWait(qqueue_batch_barrier_t *pBarrier, const struct timespec *ptTimeout);
+/** @brief Resume pools, advise accumulated work, free and NULL the barrier.
+ * @param ppBarrier Non-NULL barrier owned by this calling thread.
+ * @return RS_RET_OK or argument/owner error (which leaves ownership unchanged).
+ * Acquires queue/pool mutexes internally; caller must hold none. Does not destroy
+ * the borrowed queue and is required on both commit and abort paths.
+ */
+rsRetVal qqueueBatchBarrierRelease(qqueue_batch_barrier_t **ppBarrier);
 void qqueueDoneLoadCnf(void);
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
 void qqueueCorrectParams(qqueue_t *pThis);

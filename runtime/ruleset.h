@@ -80,6 +80,33 @@ PROTOTYPEObjDebugPrint(ruleset);
  * them and use plain c-style conventions at least inside core objects.
  */
 rsRetVal rulesetDestructForLinkedList(void *pData);
+/** @brief Observe an action and its owning statement, borrowed from ruleset.
+ * Callback errors stop traversal; they never request linked-list deletion.
+ */
+typedef rsRetVal (*rulesetActionVisitorV1_t)(ruleset_t *ruleset,
+                                             struct cnfstmt *owner,
+                                             action_t *action,
+                                             void *context);
+/** @brief Visit every live action in configuration preorder without mutation.
+ * @param conf Borrowed active configuration; caller excludes root replacement.
+ * @param visitor Read-only callback; must not destroy or retain borrowed nodes.
+ * @param context Caller-owned callback data.
+ * @return First callback error (delete sentinel becomes RS_RET_PARAM_ERROR), or
+ * RS_RET_OK. Takes no locks and transfers no ownership; the caller must keep
+ * configuration and nodes alive throughout.
+ */
+rsRetVal rulesetVisitAllActionsV1(rsconf_t *conf, rulesetActionVisitorV1_t visitor, void *context);
+/** @brief Observe a statement borrowed from its containing active ruleset. */
+typedef rsRetVal (*rulesetStatementVisitorV1_t)(ruleset_t *ruleset, struct cnfstmt *stmt, void *context);
+/** @brief Visit active statements in preorder, stopping at the first error.
+ * @param conf Borrowed configuration; caller serializes root replacement.
+ * @param visitor Read-only callback; node ownership stays with conf.
+ * @param context Caller-owned callback data.
+ * @return First callback error (delete sentinel becomes RS_RET_PARAM_ERROR), or
+ * RS_RET_OK. No internal locks are acquired; callback pointers must not escape
+ * the traversal or be mutated/destroyed.
+ */
+rsRetVal rulesetVisitAllStatementsV1(rsconf_t *conf, rulesetStatementVisitorV1_t visitor, void *context);
 rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
 
 /* Get name associated to ruleset. This function cannot fail (except,

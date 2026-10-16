@@ -5,6 +5,14 @@
  * never appear in digests, duplicate parameter keys fail, and enumeration is
  * deterministic. An isolated elseif-marker mutation must change production
  * candidate serialization; restoring it must restore byte-identical output.
+ * Ruleset-only report admission rejects NULL storage, misaligned bases/strides,
+ * undersized strides, size overflow and address wrap before reading entries;
+ * a normally built report remains accepted.
+ * Named ruleset metadata has a separate row: source/candidate agreement,
+ * case/order equivalence and metadata-only or combined edit rejection retain
+ * supported program-only changes and duplicate-key failure.
+ * Property-filter poison else slots are never traversed; effective operation,
+ * negation and then-program changes remain visible in graph fingerprints.
  */
 #include "config.h"
 
@@ -126,12 +134,20 @@ struct nvlst *rsconfTranslateCloneNvlst(const struct nvlst *list) {
 
     for (; list != NULL; list = list->next) {
         struct nvlst *copy;
+        es_str_t *value;
         if (list->val.datatype != 'S' || list->name == NULL || list->val.d.estr == NULL) {
             nvlstDestruct(head);
             return NULL;
         }
-        copy = parameter((const char *)es_getBufAddr(list->name), (const char *)es_getBufAddr(list->val.d.estr));
-        if (copy == NULL) {
+        value = es_strdup(list->val.d.estr);
+        if (value == NULL) {
+            nvlstDestruct(head);
+            return NULL;
+        }
+        copy = nvlstNewStr(value);
+        if (copy == NULL) es_deleteStr(value);
+        if (copy == NULL || (copy->name = es_strdup(list->name)) == NULL) {
+            nvlstDestruct(copy);
             nvlstDestruct(head);
             return NULL;
         }
@@ -149,10 +165,12 @@ void cnfstmtDestructLst(struct cnfstmt *list) {
         struct cnfstmt *next = list->next;
         if (list->nodetype == S_RELOAD_ACT)
             nvlstDestruct(list->d.reload_action);
-        else if (list->nodetype == S_RELOAD_PRIFILT)
+        else if (list->nodetype == S_RELOAD_PRIFILT) {
             cnfstmtDestructLst(list->d.s_prifilt.t_then);
-        else if (list->nodetype == S_RELOAD_PROPFILT)
+            cnfstmtDestructLst(list->d.s_prifilt.t_else);
+        } else if (list->nodetype == S_RELOAD_PROPFILT) {
             cnfstmtDestructLst(list->d.s_propfilt.t_then);
+        }
         free(list->printable);
         free(list);
         list = next;
@@ -237,6 +255,44 @@ static struct cnfstmt *propertyFilter(struct cnfstmt *child) {
     }
     result->nodetype = S_RELOAD_PROPFILT;
     result->d.s_propfilt.t_then = child;
+    return result;
+}
+
+static struct cnfstmt *propertyFilterBranches(struct cnfstmt *thenBranch, struct cnfstmt *elseBranch) {
+    struct cnfstmt *result = propertyFilter(thenBranch);
+
+    if (result == NULL) {
+        cnfstmtDestructLst(elseBranch);
+        return NULL;
+    }
+    cnfstmtDestructLst(elseBranch);
+    /* This deliberately synthetic poison tests semantic independence from
+     * the unused slot; the S4 production constructor initializes it to NULL. */
+    result->d.s_propfilt.t_else = (struct cnfstmt *)(uintptr_t)1;
+    return result;
+}
+
+static struct cnfstmt *priorityFilterBranches(struct cnfstmt *thenBranch, struct cnfstmt *elseBranch) {
+    struct cnfstmt *result = calloc(1, sizeof(*result));
+
+    if (result == NULL || thenBranch == NULL || elseBranch == NULL) {
+        constructionFailed = 1;
+        free(result);
+        cnfstmtDestructLst(thenBranch);
+        cnfstmtDestructLst(elseBranch);
+        return NULL;
+    }
+    result->printable = (uchar *)strdup("*.info");
+    if (result->printable == NULL) {
+        constructionFailed = 1;
+        free(result);
+        cnfstmtDestructLst(thenBranch);
+        cnfstmtDestructLst(elseBranch);
+        return NULL;
+    }
+    result->nodetype = S_RELOAD_PRIFILT;
+    result->d.s_prifilt.t_then = thenBranch;
+    result->d.s_prifilt.t_else = elseBranch;
     return result;
 }
 
@@ -454,7 +510,7 @@ int main(void) {
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(builder, &graph) == RS_RET_OK);
     CHECK(graph.enumerate(graph.context, observe, &observed) == RS_RET_OK);
-    CHECK(observed.count == 8);
+    CHECK(observed.count == 9);
     CHECK(!strcmp(observed.nodes[0]->identity, "global"));
     CHECK(!strncmp(observed.nodes[0]->fingerprint, "sha256:", strlen("sha256:")));
     CHECK(strstr(observed.nodes[0]->fingerprint, "supersecret") == NULL);
@@ -465,6 +521,8 @@ int main(void) {
     CHECK(!strcmp(observed.nodes[5]->identity, "action:named:12:named-action"));
     CHECK(!strcmp(observed.nodes[6]->identity, "action:named:5:first"));
     CHECK(!strcmp(observed.nodes[7]->identity, "action:named:6:second"));
+    CHECK(observed.nodes[8]->objectKind == RS_RELOAD_OBJ_RULESET_METADATA);
+    CHECK(!strcmp(observed.nodes[8]->identity, "ruleset:mixed"));
 
     {
         rsReloadCandidate_t *permutedCandidate = calloc(1, sizeof(*permutedCandidate));
@@ -486,6 +544,116 @@ int main(void) {
     }
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     rsReloadCandidateDestruct(&candidate);
+
+    /* Property filters have only an effective then branch: poison in the
+     * unused else slot must not affect graph construction or destruction.
+     * Priority filters retain real else semantics and branch identities. */
+    {
+        rsReloadCandidate_t *first = calloc(1, sizeof(*first));
+        rsReloadCandidate_t *second = calloc(1, sizeof(*second));
+        rsReloadCandidate_t *priorityFirst = calloc(1, sizeof(*priorityFirst));
+        rsReloadCandidate_t *prioritySecond = calloc(1, sizeof(*prioritySecond));
+        rsReloadNormalizedGraphBuilderV1_t *firstBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *secondBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *priorityFirstBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *prioritySecondBuilder = NULL;
+        rsReloadNormalizedGraphV1_t firstGraph;
+        rsReloadNormalizedGraphV1_t secondGraph;
+        rsReloadNormalizedGraphV1_t priorityFirstGraph;
+        rsReloadNormalizedGraphV1_t prioritySecondGraph;
+        observed_t firstObserved = OBSERVED_INIT;
+        observed_t secondObserved = OBSERVED_INIT;
+        observed_t priorityFirstObserved = OBSERVED_INIT;
+        observed_t prioritySecondObserved = OBSERVED_INIT;
+        const rsReloadNormalizedNodeV1_t *firstRuleset;
+        const rsReloadNormalizedNodeV1_t *secondRuleset;
+        const rsReloadNormalizedNodeV1_t *priorityFirstRuleset;
+        const rsReloadNormalizedNodeV1_t *prioritySecondRuleset;
+
+        CHECK(first != NULL && second != NULL && priorityFirst != NULL && prioritySecond != NULL);
+        addObject(first, object(CNFOBJ_RULESET, parameter("name", "branches"),
+                                propertyFilterBranches(action("then-action", "same"), action("else-first", "same"))));
+        addObject(second, object(CNFOBJ_RULESET, parameter("name", "branches"),
+                                 propertyFilterBranches(action("then-action", "same"), action("else-second", "same"))));
+        addObject(priorityFirst, object(CNFOBJ_RULESET, parameter("name", "priority-branches"),
+                                        priorityFilterBranches(action("priority-then", "same"),
+                                                               action("priority-else-first", "same"))));
+        addObject(prioritySecond, object(CNFOBJ_RULESET, parameter("name", "priority-branches"),
+                                         priorityFilterBranches(action("priority-then", "same"),
+                                                                action("priority-else-second", "same"))));
+        CHECK(!constructionFailed);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(first, &firstBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(second, &secondBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(priorityFirst, &priorityFirstBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(prioritySecond, &prioritySecondBuilder) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(firstBuilder, &firstGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(secondBuilder, &secondGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(priorityFirstBuilder, &priorityFirstGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(prioritySecondBuilder, &prioritySecondGraph) == RS_RET_OK);
+        CHECK(firstGraph.enumerate(firstGraph.context, observe, &firstObserved) == RS_RET_OK);
+        CHECK(secondGraph.enumerate(secondGraph.context, observe, &secondObserved) == RS_RET_OK);
+        CHECK(priorityFirstGraph.enumerate(priorityFirstGraph.context, observe, &priorityFirstObserved) == RS_RET_OK);
+        CHECK(prioritySecondGraph.enumerate(prioritySecondGraph.context, observe, &prioritySecondObserved) ==
+              RS_RET_OK);
+        firstRuleset = findObserved(&firstObserved, "ruleset:branches");
+        secondRuleset = findObserved(&secondObserved, "ruleset:branches");
+        CHECK(firstRuleset != NULL && secondRuleset != NULL);
+        CHECK(!strcmp(firstRuleset->fingerprint, secondRuleset->fingerprint));
+        CHECK(findObserved(&firstObserved, "action:named:10:else-first") == NULL);
+        CHECK(findObserved(&firstObserved, "action:named:11:then-action") != NULL);
+        CHECK(findObserved(&secondObserved, "action:named:11:else-second") == NULL);
+        CHECK(findObserved(&secondObserved, "action:named:11:then-action") != NULL);
+        /* Effective operation, negation, and then-action changes must still
+         * change the fingerprint despite ignoring the unused child slot. */
+        for (int variant = 0; variant < 3; ++variant) {
+            rsReloadCandidate_t *changed = calloc(1, sizeof(*changed));
+            rsReloadNormalizedGraphBuilderV1_t *changedBuilder = NULL;
+            rsReloadNormalizedGraphV1_t changedGraph;
+            observed_t changedObserved = OBSERVED_INIT;
+            struct cnfstmt *filter = propertyFilter(action("then-action", "same"));
+            const rsReloadNormalizedNodeV1_t *changedRuleset;
+            CHECK(changed != NULL && filter != NULL);
+            if (variant == 2) {
+                filter->d.s_propfilt.t_then->next = calloc(1, sizeof(struct cnfstmt));
+                CHECK(filter->d.s_propfilt.t_then->next != NULL);
+                filter->d.s_propfilt.t_then->next->nodetype = S_STOP;
+            }
+            if (variant != 2) {
+                free(filter->printable);
+                filter->printable =
+                    (uchar *)strdup(variant == 0 ? ":msg, startswith, \"needle\"" : ":msg, !contains, \"needle\"");
+                CHECK(filter->printable != NULL);
+            }
+            filter->d.s_propfilt.t_else = (struct cnfstmt *)(uintptr_t)1;
+            addObject(changed, object(CNFOBJ_RULESET, parameter("name", "branches"), filter));
+            CHECK(!constructionFailed);
+            CHECK(rsReloadCandidateBuildNormalizedGraphV1(changed, &changedBuilder) == RS_RET_OK);
+            CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(changedBuilder, &changedGraph) == RS_RET_OK);
+            CHECK(changedGraph.enumerate(changedGraph.context, observe, &changedObserved) == RS_RET_OK);
+            changedRuleset = findObserved(&changedObserved, "ruleset:branches");
+            CHECK(changedRuleset != NULL);
+            CHECK(strcmp(firstRuleset->fingerprint, changedRuleset->fingerprint));
+            CHECK(findObserved(&changedObserved, "action:named:11:then-action") != NULL);
+            rsReloadNormalizedGraphBuilderV1Destruct(&changedBuilder);
+            rsReloadCandidateDestruct(&changed);
+        }
+        priorityFirstRuleset = findObserved(&priorityFirstObserved, "ruleset:priority-branches");
+        prioritySecondRuleset = findObserved(&prioritySecondObserved, "ruleset:priority-branches");
+        CHECK(priorityFirstRuleset != NULL && prioritySecondRuleset != NULL);
+        CHECK(strcmp(priorityFirstRuleset->fingerprint, prioritySecondRuleset->fingerprint));
+        CHECK(findObserved(&priorityFirstObserved, "action:named:19:priority-else-first") != NULL);
+        CHECK(findObserved(&priorityFirstObserved, "action:named:13:priority-then") != NULL);
+        CHECK(findObserved(&prioritySecondObserved, "action:named:20:priority-else-second") != NULL);
+        CHECK(findObserved(&prioritySecondObserved, "action:named:13:priority-then") != NULL);
+        rsReloadNormalizedGraphBuilderV1Destruct(&firstBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&secondBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&priorityFirstBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&prioritySecondBuilder);
+        rsReloadCandidateDestruct(&first);
+        rsReloadCandidateDestruct(&second);
+        rsReloadCandidateDestruct(&priorityFirst);
+        rsReloadCandidateDestruct(&prioritySecond);
+    }
 
     /* Global fragments are a case-folded last-write map. Equivalent split
      * RainerScript and combined YAML blocks therefore hash identically. */
@@ -686,6 +854,29 @@ int main(void) {
         }
         CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_OK);
         CHECK(report != NULL && report->modifiedCount == 1 && report->invalidCount == 0);
+        {
+            rsReloadReportV1_t malformed = *report;
+            malformed.entries = NULL;
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            malformed = *report;
+            /* Deliberately invalid numeric address: admission must reject its
+             * alignment before any entry is dereferenced. */
+            malformed.entries = (rsReloadReportEntryV1_t *)((uintptr_t)report->entries + 1);
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            malformed = *report;
+            malformed.entryStride = sizeof(rsReloadReportEntryV1_t) - 1;
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            malformed = *report;
+            malformed.entryStride = sizeof(rsReloadReportEntryV1_t) + 1;
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            malformed = *report;
+            malformed.entryCount = SIZE_MAX / malformed.entryStride + 1;
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            malformed = *report;
+            malformed.entries = (rsReloadReportEntryV1_t *)(uintptr_t)(UINTPTR_MAX - malformed.entryStride + 1);
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(&malformed) == RS_RET_PARAM_ERROR);
+            CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_OK);
+        }
         rsReloadReportDestructV1(&report);
         {
             rsReloadNormalizedGraphBuilderV1_t *candidateBuilder = NULL;
@@ -701,6 +892,81 @@ int main(void) {
         rsReloadCandidateDestruct(&activeCandidate);
         rsReloadCandidateDestruct(&rulesetCandidate);
         rsReloadCandidateDestruct(&globalCandidate);
+    }
+
+    /* Source capture and detached graphs must agree on body/attribute rows.
+     * Attribute order and registry name case are equivalent. Queue/parser-only
+     * and combined edits cannot enter a program-only materialization plan. */
+    {
+        rsReloadNormalizedGraphBuilderV1_t *source = NULL;
+        rsReloadNormalizedGraphV1_t sourceGraph;
+        struct nvlst *attributes = parameter("name", "Route");
+        struct cnfobj *active;
+        CHECK(attributes != NULL);
+        attributes->next = parameter("queue.type", "LinkedList");
+        CHECK(attributes->next != NULL);
+        active = object(CNFOBJ_RULESET, attributes, propertyFilter(action("sink", "same")));
+        CHECK(active != NULL);
+        CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceCaptureObject(active);
+        CHECK(rsReloadCandidateSourceFinish(&source) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(source, &sourceGraph) == RS_RET_OK);
+        for (int variant = 0; variant < 6; ++variant) {
+            rsReloadCandidate_t *edited = calloc(1, sizeof(*edited));
+            rsReloadNormalizedGraphBuilderV1_t *editedBuilder = NULL;
+            rsReloadNormalizedGraphV1_t editedGraph;
+            rsReloadReportV1_t *report = NULL;
+            struct nvlst *params = parameter("QUEUE.TYPE", variant == 1 || variant == 4 ? "FixedArray" : "LinkedList");
+            struct cnfstmt *body = propertyFilter(action("sink", "same"));
+            size_t metadataChanges = 0, programChanges = 0;
+            CHECK(edited != NULL && params != NULL && body != NULL);
+            params->next = parameter("NAME", "rOuTe");
+            CHECK(params->next != NULL);
+            if (variant == 2 || variant == 5) {
+                params->next->next = parameter(variant == 5 ? "Queue.Type" : "parser", "custom");
+                CHECK(params->next->next != NULL);
+            }
+            if (variant == 3 || variant == 4) {
+                free(body->printable);
+                body->printable = (uchar *)strdup(":msg, contains, \"changed\"");
+                CHECK(body->printable != NULL);
+            }
+            addObject(edited, object(CNFOBJ_RULESET, params, body));
+            if (variant == 5) {
+                CHECK(rsReloadCandidateBuildNormalizedGraphV1(edited, &editedBuilder) == RS_RET_CONF_PARSE_ERROR);
+                CHECK(editedBuilder == NULL);
+                CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+                rsReloadCandidateSourceCaptureObject(edited->head->object);
+                CHECK(rsReloadCandidateSourceFinish(&editedBuilder) == RS_RET_NOT_IMPLEMENTED);
+                CHECK(editedBuilder == NULL);
+            } else {
+                CHECK(rsReloadCandidateBuildNormalizedGraphV1(edited, &editedBuilder) == RS_RET_OK);
+                CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(editedBuilder, &editedGraph) == RS_RET_OK);
+                CHECK(rsReloadReportBuildV1(&sourceGraph, &editedGraph, &report) == RS_RET_OK);
+                for (size_t row = 0; row < report->entryCount; ++row) {
+                    const rsReloadReportEntryV1_t *entry = &report->entries[row];
+                    if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
+                    CHECK(entry->diffKind == RS_RELOAD_DIFF_MODIFIED);
+                    if (entry->objectKind == RS_RELOAD_OBJ_RULESET_METADATA)
+                        ++metadataChanges;
+                    else if (entry->objectKind == RS_RELOAD_OBJ_RULESET)
+                        ++programChanges;
+                    else
+                        CHECK(0);
+                }
+                CHECK(metadataChanges == (size_t)(variant == 1 || variant == 2 || variant == 4));
+                CHECK(programChanges == (size_t)(variant == 3 || variant == 4));
+                CHECK(report->invalidCount == 0 && report->addedCount == 0 && report->removedCount == 0);
+                CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) ==
+                      (metadataChanges ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK));
+            }
+            rsReloadReportDestructV1(&report);
+            rsReloadNormalizedGraphBuilderV1Destruct(&editedBuilder);
+            rsReloadCandidateDestruct(&edited);
+        }
+        rsReloadNormalizedGraphBuilderV1Destruct(&source);
+        cnfstmtDestructLst(active->script);
+        cnfobjDestruct(active);
     }
 
     /* Main queue is a singleton runtime resource. Two syntax objects cannot

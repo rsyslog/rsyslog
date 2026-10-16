@@ -657,7 +657,8 @@ done:
 }
 
 
-/* set a new buffers. Returns 0 on success, 1 on error, 2 on file not exists.
+/* Set a new buffer. Returns 0 on success, 1 on parse/setup error,
+ * 2 when the file does not exist, 3 on allocation failure, and 4 on I/O error.
  * note: in case of error, errno must be kept valid!
  */
 int
