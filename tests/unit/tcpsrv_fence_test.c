@@ -16,6 +16,9 @@
  * growth boundaries, writing the control descriptor and trailing sentinel.
  * Nonzero unnamed limiter budget/loss state survives unrelated profile
  * updates; only changed interval/burst resets it, never named policy state.
+ * Listener table tests drive production allocation/stage/swap/destruction,
+ * injecting each allocation failure and proving retained object identity,
+ * descriptor rebinding, safe shrink and rejection of every occupied tail kind.
  */
 #include "config.h"
 
@@ -32,6 +35,7 @@
 #include "ruleset.h"
 #include "ratelimit.h"
 #include "tcpsrv.h"
+#include "netstrm.h"
 #include "../../runtime/tcpsrv-poll.h"
 
 /* Fault injection stays in this translation unit; production calls pthread
@@ -70,10 +74,27 @@ void ratelimitSetLinuxLike(ratelimit_t *const limiter, const unsigned interval, 
 
 /* Include the small production state machine so the unit can drive its
  * event-loop and worker safepoints without constructing network objects. */
+static int listenerAllocCall;
+static int listenerAllocFailAt;
+static int listenerArraysOwned;
+static void *listenerTestCalloc(size_t count, size_t size) {
+    if (++listenerAllocCall == listenerAllocFailAt) return NULL;
+    void *result = calloc(count, size);
+    if (result != NULL) ++listenerArraysOwned;
+    return result;
+}
+static void listenerTestFree(void *pointer) {
+    if (pointer != NULL) --listenerArraysOwned;
+    free(pointer);
+}
+#define calloc listenerTestCalloc
+#define free listenerTestFree
 #include "../../runtime/tcpsrv-fence.c"
 #undef pthread_mutex_init
 #undef pthread_cond_init
 #undef pthread_mutex_destroy
+#undef free
+#undef calloc
 
 #define CHECK(condition)                                                                    \
     do {                                                                                    \
@@ -659,8 +680,94 @@ static int pollCapacity(void) {
     return 0;
 }
 
+static int listenerTableCapacity(void) {
+    tcpsrv_t server = {.iLstnCurr = 2};
+    tcpsrv_listener_tables_t prepared = {0};
+    tcpsrv_listener_tables_t retired = {0};
+    tcpsrv_listener_tables_t initial = {0};
+    netstrm_t streams[2] = {0};
+    netstrm_t *first = &streams[0];
+    netstrm_t *second = &streams[1];
+    tcpLstnPortList_t ports[2] = {0};
+    tcpsrv_io_descr_t descriptors[2] = {0};
+    CHECK(tcpsrvPrepareListenerTables(NULL, 4, &prepared) == RS_RET_PARAM_ERROR);
+    CHECK(tcpsrvPrepareListenerTables(&server, 0, &prepared) == RS_RET_PARAM_ERROR);
+    CHECK(tcpsrvPrepareListenerTables(&server, 1, &prepared) == RS_RET_NOT_IMPLEMENTED);
+    for (int failure = 1; failure <= 3; ++failure) {
+        listenerAllocCall = 0;
+        listenerAllocFailAt = failure;
+        CHECK(tcpsrvPrepareListenerTables(&server, 4, &prepared) == RS_RET_OUT_OF_MEMORY);
+        CHECK(listenerAllocCall == failure && listenerArraysOwned == 0);
+        CHECK(prepared.streams == NULL && prepared.ports == NULL && prepared.descriptors == NULL &&
+              prepared.capacity == 0);
+    }
+    listenerAllocFailAt = 0;
+    CHECK(tcpsrvPrepareListenerTables(&server, 4, &initial) == RS_RET_OK);
+    server.ppLstn = initial.streams;
+    server.ppLstnPort = initial.ports;
+    server.ppioDescrPtr = initial.descriptors;
+    server.iLstnMax = initial.capacity;
+    memset(&initial, 0, sizeof(initial));
+    server.ppLstn[0] = first;
+    server.ppLstn[1] = second;
+    for (int i = 0; i < 2; ++i) {
+        server.ppLstnPort[i] = &ports[i];
+        server.ppioDescrPtr[i] = &descriptors[i];
+        descriptors[i].ptr.ppLstn = server.ppLstn;
+    }
+    netstrm_t **oldStreams = server.ppLstn;
+    CHECK(tcpsrvPrepareListenerTables(&server, 6, &prepared) == RS_RET_OK);
+    CHECK(tcpsrvPrepareListenerTables(&server, 6, &prepared) == RS_RET_PARAM_ERROR);
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_PARAM_ERROR);
+    server.fenceAcquired = server.fenceOwnerValid = 1;
+    server.fenceOwner = pthread_self();
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_OK);
+    CHECK(prepared.streams[0] == first && prepared.streams[1] == second && prepared.streams[5] == NULL);
+    CHECK(server.ppLstn == oldStreams && descriptors[0].ptr.ppLstn == oldStreams);
+    /* Abort destroys copied arrays only; runtime objects and bindings survive. */
+    tcpsrvDestructListenerTables(&prepared);
+    CHECK(listenerArraysOwned == 3 && server.ppLstn[1] == second);
+    CHECK(tcpsrvPrepareListenerTables(&server, 6, &prepared) == RS_RET_OK);
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_OK);
+    tcpsrvSwapListenerTablesLive(&server, &prepared, &retired);
+    CHECK(server.iLstnMax == 6 && server.iLstnCurr == 2 && server.ppLstn != oldStreams);
+    CHECK(server.ppLstn[0] == first && server.ppLstn[1] == second);
+    CHECK(server.ppLstnPort[1] == &ports[1] && server.ppioDescrPtr[1] == &descriptors[1]);
+    CHECK(descriptors[0].ptr.ppLstn == server.ppLstn && descriptors[1].ptr.ppLstn == server.ppLstn);
+    CHECK(retired.streams == oldStreams && retired.capacity == 4 && prepared.streams == NULL);
+    tcpsrvDestructListenerTables(&retired);
+    CHECK(listenerArraysOwned == 3);
+
+    CHECK(tcpsrvPrepareListenerTables(&server, 2, &prepared) == RS_RET_OK);
+    server.ppLstn[5] = first;
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_NOT_IMPLEMENTED);
+    server.ppLstn[5] = NULL;
+    server.ppLstnPort[5] = &ports[0];
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_NOT_IMPLEMENTED);
+    server.ppLstnPort[5] = NULL;
+    server.ppioDescrPtr[5] = &descriptors[0];
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_NOT_IMPLEMENTED);
+    server.ppioDescrPtr[5] = NULL;
+    CHECK(prepared.streams[0] == NULL && server.iLstnMax == 6);
+    CHECK(tcpsrvStageListenerTablesWhileFenced(&server, &prepared) == RS_RET_OK);
+    tcpsrvSwapListenerTablesLive(&server, &prepared, &retired);
+    CHECK(server.iLstnMax == 2 && server.ppLstn[0] == first && server.ppLstn[1] == second);
+    CHECK(descriptors[0].ptr.ppLstn == server.ppLstn && descriptors[1].ptr.ppLstn == server.ppLstn);
+    tcpsrvDestructListenerTables(&retired);
+    initial = (tcpsrv_listener_tables_t){.streams = server.ppLstn,
+                                         .ports = server.ppLstnPort,
+                                         .descriptors = server.ppioDescrPtr,
+                                         .capacity = server.iLstnMax};
+    tcpsrvDestructListenerTables(&initial);
+    tcpsrvDestructListenerTables(&initial);
+    tcpsrvDestructListenerTables(NULL);
+    CHECK(listenerArraysOwned == 0);
+    return 0;
+}
+
 int main(void) {
     if (syncInitFailures() != 0) return 1;
+    if (listenerTableCapacity() != 0) return 1;
     if (pollCapacity() != 0) return 1;
     if (singleWorkerRoundTrip() != 0) return 1;
     if (handoffBeforeFence() != 0) return 1;

@@ -73,7 +73,12 @@ before fencing. Shrink is eligible only when no occupied slot would be
 truncated; rejection retains the generation and every established session.
 An unchanged explicit ``socketBacklog`` permits growth across implicit
 backlog buckets, while a changed effective backlog still requires restart.
-``maxListeners`` pointer-table resizing is not included in this boundary.
+``maxListeners`` independently resizes the retained listener's three pointer
+tables. Preparation allocates replacement storage, and the event-loop/worker
+fence protects copying, descriptor rebinding and allocation-free publication.
+A shrink cannot discard an opened socket or any occupied listener-table slot.
+Old array storage remains owned until resume and retirement succeed; referenced
+listener and session objects are not replaced. Endpoint topology is unchanged.
 
 Delimiter-regex changes are accept-profile updates: existing sessions own
 their compiled old pattern, and later accepts compile the new prevalidated

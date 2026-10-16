@@ -6,6 +6,9 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -310,6 +313,87 @@ void tcpsrvParkAtFence(tcpsrv_t *const server) {
         finishDrainLocked(server);
     }
     pthread_mutex_unlock(&server->fenceMut);
+}
+
+void tcpsrvDestructListenerTables(tcpsrv_listener_tables_t *const tables) {
+    if (tables == NULL) return;
+    free(tables->streams);
+    free(tables->ports);
+    free(tables->descriptors);
+    memset(tables, 0, sizeof(*tables));
+}
+
+rsRetVal tcpsrvPrepareListenerTables(const tcpsrv_t *const server,
+                                     const int capacity,
+                                     tcpsrv_listener_tables_t *const prepared) {
+    tcpsrv_listener_tables_t tables = {0};
+    if (server == NULL || prepared == NULL || capacity < 1 || prepared->streams != NULL || prepared->ports != NULL ||
+        prepared->descriptors != NULL || prepared->capacity != 0)
+        return RS_RET_PARAM_ERROR;
+    if (capacity < server->iLstnCurr) return RS_RET_NOT_IMPLEMENTED;
+    size_t elementSize = sizeof(tables.streams[0]);
+    if (elementSize < sizeof(tables.ports[0])) elementSize = sizeof(tables.ports[0]);
+    if (elementSize < sizeof(tables.descriptors[0])) elementSize = sizeof(tables.descriptors[0]);
+    if ((size_t)capacity > SIZE_MAX / elementSize) return RS_RET_OUT_OF_MEMORY;
+    tables.streams = calloc((size_t)capacity, sizeof(tables.streams[0]));
+    if (tables.streams == NULL) goto allocation_failed;
+    tables.ports = calloc((size_t)capacity, sizeof(tables.ports[0]));
+    if (tables.ports == NULL) goto allocation_failed;
+    tables.descriptors = calloc((size_t)capacity, sizeof(tables.descriptors[0]));
+    if (tables.descriptors == NULL) goto allocation_failed;
+    tables.capacity = capacity;
+    *prepared = tables;
+    return RS_RET_OK;
+
+allocation_failed:
+    tcpsrvDestructListenerTables(&tables);
+    return RS_RET_OUT_OF_MEMORY;
+}
+
+rsRetVal tcpsrvStageListenerTablesWhileFenced(const tcpsrv_t *const server, tcpsrv_listener_tables_t *const prepared) {
+    if (server == NULL || prepared == NULL || !server->fenceAcquired || !server->fenceOwnerValid ||
+        !pthread_equal(server->fenceOwner, pthread_self()) || prepared->streams == NULL || prepared->ports == NULL ||
+        prepared->descriptors == NULL || server->ppLstn == NULL || server->ppLstnPort == NULL ||
+        server->ppioDescrPtr == NULL || prepared->capacity < 1)
+        return RS_RET_PARAM_ERROR;
+    if (prepared->capacity < server->iLstnCurr) return RS_RET_NOT_IMPLEMENTED;
+    /* Cardinality alone is not a truncation oracle: preserve any still-owned
+     * entry in the spare tail too, including a backend descriptor. */
+    for (int slot = prepared->capacity; slot < server->iLstnMax; ++slot) {
+        if (server->ppLstn[slot] != NULL || server->ppLstnPort[slot] != NULL || server->ppioDescrPtr[slot] != NULL)
+            return RS_RET_NOT_IMPLEMENTED;
+    }
+    const size_t copied = (size_t)(server->iLstnMax < prepared->capacity ? server->iLstnMax : prepared->capacity);
+    memcpy(prepared->streams, server->ppLstn, copied * sizeof(prepared->streams[0]));
+    memcpy(prepared->ports, server->ppLstnPort, copied * sizeof(prepared->ports[0]));
+    memcpy(prepared->descriptors, server->ppioDescrPtr, copied * sizeof(prepared->descriptors[0]));
+    return RS_RET_OK;
+}
+
+void tcpsrvSwapListenerTablesLive(tcpsrv_t *const server,
+                                  tcpsrv_listener_tables_t *const prepared,
+                                  tcpsrv_listener_tables_t *const retired) {
+    const int valid = server != NULL && prepared != NULL && retired != NULL && server->fenceAcquired &&
+                      server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()) &&
+                      prepared->streams != NULL && prepared->ports != NULL && prepared->descriptors != NULL &&
+                      prepared->capacity >= server->iLstnCurr && retired->streams == NULL && retired->ports == NULL &&
+                      retired->descriptors == NULL && retired->capacity == 0;
+    assert(valid);
+    if (!valid) return;
+    *retired = (tcpsrv_listener_tables_t){.streams = server->ppLstn,
+                                          .ports = server->ppLstnPort,
+                                          .descriptors = server->ppioDescrPtr,
+                                          .capacity = server->iLstnMax};
+    server->ppLstn = prepared->streams;
+    server->ppLstnPort = prepared->ports;
+    server->ppioDescrPtr = prepared->descriptors;
+    server->iLstnMax = prepared->capacity;
+    /* Stable epoll descriptors borrow the table base, not individual streams.
+     * Rebind every retained descriptor before releasing the fence. */
+    for (int slot = 0; slot < server->iLstnMax; ++slot) {
+        if (server->ppioDescrPtr[slot] != NULL) server->ppioDescrPtr[slot]->ptr.ppLstn = server->ppLstn;
+    }
+    memset(prepared, 0, sizeof(*prepared));
 }
 
 void tcpsrvApplyFlowControlLive(tcpsrv_t *const server, const int useFlowControl) {

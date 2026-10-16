@@ -5,6 +5,10 @@
 MaxListeners
 ============
 
+.. meta::
+   :description: Limit imtcp listener-table capacity and resize it during bounded retained-listener reload.
+   :keywords: rsyslog, imtcp, maxListeners, listener capacity, HUP, reload
+
 .. index::
    single: imtcp; MaxListeners
    single: MaxListeners
@@ -30,6 +34,27 @@ Sets the maximum number of listeners (server ports) supported.
 This must be set before the first $InputTCPServerRun directive.
 
 The same-named input parameter can override this module setting.
+
+With ``global(config.reloadOnHUP="on")``, the bounded retained-listener
+reload can grow or shrink this capacity independently of ``maxSessions``.
+The replacement pointer tables are allocated before the event-loop/worker
+fence. Shrink is rejected if it would truncate an opened socket or occupied
+listener slot; rejection leaves the active generation and sessions unchanged.
+This does not add, remove or replace endpoints. See
+:doc:`../../development/transactional_config_reload` for the retained limits.
+
+YAML uses the same module and input keys:
+
+.. code-block:: yaml
+
+   modules:
+     - load: imtcp
+       maxListeners: 50
+   inputs:
+     - type: imtcp
+       address: 127.0.0.1
+       port: 514
+       maxListeners: 20
 
 
 Module usage

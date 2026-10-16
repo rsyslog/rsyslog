@@ -12,6 +12,8 @@
 # commit. A growth across the next implicit-backlog bucket remains rejected.
 # Values one through three share one bucket. The explicit-backlog wrapper
 # additionally grows across that bucket and rejects a changed socket backlog.
+# A final independent maxListeners update remains compatible with the session
+# table, while focused maxListeners tests cover its own ownership boundary.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 generate_conf
@@ -149,13 +151,13 @@ printf '<167>Mar 10 01:00:00 host app: backlog-kept-second\n' >&8 || error_exit 
 wait_content 'backlog-kept-first' "$RSYSLOG_OUT_LOG"
 wait_content 'backlog-kept-second' "$RSYSLOG_OUT_LOG"
 
-# Listener pointer-table capacity is deliberately outside this delivery.
+# Listener capacity can change independently without losing session traffic.
 sed 's/ruleset="main")/maxListeners="30" ruleset="main")/' "$CONF_FILE.input-grow" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=$final_generation"* ||
-      "$reload_status" != *"source_capability=restart_required"* ]]; then
-    echo "FAIL: maxListeners change escaped the restart boundary: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=$((final_generation + 1))"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+    echo "FAIL: compatible maxListeners update did not activate: $reload_status"
     error_exit 1
 fi
 printf '<167>Mar 10 01:00:00 host app: listener-capacity-kept\n' >&9 || error_exit 1

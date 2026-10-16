@@ -137,6 +137,18 @@ typedef struct tcpsrv_reload_profile_s {
     ruleset_t *ruleset; /**< Borrowed materialized ruleset, pinned by the active generation. */
 } tcpsrv_reload_profile_t;
 
+/** @brief Owned replacement listener pointer arrays; entries remain borrowed.
+ * Prepare allocates empty arrays, fenced staging copies runtime pointers, and
+ * commit transfers the arrays to the server. Destroy only the array storage,
+ * never the streams, listener metadata or descriptors referenced by entries.
+ */
+typedef struct tcpsrv_listener_tables_s {
+    netstrm_t **streams; /**< Owned stream-pointer array. */
+    tcpLstnPortList_t **ports; /**< Owned listener-metadata-pointer array. */
+    tcpsrv_io_descr_t **descriptors; /**< Owned backend-descriptor-pointer array. */
+    int capacity; /**< Allocated slot count shared by all three arrays. */
+} tcpsrv_listener_tables_t;
+
 typedef struct tcpsrvWrkrData_s {
     statsobj_t *stats;
     STATSCOUNTER_DEF(ctrRuns, mutCtrRuns);
@@ -456,9 +468,16 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      * Returns old root plus ownership for retirement after resume; no allocation.
      */
     void (*SwapAllowedSendersLive)(tcpsrv_t *, struct AllowedSenders *, int, struct AllowedSenders **, int *);
+    /* v39 prepares and publishes retained-listener table capacity. Contracts
+     * and ownership are documented on the corresponding helper declarations. */
+    rsRetVal (*PrepareListenerTables)(const tcpsrv_t *server, int capacity, tcpsrv_listener_tables_t *prepared);
+    rsRetVal (*StageListenerTablesWhileFenced)(const tcpsrv_t *server, tcpsrv_listener_tables_t *prepared);
+    void (*SwapListenerTablesLive)(tcpsrv_t *server, tcpsrv_listener_tables_t *prepared,
+                                   tcpsrv_listener_tables_t *retired);
+    void (*DestructListenerTables)(tcpsrv_listener_tables_t *tables);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 38 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 39 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -573,6 +592,41 @@ void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
  * the ruleset must outlive every session retaining it. */
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 /** @} */
+
+/**
+ * @brief Allocate empty listener tables without changing the retained server.
+ * @param server Borrowed server with immutable constructed listener cardinality.
+ * @param capacity Positive replacement slot count, at least iLstnCurr.
+ * @param prepared Non-NULL zero-initialized output owner; remains empty on error.
+ * @return RS_RET_OK, parameter error, unsupported shrink or allocation failure.
+ * Success owns only three arrays; release with tcpsrvDestructListenerTables.
+ */
+rsRetVal tcpsrvPrepareListenerTables(const tcpsrv_t *server, int capacity, tcpsrv_listener_tables_t *prepared);
+/**
+ * @brief Copy borrowed runtime entries while all listener users are fenced.
+ * @param server Borrowed server; the caller must own its acquired fence.
+ * @param prepared Owned empty replacement arrays from PrepareListenerTables.
+ * @return RS_RET_OK, parameter error or unsupported shrink. A shrink may not
+ * truncate any occupied stream, metadata or descriptor slot. No live state
+ * changes or ownership transfers; successful staging permits infallible commit.
+ */
+rsRetVal tcpsrvStageListenerTablesWhileFenced(const tcpsrv_t *server, tcpsrv_listener_tables_t *prepared);
+/**
+ * @brief Publish staged tables and rebind descriptors without allocation.
+ * @param server Borrowed server whose acquired fence is owned by this caller.
+ * @param prepared Successfully staged arrays; ownership transfers to server
+ * and this owner is reset. No runtime mutation may intervene after staging.
+ * @param retired Zero-initialized output owner receiving the old arrays only.
+ * Release retired arrays after successful resume; their entries are not owned.
+ */
+void tcpsrvSwapListenerTablesLive(tcpsrv_t *server,
+                                  tcpsrv_listener_tables_t *prepared,
+                                  tcpsrv_listener_tables_t *retired);
+/**
+ * @brief Release only array storage, never referenced runtime objects.
+ * @param tables Owner to reset; NULL and empty owners are accepted.
+ */
+void tcpsrvDestructListenerTables(tcpsrv_listener_tables_t *tables);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

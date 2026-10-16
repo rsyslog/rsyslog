@@ -6,6 +6,8 @@
  * exclusion; accepted sessions retain their accept-time snapshots.
  * Session table replacement copies stable slot IDs only while fenced; old
  * pointer arrays stay transaction-owned until resume/retirement succeeds.
+ * Listener table replacement also rebinds descriptor table bases while fenced;
+ * it owns only arrays, never the retained listener/session objects they name.
  * This is the implementation of the TCP input module.
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
@@ -1823,7 +1825,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
     const tcpLstnParams_t *const rightParams = right->cnf_params;
 
     if (leftParams == NULL || rightParams == NULL) return 0;
-    return (ignoreLiveFields || left->iTCPSessMax == right->iTCPSessMax) && left->iTCPLstnMax == right->iTCPLstnMax &&
+    return (ignoreLiveFields || (left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax)) &&
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
@@ -2108,6 +2110,8 @@ typedef struct imtcpReloadEntryV1_s {
     tcps_sess_t **preparedSessionSlots;
     tcps_sess_t **retiredSessionSlots;
     int sessionMax;
+    tcpsrv_listener_tables_t preparedListenerTables;
+    tcpsrv_listener_tables_t retiredListenerTables;
     uint64_t fenceToken;
     int fenceAcquired;
     struct AllowedSenders *preparedAllowedSenders;
@@ -2142,6 +2146,8 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
         state->entries[i].retiredAllowedSendersOwned = 0;
         free(state->entries[i].sessionAllowed);
         state->entries[i].sessionAllowed = NULL;
+        tcpsrv.DestructListenerTables(&state->entries[i].preparedListenerTables);
+        tcpsrv.DestructListenerTables(&state->entries[i].retiredListenerTables);
     }
 }
 
@@ -2262,6 +2268,10 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
                           calloc((size_t)state->entries[index].sessionMax,
                                  sizeof(state->entries[index].preparedSessionSlots[0])));
         }
+        if (newInst->iTCPLstnMax != state->entries[index].runtime->tcpsrv->iLstnMax) {
+            CHKiRet(tcpsrv.PrepareListenerTables(state->entries[index].runtime->tcpsrv, newInst->iTCPLstnMax,
+                                                 &state->entries[index].preparedListenerTables));
+        }
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].ratelimitInterval = (unsigned)newInst->ratelimitInterval;
@@ -2342,6 +2352,14 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
         }
     }
     if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i];
+            if (entry->preparedListenerTables.streams == NULL) continue;
+            ret = tcpsrv.StageListenerTablesWhileFenced(entry->runtime->tcpsrv, &entry->preparedListenerTables);
+            if (ret != RS_RET_OK) break;
+        }
+    }
+    if (ret == RS_RET_OK) {
         /* Every occupied-tail check above precedes any ACL verdict. Nothing
          * closes or changes a session until all verdicts have succeeded. */
         for (size_t i = 0; i < state->count; ++i) {
@@ -2399,6 +2417,9 @@ static void commitReloadV1(void *const pReloadState) {
             server->iSessMax = state->entries[i].sessionMax;
             state->entries[i].preparedSessionSlots = NULL;
         }
+        if (state->entries[i].preparedListenerTables.streams != NULL)
+            tcpsrv.SwapListenerTablesLive(server, &state->entries[i].preparedListenerTables,
+                                          &state->entries[i].retiredListenerTables);
         if (state->entries[i].applyAllowedSenders) {
             tcpsrv.SwapAllowedSendersLive(
                 server, state->entries[i].preparedAllowedSenders, state->entries[i].useLegacyAllowedSender,

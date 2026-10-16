@@ -2914,6 +2914,10 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->EvaluateSessionPolicyWhileFenced = tcpsrvEvaluateSessionPolicyWhileFenced;
     pIf->ApplySessionPolicyLive = tcpsrvApplySessionPolicyLive;
     pIf->SwapAllowedSendersLive = tcpsrvSwapAllowedSendersLive;
+    pIf->PrepareListenerTables = tcpsrvPrepareListenerTables;
+    pIf->StageListenerTablesWhileFenced = tcpsrvStageListenerTablesWhileFenced;
+    pIf->SwapListenerTablesLive = tcpsrvSwapListenerTablesLive;
+    pIf->DestructListenerTables = tcpsrvDestructListenerTables;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
