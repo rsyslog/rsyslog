@@ -1,0 +1,21 @@
+.agent/skills/rsyslog-security-pr-review/SKILL.md
+  s_9caf8fc1fafeee::t_e4c68467d0ae7d 41,46,82,90,133,141
+doc/ai/designs/local-queue-execution-ledger.md
+  s_9caf8fc1fafeee::t_6e3fe1f7e0324f 43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "885ba999cf25580d19f478526a2d762e4a78f50c",
+  "prompts": {},
+  "sessions": {
+    "s_9caf8fc1fafeee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14594-0a71-7a12-b2bd-9aacc463464f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
