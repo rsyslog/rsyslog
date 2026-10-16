@@ -394,3 +394,5 @@ if ENABLE_KSI_LS12
    lmsig_ksi_ls12_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_LS12_CFLAGS)
    lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version $(GT_KSI_LS12_LIBS)
 endif
+
+EXTRA_DIST = ruleset-call.h

@@ -159,7 +159,7 @@ struct cnfstmt {
         } s_unset;
         struct {
             es_str_t *name;
-            struct cnfstmt *stmt;
+            ruleset_t *target; /* stable shell for every resolved static call */
             ruleset_t *ruleset; /* non-NULL if the ruleset has a queue assigned */
         } s_call;
         struct {
