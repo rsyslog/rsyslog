@@ -211,7 +211,7 @@ for entry in policy.get("disabled_optional_modules", []):
     module = entry.get("module", "")
     if not re.fullmatch(r"[a-z][a-z0-9]*", module) or not entry.get("reason", "").strip():
         raise SystemExit("disabled optional module requires a valid module and reason")
-    if re.search(rf"--enable-{re.escape(module)}(?:[=\s]|$)", spec):
+    if re.search(rf"--enable-{re.escape(module)}(?:\s|$|=(?!no(?:\s|$)))", spec):
         raise SystemExit(f"native spec explicitly enables optional module: {module}")
     flag = f"--disable-{module}"
     if flag not in spec:
