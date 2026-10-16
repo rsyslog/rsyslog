@@ -15,6 +15,13 @@
  * callbacks before the code is run. The tcpsrv then calls back
  * into the specific input modules at the appropriate time.
  *
+ * Concurrency & Locking:
+ * Prepared runs publish readiness only after backend registration and all
+ * worker initialization, before caller-owned gate release permits dispatch.
+ * fenceMut protects stop requests and queue synchronization lifetime; nested
+ * locking is fenceMut -> workQueue.mut. The caller pins the server through
+ * RunPrepared completion and join, and releases its own gate on abort.
+ *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
@@ -145,6 +152,53 @@ static void ATTR_NONNULL() drainControlPipe(tcpsrv_t *const pThis) {
     char drain[64];
     while (read(pThis->controlPipe[0], drain, sizeof(drain)) > 0) {
     }
+}
+
+/* Only the pinned owner may destroy a server, after its Run thread is joined.
+ * fenceMut protects queue lifetime; lock order is always fenceMut -> queue.mut. */
+static void tcpsrvRequestStop(tcpsrv_t *const server) {
+    if (server == NULL || !server->fenceSyncInitialized) return;
+    pthread_mutex_lock(&server->fenceMut);
+#ifdef HAVE_ATOMIC_BUILTINS
+    ATOMIC_STORE_32BIT(&server->stopRequested, &server->fenceMut, 1);
+#else
+    server->stopRequested = 1;
+#endif
+    tcpsrvAbortFenceLocked(server);
+    if (server->queueSyncInitialized) {
+        pthread_mutex_lock(&server->workQueue.mut);
+        server->workQueue.stop = 1;
+        pthread_cond_broadcast(&server->workQueue.workRdy);
+        pthread_mutex_unlock(&server->workQueue.mut);
+    }
+    if (server->fenceReady) {
+        const unsigned char wake = 1;
+        const ssize_t written = write(server->controlPipe[1], &wake, sizeof(wake));
+        (void)written;
+    }
+    pthread_mutex_unlock(&server->fenceMut);
+}
+
+static int tcpsrvShouldStop(tcpsrv_t *const server) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    const int stop = ATOMIC_LOAD_32BIT(&server->stopRequested, &server->fenceMut);
+#else
+    pthread_mutex_lock(&server->fenceMut);
+    const int stop = server->stopRequested;
+    pthread_mutex_unlock(&server->fenceMut);
+#endif
+    return stop || glbl.GetGlobalInputTermState();
+}
+
+/* Backend registration and complete worker startup precede this publication.
+ * Never acknowledge readiness after a concurrent early abort. */
+static rsRetVal tcpsrvBackendReady(tcpsrv_t *const server, tcpsrv_activation_gate_t gate, void *context) {
+    pthread_mutex_lock(&server->fenceMut);
+    const int stopped = server->stopRequested || glbl.GetGlobalInputTermState();
+    if (!stopped) server->fenceReady = 1;
+    pthread_mutex_unlock(&server->fenceMut);
+    if (stopped) return RS_RET_FORCE_TERM;
+    return gate == NULL ? RS_RET_OK : gate(context);
 }
 
 /* We check which event notification mechanism we have and use the best available one.
@@ -787,6 +841,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
                 (pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszPort,
                 (pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszAddr,
                 (ns == NULL) ? "" : " namespace ", (ns == NULL) ? "" : ns);
+            if (pThis->strictListenerInit) ABORT_FINALIZE(localRet);
         }
         pEntry = pEntry->pNext;
     }
@@ -1159,7 +1214,7 @@ static rsRetVal ATTR_NONNULL(1)
         switch (state) {
             case RS_READING:
                 /* maxReads==0 is intentional and documented: it disables starvation protection. */
-                while (state == RS_READING && (maxReads == 0 || read_calls < maxReads)) {
+                while (state == RS_READING && (maxReads == 0 || read_calls < maxReads) && !tcpsrvShouldStop(pThis)) {
                     iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
 
                     switch (iRet) {
@@ -1203,7 +1258,9 @@ static rsRetVal ATTR_NONNULL(1)
                 }
 
                 if (state == RS_READING) {
-                    state = RS_STARVATION; /* hit the read cap */
+                    /* A locally stopped server must leave even if its peer
+                     * remains readable; only a live server hands work off. */
+                    state = tcpsrvShouldStop(pThis) ? RS_DONE_REARM : RS_STARVATION;
                 }
                 break;
 
@@ -1231,7 +1288,7 @@ static rsRetVal ATTR_NONNULL(1)
     if (pThis->workQueue.numWrkr > 1) {
         STATSCOUNTER_ADD(wrkrData->ctrRead, wrkrData->mutCtrRead, read_calls);
     }
-    if (state == RS_DONE_REARM) {
+    if (state == RS_DONE_REARM && !tcpsrvShouldStop(pThis)) {
         rearmIoEvent(pioDescr); /* re-arm while still holding pSess->mut */
     }
 #endif
@@ -1361,7 +1418,7 @@ static rsRetVal ATTR_NONNULL(1)
     int nAccept = 0;
 #endif
 
-    while (bRun) {
+    while (bRun && !tcpsrvShouldStop(pioDescr->pSrv)) {
         iRet = doSingleAccept(pioDescr);
         if (iRet != RS_RET_OK) {
             bRun = 0;
@@ -1374,7 +1431,7 @@ static rsRetVal ATTR_NONNULL(1)
     if (pioDescr->pSrv->workQueue.numWrkr > 1) {
         STATSCOUNTER_ADD(wrkrData->ctrAccept, wrkrData->mutCtrAccept, nAccept);
     }
-    rearmIoEvent(pioDescr); /* listeners must ALWAYS be re-armed */
+    if (!tcpsrvShouldStop(pioDescr->pSrv)) rearmIoEvent(pioDescr);
 #endif
 
     RETiRet;
@@ -1425,13 +1482,12 @@ static void ATTR_NONNULL() * wrkr(void *arg); /* forward-def of wrkr */
  *   - avoids fragile “partial cleanups” spread across multiple branches
  *   - tolerates partial initialization (some threads created, some not; mutex/cond
  *     initialized or not), destroying only what actually succeeded
- *   - ignores secondary errors from pthread_*destroy/cancel/join — this is an
+ *   - ignores secondary errors from pthread_*destroy/join — this is an
  *     extreme error path and best-effort cleanup is sufficient
  *
- *  ### Thread cancellation model
- *  If any threads were created before failure, we call `pthread_cancel()` and then
- *  `pthread_join()` on each. Worker threads block in `pthread_cond_wait()` which is
- *  a POSIX cancellation point, so cancellation is reliable here.
+ *  Partial creation stops workers cooperatively before joining: cancellation
+ *  during cond_wait would otherwise leave the reacquired queue mutex owned.
+ *  Prepared startup additionally requires every worker to finish initialization.
  *
  *  @param pThis Server instance (must have `workQueue.numWrkr > 1`).
  *  @retval RS_RET_OK on success; error code on failure (resources cleaned up).
@@ -1448,6 +1504,9 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
     /* Initialize queue state first. */
     queue->head = NULL;
     queue->tail = NULL;
+    queue->stop = 0;
+    queue->ready = 0;
+    queue->startupResult = RS_RET_OK;
 
     /* Allocate arrays. */
     CHKmalloc(queue->wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
@@ -1463,6 +1522,10 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
     cond_initialized = 1;
+    pthread_mutex_lock(&pThis->fenceMut);
+    pThis->queueSyncInitialized = 1;
+    queue->stop = pThis->stopRequested;
+    pthread_mutex_unlock(&pThis->fenceMut);
     CHKmalloc(pThis->fenceItems = calloc(queue->numWrkr, sizeof(tcpsrv_io_descr_t)));
     for (unsigned i = 0; i < queue->numWrkr; ++i) {
         pThis->fenceItems[i].pSrv = pThis;
@@ -1472,6 +1535,9 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
     /* Spawn workers. */
     pThis->currWrkrs = 0;
     for (unsigned i = 0; i < queue->numWrkr; ++i) {
+#ifdef ENABLE_TESTBENCH
+        if (pThis->testFailWorkerCreate == i + 1) ABORT_FINALIZE(RS_RET_ERR);
+#endif
         if (pthread_create(&queue->wrkr_tids[i], &default_thread_attr, wrkr, pThis) != 0) {
             iRet = RS_RET_ERR;
             break;
@@ -1479,15 +1545,49 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
         ++created;
     }
 
+    if (iRet == RS_RET_OK && pThis->preparedRun) {
+        unsigned timeoutMs = 5000;
+#ifdef ENABLE_TESTBENCH
+        if (pThis->testStartupTimeoutMs != 0) timeoutMs = pThis->testStartupTimeoutMs;
+#endif
+        struct timespec deadline;
+        if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) ABORT_FINALIZE(RS_RET_ERR);
+        deadline.tv_sec += timeoutMs / 1000;
+        deadline.tv_nsec += (long)(timeoutMs % 1000) * 1000000L;
+        if (deadline.tv_nsec >= 1000000000L) {
+            ++deadline.tv_sec;
+            deadline.tv_nsec -= 1000000000L;
+        }
+        pthread_mutex_lock(&queue->mut);
+        while (queue->ready != queue->numWrkr && queue->startupResult == RS_RET_OK && !queue->stop &&
+               !glbl.GetGlobalInputTermState()) {
+            if (pthread_cond_timedwait(&queue->workRdy, &queue->mut, &deadline) != 0) {
+                iRet = RS_RET_TIMED_OUT;
+                break;
+            }
+        }
+        if (queue->startupResult != RS_RET_OK)
+            iRet = queue->startupResult;
+        else if (queue->stop || glbl.GetGlobalInputTermState())
+            iRet = RS_RET_FORCE_TERM;
+        pthread_mutex_unlock(&queue->mut);
+    }
+
 finalize_it:
     if (iRet != RS_RET_OK) {
         /* Best-effort rollback in strict reverse order of construction. */
 
-        /* If any threads were created, cancel and join them. */
+        /* Unpublish queue lifetime before destruction, then join every owner. */
+        if (cond_initialized) {
+            pthread_mutex_lock(&pThis->fenceMut);
+            pThis->queueSyncInitialized = 0;
+            pthread_mutex_lock(&queue->mut);
+            queue->stop = 1;
+            pthread_cond_broadcast(&queue->workRdy);
+            pthread_mutex_unlock(&queue->mut);
+            pthread_mutex_unlock(&pThis->fenceMut);
+        }
         if (created > 0) {
-            for (unsigned i = 0; i < created; ++i) {
-                (void)pthread_cancel(queue->wrkr_tids[i]); /* cond_wait is a cancellation point */
-            }
             for (unsigned i = 0; i < created; ++i) {
                 (void)pthread_join(queue->wrkr_tids[i], NULL);
             }
@@ -1531,17 +1631,22 @@ static void ATTR_NONNULL() stopWrkrPool(tcpsrv_t *const pThis) {
     if (pThis->fenceSyncInitialized) {
         pthread_mutex_lock(&pThis->fenceMut);
         tcpsrvAbortFenceLocked(pThis);
+        pThis->queueSyncInitialized = 0;
+        pthread_mutex_lock(&queue->mut);
+        queue->stop = 1;
+        pthread_cond_broadcast(&queue->workRdy);
+        pthread_mutex_unlock(&queue->mut);
         pthread_mutex_unlock(&pThis->fenceMut);
     }
-    pthread_mutex_lock(&queue->mut);
-    pthread_cond_broadcast(&queue->workRdy);
-    pthread_mutex_unlock(&queue->mut);
 
     /* Wait for all worker threads to finish. */
     for (unsigned i = 0; i < queue->numWrkr; i++) {
         pthread_join(queue->wrkr_tids[i], NULL);
     }
 
+    /* Discard only borrowed pending links after every worker has joined.
+     * Listener/session destruction retains ownership of the actual entries. */
+    queue->head = queue->tail = NULL;
     /* Free allocated resources. */
     free(queue->wrkr_tids);
     free(queue->wrkr_data);
@@ -1560,11 +1665,11 @@ static tcpsrv_io_descr_t ATTR_NONNULL() * dequeueWork(tcpsrv_t *pSrv) {
     tcpsrv_io_descr_t *pioDescr;
 
     pthread_mutex_lock(&queue->mut);
-    while ((queue->head == NULL) && !glbl.GetGlobalInputTermState()) {
+    while (queue->head == NULL && !queue->stop && !glbl.GetGlobalInputTermState()) {
         pthread_cond_wait(&queue->workRdy, &queue->mut);
     }
 
-    if (queue->head == NULL) {
+    if (queue->stop || queue->head == NULL) {
         pioDescr = NULL;
         goto finalize_it;
     }
@@ -1603,9 +1708,12 @@ static void ATTR_NONNULL() enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
     workQueue_t *const queue = &pioDescr->pSrv->workQueue;
 
     pthread_mutex_lock(&queue->mut);
-    tcpsrvAppendWorkLocked(pioDescr->pSrv, pioDescr);
-
-    pthread_cond_signal(&queue->workRdy);
+    /* Stop is terminal: a starvation handoff must not replenish the FIFO
+     * while its owner is trying to join workers. Session teardown owns it. */
+    if (!queue->stop) {
+        tcpsrvAppendWorkLocked(pioDescr->pSrv, pioDescr);
+        pthread_cond_signal(&queue->workRdy);
+    }
     pthread_mutex_unlock(&queue->mut);
 }
 
@@ -1622,6 +1730,12 @@ static void ATTR_NONNULL() * wrkrRun(void *arg) {
     rsRetVal localRet;
 
     tcpsrvWrkrData_t *const wrkrData = &(queue->wrkr_data[wrkrIdx]);
+#ifdef ENABLE_TESTBENCH
+    if (pThis->testFailWorkerInit == (unsigned)wrkrIdx + 1) {
+        localRet = RS_RET_ERR;
+        goto startup_ready;
+    }
+#endif
 
     uchar shortThrdName[16];
     snprintf((char *)shortThrdName, sizeof(shortThrdName), "w%d/%s", wrkrIdx,
@@ -1685,7 +1799,7 @@ static void ATTR_NONNULL() * wrkrRun(void *arg) {
         statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("accept"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                             &(wrkrData->ctrAccept));
 
-        statsobj.ConstructFinalize(wrkrData->stats);
+        localRet = statsobj.ConstructFinalize(wrkrData->stats);
         deinit_stats = 1;
     } else {
         LogMsg(errno, localRet, LOG_WARNING,
@@ -1694,6 +1808,26 @@ static void ATTR_NONNULL() * wrkrRun(void *arg) {
                "is otherwise unaffected",
                thrdName);
     }
+
+    /* Readiness is not currWrkrs: publish only after required initialization,
+     * immediately before this worker can dequeue. No queue->fence lock edge. */
+#ifdef ENABLE_TESTBENCH
+startup_ready:
+#endif
+    pthread_mutex_lock(&queue->mut);
+    if (pThis->preparedRun && localRet != RS_RET_OK) {
+        if (queue->startupResult == RS_RET_OK) queue->startupResult = localRet;
+    } else {
+#ifdef ENABLE_TESTBENCH
+        while (pThis->testHoldWorkerReady == (unsigned)wrkrIdx + 1 && !queue->stop && !glbl.GetGlobalInputTermState())
+            pthread_cond_wait(&queue->workRdy, &queue->mut);
+#endif
+        ++queue->ready;
+    }
+    const int startupFailed = pThis->preparedRun && localRet != RS_RET_OK;
+    pthread_cond_broadcast(&queue->workRdy);
+    pthread_mutex_unlock(&queue->mut);
+    if (startupFailed) goto worker_done;
 
     /**** main loop ****/
     while (1) {
@@ -1719,6 +1853,7 @@ static void ATTR_NONNULL() * wrkrRun(void *arg) {
 #endif
     }
 
+worker_done:
     /**** de-init ****/
     if (deinit_stats) {
         statsobj.Destruct(&wrkrData->stats);
@@ -1771,7 +1906,8 @@ static rsRetVal ATTR_NONNULL() processWorkset(const int numEntries, tcpsrv_io_de
 /* This function is called to gather input.
  */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const pThis) {
+PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL(1) rsRetVal
+    RunPoll(tcpsrv_t *const pThis, tcpsrv_activation_gate_t gate, void *context) {
     DEFiRet;
     int nfds;
     int i;
@@ -1803,11 +1939,24 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
      * become really rare. 2025-02-25 RGerhards
      */
     /* The reservation includes the trailing sentinel even at exact capacity. */
-    CHKiRet(tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, 0, 1));
+    iRet = tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, 0, 1);
+    if (iRet != RS_RET_OK) return iRet;
     /* Add the TCP listen sockets to the list of read descriptors. */
     for (i = 0; i < pThis->iLstnCurr; ++i) {
-        CHKiRet(poll_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
+        iRet = poll_Add(pThis, pThis->ppLstn[i], NSDSEL_RD);
+        if (iRet != RS_RET_OK) return iRet;
     }
+
+    /* Reserve control and sentinel storage before reporting activation-ready.
+     * Initial failures must not jump into the historical per-batch retry label. */
+    iRet = tcpsrvPollReserve(&pThis->evtdata.poll.fds, &pThis->evtdata.poll.maxfds, pThis->evtdata.poll.currfds, 1);
+    if (iRet != RS_RET_OK) return iRet;
+    const uint32_t initialControlIdx = pThis->evtdata.poll.currfds++;
+    pThis->evtdata.poll.fds[initialControlIdx].fd = pThis->controlPipe[0];
+    pThis->evtdata.poll.fds[initialControlIdx].events = POLLIN;
+    pThis->evtdata.poll.fds[initialControlIdx].revents = 0;
+    pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
+    if ((iRet = tcpsrvBackendReady(pThis, gate, context)) != RS_RET_OK) return iRet;
 
     while (1) {
         pThis->evtdata.poll.currfds = pThis->iLstnCurr; /* listeners are "fixed" */
@@ -1848,7 +1997,7 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
         {
             CHKiRet(poll_Poll(pThis, &nfds));
         }
-        if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
+        if (tcpsrvShouldStop(pThis)) break;
     #ifdef ENABLE_TESTBENCH
         if (testShutdownMarker != NULL) {
             sigset_t waitSet, savedSet;
@@ -1963,7 +2112,7 @@ PRAGMA_DIAGNOSTIC_POP
 
 
 #if defined(ENABLE_IMTCP_EPOLL)
-static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL(1) RunEpoll(tcpsrv_t *const pThis, tcpsrv_activation_gate_t gate, void *context) {
     DEFiRet;
     int i;
     tcpsrv_io_descr_t *workset[NSPOLL_MAX_EVENTS_PER_WAIT];
@@ -1989,10 +2138,12 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
         DBGPRINTF("Added listener %d\n", i);
     }
 
-    while (glbl.GetGlobalInputTermState() == 0) {
+    CHKiRet(tcpsrvBackendReady(pThis, gate, context));
+
+    while (!tcpsrvShouldStop(pThis)) {
         numEntries = sizeof(workset) / sizeof(tcpsrv_io_descr_t *);
         localRet = epoll_Wait(pThis, -1, &numEntries, workset, &haveControl);
-        if (glbl.GetGlobalInputTermState() == 1) {
+        if (tcpsrvShouldStop(pThis)) {
             break; /* terminate input! */
         }
 
@@ -2009,6 +2160,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
         if (haveControl) tcpsrvActivateFence(pThis);
     }
 
+finalize_it:
     /* Workers can still process listener events queued just before shutdown.
      * Join them before freeing listener descriptors so rearmIoEvent() cannot
      * observe descriptor storage that RunEpoll() is tearing down.
@@ -2019,14 +2171,30 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
     pthread_mutex_unlock(&pThis->fenceMut);
     stopWrkrPool(pThis);
 
-    /* remove the tcp listen sockets from the epoll set */
-    for (i = 0; i < pThis->iLstnCurr; ++i) {
-        CHKiRet(epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL));
-        DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
-        free(pThis->ppioDescrPtr[i]);
+    /* A server-local stop can leave live sessions even while the global input
+     * termination flag is clear. Reclaim their owned epoll descriptors before
+     * closing the backend; do not flush uncommitted partial frames on abort. */
+    if (pThis->pSessions != NULL) {
+        for (int slot = 0; slot < pThis->iSessMax; ++slot) {
+            tcps_sess_t *const session = TCPSessTblLoad(pThis, slot);
+            if (session != NULL) closeSessWithMode(pThis, session->pIODescr, session, slot, 1);
+        }
     }
 
-finalize_it:
+    /* remove the tcp listen sockets from the epoll set */
+    for (i = 0; i < pThis->iLstnMax; ++i) {
+        if (pThis->ppioDescrPtr[i] == NULL) continue;
+        /* DEL may fail for a descriptor whose ADD failed during preparation.
+         * Never skip the remaining descriptor cleanup or replace the init error. */
+        if (pThis->ppLstn[i] != NULL) {
+            localRet = epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL);
+            if (iRet == RS_RET_OK && localRet != RS_RET_OK) iRet = localRet;
+        }
+        DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
+        free(pThis->ppioDescrPtr[i]);
+        pThis->ppioDescrPtr[i] = NULL;
+    }
+
     RETiRet;
 }
 #endif
@@ -2037,14 +2205,18 @@ finalize_it:
  * select() equivalent.
  * rgerhards, 2009-11-18
  */
-static rsRetVal ATTR_NONNULL() RunInternal(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL(1) RunInternal(tcpsrv_t *const pThis, tcpsrv_activation_gate_t gate, void *context) {
     DEFiRet;
     int controlInitialized = 0;
     int eventInitialized = 0;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
+    pThis->preparedRun = gate != NULL;
+    if (tcpsrvShouldStop(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
+
     if (pThis->iLstnCurr == 0) {
         dbgprintf("tcpsrv: no listeners at all (probably init error), terminating\n");
+        if (gate != NULL) ABORT_FINALIZE(RS_RET_ERR);
         FINALIZE;
     }
 
@@ -2060,6 +2232,7 @@ static rsRetVal ATTR_NONNULL() RunInternal(tcpsrv_t *const pThis) {
     if (pThis->workQueue.numWrkr > 1) {
         iRet = startWrkrPool(pThis);
         if (iRet != RS_RET_OK) {
+            if (gate != NULL) FINALIZE;
             LogError(errno, iRet,
                      "tcpsrv could not start worker pool "
                      "- now running single threaded '%s')",
@@ -2067,14 +2240,11 @@ static rsRetVal ATTR_NONNULL() RunInternal(tcpsrv_t *const pThis) {
             pThis->workQueue.numWrkr = 1;
         }
     }
-    pthread_mutex_lock(&pThis->fenceMut);
-    pThis->fenceReady = 1;
-    pthread_mutex_unlock(&pThis->fenceMut);
 #if defined(ENABLE_IMTCP_EPOLL)
-    iRet = RunEpoll(pThis);
+    iRet = RunEpoll(pThis, gate, context);
 #else
     /* fall back to select */
-    iRet = RunPoll(pThis);
+    iRet = RunPoll(pThis, gate, context);
 #endif
 
 finalize_it:
@@ -2096,7 +2266,16 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     rsRetVal result;
     pthread_cleanup_push(qqueueLocalProducerExit, NULL);
-    result = RunInternal(pThis);
+    result = RunInternal(pThis, NULL, NULL);
+    pthread_cleanup_pop(1);
+    return result;
+}
+
+static rsRetVal RunPrepared(tcpsrv_t *const server, tcpsrv_activation_gate_t gate, void *context) {
+    if (server == NULL || gate == NULL) return RS_RET_PARAM_ERROR;
+    rsRetVal result;
+    pthread_cleanup_push(qqueueLocalProducerExit, NULL);
+    result = RunInternal(server, gate, context);
     pthread_cleanup_pop(1);
     return result;
 }
@@ -2133,11 +2312,15 @@ ENDobjConstruct(tcpsrv)
 
 
 /* ConstructionFinalizer */
-static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalizeInternal(tcpsrv_t *pThis, const sbool deferListen) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     /* The generic constructor does not propagate Initialize's return value. */
     if (!pThis->fenceSyncInitialized) ABORT_FINALIZE(RS_RET_ERR);
+
+    for (tcpLstnPortList_t *entry = pThis->pLstnPorts; entry != NULL; entry = entry->pNext)
+        entry->cnf_params->bDeferListen = deferListen;
+    pThis->strictListenerInit = deferListen;
 
     /* prepare network stream subsystem */
     CHKiRet(netstrms.Construct(&pThis->pNS));
@@ -2182,6 +2365,44 @@ finalize_it:
         LogError(0, iRet, "tcpsrv could not create listener (inputname: '%s')",
                  (pThis->pszInputName == NULL) ? (uchar *)"*UNSET*" : pThis->pszInputName);
     }
+    RETiRet;
+}
+
+
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
+    return tcpsrvConstructFinalizeInternal(pThis, 0);
+}
+
+
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalizePrepared(tcpsrv_t *pThis) {
+    const rsRetVal ret = tcpsrvConstructFinalizeInternal(pThis, 1);
+    return ret == RS_RET_OK && pThis->iLstnCurr == 0 ? RS_RET_COULD_NOT_BIND : ret;
+}
+
+
+static rsRetVal ATTR_NONNULL() tcpsrvActivatePreparedListeners(tcpsrv_t *pThis) {
+    DEFiRet;
+    int sock;
+    const int backlog = (pThis->iSynBacklog == 0) ? pThis->iSessMax / 10 + 5 : pThis->iSynBacklog;
+
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    for (int i = 0; i < pThis->iLstnCurr; ++i) {
+        if (!pThis->ppLstnPort[i]->cnf_params->bDeferListen) continue;
+        CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &sock));
+        if (listen(sock, backlog) != 0 && listen(sock, 32) != 0) {
+            const int listenErrno = errno;
+            const tcpLstnParams_t *const params = pThis->ppLstnPort[i]->cnf_params;
+            LogError(listenErrno, RS_RET_IO_ERROR,
+                     "tcpsrv: could not activate prepared listener input '%s' on address '%s' port '%s'",
+                     params->pszInputName == NULL ? "**UNSPECIFIED**" : (const char *)params->pszInputName,
+                     params->pszAddr == NULL ? "**UNSPECIFIED**" : (const char *)params->pszAddr,
+                     params->pszPort == NULL ? "**UNSPECIFIED**" : (const char *)params->pszPort);
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+    }
+    for (int i = 0; i < pThis->iLstnCurr; ++i) pThis->ppLstnPort[i]->cnf_params->bDeferListen = 0;
+
+finalize_it:
     RETiRet;
 }
 
@@ -2918,6 +3139,10 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->StageListenerTablesWhileFenced = tcpsrvStageListenerTablesWhileFenced;
     pIf->SwapListenerTablesLive = tcpsrvSwapListenerTablesLive;
     pIf->DestructListenerTables = tcpsrvDestructListenerTables;
+    pIf->ConstructFinalizePrepared = tcpsrvConstructFinalizePrepared;
+    pIf->ActivatePreparedListeners = tcpsrvActivatePreparedListeners;
+    pIf->RunPrepared = RunPrepared;
+    pIf->RequestStop = tcpsrvRequestStop;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
