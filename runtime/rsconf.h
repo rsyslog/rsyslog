@@ -266,7 +266,9 @@ struct actions_s {
 };
 
 
+struct rulesetNameBlockV1_s;
 struct rulesets_s {
+    struct rulesetNameBlockV1_s *nameIndex; /* immutable namespace, published before activation */
     linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
 
     /* support for legacy rsyslog.conf format */

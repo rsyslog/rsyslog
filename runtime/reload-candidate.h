@@ -155,7 +155,8 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *a
 /** @brief Private preparations that authorize otherwise unsupported report kinds. */
 typedef enum rsReloadCandidateAuthorizationV1_e {
     RS_RELOAD_AUTHORIZE_IMTCP_V1 = 1U << 0, /**< Classified existing-listener/named-policy transition. */
-    RS_RELOAD_AUTHORIZE_BASE_V1 = 1U << 1 /**< Independently validated single global scalar. */
+    RS_RELOAD_AUTHORIZE_BASE_V1 = 1U << 1, /**< Independently validated single global scalar. */
+    RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1 = 1U << 2 /**< Complete private shells, name-only metadata and fence. */
 } rsReloadCandidateAuthorizationV1_t;
 /* Ruleset modifications remain the baseline capability. Additional report
  * object kinds are accepted only when the caller has already prepared and

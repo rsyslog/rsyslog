@@ -80,6 +80,12 @@ PROTOTYPEObjDebugPrint(ruleset);
  * them and use plain c-style conventions at least inside core objects.
  */
 rsRetVal rulesetDestructForLinkedList(void *pData);
+/* Private additions own no queue/parser/root and never alter default/current.
+ * The detached node/key is transferred to the owning list only at commit. */
+rsRetVal rulesetPrepareAdditionV1(const char *name, ruleset_t **shell, llElt_t **node);
+void rulesetDiscardAdditionV1(ruleset_t **shell, llElt_t **node);
+void rulesetPublishAdditionV1(rsconf_t *conf, llElt_t **node);
+
 /** @brief Observe an action and its owning statement, borrowed from ruleset.
  * Callback errors stop traversal; they never request linked-list deletion.
  */

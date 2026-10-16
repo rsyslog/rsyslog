@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0
  */
 /** @file reload-ruleset-materializer.h
- * @brief Private, abort-safe preparation and batch-boundary activation of existing
+ * @brief Private, abort-safe preparation and batch-boundary activation of named
  * ruleset plans.
  */
 #ifndef RELOAD_RULESET_MATERIALIZER_H_INCLUDED
@@ -22,7 +22,7 @@ typedef rsRetVal (*rsReloadCommitEnterV1_t)(void *context);
 /** @brief Release the commit fence after every successful enter callback. */
 typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 
-/** @brief Prepare supported existing named-ruleset body changes privately.
+/** @brief Prepare supported named-ruleset bodies and name-only additions privately.
  * @param active Borrowed live configuration, kept alive until plan destruction.
  * @param activeSourceCatalog Borrowed catalog proving exclusive named-policy
  * usage when a rate-policy declaration changes.
@@ -37,6 +37,8 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
  * @return RS_RET_OK or a fail-closed capability/allocation error. No live state
  * changes on failure. Takes no locks; caller serializes configuration mutation.
  * Preparation does not instantiate actions; borrowed actions stay active-owned.
+ * Additions own private shells/nodes until commit and may only call existing
+ * actions through rulesets. No input changes accompany membership additions.
  */
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *activeSourceCatalog,

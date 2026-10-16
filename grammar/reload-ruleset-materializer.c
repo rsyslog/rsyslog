@@ -15,6 +15,8 @@
 #include "config.h"
 
 #include <stdint.h>
+#include <limits.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,6 +25,7 @@
 #include "grammar/rainerscript.h"
 #include "reload-ruleset-materializer.h"
 #include "ruleset.h"
+#include "ruleset-name-index.h"
 #include "queue.h"
 
 typedef struct reloadActionBindingV1_s {
@@ -39,6 +42,8 @@ typedef struct reloadPlanEntryV1_s {
     ruleset_t *runtime;
     struct cnfstmt *root;
     struct cnfstmt *oldRoot;
+    llElt_t *detachedNode;
+    int added;
     struct reloadPlanEntryV1_s *next;
 } reloadPlanEntryV1_t;
 
@@ -55,14 +60,25 @@ struct rsReloadRulesetPlanV1_s {
     reloadPlanEntryV1_t *tail;
     reloadActionTransferV1_t *actionTransfers;
     size_t count;
+    size_t additions;
+    rulesetNameBlockV1_t *nameBlock;
     int activated;
 };
+
+typedef struct reloadAddedNameV1_s {
+    char *identity;
+    char *name;
+    struct reloadAddedNameV1_s *next;
+} reloadAddedNameV1_t;
 
 typedef struct prepareContextV1_s {
     rsconf_t *active;
     const rsReloadReportV1_t *report;
     reloadActionBindingV1_t *actions;
     rsReloadRulesetPlanV1_t *plan;
+    int preparingAddition;
+    size_t validatedAdditions;
+    reloadAddedNameV1_t *addedNames;
 } prepareContextV1_t;
 
 static rsRetVal validateActiveCall(ruleset_t *ruleset, struct cnfstmt *stmt, void *context);
@@ -73,16 +89,64 @@ static const rsReloadReportEntryV1_t *reportEntryAt(const rsReloadReportV1_t *re
     return (const rsReloadReportEntryV1_t *)(const void *)address;
 }
 
-static int reportModifiesRuleset(const rsReloadReportV1_t *report, const char *identity) {
+static int reportChangesRuleset(const rsReloadReportV1_t *report, const char *identity) {
     size_t i;
     for (i = 0; i < report->entryCount; ++i) {
         const rsReloadReportEntryV1_t *const entry = reportEntryAt(report, i);
-        if (entry->objectKind == RS_RELOAD_OBJ_RULESET && entry->diffKind == RS_RELOAD_DIFF_MODIFIED &&
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET &&
+            (entry->diffKind == RS_RELOAD_DIFF_MODIFIED || entry->diffKind == RS_RELOAD_DIFF_ADDED) &&
             entry->identity != NULL && !strcmp(entry->identity, identity)) {
-            return 1;
+            return entry->diffKind == RS_RELOAD_DIFF_ADDED ? 2 : 1;
         }
     }
     return 0;
+}
+
+/* Added shells have no runtime metadata lifecycle in this slice. Validate
+ * their complete source declaration before any addition authorization exists. */
+static rsRetVal validateAddedRulesetObject(const struct cnfobj *object, size_t ordinal, void *context) {
+    prepareContextV1_t *const prepare = context;
+    const struct nvlst *nameParam = NULL;
+    char *name = NULL;
+    char *identity = NULL;
+    size_t parameters = 0;
+    DEFiRet;
+    (void)ordinal;
+    if (object->objType != CNFOBJ_RULESET || object->nvlst == NULL) return RS_RET_OK;
+    for (const struct nvlst *param = object->nvlst; param != NULL; param = param->next) {
+        char *key;
+        if (param->name == NULL) return RS_RET_PARAM_ERROR;
+        CHKmalloc(key = es_str2cstr(param->name, NULL));
+        if (!strcasecmp(key, "name")) nameParam = param;
+        free(key);
+        ++parameters;
+    }
+    if (nameParam == NULL || nameParam->val.datatype != 'S' || nameParam->val.d.estr == NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(name = es_str2cstr(nameParam->val.d.estr, NULL));
+    if (strlen(name) > SIZE_MAX - 9) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(identity = malloc(strlen(name) + 9));
+    strcpy(identity, "ruleset:");
+    strcpy(identity + 8, name);
+    for (char *p = identity + 8; *p; ++p)
+        if (*p >= 'A' && *p <= 'Z') *p += 'a' - 'A';
+    if (reportChangesRuleset(prepare->report, identity) != 2) FINALIZE;
+    if (parameters != 1 || object->subobjs != NULL || *name == '\0') ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (!rulesetNameIndexSupportedV1() || prepare->active->rulesets.nameIndex == NULL)
+        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    for (reloadAddedNameV1_t *known = prepare->addedNames; known != NULL; known = known->next)
+        if (!strcmp(known->identity, identity)) ABORT_FINALIZE(RS_RET_DUP_PARAM);
+    reloadAddedNameV1_t *addedName;
+    CHKmalloc(addedName = calloc(1, sizeof(*addedName)));
+    addedName->identity = identity;
+    addedName->name = name;
+    addedName->next = prepare->addedNames;
+    prepare->addedNames = addedName;
+    identity = name = NULL;
+    ++prepare->validatedAdditions;
+finalize_it:
+    free(identity);
+    free(name);
+    RETiRet;
 }
 
 static void actionBindingsDestruct(reloadActionBindingV1_t *binding) {
@@ -151,6 +215,29 @@ static reloadActionBindingV1_t *findAction(prepareContextV1_t *prepare, const ch
         if (strlen(binding->name) == nameLen && !memcmp(binding->name, name, nameLen)) return binding;
     }
     return NULL;
+}
+
+static rsRetVal resolvePreparedTarget(void *context, ruleset_t **target, uchar *name) {
+    prepareContextV1_t *const prepare = context;
+    for (reloadPlanEntryV1_t *entry = prepare->plan->head; entry != NULL; entry = entry->next)
+        if (entry->added && !strcasecmp(entry->identity + 8, (char *)name)) {
+            *target = entry->runtime;
+            return RS_RET_OK;
+        }
+    return rulesetGetRuleset(prepare->active, target, name);
+}
+static rsRetVal validatePreparedCall(struct cnfstmt *stmt, prepareContextV1_t *prepare) {
+    ruleset_t *target = NULL;
+    char *name;
+    rsRetVal ret;
+    if (stmt->d.s_call.name == NULL || stmt->d.s_call.target == NULL) return RS_RET_NOT_IMPLEMENTED;
+    if ((name = es_str2cstr(stmt->d.s_call.name, NULL)) == NULL) return RS_RET_OUT_OF_MEMORY;
+    ret = resolvePreparedTarget(prepare, &target, (uchar *)name);
+    free(name);
+    if (ret != RS_RET_OK) return ret;
+    return target == stmt->d.s_call.target && stmt->d.s_call.ruleset == (rulesetHasQueue(target) ? target : NULL)
+               ? RS_RET_OK
+               : RS_RET_NOT_IMPLEMENTED;
 }
 
 static rsRetVal validatePreparedStatements(const struct cnfstmt *stmt) {
@@ -237,7 +324,7 @@ static rsRetVal lowerPreparedStatements(struct cnfstmt *stmt, prepareContextV1_t
             case S_CALL_INDIRECT:
                 break;
             case S_CALL:
-                CHKiRet(validateActiveCall(NULL, stmt, prepare->active));
+                CHKiRet(validatePreparedCall(stmt, prepare));
                 break;
             case S_IF:
                 CHKiRet(lowerPreparedStatements(stmt->d.s_if.t_then, prepare));
@@ -254,6 +341,7 @@ static rsRetVal lowerPreparedStatements(struct cnfstmt *stmt, prepareContextV1_t
                 CHKiRet(lowerPreparedStatements(stmt->d.s_propfilt.t_then, prepare));
                 break;
             case S_RELOAD_ACT: {
+                if (prepare->preparingAddition) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
                 char *fingerprint = NULL;
                 reloadActionTransferV1_t *transfer = NULL;
                 const char *name;
@@ -291,50 +379,76 @@ finalize_it:
 
 #include "reload-call-binding.h"
 
-static rsRetVal prepareFragment(
+static rsRetVal prepareShellFragment(
     const char *identity, const struct cnfstmt *fragment, int firstForIdentity, int isSyntheticDefault, void *context) {
-    prepareContextV1_t *const prepare = (prepareContextV1_t *)context;
+    prepareContextV1_t *const prepare = context;
     reloadPlanEntryV1_t *entry = NULL;
-    ruleset_t *runtime = NULL;
-    const char *name;
+    const int change = reportChangesRuleset(prepare->report, identity);
     DEFiRet;
-
-    if (!reportModifiesRuleset(prepare->report, identity)) return RS_RET_OK;
-    if (!firstForIdentity || isSyntheticDefault || strncmp(identity, "ruleset:", 8)) return RS_RET_NOT_IMPLEMENTED;
-    name = identity + 8;
-    if (*name == '\0') return RS_RET_PARAM_ERROR;
-    CHKiRet(rulesetGetRuleset(prepare->active, &runtime, (uchar *)name));
-    if ((runtime->pQueue != NULL && runtime->pQueue->qType == QUEUETYPE_DIRECT) ||
-        (runtime->pQueue == NULL && prepare->active->pMsgQueue != NULL &&
-         prepare->active->pMsgQueue->qType == QUEUETYPE_DIRECT)) {
-        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    }
+    (void)fragment;
+    if (!change) return RS_RET_OK;
+    if (!firstForIdentity || isSyntheticDefault || strncmp(identity, "ruleset:", 8) || identity[8] == '\0')
+        return RS_RET_NOT_IMPLEMENTED;
     CHKmalloc(entry = calloc(1, sizeof(*entry)));
     CHKmalloc(entry->identity = strdup(identity));
-    entry->runtime = runtime;
-    CHKiRet(cnfstmtCloneReloadSafe(fragment, &entry->root));
-    CHKiRet(validatePreparedStatements(entry->root));
-    CHKiRet(lowerPreparedFilters(entry->root, prepare->active));
-    CHKiRet(bindPreparedCalls(entry->root, prepare->active));
-    /* Match startup's runtime-required expression canonicalization before
-     * binding borrowed actions. In particular, array equality relies on the
-     * optimizer to move arrays to the RHS and sort them for bsearch(). */
-    entry->root = cnfstmtOptimize(entry->root);
-    CHKiRet(lowerPreparedStatements(entry->root, prepare));
+    entry->added = change == 2;
+    if (entry->added) {
+        ruleset_t *existing = NULL;
+        if (!rulesetNameIndexSupportedV1() || prepare->active->rulesets.nameIndex == NULL)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        if (rulesetGetRuleset(prepare->active, &existing, (uchar *)identity + 8) != RS_RET_NOT_FOUND)
+            ABORT_FINALIZE(RS_RET_DUP_PARAM);
+        if (prepare->plan->additions >= (size_t)INT_MAX || prepare->active->rulesets.llRulesets.iNumElts < 0 ||
+            prepare->active->rulesets.llRulesets.iNumElts > INT_MAX - (int)prepare->plan->additions - 1)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        reloadAddedNameV1_t *declared;
+        for (declared = prepare->addedNames; declared != NULL && strcmp(declared->identity, identity);
+             declared = declared->next) {
+        }
+        if (declared == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        CHKiRet(rulesetPrepareAdditionV1(declared->name, &entry->runtime, &entry->detachedNode));
+    } else {
+        CHKiRet(rulesetGetRuleset(prepare->active, &entry->runtime, (uchar *)identity + 8));
+    }
+    if ((entry->runtime->pQueue != NULL && entry->runtime->pQueue->qType == QUEUETYPE_DIRECT) ||
+        (entry->runtime->pQueue == NULL && prepare->active->pMsgQueue != NULL &&
+         prepare->active->pMsgQueue->qType == QUEUETYPE_DIRECT))
+        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     if (prepare->plan->tail == NULL)
         prepare->plan->head = entry;
     else
         prepare->plan->tail->next = entry;
     prepare->plan->tail = entry;
     ++prepare->plan->count;
+    if (entry->added) ++prepare->plan->additions;
     entry = NULL;
-
 finalize_it:
     if (entry != NULL) {
+        if (entry->added) rulesetDiscardAdditionV1(&entry->runtime, &entry->detachedNode);
         free(entry->identity);
-        cnfstmtDestructLst(entry->root);
         free(entry);
     }
+    RETiRet;
+}
+static rsRetVal prepareFragment(
+    const char *identity, const struct cnfstmt *fragment, int firstForIdentity, int isSyntheticDefault, void *context) {
+    prepareContextV1_t *const prepare = context;
+    reloadPlanEntryV1_t *entry;
+    DEFiRet;
+    (void)firstForIdentity;
+    (void)isSyntheticDefault;
+    if (!reportChangesRuleset(prepare->report, identity)) return RS_RET_OK;
+    for (entry = prepare->plan->head; entry != NULL && strcmp(entry->identity, identity); entry = entry->next) {
+    }
+    if (entry == NULL) return RS_RET_NOT_IMPLEMENTED;
+    prepare->preparingAddition = entry->added;
+    CHKiRet(cnfstmtCloneReloadSafe(fragment, &entry->root));
+    CHKiRet(validatePreparedStatements(entry->root));
+    CHKiRet(lowerPreparedFilters(entry->root, prepare->active));
+    CHKiRet(bindPreparedCallsWithResolver(entry->root, resolvePreparedTarget, prepare));
+    entry->root = cnfstmtOptimize(entry->root);
+    CHKiRet(lowerPreparedStatements(entry->root, prepare));
+finalize_it:
     RETiRet;
 }
 
@@ -376,13 +490,13 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       rsReloadRulesetPlanV1_t **out) {
     prepareContextV1_t prepare = {0};
     rsReloadRulesetPlanV1_t *plan = NULL;
-    size_t modifiedRulesets = 0;
+    size_t changedRulesets = 0;
     DEFiRet;
     if (active == NULL || candidate == NULL || report == NULL || out == NULL || *out != NULL) return RS_RET_PARAM_ERROR;
     /* Local and mixed graphs have producer-owned FE workers and cached routes
      * outside the legacy queue barrier. Reject before preparing any live swap
      * until their complete graph can participate in the activation fence. */
-    if (active->local_queue_graph != NULL && report->modifiedCount != 0) {
+    if (active->local_queue_graph != NULL && (report->modifiedCount != 0 || report->addedCount != 0)) {
         LogError(0, RS_RET_NOT_IMPLEMENTED,
                  "reload unsupported for active local-queue graph, including mixed boundaries; "
                  "ruleset roots unchanged; restart to apply configuration");
@@ -391,20 +505,40 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     if (report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
         return RS_RET_PARAM_ERROR;
+    prepare.active = active;
+    prepare.report = report;
+    CHKiRet(rsReloadCandidateVisitObjectsV1(candidate, validateAddedRulesetObject, &prepare));
     unsigned authorizations = baseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
     if (sourceCapability == eMOD_RELOAD_REUSE || sourceCapability == eMOD_RELOAD_LIVE_SWAP ||
         sourceCapability == eMOD_RELOAD_NEW_SESSIONS || sourceCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS ||
         sourceCapability == eMOD_RELOAD_DRAIN_REPLACE)
         authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
-    CHKiRet(rsReloadCandidateCheckAuthorizedReportV1(activeSourceCatalog, candidate, report, authorizations));
+    if (prepare.validatedAdditions == 0) {
+        CHKiRet(rsReloadCandidateCheckAuthorizedReportV1(activeSourceCatalog, candidate, report, authorizations));
+    } else {
+        /* Membership additions cannot be combined with input retargeting or
+         * any other lifecycle change. Modified metadata never gains admission. */
+        for (size_t i = 0; i < report->entryCount; ++i) {
+            const rsReloadReportEntryV1_t *const entry = reportEntryAt(report, i);
+            if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
+            if (entry->objectKind == RS_RELOAD_OBJ_RULESET &&
+                (entry->diffKind == RS_RELOAD_DIFF_ADDED || entry->diffKind == RS_RELOAD_DIFF_MODIFIED))
+                continue;
+            if (entry->objectKind == RS_RELOAD_OBJ_RULESET_METADATA && entry->diffKind == RS_RELOAD_DIFF_ADDED &&
+                entry->identity != NULL && reportChangesRuleset(report, entry->identity) == 2)
+                continue;
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        }
+    }
     for (size_t i = 0; i < report->entryCount; ++i) {
         const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
         const rsReloadReportEntryV1_t *const entry = (const rsReloadReportEntryV1_t *)(const void *)address;
-        if (entry->objectKind == RS_RELOAD_OBJ_RULESET && entry->diffKind == RS_RELOAD_DIFF_MODIFIED)
-            ++modifiedRulesets;
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET &&
+            (entry->diffKind == RS_RELOAD_DIFF_MODIFIED || entry->diffKind == RS_RELOAD_DIFF_ADDED))
+            ++changedRulesets;
     }
     CHKmalloc(plan = calloc(1, sizeof(*plan)));
-    if (modifiedRulesets == 0) {
+    if (changedRulesets == 0) {
         *out = plan;
         plan = NULL;
         FINALIZE;
@@ -414,8 +548,21 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     prepare.plan = plan;
     plan->active = active;
     CHKiRet(rulesetVisitAllActionsV1(active, collectActiveAction, &prepare));
+    CHKiRet(rsReloadCandidateVisitRulesetFragmentsV1(candidate, prepareShellFragment, &prepare));
     CHKiRet(rsReloadCandidateVisitRulesetFragmentsV1(candidate, prepareFragment, &prepare));
-    if (plan->count != modifiedRulesets) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (plan->additions != 0) {
+        ruleset_t **shells;
+        if (plan->additions > SIZE_MAX / sizeof(*shells)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        shells = calloc(plan->additions, sizeof(*shells));
+        size_t i = 0;
+        if (shells == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        for (reloadPlanEntryV1_t *entry = plan->head; entry != NULL; entry = entry->next)
+            if (entry->added) shells[i++] = entry->runtime;
+        iRet = rulesetNameIndexPrepareV1(active, shells, i, &plan->nameBlock);
+        free(shells);
+        CHKiRet(iRet);
+    }
+    if (plan->count != changedRulesets) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     /* The private optimizer may remove unreachable syntax. Do not let that
      * silently retire an active action (and its queue) while the normalized
      * action node is otherwise reported unchanged. Action replacement/removal
@@ -431,10 +578,24 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
         free(queues);
         CHKiRet(iRet);
     }
+    if (plan->additions != prepare.validatedAdditions) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (plan->additions != 0) {
+        /* Only complete private shells, roots, ownership and queue eligibility
+         * can grant the explicit additions authorization. */
+        CHKiRet(rsReloadCandidateCheckAuthorizedReportV1(activeSourceCatalog, candidate, report,
+                                                         authorizations | RS_RELOAD_AUTHORIZE_RULESET_ADDITIONS_V1));
+    }
     *out = plan;
     plan = NULL;
 
 finalize_it:
+    while (prepare.addedNames != NULL) {
+        reloadAddedNameV1_t *const next = prepare.addedNames->next;
+        free(prepare.addedNames->identity);
+        free(prepare.addedNames->name);
+        free(prepare.addedNames);
+        prepare.addedNames = next;
+    }
     actionBindingsDestruct(prepare.actions);
     rsReloadRulesetPlanDestructV1(&plan);
     RETiRet;
@@ -449,6 +610,7 @@ void rsReloadRulesetPlanDestructV1(rsReloadRulesetPlanV1_t **plan) {
         reloadPlanEntryV1_t *const next = entry->next;
         free(entry->identity);
         cnfstmtDestructLst(entry->root);
+        if (entry->added) rulesetDiscardAdditionV1(&entry->runtime, &entry->detachedNode);
         free(entry);
         entry = next;
     }
@@ -458,6 +620,7 @@ void rsReloadRulesetPlanDestructV1(rsReloadRulesetPlanV1_t **plan) {
         free(transfer);
         transfer = next;
     }
+    rulesetNameIndexDiscardV1(&(*plan)->nameBlock);
     free(*plan);
     *plan = NULL;
 }
@@ -646,6 +809,12 @@ rsRetVal rsReloadRulesetPlanActivateV1(rsReloadRulesetPlanV1_t *const plan,
         entry->runtime->last = lastStatement(entry->root);
         entry->root = NULL;
     }
+    for (entry = plan->head; entry != NULL; entry = entry->next) {
+        if (!entry->added) continue;
+        rulesetPublishAdditionV1(plan->active, &entry->detachedNode);
+        entry->added = 0; /* Owning list now owns this shell/root. */
+    }
+    if (plan->nameBlock != NULL) rulesetNameIndexPublishV1(plan->active, &plan->nameBlock);
     if (publish != NULL) publish(publishContext);
     plan->activated = 1;
     if (commitEntered) {

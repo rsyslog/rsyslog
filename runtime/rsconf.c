@@ -40,6 +40,7 @@
 #include "obj.h"
 #include "srUtils.h"
 #include "ruleset.h"
+#include "ruleset-name-index.h"
 #include "modules.h"
 #include "conf.h"
 #include "queue.h"
@@ -430,6 +431,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
  */
 BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
     cnfSetDefaults(pThis);
+    pThis->rulesets.nameIndex = NULL;
     lookupInitCnf(&pThis->lu_tabs);
     CHKiRet(dynstats_initCnf(&pThis->dynstats_buckets));
     CHKiRet(perctile_initCnf(&pThis->perctile_buckets));
@@ -521,6 +523,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
 #endif
     lookupDestroyCnf(pThis);
     freeActionNames(pThis);
+    rulesetNameIndexDestroyV1(pThis);
     llDestroy(&(pThis->rulesets.llRulesets));
     ratelimit_cfgsDestruct(&pThis->ratelimit_cfgs);
     releaseCnfModRefs(pThis);
@@ -1325,6 +1328,9 @@ static rsRetVal activate(rsconf_t *cnf) {
     DEFiRet;
     rsconf_t *runCnfOld = runConf;
 
+    /* No worker or input may observe a mutable startup namespace. */
+    if (rulesetNameIndexSupportedV1() && cnf->rulesets.nameIndex == NULL) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+
     /* at this point, we "switch" over to the running conf */
     runConf = cnf;
     loadConf = NULL;
@@ -1866,6 +1872,8 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
     CHKiRet(rulesetValidateLocalQueues(loadConf));
+    /* Complete immutable namespace before Activate starts any queue or input. */
+    CHKiRet(rulesetNameIndexInitV1(loadConf));
 
     if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;

@@ -26,6 +26,12 @@ The following parameters can be set:
   ``on`` can activate supported body changes to existing named rulesets, reusing
   unchanged named actions at queue batch boundaries, plus the explicitly
   supported policy fields of existing imtcp listeners described in the ADR.
+  It can also add named rulesets whose only declaration attribute is ``name``.
+  Their bodies must contain no action definitions; calls may target existing
+  rulesets or other rulesets prepared in the same candidate. New names and
+  related body changes publish together without changing the default ruleset.
+  Adding rulesets cannot be combined with input changes. Ruleset removal and
+  queue or parser attribute changes remain unsupported.
   Default-ruleset body changes remain unsupported at this stage.
   It does not add or remove listeners. It rejects changes to
   action definitions, unsupported input profiles, unsupported global settings, queues, and other

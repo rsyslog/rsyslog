@@ -39,6 +39,7 @@
 #include "cfsysline.h"
 #include "msg.h"
 #include "ruleset.h"
+#include "ruleset-name-index.h"
 #include "errmsg.h"
 #include "parserif.h"
 #include "parser.h"
@@ -853,6 +854,9 @@ rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName
     assert(ppRuleset != NULL);
     assert(pszName != NULL);
 
+    int indexed;
+    iRet = rulesetNameIndexLookupV1(conf, ppRuleset, (const char *)pszName, &indexed);
+    if (indexed) FINALIZE; /* A published baseline forbids mutable-list fallback. */
     CHKiRet(llFind(&(conf->rulesets.llRulesets), pszName, (void *)ppRuleset));
 
 finalize_it:
@@ -936,6 +940,8 @@ BEGINobjDestruct(ruleset) /* be sure to specify the object type also in END and 
 ENDobjDestruct(ruleset)
 
 
+#include "ruleset-addition.h"
+
 /* helper for Destructor, shut down queue workers */
 DEFFUNC_llExecFunc(doShutdownQueueWorkers) {
     DEFiRet;
@@ -976,6 +982,7 @@ static rsRetVal destructAllActions(rsconf_t *conf) {
     DBGPRINTF("destructAllActions: action and conf stmt shutdown\n");
     llExecFunc(&(conf->rulesets.llRulesets), doDestructCnfStmt, NULL);
 
+    rulesetNameIndexDestroyV1(conf);
     CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
     CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList, rulesetKeyDestruct,
                    (int (*)(void *, void *))strcasecmp));

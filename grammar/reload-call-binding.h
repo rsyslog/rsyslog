@@ -3,7 +3,8 @@
  */
 /* Bind private syntax only through the supplied active membership catalog.
  * Every nested static target is resolved before the recursive optimizer runs. */
-static rsRetVal bindPreparedCalls(struct cnfstmt *stmt, rsconf_t *const active) {
+typedef rsRetVal (*reloadCallResolverV1_t)(void *context, ruleset_t **target, uchar *name);
+static rsRetVal bindPreparedCallsWithResolver(struct cnfstmt *stmt, reloadCallResolverV1_t resolver, void *context) {
     DEFiRet;
     for (; stmt != NULL; stmt = stmt->next) {
         switch (stmt->nodetype) {
@@ -12,7 +13,7 @@ static rsRetVal bindPreparedCalls(struct cnfstmt *stmt, rsconf_t *const active) 
                 char *name = NULL;
                 if (stmt->d.s_call.name == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
                 CHKmalloc(name = es_str2cstr(stmt->d.s_call.name, NULL));
-                iRet = rulesetGetRuleset(active, &target, (uchar *)name);
+                iRet = resolver(context, &target, (uchar *)name);
                 free(name);
                 if (iRet != RS_RET_OK) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
                 stmt->d.s_call.target = target;
@@ -20,18 +21,18 @@ static rsRetVal bindPreparedCalls(struct cnfstmt *stmt, rsconf_t *const active) 
                 break;
             }
             case S_IF:
-                CHKiRet(bindPreparedCalls(stmt->d.s_if.t_then, active));
-                CHKiRet(bindPreparedCalls(stmt->d.s_if.t_else, active));
+                CHKiRet(bindPreparedCallsWithResolver(stmt->d.s_if.t_then, resolver, context));
+                CHKiRet(bindPreparedCallsWithResolver(stmt->d.s_if.t_else, resolver, context));
                 break;
             case S_FOREACH:
-                CHKiRet(bindPreparedCalls(stmt->d.s_foreach.body, active));
+                CHKiRet(bindPreparedCallsWithResolver(stmt->d.s_foreach.body, resolver, context));
                 break;
             case S_PRIFILT:
-                CHKiRet(bindPreparedCalls(stmt->d.s_prifilt.t_then, active));
-                CHKiRet(bindPreparedCalls(stmt->d.s_prifilt.t_else, active));
+                CHKiRet(bindPreparedCallsWithResolver(stmt->d.s_prifilt.t_then, resolver, context));
+                CHKiRet(bindPreparedCallsWithResolver(stmt->d.s_prifilt.t_else, resolver, context));
                 break;
             case S_PROPFILT:
-                CHKiRet(bindPreparedCalls(stmt->d.s_propfilt.t_then, active));
+                CHKiRet(bindPreparedCallsWithResolver(stmt->d.s_propfilt.t_then, resolver, context));
                 break;
             default:
                 break;
@@ -39,4 +40,11 @@ static rsRetVal bindPreparedCalls(struct cnfstmt *stmt, rsconf_t *const active) 
     }
 finalize_it:
     RETiRet;
+}
+
+static rsRetVal resolveActiveReloadCall(void *context, ruleset_t **target, uchar *name) {
+    return rulesetGetRuleset(context, target, name);
+}
+static inline rsRetVal bindPreparedCalls(struct cnfstmt *stmt, rsconf_t *active) {
+    return bindPreparedCallsWithResolver(stmt, resolveActiveReloadCall, active);
 }

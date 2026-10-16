@@ -1129,11 +1129,9 @@ void shadowReloadBeginRequest(void) {
                                                   pendingSourceModuleCapability == eMOD_RELOAD_DRAIN_REPLACE);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
-                    unsigned authorizations = pendingBaseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
-                    if (sourceReloadable) authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
-                    pendingCandidateResult = rsReloadCandidateCheckAuthorizedReportV1(
-                        activeSourceObjectCatalog, pendingCandidate, pendingReport, authorizations);
-                    if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                    /* Private plan preparation owns source authorization. In
+                     * particular, additions gain their scoped authorization
+                     * only after all shells, roots and metadata are prepared. */
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
