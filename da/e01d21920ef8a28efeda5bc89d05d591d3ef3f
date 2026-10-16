@@ -1,0 +1,19 @@
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_42fe2177c79de2::t_c32f0001810444 51-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dae01d21920ef8a28efeda5bc89d05d591d3ef3f",
+  "prompts": {},
+  "sessions": {
+    "s_42fe2177c79de2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1458f-52e7-7101-ae9f-d4bceb0d9c7b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
