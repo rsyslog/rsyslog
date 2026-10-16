@@ -1,15 +1,116 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-16. Latest publication is nineteen draft stack PRs through
-slice 13a. Ordinary introducing fixes are folded into their owning slices and
+Recorded: 2026-10-17. Latest publication is twenty-two draft stack PRs through
+slice 14b. Ordinary introducing fixes are folded into their owning slices and
 children are recascaded with backup refs and own-patch range-diffs preserved.
 The full nine-milestone implementation plan continues; security work remains
 explicitly deferred. No merge readiness or hardware performance acceptance is
-claimed. The broad runtime and corrected full analyzer gate are running on the
-assembled bounded tip; source-only call-graph work continues separately.
+claimed. The published bounded tip passed the broad runtime and corrected full
+analyzer gate. New metadata, call-graph and ruleset-addition changes are being
+validated separately; older passing receipts do not validate their new heads.
 
 ## Published continuation checkpoint (2026-10-16)
+
+### Latest deterministic validation and continuing work
+
+The bounded assembled tip 96411a585f2816ffb99e50cd6430fb6800faa31d
+passed the full clean Clang analyzer (zero reports) and the change-gated
+Ubuntu 26.04 run-ci.sh suite: 1839 total, 1769 passed, 70 skipped, zero failures,
+errors or unexpected passes. Runtime build/check60, analyzer20, same pinned
+image/default configure options and documented analyzer exclusions. The passing
+broad evidence was recorded with devtools/record-container-validation.py;
+container_validation.json in the benchmark integration worktree binds source,
+image, full suite log and explicit coverage limits. This is deterministic local
+container evidence, not security, performance or PR merge readiness.
+Focused ASan/UBSan30/30 and TSAN6/6 also passed on that exact head.
+
+Call-graph draft #7708 is published at a5ab93e601a141e88852a221bdd4bc8e92e9aec3,
+parent 38477ae248ade77c9e8617105d768e3a6c1acb3d. That exact new candidate
+passed full clean analyzer, both compile-portability lanes, full-image mock
+distcheck (1706 total,1696 pass,10 skip,zero failure), focused ASan/UBSan9/9
+and TSAN9/9, plus independent ordinary review. The earlier parent's broad pass
+is not a broad pass for this patch. New GNU sed -i fixture calls were caught;
+the owning13b script is corrected locally at016a296a6, with real RS/YAML2/2,
+strict POSIX-sed2/2 and failure-preservation controls passed. It is not yet
+republished; the old source and logs remain preserved.
+
+Local assembled checkpoint14b is e9845c2c7005ca15c2ada4c11c22ac3be3e7bee2,
+parent14a1b22db1124add5a3b4c100ad3b6df27be2944c42 above corrected13b
+61f579c77fee98554bdc646259c0e0b70ce4a14b. Both new slices and all recascaded parents are now published as drafts
+(#7709 and #7710); the complete22-link order is in every PR description. Ordinary assembled review is clear; the full analyzer passed with zero reports on this exact head, and the broad
+runtime gate is running in rsyslog-reload-m4-checkpoint-validation. Exact final checkpoint focused
+normal13/13 and TSAN11/11 passed (CI queue.c ignorelist remains a coverage
+limit; impstats disabled per TSAN CI, seccomp unconfined, CPU4/build4/check2).
+
+Additional queue-less named rulesets are implemented in14a: immutable name
+blocks, private two-pass shells/program binding and startup namespace publication
+before activation. Both frontend traffic scenarios passed, including forward
+references, repeated additions, indirect lookup visibility, old-call latching
+and rollback for unsupported changes. Seven focused tests, four private
+ASan/UBSan tests, clean HTML docs and MOCK distribution checks passed. Final
+portability corrections were folded into14a: validated report-row address
+calculation for Clang cast-alignment checks, and an explicit abort sentinel for
+a native direct-plan fixture helper never reached by its tests (O0 linking must
+not depend on dead-code elimination). Original failures, backups and exact
+checks are retained. The two Tier2 compile lanes passed at3dd85dde, whose
+production source is identical to the final checkpoint; only that test sentinel
+differs. Ordinary review explicitly carried forward across the sentinel change.
+
+The14b opt-in completion barrier uses real preceding-batch completion before
+worker acknowledgment and includes DA transfer workers and child consumers.
+Its own normal10/10, expanded DA2/2 and ASan/UBSan10/10 passed. The first
+sanitizer build hit the existing generic module callback function-type check
+before queue startup; that original log is retained, and the passing run kept
+ASan/UBSan with only the function-type check disabled. Completion is not
+positive emptiness proof: departed-worker responsibility, backend state and
+reader ownership still need proof before removal or reclamation is enabled.
+
+The next14c implementation activates the default program, using a distinct
+synthetic default-program identity so a legal named default ruleset stays
+separate. It aggregates source fragments before compilation and invalidates
+startup capture for legacy current/default routing changes. Focused controls
+will cover source order, STOP, empty transitions, named/default atomic changes
+and action ownership. Source changes and tests remain under development.
+Parallel14d work adds explicit nonblocking inspection of every worker slot,
+including exited workers with retained leases. It preserves the existing Wait
+contract and distinguishes contention, invalidated generations and retained
+work, without claiming queue emptiness or enabling removal. Both worktrees
+preserve the frozen assembled checkpoint;14d will be reparented after14c.
+
+The14a work discovered an older admission defect. Original slice4 was
+reproduced accepting a named input-bound ruleset queue.type change as activated
+generation2 while only its program could be replaced. The owning-slice fix
+adds distinct normalized ruleset metadata. Both frontend regressions now reject
+queue/parser attribute changes without advancing generation while supported
+body changes activate. Owning-slice ASan13/13, mock distribution checks,
+targeted analyzer and independent ordinary review passed. Children were
+recascaded with backup refs; test source-catalog API adaptation was folded into
+owning6. The first assembled metadata analyzer passed, but its broad run used
+the pre-adaptation source and failed to compile that unit test; this failed
+checkpoint is preserved, not counted as a passing gate.
+
+The corrected assembled41a156e1 checkpoint passed eight selected sanitizer
+tests before two exact report-count assertions failed. The eight integrations
+aborted by fail-fast were run separately and all passed. A complete changed-test
+audit found26 stale exact assertions across five shell files; each correction
+changes only unchanged+1 for the explicit metadata row. All generation/result/
+added/removed/modified/invalid/capability predicates are preserved. Corrections
+were folded into their true introducing slices and all descendants recascaded,
+with context-only range-diff exceptions recorded rather than misreported as
+literal equality. Final13b61f579c77 passed the corrected two frontend tests
+under ASan/UBSan2/2. Full original failure and separate passing logs remain
+preserved. The complete nine-milestone implementation continues; security work
+remains deferred and no older green receipt is presented as current acceptance.
+
+The earlier hosted snapshot used full statusCheckRollup for all20 then-existing
+drafts. New heads and the two new PRs need a fresh hosted snapshot.
+Current failures included seven external Codecov Repository-not-found uploads
+and one Ubuntu20 pmsnare-ccoff-udp missing-output test failure on unchanged
+foundation8a239d6. Its cause remains unresolved; only that failed job is being
+retried on unchanged source with original logs retained. Cancelled runs are
+counted separately. Reserved review threads remain untouched.
+
 
 The introducing fixes for the analyzer allocation representation (slice 2),
 old-GCC initialization and portable fixture edits (slice 4), accepted-session
@@ -29,33 +130,43 @@ a historical checkpoint and must not be mistaken for this current state.
 | Slice | PR | Published head |
 | --- | --- | --- |
 | 1 | #7683 | 8a239d6b92c95825cec06fe921e066f768ec86a3 |
-| 02 | #7684 | bb52fbe414586fa2ca46c63da8c0ce18cb07c146 |
-| 03 | #7685 | 58744ade952662666e96ab06c41fa45988d53fa9 |
-| 04 | #7686 | 53a26ffde293b084bf4120336e386990fccc9bcf |
-| 05 | #7687 | 6d77d8586a938c5098801d92dad3953cf0ffcc97 |
-| 06 | #7689 | 1aed1f767d5d890ab5a66a704a6b97782ee9e1ce |
-| 06a | #7691 | c8e6f6aa0717630617f47b84d07f850b41912d6c |
-| 07 | #7690 | 7c063c28a647368c668a16ff2182635b7d11715b |
-| 08a | #7692 | ada382461ce4f6531660a0b75bf5fc2d6940a5a2 |
-| 08b | #7693 | 920c5423065c1aadb68fd32cf5d32c1198102b9d |
-| 08c | #7694 | 48071c2e6685984b3653295ce091b6cef834c432 |
-| 09 | #7695 | f8e6b92d19d3bd5a584394c6a5650e2de13d731c |
-| 10 | #7701 | 9368b71ff74c26af621c4ff3ad05a80cac64c43a |
-| 11 | #7702 | 408f8455cfdc0dcf2ae274e8269cf58c7e943af6 |
-| 12a | #7703 | 0a4f9df050f5fa4ac76c4bb24f2c1063c7969151 |
-| 12b | #7704 | 3670dbfb367be2c6d02baa55cb5dd4c91ab11a54 |
-| helper-integration | #7705 | a1002ea6de4b574a4caf165678ea74ce960ec609 |
-| benchmark-integration | #7706 | 96411a585f2816ffb99e50cd6430fb6800faa31d |
-| 13a | #7707 | 38477ae248ade77c9e8617105d768e3a6c1acb3d |
+| 2 | #7684 | bb52fbe414586fa2ca46c63da8c0ce18cb07c146 |
+| 3 | #7685 | 58744ade952662666e96ab06c41fa45988d53fa9 |
+| 4 | #7686 | 68a30697c0332744815b2a2fd3cdefe09c8bae1b |
+| 5 | #7687 | f66ff489a3f28dca90fc1ecff35bf5087d8a3b40 |
+| 6 | #7689 | a5b650222c01866571ce28e55d25ae946f0dcdd5 |
+| 6a | #7691 | 37e008e0fb5f12bd2983aa4d48189f841d9f1d88 |
+| 7 | #7690 | defde6a79d8a612d91dca4eb873828f7f535f1db |
+| 8a | #7692 | c14352b4e6c159b9d04d3620af5c8953ff8a8bcf |
+| 8b | #7693 | cf5eb255358a2660d3b2248a8aca8180a76b40ff |
+| 8c | #7694 | b5feee26e0f2dcb4d025aa23be067fd8ecdfb749 |
+| 9 | #7695 | ac5031a4af1e7b55fbbb75b8a8950f5db9b0bce6 |
+| 10 | #7701 | 47b6789cfad59103d8c0f06fddfa7ae243f7b4c9 |
+| 11 | #7702 | 018d85b6aea0bf90d4a3e4491a0d6e73d2542a5e |
+| 12a | #7703 | f946563eda731e01efadc2197c5ae49e1953ae71 |
+| 12b | #7704 | 00638ad63e78b21e5fa21370ed793cb83db26ded |
+| helpers | #7705 | 4f4978084010f617590754eafb85552ebe9dcf10 |
+| benchmark | #7706 | 6b56f3bccc75c676c1ee2c259dbb9cf350ad593f |
+| 13a | #7707 | bd67ea4d1dbeff629e3bef98c8375c14eda13dfe |
+| 13b | #7708 | 61f579c77fee98554bdc646259c0e0b70ce4a14b |
+| 14a | #7709 | 1b22db1124add5a3b4c100ad3b6df27be2944c42 |
+| 14b | #7710 | e9845c2c7005ca15c2ada4c11c22ac3be3e7bee2 |
 
-Slices 1–11 retain their existing upstream PR heads. Slice 12a and new children
-use fork PR heads. Matching upstream parent-base refs exist through the benchmark
-checkpoint so every child can target its exact immediate predecessor; those
-base refs must stay synchronized during future cascades. No PR was merged and
-no reserved thread was resolved. All four new PRs are assigned to rgerhards,
-use milestone v8.2610 and appropriate configuration/core/QA labels.
+Slices1-11 continue using upstream source branches;12a and children use fork
+PR heads. Matching upstream parent-base twins now exist through14a so every
+child targets its exact immediate predecessor. The twins must stay synchronized
+in future cascades. Fresh upstream main remained332da35217b3ead9fdf95436d6b4790657f9015b.
+Exact-lease atomic pushes changed18 upstream refs and8 fork refs. No PR was
+merged and no reserved thread was resolved. Both new draft PRs are assigned to
+rgerhards, use milestone v8.2610 and configuration/core enhancement labels.
+All22 descriptions were updated through the GitHub connector with current heads,
+parents, merge order and validation limits. Publication manifest, original leases,
+push logs and exact descriptions are under
+/tmp/reload-publication-20261017/ and copied into the canonical evidence directory.
+Intermediate publication used the previously expressly authorized
+SKIP_CONTAINER_VALIDATION=1 override; no final readiness claim is implied.
 
-The first fork publication attempt used a local unpublished 12b head as its
+An earlier fork publication attempt used a local unpublished 12b head as its
 expected lease and was atomically rejected without changing any ref. A fresh
 remote-ref check established the new refs were absent; the corrected exact-
 lease atomic publication then passed. This was a normal Git lease rejection,
