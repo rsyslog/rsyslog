@@ -341,6 +341,14 @@ rsRetVal qqueue_shutdown_graph_node(qqueue_t *queue, const struct timespec *grac
  * requires release, including when wait subsequently times out or is aborted.
  */
 rsRetVal qqueueBatchBarrierBegin(qqueue_t *pThis, qqueue_batch_barrier_t **ppBarrier);
+/** Opt-in preceding-batch completion barrier. Uses the same owner-only wait
+ * and release APIs, additionally pausing the DA transfer pool. Each current
+ * worker with responsibility invokes pfObjProcessed before acknowledging; wait retains
+ * and reports the exact first callback error. A successful wait is NOT an
+ * empty/retirement proof: exited-worker leases, stores, deletion inventory,
+ * deferred objects and producer admission still need independent proof.
+ * No input/ruleset membership lifecycle is enabled by this dormant API. */
+rsRetVal qqueueCompletionBarrierBegin(qqueue_t *pThis, qqueue_batch_barrier_t **ppBarrier);
 /** @brief Wait for all affected workers to stop between batches.
  * @param pBarrier Barrier owned by this calling thread.
  * @param ptTimeout Absolute CLOCK_REALTIME deadline, shared across pools.

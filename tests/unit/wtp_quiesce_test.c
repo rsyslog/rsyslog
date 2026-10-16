@@ -5,7 +5,10 @@
  * immediately, timeouts leave the token releasable, direct queues fail closed,
  * both DA consumer pools pause under their own mutexes, latent segmented-disk
  * work and zero-worker demand are advised on resume, token ownership is
- * enforced, and shutdown state is never overwritten.
+ * enforced, and shutdown state is never overwritten. Opt-in completion tests
+ * hold the real production boundary callback, retain exact errors, invalidate
+ * a generation during unlocked disposal, balance cancellation/shutdown, and
+ * include DA transfer without changing ordinary barrier cleanup semantics.
  */
 #include "config.h"
 
@@ -180,7 +183,7 @@ static void *workerMain(void *const arg) {
     }
 
     THREAD_CHECK(poolState(testPool) == wtpState_QUIESCE);
-    wtpWorkerQuiesce(&testPool->pool, &testPool->worker.pcondBusy);
+    wtpWorkerQuiesceAtBoundary(&testPool->pool, &testPool->worker);
     pthread_mutex_unlock(&testPool->queueMutex);
     return NULL;
 }
@@ -470,7 +473,262 @@ static int testQueueBarrierPartialBeginRollback(void) {
     return 0;
 }
 
+
+/* The actual production boundary invokes this callback with the queue mutex
+ * held. Release it while held on a condition, exactly as deferred disposal is
+ * allowed to do. This exercises request-generation revalidation, not a copied
+ * queue/store algorithm. Actual source-lease completion is covered by the
+ * queue-layer initialized-daemon fixture. */
+typedef struct completion_ctx_s {
+    test_pool_t *pool;
+    pthread_mutex_t gate;
+    pthread_cond_t changed;
+    int entered;
+    int release;
+    rsRetVal result;
+} completion_ctx_t;
+
+static rsRetVal completionCallback(void *arg, wti_t *worker) {
+    completion_ctx_t *ctx = arg;
+    (void)worker;
+    pthread_mutex_unlock(ctx->pool->pool.pmutUsr);
+    pthread_mutex_lock(&ctx->gate);
+    ++ctx->entered;
+    pthread_cond_broadcast(&ctx->changed);
+    while (!ctx->release) pthread_cond_wait(&ctx->changed, &ctx->gate);
+    pthread_mutex_unlock(&ctx->gate);
+    pthread_mutex_lock(ctx->pool->pool.pmutUsr);
+    return ctx->result;
+}
+
+static void *completionWorker(void *arg) {
+    completion_ctx_t *ctx = arg;
+    int saved;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &saved);
+    pthread_mutex_lock(ctx->pool->pool.pmutUsr);
+    wtpWorkerQuiesceAtBoundary(&ctx->pool->pool, &ctx->pool->worker);
+    pthread_mutex_unlock(ctx->pool->pool.pmutUsr);
+    pthread_setcancelstate(saved, NULL);
+    pthread_testcancel();
+    return NULL;
+}
+
+static void releaseCompletion(completion_ctx_t *ctx) {
+    pthread_mutex_lock(&ctx->gate);
+    ctx->release = 1;
+    pthread_cond_broadcast(&ctx->changed);
+    pthread_mutex_unlock(&ctx->gate);
+}
+
+static int completionCase(const int failure, const int replaceGeneration, const int cancel, const int shutdown) {
+    test_pool_t pool;
+    initPool(&pool, 1);
+    completion_ctx_t ctx = {.pool = &pool,
+                            .gate = PTHREAD_MUTEX_INITIALIZER,
+                            .changed = PTHREAD_COND_INITIALIZER,
+                            .result = failure ? RS_RET_IO_ERROR : RS_RET_OK};
+    pool.pool.pUsr = &ctx;
+    pool.pool.pfObjProcessed = completionCallback;
+    pool.worker.batch.nElemDeq = 1; /* preceding owned batch, never erased by the barrier */
+    uint64_t first = 0, current = 0;
+    struct timespec deadline;
+    pthread_t thread;
+    CHECK(wtpRequestCompletionQuiesce(&pool.pool, &first) == RS_RET_OK);
+    current = first;
+    CHECK(pthread_create(&thread, NULL, completionWorker, &ctx) == 0);
+    pthread_mutex_lock(&ctx.gate);
+    while (!ctx.entered) pthread_cond_wait(&ctx.changed, &ctx.gate);
+    pthread_mutex_unlock(&ctx.gate);
+    CHECK(deadlineMs(-1000, &deadline) == 0);
+    CHECK(wtpWaitCompletionQuiesced(&pool.pool, first, &deadline) == RS_RET_TIMED_OUT);
+    CHECK(pool.pool.iNumCompletionQuiesced == 0);
+    if (shutdown) {
+        /* Shutdown wins while deferred disposal has released the queue mutex.
+         * Its return cannot acknowledge the retired request or restore RUNNING. */
+        pthread_mutex_lock(&pool.queueMutex);
+        setPoolState(&pool, wtpState_SHUTDOWN_IMMEDIATE);
+        pthread_mutex_unlock(&pool.queueMutex);
+        CHECK(wtpWaitCompletionQuiesced(&pool.pool, current, &deadline) == RS_RET_NO_RUN);
+        releaseCompletion(&ctx);
+        CHECK(wtpResumeCompletion(&pool.pool, current) == RS_RET_OK);
+        CHECK(pthread_join(thread, NULL) == 0);
+        CHECK(pool.pool.iNumCompletionQuiesced == 0 && pool.pool.iNumQuiesced == 0);
+        CHECK(poolState(&pool) == wtpState_SHUTDOWN_IMMEDIATE);
+        pthread_cond_destroy(&ctx.changed);
+        pthread_mutex_destroy(&ctx.gate);
+        cleanupPool(&pool);
+        return 0;
+    }
+    if (replaceGeneration) {
+        CHECK(wtpResumeCompletion(&pool.pool, first) == RS_RET_OK);
+        CHECK(wtpRequestCompletionQuiesce(&pool.pool, &current) == RS_RET_OK);
+        CHECK(current != first);
+        CHECK(wtpWaitCompletionQuiesced(&pool.pool, first, &deadline) == RS_RET_NO_RUN);
+    }
+    releaseCompletion(&ctx);
+    if (replaceGeneration) {
+        CHECK(pthread_join(thread, NULL) == 0);
+        CHECK(deadlineMs(-1000, &deadline) == 0);
+        CHECK(wtpWaitCompletionQuiesced(&pool.pool, current, &deadline) == RS_RET_TIMED_OUT);
+        CHECK(pool.pool.iNumCompletionQuiesced == 0); /* no stale acknowledgment */
+        CHECK(pthread_create(&thread, NULL, completionWorker, &ctx) == 0);
+    }
+    CHECK(deadlineMs(5000, &deadline) == 0); /* hang guard, not a completion oracle */
+    CHECK(wtpWaitCompletionQuiesced(&pool.pool, current, &deadline) == (failure ? RS_RET_IO_ERROR : RS_RET_OK));
+    if (failure) CHECK(wtpWaitCompletionQuiesced(&pool.pool, current, &deadline) == RS_RET_IO_ERROR);
+    if (cancel) CHECK(pthread_cancel(thread) == 0);
+    if (shutdown) {
+        pthread_mutex_lock(&pool.queueMutex);
+        setPoolState(&pool, wtpState_SHUTDOWN_IMMEDIATE);
+        pthread_cond_signal(&pool.worker.pcondBusy);
+        pthread_mutex_unlock(&pool.queueMutex);
+        CHECK(wtpWaitCompletionQuiesced(&pool.pool, current, &deadline) == RS_RET_NO_RUN);
+    }
+    CHECK(wtpResumeCompletion(&pool.pool, current) == RS_RET_OK);
+    void *joined = NULL;
+    CHECK(pthread_join(thread, &joined) == 0);
+    CHECK(joined == (cancel ? PTHREAD_CANCELED : NULL));
+    CHECK(pool.pool.iNumCompletionQuiesced == 0 && pool.pool.iNumQuiesced == 0);
+    CHECK(poolState(&pool) == (shutdown ? wtpState_SHUTDOWN_IMMEDIATE : wtpState_RUNNING));
+    pthread_cond_destroy(&ctx.changed);
+    pthread_mutex_destroy(&ctx.gate);
+    cleanupPool(&pool);
+    return 0;
+}
+
+/* An idle WTI has no preceding responsibility. Do not manufacture a store
+ * completion or mutate legacy deletion frontiers by calling its callback. */
+static int completionEmptyWorker(void) {
+    test_pool_t pool;
+    initPool(&pool, 1);
+    completion_ctx_t ctx = {.pool = &pool,
+                            .gate = PTHREAD_MUTEX_INITIALIZER,
+                            .changed = PTHREAD_COND_INITIALIZER,
+                            .release = 1,
+                            .result = RS_RET_IO_ERROR};
+    pool.pool.pUsr = &ctx;
+    pool.pool.pfObjProcessed = completionCallback;
+    uint64_t generation;
+    pthread_t thread;
+    struct timespec deadline;
+    CHECK(wtpRequestCompletionQuiesce(&pool.pool, &generation) == RS_RET_OK);
+    CHECK(pthread_create(&thread, NULL, completionWorker, &ctx) == 0);
+    CHECK(deadlineMs(5000, &deadline) == 0);
+    CHECK(wtpWaitCompletionQuiesced(&pool.pool, generation, &deadline) == RS_RET_OK);
+    CHECK(wtpResumeCompletion(&pool.pool, generation) == RS_RET_OK);
+    CHECK(pthread_join(thread, NULL) == 0);
+    CHECK(ctx.entered == 0);
+    pthread_cond_destroy(&ctx.changed);
+    pthread_mutex_destroy(&ctx.gate);
+    cleanupPool(&pool);
+    return 0;
+}
+
+/* The opt-in family includes the real queue-composition transfer-pool slot.
+ * Ordinary barriers must continue to omit it. Nonzero queued inventory is
+ * deliberately left intact: completion quiescence is not an empty proof. */
+static int completionDAFamily(void) {
+    test_pool_t regular, transfer, child;
+    initPool(&regular, 0);
+    initPool(&transfer, 0);
+    initPool(&child, 0);
+    qqueue_t parentQueue = {0}, childQueue = {0};
+    parentQueue.qType = QUEUETYPE_LINKEDLIST;
+    parentQueue.mut = &regular.queueMutex;
+    parentQueue.pWtpReg = &regular.pool;
+    parentQueue.pWtpDA = &transfer.pool;
+    parentQueue.bIsDA = 1;
+    parentQueue.pqDA = &childQueue;
+    parentQueue.iQueueSize = 5;
+    childQueue.qType = QUEUETYPE_DISK;
+    childQueue.mut = &child.queueMutex;
+    childQueue.pWtpReg = &child.pool;
+    qqueue_batch_barrier_t *barrier = NULL;
+    CHECK(qqueueBatchBarrierBegin(&parentQueue, &barrier) == RS_RET_OK);
+    CHECK(poolState(&transfer) == wtpState_RUNNING);
+    CHECK(qqueueBatchBarrierRelease(&barrier) == RS_RET_OK);
+    CHECK(qqueueCompletionBarrierBegin(&parentQueue, &barrier) == RS_RET_OK);
+    CHECK(poolState(&regular) == wtpState_QUIESCE && poolState(&transfer) == wtpState_QUIESCE &&
+          poolState(&child) == wtpState_QUIESCE);
+    struct timespec deadline;
+    CHECK(deadlineMs(5000, &deadline) == 0);
+    CHECK(qqueueBatchBarrierWait(barrier, &deadline) == RS_RET_OK);
+    CHECK(parentQueue.iQueueSize == 5);
+    CHECK(qqueueBatchBarrierRelease(&barrier) == RS_RET_OK && barrier == NULL);
+    CHECK(poolState(&regular) == wtpState_RUNNING && poolState(&transfer) == wtpState_RUNNING &&
+          poolState(&child) == wtpState_RUNNING);
+    cleanupPool(&child);
+    cleanupPool(&transfer);
+    cleanupPool(&regular);
+    return 0;
+}
+
+/* Three real production pool-boundary callbacks share the DA queue mutex.
+ * Releasing regular, transfer and child completion separately must leave the
+ * family incomplete until the last acknowledgment. A child error is retained
+ * exactly; none of these control callbacks may erase a batch responsibility. */
+static int completionDAActiveFamily(const int childFailure) {
+    test_pool_t pools[3];
+    completion_ctx_t contexts[3];
+    pthread_t threads[3];
+    for (int i = 0; i < 3; ++i) initPool(&pools[i], 1);
+    for (int i = 0; i < 3; ++i) {
+        memset(&contexts[i], 0, sizeof(contexts[i]));
+        contexts[i].pool = &pools[i];
+        contexts[i].result = i == 2 && childFailure ? RS_RET_IO_ERROR : RS_RET_OK;
+        pthread_mutex_init(&contexts[i].gate, NULL);
+        pthread_cond_init(&contexts[i].changed, NULL);
+        pools[i].pool.pmutUsr = &pools[0].queueMutex;
+        pools[i].pool.pUsr = &contexts[i];
+        pools[i].pool.pfObjProcessed = completionCallback;
+        pools[i].worker.batch.nElemDeq = 1;
+    }
+    qqueue_t parent = {0}, child = {0};
+    parent.qType = QUEUETYPE_LINKEDLIST;
+    parent.mut = &pools[0].queueMutex;
+    parent.pWtpReg = &pools[0].pool;
+    parent.pWtpDA = &pools[1].pool;
+    parent.bIsDA = 1;
+    parent.pqDA = &child;
+    child.qType = QUEUETYPE_DISK;
+    child.mut = parent.mut;
+    child.pWtpReg = &pools[2].pool;
+    qqueue_batch_barrier_t *barrier = NULL;
+    CHECK(qqueueCompletionBarrierBegin(&parent, &barrier) == RS_RET_OK);
+    for (int i = 0; i < 3; ++i) CHECK(pthread_create(&threads[i], NULL, completionWorker, &contexts[i]) == 0);
+    for (int i = 0; i < 3; ++i) {
+        pthread_mutex_lock(&contexts[i].gate);
+        while (!contexts[i].entered) pthread_cond_wait(&contexts[i].changed, &contexts[i].gate);
+        pthread_mutex_unlock(&contexts[i].gate);
+    }
+    struct timespec expired, deadline;
+    CHECK(deadlineMs(-1000, &expired) == 0);
+    CHECK(qqueueBatchBarrierWait(barrier, &expired) == RS_RET_TIMED_OUT);
+    for (int i = 0; i < 3; ++i) {
+        releaseCompletion(&contexts[i]);
+        CHECK(deadlineMs(5000, &deadline) == 0);
+        CHECK(wtpWaitCompletionQuiesced(&pools[i].pool, pools[i].pool.quiesceGeneration, &deadline) ==
+              (i == 2 && childFailure ? RS_RET_IO_ERROR : RS_RET_OK));
+        if (i != 2) CHECK(qqueueBatchBarrierWait(barrier, &expired) == RS_RET_TIMED_OUT);
+    }
+    CHECK(qqueueBatchBarrierWait(barrier, &deadline) == (childFailure ? RS_RET_IO_ERROR : RS_RET_OK));
+    CHECK(qqueueBatchBarrierRelease(&barrier) == RS_RET_OK);
+    for (int i = 0; i < 3; ++i) CHECK(pthread_join(threads[i], NULL) == 0);
+    for (int i = 0; i < 3; ++i) {
+        CHECK(pools[i].worker.batch.nElemDeq == 1);
+        CHECK(pools[i].pool.iNumQuiesced == 0 && pools[i].pool.iNumCompletionQuiesced == 0);
+        pthread_cond_destroy(&contexts[i].changed);
+        pthread_mutex_destroy(&contexts[i].gate);
+        cleanupPool(&pools[i]);
+    }
+    return 0;
+}
+
 int main(void) {
+    if (completionCase(0, 0, 0, 0) || completionCase(1, 0, 0, 0) || completionCase(0, 1, 0, 0) ||
+        completionCase(0, 0, 1, 0) || completionCase(0, 0, 0, 1) || completionEmptyWorker() || completionDAFamily() ||
+        completionDAActiveFamily(0) || completionDAActiveFamily(1))
+        return 1;
     if (testIdleWorker() != 0 || testActiveWorkerAndTimeout() != 0 || testZeroWorkerAndShutdownPriority() != 0 ||
         testParkedWorkerShutdownPriority() != 0 || testQueueDirectAndDA() != 0 || testQueueBarrierOwner() != 0 ||
         testQueueDADistinctWorkerMutexes() != 0 || testQueueBarrierPartialBeginRollback() != 0)
