@@ -39,7 +39,7 @@ env:
 jobs:
   changes:
     name: check change scope
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     permissions:
       contents: read
@@ -307,7 +307,7 @@ jobs:
 
   compile:
     name: compile (${{ matrix.config }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -376,7 +376,7 @@ jobs:
     name: extended compile (${{ matrix.config }})
     needs: [compile, changes]
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.c_headers == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -437,7 +437,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 50
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
@@ -674,7 +674,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_ubuntu == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 35
     strategy:
       fail-fast: true
@@ -1167,7 +1167,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.elasticsearch == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 45
     name: elasticsearch-8-tests
     env:
@@ -1238,7 +1238,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.victorialogs == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     name: victorialogs-tests
     env:
@@ -1326,7 +1326,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.analyzer == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     name: clang static analyzer
     steps:
       - name: Checkout repository
@@ -1421,7 +1421,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.kafka == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 50
     name: kafka distcheck CI
     steps:
@@ -1475,7 +1475,7 @@ jobs:
     needs: [changes]
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 180
     name: dev container definition CI
     steps:
@@ -1730,7 +1730,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 75
     name: i386 CI (Debian 13, linux/386)
     steps:
