@@ -1,11 +1,121 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Transactional reload implementation and PR-stack ledger
 
-Recorded: 2026-10-15. Status: nine updated/new branches were atomically pushed,
-followed by a separate slice-9 publication;
-all twelve published draft PR heads have fresh passed exact-candidate security
-receipts. Main remains c62d84ad7. Hosted checks/review are awaited; targeted
-validation is not final-tip broad validation and no merge-readiness is claimed.
+Recorded: 2026-10-16. Latest status: all fourteen intermediate branches through
+slice 11 were atomically published after refreshing onto upstream main
+332da35217b3ead9fdf95436d6b4790657f9015b. New draft PRs are slice 10/#7701 and
+slice 11/#7702. Slice 12a/#7703 is now published from the fork at
+c0379e94abf3ae4772f0342e8f2fb0745bcffb6d; all fifteen descriptions retain
+the complete merge order and
+prominently retain merge requirements. Ordinary introducing fixes are folded
+into slices 2, 4, 6, 8a and 10. Existing merge holds remain; further review is
+deferred at the user's request. No new review clearance or merge readiness is
+claimed. Focused validation is not final-tip broad validation.
+
+### 2026-10-16 ordinary integration checkpoint
+
+The user requested continued implementation and focused validation, with further
+security work deferred. Existing blocked findings and merge requirements remain
+in force; no security clearance is inferred from this deferral.
+
+The property-filter startup correction is folded into local slice 2 at
+af58d12f28f1de5434f59bb8f0e4f3b292c927ce. Independent ordinary review found no
+issue; the deterministic regression failed before the fix and passed afterward.
+The native unit and both affected omruleset tests passed under Clang ASan/UBSan.
+The regex preparation-bound correction is folded into slice 8a, with independent
+ordinary review, native boundary red/green, both frontend integrations, and
+header distribution checks passed. These are targeted results, not a broad gate.
+
+The first cascade through 8a was conflict-free. A second ordinary integration
+folded then-only property-filter semantics into slices 4 and 6 and OFF-mode
+retirement accounting into slice 10, then recascaded through slice 11. Backup
+refs preserve every preceding head. Manual resolutions retained both endpoint
+and poison-slot test controls, accurate comments, and both regex/policy-owner
+headers; other own-patch range-diffs are unchanged. A subsequent packaging-only
+upstream refresh was conflict-free, with all fourteen own patches unchanged.
+Current published heads:
+
+| Slice | Published head after ordinary correction cascade |
+| --- | --- |
+| 1 | 8a239d6b92c95825cec06fe921e066f768ec86a3 |
+| 2 | 6766945dd9dbada49303c5843d26ca84c47ccfbd |
+| 3 | e09406c53ef0fed49216a24bdff8eae6fa2b9107 |
+| 4 | 6f2b5a53a93aa42c62ee303748ab99d676531d73 |
+| 5 | 40e90fe913039376915937beeca4945c04dd287b |
+| 6 | 97424f55a2c38df1f0e74ac31ceb50efbcb75f9e |
+| 6a | 110a9d8ba38c18bc181d6e022991f5aec9f435a4 |
+| 7 | 3fcc358dfcafad9ab9ed8cba9aa6ffd206109dc5 |
+| 8a | 529c02f6806cbe2527b2108845b9c7094a287966 |
+| 8b | c88bff9e123b859aca98c6c888c1879595b7ddae |
+| 8c | cf90fc62317df225fef016762366d19f5e6fc3b5 |
+| 9 | e8670e2babd0fe6c446b27a7bcaa2483c1e2a6dc |
+| 10 | 961e9e04e1bcff6120321e287065ef2b2f49ea22 |
+| 11 | 0b930aad80c9ac127f7dd1d4ec53e34b8b922f67 |
+
+The first-cascade 8a snapshot 2f35bc02 passed twenty focused cases per actual
+epoll/poll backend. That result is historical and does not validate subsequent
+edits. A forty-five-case selection passed on combined tip e9d5aca607306fab866e750292b6b83f36163d6c
+under actual epoll (45/45, 32.396s) and poll (45/45, 32.050s), with zero skips,
+failures or errors. After the upstream refresh, only three openSUSE packaging
+files differ; all runtime/test bytes are identical. These are runtime-tree-
+equivalent results, not exact-new-HEAD executions. New evidence uses ordinary-
+validation paths. The fourteen branches are published with exact leases and
+the previously approved intermediate-only validation override. Earlier receipts
+do not transfer to rebased candidates; review is deferred, not waived.
+
+The slice-10 mode-switch/retirement accounting edge case is corrected:
+an ON-to-OFF activation combined with a supported input update can retain
+pending retirement after resume fails. A subsequent blocked OFF HUP must not
+increment the ON-mode rejection counter. The global-only REUSE case does not
+have this module-resume failure path. Its production selector has a failing
+OFF-mode negative control and passing restored control; two focused native
+tests and independent ordinary review passed before the correction was folded.
+
+The slice-4/slice-6 changes align reload walkers and materialization with
+then-only property-filter semantics while preserving real IF/priority-filter
+else branches. Unlike the pre-slice-4 constructor involved in the slice-2
+startup defect, slice 4 initializes its unused slot to NULL. Poison-slot native
+red/green evidence is synthetic and is not a reproduced slice-4 parser crash.
+The two new ruleset visitor changes have source review, not a direct visitor
+poison test. The strengthened YAML condition-only reload/output test passed.
+
+An ordinary architecture review of incomplete slice 12 recommends a coherent
+prepared-backend/readiness checkpoint before complete listener topology wiring.
+The current dirty mixed implementation is not a merge candidate: its classifier
+and preparer do not yet implement the same topology contract. Native partial
+worker-startup and RequestStop oracles remain required. The existing source and
+evidence are preserved; guarded full lifecycle wiring remains untouched.
+
+A separate slice-12a worktree now isolates the prepared-backend foundation:
+exactly four appended API methods (ABI 40), worker readiness/cooperative stop,
+minimal private prepared socket setup and a real production-backend native test.
+It has no imtcp configuration caller and adds no advertised listener topology
+support. Full pinned-image module/dependency builds, native tests and six TCP/
+reload smokes passed under actual epoll and poll (build 4, check 2, 4 CPUs).
+Independent ordinary review and distribution checks passed. The source is now
+committed and published as [PR #7703](https://github.com/rsyslog/rsyslog/pull/7703)
+at c0379e94abf3ae4772f0342e8f2fb0745bcffb6d on the slice-11 parent above.
+Takeover verification confirmed all eight source paths byte-identical to the
+previously tested archive; fresh poll native controls passed and mock distcheck
+reported 1,162 total / 1,156 pass / 6 skip / zero fail or error. Fresh formatting
+and whitespace checks passed. Full logs and command/image details remain in
+slice 12a's `.ordinary-validation/README.md`. This is targeted-container-tested
+intermediate work, not full PR-ready validation; security work remains deferred.
+The original mixed WIP is preserved. The takeover session owns continuation.
+
+
+Published order now continues from [9/#7695](https://github.com/rsyslog/rsyslog/pull/7695)
+to [10/#7701](https://github.com/rsyslog/rsyslog/pull/7701) to
+[11/#7702](https://github.com/rsyslog/rsyslog/pull/7702), then
+[12a/#7703](https://github.com/rsyslog/rsyslog/pull/7703) backend foundation and
+planned 12b complete listener lifecycle. Slice 12a targets slice 11, is assigned
+to rgerhards, uses milestone v8.2610 and enhancement/configuration labels, and
+remains draft. All fourteen parent descriptions now link 12a in the merge order.
+Upstream main and all published feature branches use the verified 332da352 base.
+Fork main synchronization was previously guard-blocked and has not been retried.
+The prior session's explanation of a UI cybersecurity content restriction as a
+specific lifecycle-edit execution denial is not established by that banner;
+the continuing session does not infer a source prohibition from it.
 
 Previous published checkpoint: the quality batch was atomically published through
 slice 7, draft PR #7690. All seven exact published candidates had passed
@@ -144,9 +254,9 @@ controller snapshots. Historical 195/72 pin changes are intentionally not
 copied if that ownership proof holds; this remains a design obligation, not
 already-proven final-candidate behavior.
 
-## Current evidence and remaining work
+## Earlier evidence and remaining-work record (superseded above)
 
-### Current publication and remaining local work
+### Earlier publication and remaining local work
 
 The nine-branch atomic push completed with exact published heads verified.
 Slice 7 now targets slice 6a. All twelve PRs are draft; the explicitly approved
@@ -177,11 +287,34 @@ retarget after parent merge and reverify the delta. Do not merge umbrella
 #7654 alongside this stack. Hosted new runs and review-thread decisions remain
 pending; no thread-resolution or hosted-clean claim is made.
 
-All exact published candidates have fresh passed receipts. Slice 2 retains its
+Publication-time passed receipts are historical evidence, not current merge
+clearance: slice 8b now has a blocked receipt on the unchanged exact digest.
+Introducing-slice fixes, dependent cascades and fresh reviews are required.
+Slice 2 retains its
 non-blocking diagnostic hardening note. Slice 8a retains one non-blocking
 hardening tradeoff: per-session regex compilation cost is unmeasured, not a
 confirmed vulnerability. Other pending local descendants need fresh receipts
 after their final cascades.
+
+Current merge holds and validation limits:
+
+- Slice 2 has an ordinary graph-walker initialization correction in progress,
+  following hosted ARM64 ASan startup feedback. Its two-file local change has
+  a failing original unit control and passing corrected control; actual Clang
+  21 ASan+UBSan unit, omruleset and queue controls passed 3/3. Independent
+  ordinary review is pending; no original-platform reproduction claim.
+- Slice 8a has a separate ordinary regex preparation bound-consistency fix
+  underway. Its earlier cost tradeoff does not cover this new correction;
+  no overflow claim is made.
+- Slice 8b's current unchanged digest is blocked after independent validation
+  and lead review. There is static proof, not a runtime PoC. Fix authorization
+  is pending; details remain outside this tracked operational ledger.
+- Slice 12 is dirty and incomplete. Two native checks passed, but the full
+  compile is unfinished and no HUP validation is claimed. Production wiring
+  is paused pending the explicitly requested direct user approval.
+- All twelve hosted PRs remain draft with unresolved AI review work and no
+  human review clearance. A hosted documentation Codecov failure is not a
+  Sphinx build failure.
 
 | Slice | Local checkpoint and bounded evidence |
 | --- | --- |
@@ -192,12 +325,12 @@ after their final cascades.
 | 6a | New frozen 4e10c15dd2342be7f7bd1d1c73448b7ef041240d implements operational retry backoff/status separately from slice 6 ownership safety. Eight current focused controls passed; patch-identical pre-cascade evidence includes epoll 19/19, poll 19/19, mock distribution and HTML. Fresh discovery and lead reviews reported zero candidates and the receipt is current (9 files, 443 reviewable changed lines). |
 | 7 | Published 1cc47d91800926cb7c9462d8f167490317701ca4 corrects unchanged-limiter budget reset on unrelated profile changes. Earlier epoll 22/22, poll 22/22, native red-guard evidence and a clear ordinary independent review are retained separately; fresh discovery and lead review completed with a passed receipt. |
 | 8a | Published 434c0d2a0ea7f88f527a2c6c6bd41599ca3347ce has a fresh passed receipt with the non-blocking operational hardening tradeoff stated above. |
-| 8b | Published d1ac0c3ac3ffd8b653a7350077f5afba3519d341 has fresh completed discovery/lead review and a passed receipt. Combined current GCC focused controls passed 9/9. Pre-cascade 925d35580f03d5c56fa18abdb8821652916e9958 evidence remains epoll 22/22, poll 22/22, ASan 7/7 with leak detection disabled, mock distribution 1,601 passes/10 skips and HTML; these are not exact-current-head claims. |
+| 8b | Published d1ac0c3ac3ffd8b653a7350077f5afba3519d341 now has a blocked receipt, superseding the earlier passed review on the same digest. Earlier focused/backend/sanitizer evidence is retained, not remediation proof. Fix authorization and a subsequent fix/review/cascade remain pending. |
 | 8c | Published 33356ca522e9fe48a89f7df240ac4315362ecf22 is integrated onto slice 8b with interface 39. Actual epoll 17/17, poll 17/17, mock distribution 1,127 passes/6 skips and HTML passed. Fresh discovery/lead reviews covered all 12 files, with zero candidates and a passed receipt. |
 | 9 | Published draft #7695 at 0b22b3cef9784d4704d886c50b32b1d29774fc7d, parent 33356ca522e9fe48a89f7df240ac4315362ecf22. Actual epoll 17/17, poll 17/17, mock distribution 1,130 passes/6 skips and HTML passed, using the same pinned image and build/check -j4/-j2. Fresh Luna/high discovery and lead reviews covered all 14 files with zero candidates and a passed receipt. Earlier f18e413 evidence remains historical. |
 | 10 | Current local 2d54d8699ae083a2104a6b3ba4c6b7d68ff9917e includes the testbench registration guard and corrected oversized-message helper/YAML oracles. Pre-cascade native GCC, direct Clang parser/owner, HTML and mock evidence remains separate. |
-| 11 | Exact current local f0b853059e48a938a274bef9efc5d2238ee4e990 passed combined epoll 42/42 (57.45s) and actual poll 42/42 (57.30s). Each backend's config.h, test-suite summary and actual ELF SHA evidence is preserved. Three originally failing oversized-message helper/YAML oracles were corrected and passed 3/3; original failures are retained. Three Clang 21 ASan+UBSan controls are underway with detect_leaks=0; no leak-validation claim. Earlier native/Clang/documentation/mock evidence remains separate. |
-| 12 | Production all-worker readiness, not merely backend readiness, remains an implementation requirement alongside early-stop lifetime handling. Source work is in progress on parent 5007 pending a rebase after the next parent freeze; no live-validation claim. |
+| 11 | Exact local f0b853059e48a938a274bef9efc5d2238ee4e990 passed combined epoll 42/42 (57.45s) and actual poll 42/42 (57.30s), with backend config.h, summary and actual ELF SHA evidence preserved. Corrected oversized-message helper/YAML controls passed 3/3; original failures remain. GCC ASan+UBSan O0 controls passed 3/3 with detect_leaks=0, not leak validation. Clang owner/catalog controls passed 2/2; its parser stops at an inherited function-ABI issue before tests. An extracted exact-main-prototype control reproduces that issue, not main-runtime behavior. GCC O1 was blocked by the inline heuristic; O0 sanitizer evidence is distinct. Mock distribution passed 1,186/6 skips (1,192 total); HTML passed in 154.63s. |
+| 12 | Production all-worker readiness and early-stop lifetime work remains incomplete, with two native checks passed but full compile unfinished and no HUP validation. Direct user approval for source wiring is pending; no permission is inferred from continuation of other tasks. |
 
 New local functional slice 6a separates operational retirement retry from
 the ownership safety already implemented in slice 6: bounded attempts with
@@ -216,17 +349,20 @@ Final performance acceptance is blocked pending a user-provided capable host
 or an explicit reduced-scope decision; this is not N/A or acceptance.
 Slice 10 uses a portable
 full-daemon parser-unit seam; this is not live-validation clearance.
-All current published slices 1-9 have valid matching receipts. Only subsequent
-changes/rebases require refreshed exact-candidate checks and digest-bound
-receipts; those receipts do not transfer automatically across rebases.
+Published receipt status must be read with the current holds above: slice 8b
+is blocked, and slices 2 onward require introducing fixes/cascades and fresh
+exact-candidate review before merge clearance. Earlier passed receipts do not
+clear new findings or changed descendants.
 Hosted checks, thread decisions
 and final combined broad validation remain separate gates; the stack is not
 overall merge-ready.
 
-### Current receipt and validation audit trail
+### Earlier receipt and validation audit trail
 
 Read from each source worktree's ignored `.codex/security-review/receipt.json`;
-all rows are passed, with complete reviewed/expected coverage. Digests bind
+Coverage rows retain complete reviewed/expected inventories; slice 8b is now
+blocked, superseding its earlier passed status. Other publication-time passed
+receipts do not override the current merge holds. Digests bind
 the current published deltas, not the older historical tables below.
 
 | Slice | Route | Reviewed/expected | Diff digest |
@@ -243,6 +379,12 @@ the current published deltas, not the older historical tables below.
 | 8b | lead_required | 14/14 | 2eed464864eba805e14715f7f66a1dbfea6a207ee7585c2c3fd21c157ba665e8 |
 | 8c | lead_required | 12/12 | 7dd8f74372fb39fc65253b761d78ba1375b9837a0b6b3d4f0897d97f40eada26 |
 | 9 | lead_required | 14/14 | 8c130dcf78656878b933e11ada17fba1e2af93d39ad8e9667dd298147e6e99e5 |
+
+Local pending packages: slice 10 is lead_required, 32 expected files, digest
+`566d8fcee49c70576848d9d4324ee45ff539a1f345f2f84f4e23b54f001c1125`;
+slice 11 is lead_required, 24 expected files, digest
+`51c3f53c92b6e9579411b69ff21564d388e58e9b3c43a238cf0bc3d86c5c641a`.
+Neither has final security clearance; a further dependency cascade is pending.
 
 Representative exact focused commands below run from the matching sibling
 worktree. Common command prefix and configure flags are shared literally by
