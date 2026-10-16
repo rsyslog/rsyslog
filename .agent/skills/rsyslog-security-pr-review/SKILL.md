@@ -38,12 +38,12 @@ validation base.
 ## Review routing
 
 - `not_applicable`: write a minimal receipt and stop. Do not start discovery.
-- `quick`: use one fresh Terra/medium discovery agent. Review every path in
+- `quick`: use one fresh Luna/high discovery agent. Review every path in
   `coverage.expected_files` and only directly supporting code needed to trace
   the mapped boundaries and invariants. Record expected-file coverage in
   `reviewed_files`; record supporting paths separately in `context_files`.
 - `lead_required`: run the same bounded discovery, then give the package and
-  results to a fresh Terra/high security lead. Model changes, unmapped source,
+  results to a fresh Luna/high security lead. Model changes, unmapped source,
   high-risk components, and ambiguous trust-boundary changes use this route.
 - `expanded`: split at most once into two non-overlapping discovery shards,
   with every expected file assigned exactly once. If two bounded shards cannot
@@ -79,7 +79,7 @@ files and model IDs, source, control, sink, attacker capability, impact,
 counterevidence, proof gaps, discovery disposition, and timestamps. Candidate
 discovery alone never blocks.
 
-Give candidates to a fresh Terra/medium validator that did not perform
+Give candidates to a fresh Luna/high validator that did not perform
 discovery. Follow the Codex Security Validation phase when available. Require
 direct code proof or a safe reproducer of attacker control, reachability, and
 impact. Classify each result as `confirmed`, `deferred`, `hardening`, or
@@ -87,7 +87,7 @@ impact. Classify each result as `confirmed`, `deferred`, `hardening`, or
 PR-introduced or worsened findings.
 
 The discovery-plus-validation target is less than five minutes and 60,000
-aggregate tokens. Invoke a fresh Terra/high security lead only for confirmed or
+aggregate tokens. Invoke a fresh Luna/high security lead only for confirmed or
 deferred candidates, model changes, unmapped security-relevant code, or an
 ambiguous boundary change. Attack-path analysis is conditional: use it only
 when source-to-sink reachability or severity remains material and unclear.
@@ -130,7 +130,7 @@ or `SECURITY RESOLVE <candidate-id>`. This explicit invocation authorizes one
 fix, not other candidates. Refuse if the candidate is absent, not independently
 confirmed, or its stored digest differs from a freshly built input.
 
-1. Give a fresh Terra/medium agent a read-only boundary and compatibility
+1. Give a fresh Luna/high agent a read-only boundary and compatibility
    investigation before editing.
 2. Assign Luna/xhigh as the only writing agent. It implements the smallest
    complete repository-native fix, a regression test that fails without it,
@@ -138,7 +138,7 @@ confirmed, or its stored digest differs from a freshly built input.
 3. Run the reproducer, a distinct malicious-input class, the legitimate
    control, closest tests, and applicable rsyslog build checks. Follow the
    repository build, test, formatting, and test-comment skills.
-4. Give a fresh Terra/medium verifier only the original finding, repository
+4. Give a fresh Luna/high verifier only the original finding, repository
    policy, and candidate diff. Do not give it the patch rationale or earlier
    conclusions. It must reconstruct the invariant, search for bypasses and
    regressions, and verify that the original path is closed. Use Codex Security
