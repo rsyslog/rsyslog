@@ -104,6 +104,45 @@ struct AllowedSenders {
     struct AllowedSenders *pNext;
 };
 
+struct rsconf_s;
+
+/**
+ * @brief Append a parsed sender using explicit configuration, never loadConf.
+ * @param config Borrowed configuration controlling DNS/materialization.
+ * @param root Caller-owned list head; empty on first append.
+ * @param last Caller-owned tail matching root.
+ * @param allowedSender Borrowed textual sender specification.
+ * @return RS_RET_OK or parse/allocation error; existing entries remain owned by caller.
+ */
+rsRetVal netAddAllowedSenderEntryForConfig(struct rsconf_s *config,
+                                           struct AllowedSenders **root,
+                                           struct AllowedSenders **last,
+                                           uchar *allowedSender);
+/** @brief Deep-copy a borrowed ACL without DNS resolution.
+ * @param source Borrowed list, including NULL for unrestricted policy.
+ * @param root Empty output head; independently owned on success, NULL on failure.
+ * @param last Empty output tail; belongs to root, NULL on failure.
+ * @return RS_RET_OK or allocation failure. Caller destroys successful output.
+ */
+rsRetVal netCloneAllowedSenders(const struct AllowedSenders *source,
+                                struct AllowedSenders **root,
+                                struct AllowedSenders **last);
+/** @brief Parse borrowed text and report numeric eligibility without DNS.
+ * @param allowedSender Borrowed text. @param isNumeric Output classification.
+ * @return RS_RET_OK or the original parse/allocation error.
+ */
+rsRetVal netAllowedSenderEntryIsNumeric(uchar *allowedSender, int *isNumeric);
+/** @brief Classify numeric or DNS-free textual policy without resolving hosts.
+ * @param config Borrowed immutable DNS policy. @param allowedSender Borrowed text.
+ * @param isReloadSafe Output eligibility; false for DNS-resolved bare hosts.
+ * @return RS_RET_OK or the original parse/allocation error. No ownership transfer.
+ */
+rsRetVal netAllowedSenderEntryIsReloadSafe(struct rsconf_s *config, uchar *allowedSender, int *isReloadSafe);
+/** @brief Destroy an exclusively owned ACL and clear its head.
+ * @param root Caller-owned head; NULL entries are safe. Requires external exclusion.
+ */
+void netDestructAllowedSenders(struct AllowedSenders **root);
+
 
 /* this structure is a helper to implement wildcards in permittedPeers_t. It specifies
  * the domain component and the matching mode.
@@ -233,8 +272,14 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
      *          that fd and reset the value to -1.
      */
     rsRetVal (*netns_restore)(int *fd);
+    rsRetVal (*addAllowedSenderEntryForConfig)(struct rsconf_s *config, struct AllowedSenders **root,
+                                               struct AllowedSenders **last, uchar *allowedSender);
+    rsRetVal (*cloneAllowedSenders)(const struct AllowedSenders *source, struct AllowedSenders **root,
+                                    struct AllowedSenders **last);
+    rsRetVal (*allowedSenderEntryIsNumeric)(uchar *allowedSender, int *isNumeric);
+    rsRetVal (*allowedSenderEntryIsReloadSafe)(struct rsconf_s *config, uchar *allowedSender, int *isReloadSafe);
 ENDinterface(net)
-#define netCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

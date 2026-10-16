@@ -310,9 +310,12 @@ When an endpoint is removed, it stops accepting new sessions but its existing
 sessions remain alive.  For those sessions, TLS, framing, and compression are
 frozen for the lifetime of the session.  A compatible ruleset update changes a
 session's ruleset-shell pointer through an event-loop control event at the
-safepoint, namely before the next complete message is processed.  An ACL change
-is evaluated for the next message and may drop that message without
-disconnecting the session.  Removing a ruleset still bound to a preserved
+safepoint, namely before the next complete message is processed. An eligible ACL
+change is evaluated for every established session while the event loop and
+workers are fenced. Newly denied sessions are error-closed synchronously,
+without flushing partial frames; their session slots and persistent descriptors
+are reclaimed before resume. Still-permitted sessions retain their stream and
+framing state. Removing a ruleset still bound to a preserved
 session rejects the candidate; no fallback rebinding is permitted.
 
 If a listener is incompatible, the candidate must prepare the replacement
@@ -409,7 +412,13 @@ only for later connections, as do octet-counted framing support and the
 compression mode, driver, and resource limits.  Multiline framing without a
 changed delimiter regex is also an accept-profile update. Delimiter regex
 changes use session-owned compiled state and preparation-time validation.
-TLS, endpoint, ACL, named rate-limit, and
+Numeric sender ACLs and DNS-free wildcard or explicitly unresolved textual
+sender ACLs can change live. The runtime owns independent ACL copies; module
+policy, input overrides, and legacy fallback retain their startup precedence.
+DNS-resolved hostname policy changes remain restart-required. ACL verdict storage
+is reserved before quiesce, and every occupied-tail capacity check precedes
+policy evaluation, so a rejected shrink cannot revoke any session.
+TLS, endpoint, named rate-limit, and
 listener-structure fields remain conservatively restart-required until their
 corresponding prepare, ownership, and reconciliation contracts are implemented.
 Unnamed Linux-like interval and burst values are copied and the listener-local
@@ -464,8 +473,9 @@ Release E
   Add endpoint-tuple reconciliation for ``imtcp``.  A removed listener stops
   accepting only; established sessions preserve frozen TLS, framing, and
   compression.  Session ruleset-shell updates use the event-loop control event
-  at the safepoint/next complete message, ACL changes drop the next message
-  without disconnecting, and bound-ruleset removal rejects the reload.
+  at the safepoint/next complete message, eligible ACL changes synchronously
+  reclaim newly denied sessions without flushing partial frames, and bound-ruleset
+  removal rejects the reload.
 
 Release F
   Expand the capability matrix and supported object set, complete hardening and
@@ -478,7 +488,7 @@ and resource cleanup.  Stages that introduce reuse must test both compatible
 preservation and incompatible replacement.  ``imtcp`` functional tests keep a
 TCP connection open while numbered messages are sent before, during, and after
 HUP.  They must prove the stated event-loop boundary and preservation,
-ACL/drop, exact-delivery, and ordering behaviour without relying on sleeps.
+ACL reclamation/no-partial-flush, exact-delivery, and ordering behaviour without relying on sleeps.
 
 The mandatory performance gate runs *after focused tests, rollback tests,
 ASAN/UBSAN, lifecycle TSAN, static analysis, and PR-ready container validation

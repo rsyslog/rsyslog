@@ -198,6 +198,11 @@ static rsRetVal ATTR_NONNULL() eventNotify_exit(tcpsrv_t *const pThis) {
 }
 
 
+    #ifdef ENABLE_TESTBENCH
+static void (*testAcceptedPublication)(tcpsrv_t *, tcpsrv_io_descr_t *);
+static int testAcceptedMetadataReady;
+    #endif
+
 /* Modify socket set */
 static rsRetVal ATTR_NONNULL()
     epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int isLstn, const int op) {
@@ -213,7 +218,11 @@ static rsRetVal ATTR_NONNULL()
         pioDescr->event.data.ptr = (void *)pioDescr;
         if (epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD, sock, &pioDescr->event) < 0) {
             LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed on fd %d, isLstn %d\n", sock, isLstn);
+            ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
         }
+    #ifdef ENABLE_TESTBENCH
+        if (!isLstn && testAcceptedPublication != NULL) testAcceptedPublication(pThis, pioDescr);
+    #endif
     } else if (op == EPOLL_CTL_DEL) {
         dbgprintf("removing epoll entry %d, socket %d\n", id, sock);
         if (epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
@@ -425,6 +434,7 @@ static void freeLstnParams(tcpLstnParams_t *cnf_params) {
         return;
     }
 
+    if (cnf_params->bOwnAllowedSenderRoot) net.DestructAllowedSenders(&cnf_params->pAllowedSenderRoot);
     if (cnf_params->pInputName != NULL) {
         prop.Destruct(&cnf_params->pInputName);
     }
@@ -603,12 +613,10 @@ finalize_it:
 static tcps_sess_t tcpsess_slot_reserved;
 
 
-#if !defined(ENABLE_IMTCP_EPOLL)
 static inline tcps_sess_t *ATTR_NONNULL() TCPSessTblLoad(tcpsrv_t *const pThis, const int i) {
     tcps_sess_t *const pSess = (tcps_sess_t *)ATOMIC_LOAD_PTR((void **)&pThis->pSessions[i], &pThis->mut_sessions);
     return pSess == &tcpsess_slot_reserved ? NULL : pSess;
 }
-#endif
 
 
 static inline void ATTR_NONNULL(1) TCPSessTblStore(tcpsrv_t *const pThis, const int i, tcps_sess_t *const pSess) {
@@ -974,7 +982,10 @@ finalize_it:
  * \param[in] pioDescr I/O descriptor for the session to close
  *                     (pioDescr->ptrType == NSD_PTR_TYPE_SESS).
  *
- * \pre  \p pioDescr and its \c pSess are valid.
+ * \param[in] pSess Session to reclaim, including its unsubmitted partial frame.
+ * \param[in] sessionSlot Stable table slot belonging to pSess.
+ * \param[in] errorClose Select error-close (no partial-frame flush).
+ * \pre pSess is valid; pioDescr may be NULL for fenced poll-mode reclamation.
  * \post The session object is destroyed. On EPOLL builds, \p pioDescr is
  *       freed; on non-EPOLL builds, the session table entry is cleared.
  * \post Callers must not access \p pioDescr or \c pSess after return.
@@ -984,28 +995,53 @@ finalize_it:
  *
  * \retval RS_RET_OK
  */
-static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
+static rsRetVal closeSessWithMode(tcpsrv_t *const pThis,
+                                  tcpsrv_io_descr_t *const pioDescr,
+                                  tcps_sess_t *pSess,
+                                  const int sessionSlot,
+                                  const int errorClose) {
     DEFiRet;
-    assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
-    tcps_sess_t *pSess = pioDescr->ptr.pSess;
+    assert(pThis != NULL && pSess != NULL);
+    assert(sessionSlot >= 0 && sessionSlot < pThis->iSessMax);
+    if (pioDescr != NULL) assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS && pioDescr->ptr.pSess == pSess);
 
 #if defined(ENABLE_IMTCP_EPOLL)
     /* note: we do not check the result of epoll_Ctl because we cannot do
      * anything against a failure BUT we need to do the cleanup in any case.
      */
-    epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
+    if (pioDescr != NULL) epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
-    assert(pThis->pOnRegularClose != NULL);
-    pThis->pOnRegularClose(pSess);
+    if (errorClose) {
+        assert(pThis->pOnErrClose != NULL);
+        pThis->pOnErrClose(pSess);
+    } else {
+        assert(pThis->pOnRegularClose != NULL);
+        pThis->pOnRegularClose(pSess);
+    }
 
+    if (pSess->pIODescr == pioDescr) pSess->pIODescr = NULL;
     tcps_sess.Destruct(&pSess);
-    TCPSessTblStore(pThis, pioDescr->id, NULL);
+    TCPSessTblStore(pThis, sessionSlot, NULL);
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
-    DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
-    free(pioDescr);
+    if (pioDescr != NULL) {
+        DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
+        free(pioDescr);
+    }
 #endif
     RETiRet;
+}
+
+static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
+    assert(pioDescr != NULL && pioDescr->ptrType == NSD_PTR_TYPE_SESS);
+    return closeSessWithMode(pThis, pioDescr, pioDescr->ptr.pSess, pioDescr->id, 0);
+}
+
+/* Policy changes run while the event loop and all workers are fenced. Close a
+ * newly denied session synchronously so its session slot and persistent epoll
+ * descriptor are both reclaimed before new peers may be accepted. */
+static void closeDeniedSession(tcpsrv_t *const pThis, tcps_sess_t *const pSess, const int sessionSlot) {
+    closeSessWithMode(pThis, pSess->pIODescr, pSess, sessionSlot, 1);
 }
 
 
@@ -1212,10 +1248,59 @@ static rsRetVal ATTR_NONNULL(1)
 }
 
 
+#if defined(ENABLE_IMTCP_EPOLL)
+/* Own the accepted session until ADD succeeds. The syscall publishes all
+ * metadata; another worker may destroy the session and descriptor before it
+ * returns, so the success path must never dereference either object. */
+static rsRetVal publishAcceptedSession(tcpsrv_t *pThis, tcps_sess_t *pSess, const int slot, const int sock) {
+    tcpsrv_io_descr_t *descriptor = NULL;
+    DEFiRet;
+    CHKmalloc(descriptor = calloc(1, sizeof(*descriptor)));
+    descriptor->pSrv = pThis;
+    descriptor->id = slot;
+    INIT_ATOMIC_HELPER_MUT(descriptor->mut_isInError);
+    descriptor->ptrType = NSD_PTR_TYPE_SESS;
+    descriptor->ioDirection = NSDSEL_RD;
+    descriptor->sock = sock;
+    descriptor->ptr.pSess = pSess;
+    pSess->pIODescr = descriptor;
+    CHKiRet(epoll_Ctl(pThis, descriptor, 0, EPOLL_CTL_ADD));
+    return RS_RET_OK;
+finalize_it:
+    pSess->pIODescr = NULL;
+    pThis->pOnErrClose(pSess);
+    tcps_sess.Destruct(&pSess);
+    TCPSessTblStore(pThis, slot, NULL);
+    if (descriptor != NULL) {
+        DESTROY_ATOMIC_HELPER_MUT(descriptor->mut_isInError);
+        free(descriptor);
+    }
+    RETiRet;
+}
+
+    #ifdef ENABLE_TESTBENCH
+/* Native test seam at successful kernel publication. Reclaim synchronously,
+ * before ADD returns, to make the competing worker lifetime deterministic. */
+static void testReclaimAccepted(tcpsrv_t *server, tcpsrv_io_descr_t *descriptor) {
+    testAcceptedMetadataReady = descriptor->ptr.pSess->pIODescr == descriptor;
+    closeSess(server, descriptor);
+}
+
+rsRetVal tcpsrvTestPublishAccepted(tcpsrv_t *, tcps_sess_t *, int, int, int);
+rsRetVal tcpsrvTestPublishAccepted(tcpsrv_t *server, tcps_sess_t *session, int slot, int sock, int reclaim) {
+    testAcceptedMetadataReady = 0;
+    testAcceptedPublication = reclaim ? testReclaimAccepted : NULL;
+    const rsRetVal ret = publishAcceptedSession(server, session, slot, sock);
+    testAcceptedPublication = NULL;
+    return reclaim && !testAcceptedMetadataReady ? RS_RET_ERR : ret;
+}
+    #endif
+#endif
+
+
 /* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr) {
     tcps_sess_t *pNewSess = NULL;
-    tcpsrv_io_descr_t *pDescrNew = NULL;
     const int idx = pioDescr->id;
     int iSess = -1;
     tcpsrv_t *const pThis = pioDescr->pSrv;
@@ -1230,20 +1315,15 @@ static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr
 
     if (iRet == RS_RET_OK) {
 #if defined(ENABLE_IMTCP_EPOLL)
-        /* pDescrNew is only dyn allocated in epoll mode! */
-        CHKmalloc(pDescrNew = (tcpsrv_io_descr_t *)calloc(1, sizeof(tcpsrv_io_descr_t)));
-        pDescrNew->pSrv = pThis;
-        pDescrNew->id = iSess;
-        pDescrNew->isInError = 0;
-        INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
-        pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
-        pDescrNew->ioDirection = NSDSEL_RD;
-        CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
-        pDescrNew->ptr.pSess = pNewSess;
-        CHKiRet(epoll_Ctl(pThis, pDescrNew, 0, EPOLL_CTL_ADD));
+        int sock;
+        CHKiRet(netstrm.GetSock(pNewSess->pStrm, &sock));
+        /* The helper owns the session on both success and failure. */
+        tcps_sess_t *const accepted = pNewSess;
+        pNewSess = NULL;
+        CHKiRet(publishAcceptedSession(pThis, accepted, iSess, sock));
 #endif
 
-        DBGPRINTF("New session created with NSD %p.\n", pNewSess);
+        DBGPRINTF("New session accepted.\n");
     } else {
         DBGPRINTF("tcpsrv: error %d during accept\n", iRet);
     }
@@ -1257,9 +1337,13 @@ finalize_it:
                  "tcpsrv listener (inputname: '%s') failed "
                  "to process incoming connection %s with error %d",
                  (cnf_params->pszInputName == NULL) ? (uchar *)"*UNSET*" : cnf_params->pszInputName, connInfo, iRet);
-        if (pDescrNew != NULL) {
-            DESTROY_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
-            free(pDescrNew);
+        /* GetSock failed before descriptor publication. SessAccept already
+         * transferred the session into its table slot, so reclaim it here. */
+        if (pNewSess != NULL) {
+            pNewSess->pIODescr = NULL;
+            pThis->pOnErrClose(pNewSess);
+            tcps_sess.Destruct(&pNewSess);
+            TCPSessTblStore(pThis, iSess, NULL);
         }
         srSleep(0, 20000); /* Sleep 20ms */
     }
@@ -2393,6 +2477,56 @@ static void ATTR_NONNULL(1, 2) ApplyReloadProfile(tcpsrv_t *const pThis, const t
     tcpsrvApplyRulesetLive(pThis, profile->ruleset);
 }
 
+static rsRetVal tcpsrvEvaluateSessionPolicyWhileFenced(tcpsrv_t *const server,
+                                                       tcpsrv_reload_session_policy_eval_t evaluate,
+                                                       void *const context,
+                                                       unsigned char *const allowed,
+                                                       const size_t allowedCount) {
+    if (server == NULL || evaluate == NULL || allowed == NULL || allowedCount < (size_t)server->iSessMax)
+        return RS_RET_PARAM_ERROR;
+    if (!server->fenceAcquired || !server->fenceOwnerValid || !pthread_equal(server->fenceOwner, pthread_self()))
+        return RS_RET_PARAM_ERROR;
+    for (int i = 0; i < server->iSessMax; ++i) {
+        tcps_sess_t *const session = TCPSessTblLoad(server, i);
+        int permitted = 1;
+        if (session != NULL) {
+            const rsRetVal ret = evaluate(session, context, &permitted);
+            if (ret != RS_RET_OK) return ret;
+        }
+        allowed[i] = permitted != 0;
+    }
+    return RS_RET_OK;
+}
+
+static void tcpsrvApplySessionPolicyLive(tcpsrv_t *const server,
+                                         const unsigned char *const allowed,
+                                         const size_t allowedCount) {
+    (void)allowedCount;
+    assert(server != NULL && allowed != NULL && allowedCount >= (size_t)server->iSessMax);
+    assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
+    for (int i = 0; i < server->iSessMax; ++i) {
+        tcps_sess_t *const session = TCPSessTblLoad(server, i);
+        if (session != NULL && !allowed[i]) closeDeniedSession(server, session, i);
+    }
+}
+
+static void tcpsrvSwapAllowedSendersLive(tcpsrv_t *const server,
+                                         struct AllowedSenders *const preparedRoot,
+                                         const int useLegacy,
+                                         struct AllowedSenders **const retiredRoot,
+                                         int *const retiredOwned) {
+    tcpLstnPortList_t *const listener = server->pLstnPorts;
+    assert(listener != NULL && listener->pNext == NULL && listener->cnf_params != NULL);
+    assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
+    assert(retiredRoot != NULL && *retiredRoot == NULL && retiredOwned != NULL);
+    *retiredRoot = listener->cnf_params->pAllowedSenderRoot;
+    *retiredOwned = listener->cnf_params->bOwnAllowedSenderRoot;
+    listener->cnf_params->pAllowedSenderRoot = preparedRoot;
+    listener->cnf_params->bOwnAllowedSenderRoot = preparedRoot != NULL;
+    listener->cnf_params->bUseLegacyAllowedSender = useLegacy;
+}
+
+
 void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *const server, uchar *const preparedRegex) {
     tcpLstnPortList_t *const listener = server->pLstnPorts;
 
@@ -2777,6 +2911,9 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetSupportOctetCountedFraming = SetSupportOctetCountedFraming;
     pIf->SetMultiLineForNewSessions = SetMultiLineForNewSessions;
     pIf->ApplyReloadProfile = ApplyReloadProfile;
+    pIf->EvaluateSessionPolicyWhileFenced = tcpsrvEvaluateSessionPolicyWhileFenced;
+    pIf->ApplySessionPolicyLive = tcpsrvApplySessionPolicyLive;
+    pIf->SwapAllowedSendersLive = tcpsrvSwapAllowedSendersLive;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

@@ -29,6 +29,7 @@
 
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
+struct tcpsrv_io_descr_s;
 
 #define TCPSRV_COMPRESS_NEVER 0
 #define TCPSRV_COMPRESS_STREAM_ALWAYS 2
@@ -126,6 +127,7 @@ struct tcps_sess_s {
         sbool bOwnStartRegex; /**< ownedStartRegex has successfully compiled state. */
         regex_t ownedStartRegex; /**< Session-owned immutable delimiter pattern. */
 #endif
+        struct tcpsrv_io_descr_s *pIODescr; /**< Borrowed persistent epoll descriptor; NULL for poll. */
     /** @} */
 };
 
