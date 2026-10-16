@@ -66,6 +66,7 @@
 #include "ruleset.h"
 #include "rainerscript.h"
 #include "parserif.h"
+#include "reload-candidate.h"
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
@@ -78,17 +79,101 @@ DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(nets
 
         static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
-/* Module static data */
+/** @brief Runtime-owned endpoint record; registry removal frees its owned strings.
+ * The server is borrowed; normal module teardown destroys it separately.
+ */
 typedef struct tcpsrv_etry_s {
     tcpsrv_t *tcpsrv;
+    char *endpoint_key; /**< Owned canonical socket identity; NULL for unkeyable endpoints. */
+    char *config_name; /**< Owned inputname copy for diagnostics, never socket identity. */
+    enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
     struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
-static tcpsrv_etry_t *tcpsrv_root = NULL;
-static int n_tcpsrv = 0;
+
+/* Runtime-owned registry foundation for a later reload lifecycle.  It is
+ * private to imtcp and deliberately has no lookup, activation, or message
+ * path role yet: retaining the current list ordering preserves all behavior. */
+static struct {
+    tcpsrv_etry_t *head;
+    int count;
+} endpoint_registry = {0};
 
 static permittedPeers_t *pPermPeersRoot = NULL;
+
+static rsRetVal endpointKeyBuild(const tcpLstnParams_t *const params,
+                                 const char *const networkNamespace,
+                                 char **const key) {
+    const char *const address = params->pszAddr == NULL ? "*" : (const char *)params->pszAddr;
+    const char *const port = params->pszPort == NULL ? "" : (const char *)params->pszPort;
+    const char *const ns = networkNamespace == NULL ? "" : networkNamespace;
+    char *end = NULL;
+    unsigned long numericPort;
+    int printed;
+    size_t required;
+
+    if (key == NULL || *key != NULL) return RS_RET_PARAM_ERROR;
+    if (params->pszLstnPortFileName != NULL) return RS_RET_NOT_IMPLEMENTED;
+    if (*port == '\0') return RS_RET_PARAM_ERROR;
+    errno = 0;
+    numericPort = strtoul(port, &end, 10);
+    if (errno != 0 || end == port || *end != '\0' || numericPort == 0 || numericPort > UINT16_MAX)
+        return RS_RET_NOT_IMPLEMENTED;
+    printed = snprintf(NULL, 0, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(address), address,
+                       (unsigned)numericPort);
+    if (printed < 0) return RS_RET_PARAM_ERROR;
+    required = (size_t)printed;
+    if ((*key = malloc(required + 1)) == NULL) return RS_RET_OUT_OF_MEMORY;
+    snprintf(*key, required + 1, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(address), address,
+             (unsigned)numericPort);
+    return RS_RET_OK;
+}
+
+static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
+                                    const tcpLstnParams_t *const params,
+                                    const char *const networkNamespace,
+                                    const uchar *const configName) {
+    tcpsrv_etry_t *entry = NULL;
+    const tcpsrv_etry_t *existing;
+    DEFiRet;
+
+    if (server == NULL || params == NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(entry = calloc(1, sizeof(*entry)));
+    iRet = endpointKeyBuild(params, networkNamespace, &entry->endpoint_key);
+    if (iRet == RS_RET_NOT_IMPLEMENTED)
+        iRet = RS_RET_OK; /* dynamic/service endpoints remain active but are not reload-keyable */
+    else if (iRet != RS_RET_OK)
+        ABORT_FINALIZE(iRet);
+    if (entry->endpoint_key != NULL) {
+        for (existing = endpoint_registry.head; existing != NULL; existing = existing->next) {
+            if (existing->endpoint_key != NULL && !strcmp(existing->endpoint_key, entry->endpoint_key))
+                ABORT_FINALIZE(RS_RET_DUP_PARAM);
+        }
+    }
+    if (configName != NULL) CHKmalloc(entry->config_name = strdup((const char *)configName));
+    entry->tcpsrv = server;
+    entry->state = IMTCP_ENDPOINT_ACTIVE;
+    entry->next = endpoint_registry.head;
+    endpoint_registry.head = entry;
+    ++endpoint_registry.count;
+    entry = NULL;
+
+finalize_it:
+    if (entry != NULL) {
+        free(entry->endpoint_key);
+        free(entry->config_name);
+        free(entry);
+    }
+    RETiRet;
+}
+
+static void endpointRegistryRemove(tcpsrv_etry_t *const entry) {
+    entry->state = IMTCP_ENDPOINT_RETIRING;
+    free(entry->endpoint_key);
+    free(entry->config_name);
+    free(entry);
+}
 
 /* default number of workers to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
@@ -233,6 +318,8 @@ struct modConfData_s {
     uint64_t compressionMaxDecompressedBytesPerReceive;
     uint64_t compressionMaxTotalZstdWindowBytes;
     sbool compressionMaxTotalZstdWindowBytesSet;
+    /* Exact module origin, owned only by private reload snapshots. */
+    char *reloadModuleLoadName; /**< Owned spelling from the detached catalog; freed with this config. */
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -338,13 +425,16 @@ static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / si
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
 
+static void destructModuleConfigContents(modConfData_t *pModConf);
+
 #define MAX_FRAME_SIZE_LIMIT 200000000
 
-static rsRetVal validateMaxFrameSize(const int maxFrameSize) {
+static rsRetVal validateMaxFrameSize(const int maxFrameSize, const sbool emitDiagnostics) {
     if (maxFrameSize < 1 || maxFrameSize > MAX_FRAME_SIZE_LIMIT) {
-        LogError(0, RS_RET_PARAM_ERROR,
-                 "imtcp: invalid value for 'maxFrameSize' parameter given is %d, valid range is 1..%d", maxFrameSize,
-                 MAX_FRAME_SIZE_LIMIT);
+        if (emitDiagnostics)
+            LogError(0, RS_RET_PARAM_ERROR,
+                     "imtcp: invalid value for 'maxFrameSize' parameter given is %d, valid range is 1..%d",
+                     maxFrameSize, MAX_FRAME_SIZE_LIMIT);
         return RS_RET_PARAM_ERROR;
     }
 
@@ -369,7 +459,7 @@ static rsRetVal validateLegacySessionLimits(void) {
     return RS_RET_OK;
 }
 
-static rsRetVal parseCompressionModeStr(const char *const str, int *const mode) {
+static rsRetVal parseCompressionModeStr(const char *const str, int *const mode, const sbool emitDiagnostics) {
     DEFiRet;
 
     if (strcasecmp(str, "none") == 0) {
@@ -377,7 +467,8 @@ static rsRetVal parseCompressionModeStr(const char *const str, int *const mode) 
     } else if (strcasecmp(str, "stream:always") == 0) {
         *mode = TCPSRV_COMPRESS_STREAM_ALWAYS;
     } else {
-        parser_errmsg("imtcp: invalid compression.mode '%s', supported values are 'none' and 'stream:always'", str);
+        if (emitDiagnostics)
+            parser_errmsg("imtcp: invalid compression.mode '%s', supported values are 'none' and 'stream:always'", str);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -385,17 +476,17 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal parseCompressionMode(es_str_t *const val, int *const mode) {
+static rsRetVal parseCompressionMode(es_str_t *const val, int *const mode, const sbool emitDiagnostics) {
     DEFiRet;
     char *const str = es_str2cstr(val, NULL);
     CHKmalloc(str);
-    CHKiRet(parseCompressionModeStr(str, mode));
+    CHKiRet(parseCompressionModeStr(str, mode, emitDiagnostics));
 finalize_it:
     free(str);
     RETiRet;
 }
 
-static rsRetVal parseCompressionDriverStr(const char *const str, int *const driver) {
+static rsRetVal parseCompressionDriverStr(const char *const str, int *const driver, const sbool emitDiagnostics) {
     DEFiRet;
 
     if (strcasecmp(str, "zlib") == 0) {
@@ -404,11 +495,13 @@ static rsRetVal parseCompressionDriverStr(const char *const str, int *const driv
 #ifdef ENABLE_LIBZSTD
         *driver = TCPSRV_COMPRESS_DRIVER_ZSTD;
 #else
-        parser_errmsg("imtcp: compression.driver='zstd' requires rsyslog to be built with libzstd support");
+        if (emitDiagnostics)
+            parser_errmsg("imtcp: compression.driver='zstd' requires rsyslog to be built with libzstd support");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 #endif
     } else {
-        parser_errmsg("imtcp: invalid compression.driver '%s', supported values are 'zlib' and 'zstd'", str);
+        if (emitDiagnostics)
+            parser_errmsg("imtcp: invalid compression.driver '%s', supported values are 'zlib' and 'zstd'", str);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -416,11 +509,11 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal parseCompressionDriver(es_str_t *const val, int *const driver) {
+static rsRetVal parseCompressionDriver(es_str_t *const val, int *const driver, const sbool emitDiagnostics) {
     DEFiRet;
     char *const str = es_str2cstr(val, NULL);
     CHKmalloc(str);
-    CHKiRet(parseCompressionDriverStr(str, driver));
+    CHKiRet(parseCompressionDriverStr(str, driver, emitDiagnostics));
 finalize_it:
     free(str);
     RETiRet;
@@ -428,7 +521,7 @@ finalize_it:
 
 static rsRetVal setLegacyCompressionMode(void __attribute__((unused)) * pVal, uchar *pNewVal) {
     DEFiRet;
-    CHKiRet(parseCompressionModeStr((const char *)pNewVal, &cs.compressionMode));
+    CHKiRet(parseCompressionModeStr((const char *)pNewVal, &cs.compressionMode, RSTRUE));
 finalize_it:
     free(pNewVal);
     RETiRet;
@@ -436,7 +529,7 @@ finalize_it:
 
 static rsRetVal setLegacyCompressionDriver(void __attribute__((unused)) * pVal, uchar *pNewVal) {
     DEFiRet;
-    CHKiRet(parseCompressionDriverStr((const char *)pNewVal, &cs.compressionDriver));
+    CHKiRet(parseCompressionDriverStr((const char *)pNewVal, &cs.compressionDriver, RSTRUE));
 finalize_it:
     free(pNewVal);
     RETiRet;
@@ -472,15 +565,17 @@ static rsRetVal applySecureDefaultsToStreamDriver(rsconf_t *const cnf,
                                                   int *const streamDriverMode,
                                                   const sbool streamDriverModeSet,
                                                   const uchar *const effectiveStreamDriverName,
-                                                  const char *const context) {
+                                                  const char *const context,
+                                                  const sbool emitDiagnostics) {
     if (glblIsTlsCapableNetstrmDrvr(effectiveStreamDriverName) && *streamDriverMode == 0 &&
         cnf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
         if (streamDriverModeSet) {
-            LogError(0, RS_RET_PARAM_ERROR,
-                     "%s: compatibility.defaults.secure=\"strict\" rejects explicit streamdriver.mode=\"0\" "
-                     "with TLS-capable stream driver \"%s\"; use streamdriver.mode=\"1\" to enable TLS or "
-                     "select ptcp/plain TCP intentionally",
-                     context, (const char *)effectiveStreamDriverName);
+            if (emitDiagnostics)
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "%s: compatibility.defaults.secure=\"strict\" rejects explicit streamdriver.mode=\"0\" "
+                         "with TLS-capable stream driver \"%s\"; use streamdriver.mode=\"1\" to enable TLS or "
+                         "select ptcp/plain TCP intentionally",
+                         context, (const char *)effectiveStreamDriverName);
             return RS_RET_PARAM_ERROR;
         }
         *streamDriverMode = 1;
@@ -503,17 +598,22 @@ static const uchar *getEffectiveInstanceAuthMode(const instanceConf_t *const ins
     return inst->pszStrmDrvrAuthMode == NULL ? modConf->pszStrmDrvrAuthMode : inst->pszStrmDrvrAuthMode;
 }
 
-static rsRetVal applySecureDefaultsToModuleConfig(modConfData_t *const modConf) {
+static rsRetVal applySecureDefaultsToModuleConfig(modConfData_t *const modConf, const sbool emitDiagnostics) {
     return applySecureDefaultsToStreamDriver(modConf->pConf, &modConf->iStrmDrvrMode, modConf->bStrmDrvrModeSet,
-                                             getEffectiveModuleStreamDriver(modConf), "imtcp module");
+                                             getEffectiveModuleStreamDriver(modConf), "imtcp module", emitDiagnostics);
 }
 
-static rsRetVal applySecureDefaultsToInstanceConfig(instanceConf_t *const inst, modConfData_t *const modConf) {
+static rsRetVal applySecureDefaultsToInstanceConfig(instanceConf_t *const inst,
+                                                    const modConfData_t *const modConf,
+                                                    const sbool emitDiagnostics) {
     return applySecureDefaultsToStreamDriver(modConf->pConf, &inst->iStrmDrvrMode, inst->bStrmDrvrModeSet,
-                                             getEffectiveInstanceStreamDriver(inst, modConf), "imtcp input");
+                                             getEffectiveInstanceStreamDriver(inst, modConf), "imtcp input",
+                                             emitDiagnostics);
 }
 
-static rsRetVal applySecureDefaultsToZstdWindow(instanceConf_t *const inst, const modConfData_t *const modConf) {
+static rsRetVal applySecureDefaultsToZstdWindow(instanceConf_t *const inst,
+                                                const modConfData_t *const modConf,
+                                                const sbool emitDiagnostics) {
     const int secure_policy = modConf->pConf->globals.compatDefaultsSecure;
 
     if (inst->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS ||
@@ -523,9 +623,10 @@ static rsRetVal applySecureDefaultsToZstdWindow(instanceConf_t *const inst, cons
 
     if (secure_policy == COMPAT_DEFAULTS_SECURE_STRICT &&
         (!inst->compressionMaxTotalZstdWindowBytesSet || inst->compressionMaxTotalZstdWindowBytes == 0)) {
-        LogError(0, RS_RET_PARAM_ERROR,
-                 "imtcp input: compatibility.defaults.secure=\"strict\" requires an explicit positive "
-                 "compression.maxTotalZstdWindowBytes value for zstd stream decompression");
+        if (emitDiagnostics)
+            LogError(0, RS_RET_PARAM_ERROR,
+                     "imtcp input: compatibility.defaults.secure=\"strict\" requires an explicit positive "
+                     "compression.maxTotalZstdWindowBytes value for zstd stream decompression");
         return RS_RET_PARAM_ERROR;
     }
 
@@ -603,83 +704,103 @@ finalize_it:
     RETiRet;
 }
 
+/* Keep effective defaults in side-effect-free helpers so normal startup and
+ * private reload lowering cannot drift apart. Pointer fields remain NULL from
+ * calloc and are populated only by the normal or private parameter pass. */
+static void initModuleDefaults(modConfData_t *const config) {
+    config->iTCPSessMax = 200;
+    config->iTCPLstnMax = 20;
+    config->numWrkr = DEFAULT_NUMWRKR;
+    config->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
+    config->bSuppOctetFram = 1;
+    config->iStrmDrvrMode = 0;
+    config->bUseFlowControl = 1;
+    config->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+    config->maxFrameSize = 200000;
+    config->bPreserveCase = 1;
+    config->compressionMode = TCPSRV_COMPRESS_NEVER;
+    config->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    config->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    config->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
+    config->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
+}
+
+static void initInstanceDefaults(instanceConf_t *const inst, const modConfData_t *const moduleConfig) {
+    inst->cnf_params->bSuppOctetFram = FRAMING_UNSET;
+    inst->ratelimitInterval = -1;
+    inst->ratelimitBurst = -1;
+    inst->iStrmDrvrMode = moduleConfig->iStrmDrvrMode;
+    inst->bStrmDrvrModeSet = moduleConfig->bStrmDrvrModeSet;
+    inst->iStrmDrvrExtendedCertCheck = moduleConfig->iStrmDrvrExtendedCertCheck;
+    inst->iStrmDrvrSANPreference = moduleConfig->iStrmDrvrSANPreference;
+    inst->iStrmTlsVerifyDepth = moduleConfig->iStrmTlsVerifyDepth;
+    inst->iStrmTlsRevocationCheck = moduleConfig->iStrmTlsRevocationCheck;
+    inst->bKeepAlive = moduleConfig->bKeepAlive;
+    inst->iKeepAliveIntvl = moduleConfig->iKeepAliveIntvl;
+    inst->iKeepAliveProbes = moduleConfig->iKeepAliveProbes;
+    inst->iKeepAliveTime = moduleConfig->iKeepAliveTime;
+    inst->iAddtlFrameDelim = moduleConfig->iAddtlFrameDelim;
+    inst->maxFrameSize = moduleConfig->maxFrameSize;
+    inst->bUseFlowControl = moduleConfig->bUseFlowControl;
+    inst->bDisableLFDelim = moduleConfig->bDisableLFDelim;
+    inst->discardTruncatedMsg = moduleConfig->discardTruncatedMsg;
+    inst->bEmitMsgOnClose = moduleConfig->bEmitMsgOnClose;
+    inst->bEmitMsgOnOpen = moduleConfig->bEmitMsgOnOpen;
+    inst->bPreserveCase = moduleConfig->bPreserveCase;
+    inst->iTCPLstnMax = moduleConfig->iTCPLstnMax;
+    inst->iTCPSessMax = moduleConfig->iTCPSessMax;
+    inst->numWrkr = moduleConfig->numWrkr;
+    inst->starvationMaxReads = moduleConfig->starvationMaxReads;
+    inst->compressionMode = moduleConfig->compressionMode;
+    inst->compressionDriver = moduleConfig->compressionDriver;
+    inst->compressionMaxExpansionRatio = moduleConfig->compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = moduleConfig->compressionMaxDecompressedBytesPerReceive;
+    inst->compressionMaxTotalZstdWindowBytes = moduleConfig->compressionMaxTotalZstdWindowBytes;
+    inst->compressionMaxTotalZstdWindowBytesSet = moduleConfig->compressionMaxTotalZstdWindowBytesSet;
+}
+
 
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
-static rsRetVal createInstance(instanceConf_t **pinst) {
+/* Allocate an owned input configuration without touching loadModConf or
+ * appending it to a live parse tree. Candidate lowering uses this boundary;
+ * callers own the result until they explicitly append or destroy it. */
+static rsRetVal createDetachedInstance(const modConfData_t *const moduleConfig, instanceConf_t **const pinst) {
     instanceConf_t *inst = NULL;
 
     DEFiRet;
+    if (moduleConfig == NULL || pinst == NULL || *pinst != NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     CHKmalloc(inst = (instanceConf_t *)calloc(1, sizeof(instanceConf_t)));
     CHKmalloc(inst->cnf_params = (tcpLstnParams_t *)calloc(1, sizeof(tcpLstnParams_t)));
-    inst->next = NULL;
-    inst->pszBindRuleset = NULL;
-    inst->pszInputName = NULL;
-    inst->dfltTZ = NULL;
-    inst->cnf_params->bSuppOctetFram = -1; /* unset */
-    inst->bSPFramingFix = 0;
-    inst->ratelimitInterval = -1;
-    inst->ratelimitBurst = -1;
+    initInstanceDefaults(inst, moduleConfig);
 
-    inst->pszNetworkNamespace = NULL;
-    inst->pszStrmDrvrName = NULL;
-    inst->pszStrmDrvrAuthMode = NULL;
-    inst->pszStrmDrvrPermitExpiredCerts = NULL;
-    inst->pszStrmDrvrCAFile = NULL;
-    inst->pszStrmDrvrCRLFile = NULL;
-    inst->pszStrmDrvrKeyFile = NULL;
-    inst->pszStrmDrvrCertFile = NULL;
-    inst->pPermPeersRoot = NULL;
-    inst->gnutlsPriorityString = NULL;
-    inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
-    inst->bStrmDrvrModeSet = loadModConf->bStrmDrvrModeSet;
-    inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
-    inst->iStrmDrvrSANPreference = loadModConf->iStrmDrvrSANPreference;
-    inst->iStrmTlsVerifyDepth = loadModConf->iStrmTlsVerifyDepth;
-    inst->iStrmTlsRevocationCheck = loadModConf->iStrmTlsRevocationCheck;
-    inst->bKeepAlive = loadModConf->bKeepAlive;
-    inst->iKeepAliveIntvl = loadModConf->iKeepAliveIntvl;
-    inst->iKeepAliveProbes = loadModConf->iKeepAliveProbes;
-    inst->iKeepAliveTime = loadModConf->iKeepAliveTime;
-    inst->iAddtlFrameDelim = loadModConf->iAddtlFrameDelim;
-    inst->maxFrameSize = loadModConf->maxFrameSize;
-    inst->bUseFlowControl = loadModConf->bUseFlowControl;
-    inst->bDisableLFDelim = loadModConf->bDisableLFDelim;
-    inst->discardTruncatedMsg = loadModConf->discardTruncatedMsg;
-    inst->bEmitMsgOnClose = loadModConf->bEmitMsgOnClose;
-    inst->bEmitMsgOnOpen = loadModConf->bEmitMsgOnOpen;
-    inst->bPreserveCase = loadModConf->bPreserveCase;
-    inst->iSynBacklog = 0; /* default: unset */
-    inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
-    inst->iTCPSessMax = loadModConf->iTCPSessMax;
-    inst->numWrkr = loadModConf->numWrkr;
-    inst->starvationMaxReads = loadModConf->starvationMaxReads;
-    inst->compressionMode = loadModConf->compressionMode;
-    inst->compressionDriver = loadModConf->compressionDriver;
-    inst->compressionMaxExpansionRatio = loadModConf->compressionMaxExpansionRatio;
-    inst->compressionMaxDecompressedBytesPerReceive = loadModConf->compressionMaxDecompressedBytesPerReceive;
-    inst->compressionMaxTotalZstdWindowBytes = loadModConf->compressionMaxTotalZstdWindowBytes;
-    inst->compressionMaxTotalZstdWindowBytesSet = loadModConf->compressionMaxTotalZstdWindowBytesSet;
-    inst->pAllowedSendersRoot = NULL;
-    inst->pAllowedSendersLast = NULL;
-    inst->bAllowedSendersSet = 0;
+    *pinst = inst;
+    inst = NULL;
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (inst != NULL) free(inst->cnf_params);
+        free(inst);
+    }
+    RETiRet;
+}
 
-    inst->cnf_params->pszLstnPortFileName = NULL;
-    inst->cnf_params->bMultiLine = 0;
-    inst->cnf_params->pszStartRegex = NULL;
+static rsRetVal createInstance(instanceConf_t **const pinst) {
+    instanceConf_t *inst = NULL;
+    DEFiRet;
 
-    /* node created, let's add to config */
-    if (loadModConf->tail == NULL) {
+    if (loadModConf == NULL) return RS_RET_PARAM_ERROR;
+    CHKiRet(createDetachedInstance(loadModConf, &inst));
+    if (loadModConf->tail == NULL)
         loadModConf->tail = loadModConf->root = inst;
-    } else {
+    else {
         loadModConf->tail->next = inst;
         loadModConf->tail = inst;
     }
-
     *pinst = inst;
+    inst = NULL;
 finalize_it:
-    if (iRet != RS_RET_OK) {
+    if (inst != NULL) {
         free(inst->cnf_params);
         free(inst);
     }
@@ -742,8 +863,8 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->compressionMaxDecompressedBytesPerReceive = cs.compressionMaxDecompressedBytesPerReceive;
     inst->compressionMaxTotalZstdWindowBytes = cs.compressionMaxTotalZstdWindowBytes;
     inst->compressionMaxTotalZstdWindowBytesSet = cs.compressionMaxTotalZstdWindowBytesSet;
-    CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
-    CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
+    CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf, RSTRUE));
+    CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf, RSTRUE));
     warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
                                      getEffectiveInstanceAuthMode(inst, loadModConf));
 
@@ -868,16 +989,14 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
         inst->cnf_params->bUseLegacyAllowedSender = 1;
     }
     CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, inst->cnf_params));
-    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
+    tcpLstnParams_t *const listenerParams = inst->cnf_params;
+    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, listenerParams);
     inst->cnf_params = NULL; /* ownership transferred to tcpsrv, including setup failure cleanup */
     CHKiRet(iRet);
 
-    tcpsrv_etry_t *etry;
-    CHKmalloc(etry = (tcpsrv_etry_t *)calloc(1, sizeof(tcpsrv_etry_t)));
-    etry->tcpsrv = pOurTcpsrv;
-    etry->next = tcpsrv_root;
-    tcpsrv_root = etry;
-    ++n_tcpsrv;
+    CHKiRet(endpointRegistryAdd(pOurTcpsrv, listenerParams, ns,
+                                inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
+    pOurTcpsrv = NULL; /* endpoint registry owns the configured runtime server */
 
 finalize_it:
     if (iRet != RS_RET_OK) {
@@ -891,25 +1010,17 @@ finalize_it:
 }
 
 
-BEGINnewInpInst
-    struct cnfparamvals *pvals;
-    instanceConf_t *inst;
+/* Apply the parsed input parameter block to an already initialized, owned
+ * instance.  The caller controls whether that instance is detached or linked
+ * into the normal load configuration. */
+static rsRetVal applyInputParams(const modConfData_t *const moduleConfig,
+                                 instanceConf_t *const inst,
+                                 struct cnfparamvals *const pvals,
+                                 const sbool emitDiagnostics) {
     int i;
-    CODESTARTnewInpInst;
-    DBGPRINTF("newInpInst (imtcp)\n");
+    DEFiRet;
 
-    pvals = nvlstGetParams(lst, &inppblk, NULL);
-    if (pvals == NULL) {
-        LogError(0, RS_RET_MISSING_CNFPARAMS, "imtcp: required parameter are missing\n");
-        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-    }
-
-    if (Debug) {
-        dbgprintf("input param blk in imtcp:\n");
-        cnfparamsPrint(&inppblk, pvals);
-    }
-
-    CHKiRet(createInstance(&inst));
+    if (moduleConfig == NULL || inst == NULL || inst->cnf_params == NULL || pvals == NULL) return RS_RET_PARAM_ERROR;
 
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
@@ -938,7 +1049,10 @@ BEGINnewInpInst
             if (pvals[i].val.d.n >= 2) {
                 inst->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
             } else {
-                parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
+                if (emitDiagnostics)
+                    parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
+                else
+                    ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
             }
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
             inst->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
@@ -963,12 +1077,14 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                const rsRetVal peerRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                CHKiRet(peerRet);
             }
         } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
-                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+                if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
                 ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
             }
             inst->bAllowedSendersSet = 1;
@@ -994,7 +1110,7 @@ BEGINnewInpInst
             inst->iAddtlFrameDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxframesize")) {
             const int max = (int)pvals[i].val.d.n;
-            CHKiRet(validateMaxFrameSize(max));
+            CHKiRet(validateMaxFrameSize(max, emitDiagnostics));
             inst->maxFrameSize = max;
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
             inst->iTCPSessMax = (int)pvals[i].val.d.n;
@@ -1025,9 +1141,9 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
             CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "compression.mode")) {
-            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &inst->compressionMode));
+            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &inst->compressionMode, emitDiagnostics));
         } else if (!strcmp(inppblk.descr[i].name, "compression.driver")) {
-            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &inst->compressionDriver));
+            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &inst->compressionDriver, emitDiagnostics));
         } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
             inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
@@ -1049,10 +1165,11 @@ BEGINnewInpInst
 
     if (inst->cnf_params->pszRatelimitName != NULL) {
         if (inst->ratelimitInterval != -1 || inst->ratelimitBurst != -1) {
-            LogError(0, RS_RET_INVALID_PARAMS,
-                     "imtcp: ratelimit.name is mutually exclusive with "
-                     "ratelimit.interval and ratelimit.burst - using named "
-                     "ratelimit");
+            if (emitDiagnostics)
+                LogError(0, RS_RET_INVALID_PARAMS,
+                         "imtcp: ratelimit.name is mutually exclusive with "
+                         "ratelimit.interval and ratelimit.burst - using named "
+                         "ratelimit");
         }
     } else {
         if (inst->ratelimitInterval == -1) {
@@ -1062,13 +1179,39 @@ BEGINnewInpInst
             inst->ratelimitBurst = 10000;
         }
     }
-    CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
-    CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
-    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
-                                     getEffectiveInstanceAuthMode(inst, loadModConf));
+    CHKiRet(applySecureDefaultsToInstanceConfig(inst, moduleConfig, emitDiagnostics));
+    CHKiRet(applySecureDefaultsToZstdWindow(inst, moduleConfig, emitDiagnostics));
+    if (emitDiagnostics)
+        warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, moduleConfig),
+                                         getEffectiveInstanceAuthMode(inst, moduleConfig));
 
 finalize_it:
-    CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
+    RETiRet;
+}
+
+
+BEGINnewInpInst
+    struct cnfparamvals *pvals = NULL;
+    instanceConf_t *inst = NULL;
+    CODESTARTnewInpInst;
+    DBGPRINTF("newInpInst (imtcp)\n");
+
+    pvals = nvlstGetParams(lst, &inppblk, NULL);
+    if (pvals == NULL) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "imtcp: required parameter are missing\n");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
+
+    if (Debug) {
+        dbgprintf("input param blk in imtcp:\n");
+        cnfparamsPrint(&inppblk, pvals);
+    }
+
+    CHKiRet(createInstance(&inst));
+    CHKiRet(applyInputParams(loadModConf, inst, pvals, RSTRUE));
+
+finalize_it:
+    CODE_STD_FINALIZERnewInpInst if (pvals != NULL) cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 
 
@@ -1076,59 +1219,155 @@ BEGINbeginCnfLoad
     CODESTARTbeginCnfLoad;
     loadModConf = pModConf;
     pModConf->pConf = pConf;
-    /* init our settings */
-    loadModConf->iTCPSessMax = 200;
-    loadModConf->iTCPLstnMax = 20;
-    loadModConf->numWrkr = DEFAULT_NUMWRKR;
-    loadModConf->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
-    loadModConf->bSuppOctetFram = 1;
-    loadModConf->iStrmDrvrMode = 0;
-    loadModConf->bStrmDrvrModeSet = 0;
-    loadModConf->iStrmDrvrExtendedCertCheck = 0;
-    loadModConf->iStrmDrvrSANPreference = 0;
-    loadModConf->iStrmTlsVerifyDepth = 0;
-    loadModConf->iStrmTlsRevocationCheck = 0; /* disabled by default */
-    loadModConf->bUseFlowControl = 1;
-    loadModConf->bKeepAlive = 0;
-    loadModConf->iKeepAliveIntvl = 0;
-    loadModConf->iKeepAliveProbes = 0;
-    loadModConf->iKeepAliveTime = 0;
-    loadModConf->bEmitMsgOnClose = 0;
-    loadModConf->bEmitMsgOnOpen = 0;
-    loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
-    loadModConf->maxFrameSize = 200000;
-    loadModConf->bDisableLFDelim = 0;
-    loadModConf->discardTruncatedMsg = 0;
-    loadModConf->gnutlsPriorityString = NULL;
-    loadModConf->pszNetworkNamespace = NULL;
-    loadModConf->pszStrmDrvrName = NULL;
-    loadModConf->pszStrmDrvrAuthMode = NULL;
-    loadModConf->pszStrmDrvrPermitExpiredCerts = NULL;
-    loadModConf->pszStrmDrvrCAFile = NULL;
-    loadModConf->pszStrmDrvrCRLFile = NULL;
-    loadModConf->pszStrmDrvrKeyFile = NULL;
-    loadModConf->pszStrmDrvrCertFile = NULL;
-    loadModConf->pPermPeersRoot = NULL;
-    loadModConf->pAllowedSendersRoot = NULL;
-    loadModConf->pAllowedSendersLast = NULL;
-    loadModConf->bAllowedSendersSet = 0;
-    loadModConf->configSetViaV2Method = 0;
-    loadModConf->bPreserveCase = 1; /* default to true */
-    loadModConf->compressionMode = TCPSRV_COMPRESS_NEVER;
-    loadModConf->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
-    loadModConf->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
-    loadModConf->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
-    loadModConf->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
-    loadModConf->compressionMaxTotalZstdWindowBytesSet = RSFALSE;
+    initModuleDefaults(loadModConf);
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config variables */
     resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
 ENDbeginCnfLoad
 
 
+/* Apply a parsed module parameter block to the explicitly supplied
+ * configuration generation.  No load-list selection happens here. */
+static rsRetVal applyModuleParams(modConfData_t *const moduleConfig,
+                                  struct cnfparamvals *const pvals,
+                                  const sbool emitDiagnostics) {
+    int i;
+    DEFiRet;
+
+    if (moduleConfig == NULL || pvals == NULL) return RS_RET_PARAM_ERROR;
+
+    for (i = 0; i < modpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
+            moduleConfig->bUseFlowControl = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
+            moduleConfig->bDisableLFDelim = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
+            moduleConfig->discardTruncatedMsg = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
+            moduleConfig->bSuppOctetFram = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
+            moduleConfig->bEmitMsgOnClose = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionopen")) {
+            moduleConfig->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
+            moduleConfig->iAddtlFrameDelim = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "maxframesize")) {
+            const int max = (int)pvals[i].val.d.n;
+            CHKiRet(validateMaxFrameSize(max, emitDiagnostics));
+            moduleConfig->maxFrameSize = max;
+        } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
+            moduleConfig->iTCPSessMax = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
+            moduleConfig->starvationMaxReads = (unsigned)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "maxlisteners") ||
+                   !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
+            moduleConfig->iTCPLstnMax = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "workerthreads")) {
+            moduleConfig->numWrkr = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive")) {
+            moduleConfig->bKeepAlive = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive.probes")) {
+            moduleConfig->iKeepAliveProbes = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive.time")) {
+            moduleConfig->iKeepAliveTime = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
+            moduleConfig->iKeepAliveIntvl = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
+            CHKmalloc(moduleConfig->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
+            CHKmalloc(moduleConfig->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
+            moduleConfig->iStrmDrvrMode = (int)pvals[i].val.d.n;
+            moduleConfig->bStrmDrvrModeSet = 1;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
+            moduleConfig->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
+            moduleConfig->iStrmDrvrSANPreference = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
+            if (pvals[i].val.d.n >= 2) {
+                moduleConfig->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
+            } else {
+                if (emitDiagnostics)
+                    parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
+                else
+                    ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
+            moduleConfig->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(peer);
+                const rsRetVal peerRet = net.AddPermittedPeer(&moduleConfig->pPermPeersRoot, peer);
+                free(peer);
+                CHKiRet(peerRet);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
+            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
+                if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            moduleConfig->bAllowedSendersSet = 1;
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(sender);
+                const rsRetVal entryRet = net.addAllowedSenderEntry(&moduleConfig->pAllowedSendersRoot,
+                                                                    &moduleConfig->pAllowedSendersLast, sender);
+                free(sender);
+                CHKiRet(entryRet);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
+            moduleConfig->bPreserveCase = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.mode")) {
+            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &moduleConfig->compressionMode, emitDiagnostics));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
+            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &moduleConfig->compressionDriver, emitDiagnostics));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxexpansionratio")) {
+            moduleConfig->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            moduleConfig->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
+            moduleConfig->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
+            moduleConfig->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
+        } else {
+            dbgprintf(
+                "imtcp: program error, non-handled "
+                "param '%s' in beginCnfLoad\n",
+                modpblk.descr[i].name);
+        }
+    }
+
+    /* remove all of our legacy handlers, as they can not used in addition
+     * the the new-style config method.
+     */
+    moduleConfig->configSetViaV2Method = 1;
+    CHKiRet(applySecureDefaultsToModuleConfig(moduleConfig, emitDiagnostics));
+    if (emitDiagnostics)
+        warnIfInsecureListenerConfigured(moduleConfig->iStrmDrvrMode, getEffectiveModuleStreamDriver(moduleConfig),
+                                         moduleConfig->pszStrmDrvrAuthMode);
+
+finalize_it:
+    RETiRet;
+}
+
+
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
-    int i;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -1143,129 +1382,369 @@ BEGINsetModCnf
         cnfparamsPrint(&modpblk, pvals);
     }
 
-    for (i = 0; i < modpblk.nParams; ++i) {
-        if (!pvals[i].bUsed) continue;
-        if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
-            loadModConf->bUseFlowControl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
-            loadModConf->bDisableLFDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
-            loadModConf->discardTruncatedMsg = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
-            loadModConf->bSuppOctetFram = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
-            loadModConf->bEmitMsgOnClose = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionopen")) {
-            loadModConf->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
-            loadModConf->iAddtlFrameDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "maxframesize")) {
-            const int max = (int)pvals[i].val.d.n;
-            CHKiRet(validateMaxFrameSize(max));
-            loadModConf->maxFrameSize = max;
-        } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
-            loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
-            loadModConf->starvationMaxReads = (unsigned)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "maxlisteners") ||
-                   !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
-            loadModConf->iTCPLstnMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "workerthreads")) {
-            loadModConf->numWrkr = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive")) {
-            loadModConf->bKeepAlive = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive.probes")) {
-            loadModConf->iKeepAliveProbes = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive.time")) {
-            loadModConf->iKeepAliveTime = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
-            loadModConf->iKeepAliveIntvl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
-            CHKmalloc(loadModConf->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
-            CHKmalloc(loadModConf->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
-            loadModConf->iStrmDrvrMode = (int)pvals[i].val.d.n;
-            loadModConf->bStrmDrvrModeSet = 1;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
-            loadModConf->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
-            loadModConf->iStrmDrvrSANPreference = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
-            if (pvals[i].val.d.n >= 2) {
-                loadModConf->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
-            } else {
-                parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
-            }
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
-            loadModConf->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
-            CHKmalloc(loadModConf->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            CHKmalloc(loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
-            CHKmalloc(loadModConf->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
-                free(peer);
-            }
-        } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
-            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
-                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
-                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-            loadModConf->bAllowedSendersSet = 1;
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKmalloc(sender);
-                const rsRetVal entryRet = net.addAllowedSenderEntry(&loadModConf->pAllowedSendersRoot,
-                                                                    &loadModConf->pAllowedSendersLast, sender);
-                free(sender);
-                CHKiRet(entryRet);
-            }
-        } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
-            loadModConf->bPreserveCase = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "compression.mode")) {
-            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &loadModConf->compressionMode));
-        } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
-            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &loadModConf->compressionDriver));
-        } else if (!strcmp(modpblk.descr[i].name, "compression.maxexpansionratio")) {
-            loadModConf->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
-            loadModConf->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
-            loadModConf->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
-            loadModConf->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
-        } else {
-            dbgprintf(
-                "imtcp: program error, non-handled "
-                "param '%s' in beginCnfLoad\n",
-                modpblk.descr[i].name);
-        }
-    }
-
-    /* remove all of our legacy handlers, as they can not used in addition
-     * the the new-style config method.
-     */
+    CHKiRet(applyModuleParams(loadModConf, pvals, RSTRUE));
+    /* New-style module configuration disables the legacy handlers only after
+     * the explicit generation has accepted the complete parameter block. */
     bLegacyCnfModGlobalsPermitted = 0;
-    loadModConf->configSetViaV2Method = 1;
-    CHKiRet(applySecureDefaultsToModuleConfig(loadModConf));
-    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, getEffectiveModuleStreamDriver(loadModConf),
-                                     loadModConf->pszStrmDrvrAuthMode);
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
+
+
+static int nvlstNameEquals(const es_str_t *const name, const char *const expected) {
+    const size_t expectedLength = strlen(expected);
+    return name != NULL && es_strlen((es_str_t *)name) == expectedLength &&
+           strncasecmp((const char *)es_getBufAddr((es_str_t *)name), expected, expectedLength) == 0;
+}
+
+static const struct nvlst *findSourceParam(const struct nvlst *list, const char *const name) {
+    for (; list != NULL; list = list->next) {
+        if (nvlstNameEquals(list->name, name)) return list;
+    }
+    return NULL;
+}
+
+static int sourceStringEquals(const struct nvlst *const param, const char *const expected) {
+    const size_t expectedLength = strlen(expected);
+    return param != NULL && param->val.datatype == 'S' && param->val.d.estr != NULL &&
+           es_strlen(param->val.d.estr) == expectedLength &&
+           strncasecmp((const char *)es_getBufAddr(param->val.d.estr), expected, expectedLength) == 0;
+}
+
+static int sourceModuleIsImtcp(const struct cnfobj *const object) {
+    const struct nvlst *const load = findSourceParam(object->nvlst, "load");
+    const char *path;
+    size_t length;
+    size_t baseOffset = 0;
+    size_t i;
+
+    if (load == NULL || load->val.datatype != 'S' || load->val.d.estr == NULL) return 0;
+    path = (const char *)es_getBufAddr(load->val.d.estr);
+    length = es_strlen(load->val.d.estr);
+    for (i = 0; i < length; ++i) {
+        if (path[i] == '/') baseOffset = i + 1;
+    }
+    length -= baseOffset;
+    return (length == sizeof("imtcp") - 1 && !strncasecmp(path + baseOffset, "imtcp", length)) ||
+           (length == sizeof("imtcp.so") - 1 && !strncasecmp(path + baseOffset, "imtcp.so", length));
+}
+
+static int sourceInputIsImtcp(const struct cnfobj *const object) {
+    return sourceStringEquals(findSourceParam(object->nvlst, "type"), "imtcp");
+}
+
+static int sourceParamKnown(const es_str_t *const name,
+                            const struct cnfparamblk *const block,
+                            const char *const genericName) {
+    int i;
+    if (nvlstNameEquals(name, genericName) || nvlstNameEquals(name, "config.enabled")) return 1;
+    for (i = 0; i < block->nParams; ++i) {
+        if (nvlstNameEquals(name, block->descr[i].name)) return 1;
+    }
+    return 0;
+}
+
+static rsRetVal validateSourceParams(const struct nvlst *list,
+                                     const struct cnfparamblk *const block,
+                                     const char *const genericName) {
+    for (; list != NULL; list = list->next) {
+        if (!sourceParamKnown(list->name, block, genericName)) return RS_RET_NOT_IMPLEMENTED;
+    }
+    return RS_RET_OK;
+}
+
+typedef struct imtcpReloadBuildContext_s {
+    modConfData_t *config;
+    int moduleSeen;
+} imtcpReloadBuildContext_t;
+
+static int reloadStringEqual(const char *const left, const char *const right) {
+    return left == right || (left != NULL && right != NULL && !strcmp(left, right));
+}
+
+static int reloadUStringEqual(const uchar *const left, const uchar *const right) {
+    return reloadStringEqual((const char *)left, (const char *)right);
+}
+
+static int reloadRulesetNameEqual(const uchar *const left, const uchar *const right) {
+    return left == right || (left != NULL && right != NULL && !strcasecmp((const char *)left, (const char *)right));
+}
+
+static int reloadPermittedPeersEqual(const permittedPeers_t *left, const permittedPeers_t *right) {
+    while (left != NULL && right != NULL) {
+        if (!reloadUStringEqual(left->pszID, right->pszID)) return 0;
+        left = left->pNext;
+        right = right->pNext;
+    }
+    return left == NULL && right == NULL;
+}
+
+static int reloadSockaddrEqual(const struct sockaddr *const left, const struct sockaddr *const right) {
+    if (left == right) return 1;
+    if (left == NULL || right == NULL || left->sa_family != right->sa_family) return 0;
+    if (left->sa_family == AF_INET) {
+        const struct sockaddr_in *const left4 = (const struct sockaddr_in *)(const void *)left;
+        const struct sockaddr_in *const right4 = (const struct sockaddr_in *)(const void *)right;
+        return left4->sin_addr.s_addr == right4->sin_addr.s_addr;
+    }
+    if (left->sa_family == AF_INET6) {
+        const struct sockaddr_in6 *const left6 = (const struct sockaddr_in6 *)(const void *)left;
+        const struct sockaddr_in6 *const right6 = (const struct sockaddr_in6 *)(const void *)right;
+        return left6->sin6_scope_id == right6->sin6_scope_id &&
+               !memcmp(&left6->sin6_addr, &right6->sin6_addr, sizeof(left6->sin6_addr));
+    }
+    return SALEN((struct sockaddr *)left) == SALEN((struct sockaddr *)right) &&
+           !memcmp(left, right, SALEN((struct sockaddr *)left));
+}
+
+static int reloadAllowedSendersEqual(const struct AllowedSenders *left, const struct AllowedSenders *right) {
+    while (left != NULL && right != NULL) {
+        if (left->SignificantBits != right->SignificantBits || left->allowedSender.flags != right->allowedSender.flags)
+            return 0;
+        if (F_ISSET(left->allowedSender.flags, ADDR_NAME)) {
+            if (!reloadStringEqual(left->allowedSender.addr.HostWildcard, right->allowedSender.addr.HostWildcard))
+                return 0;
+        } else if (!reloadSockaddrEqual(left->allowedSender.addr.NetAddr, right->allowedSender.addr.NetAddr)) {
+            return 0;
+        }
+        left = left->pNext;
+        right = right->pNext;
+    }
+    return left == NULL && right == NULL;
+}
+
+static const uchar *reloadEffectiveString(const uchar *const inputValue, const uchar *const moduleValue) {
+    return inputValue == NULL ? moduleValue : inputValue;
+}
+
+static const char *reloadEffectiveNamespace(const instanceConf_t *const inst, const modConfData_t *const module) {
+    return inst->pszNetworkNamespace == NULL ? module->pszNetworkNamespace : inst->pszNetworkNamespace;
+}
+
+static const permittedPeers_t *reloadEffectivePermittedPeers(const instanceConf_t *const inst,
+                                                             const modConfData_t *const module) {
+    return inst->pPermPeersRoot == NULL ? module->pPermPeersRoot : inst->pPermPeersRoot;
+}
+
+static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instanceConf_t *const inst,
+                                                                  const modConfData_t *const module,
+                                                                  int *const usesLegacy) {
+    if (inst->bAllowedSendersSet) {
+        *usesLegacy = 0;
+        return inst->pAllowedSendersRoot;
+    }
+    if (module->bAllowedSendersSet) {
+        *usesLegacy = 0;
+        return module->pAllowedSendersRoot;
+    }
+    *usesLegacy = 1;
+    return NULL;
+}
+
+static int reloadInstanceEqual(const instanceConf_t *const left,
+                               const modConfData_t *const leftModule,
+                               const instanceConf_t *const right,
+                               const modConfData_t *const rightModule) {
+    int leftLegacyAcl;
+    int rightLegacyAcl;
+    const struct AllowedSenders *const leftAllowed = reloadEffectiveAllowedSenders(left, leftModule, &leftLegacyAcl);
+    const struct AllowedSenders *const rightAllowed =
+        reloadEffectiveAllowedSenders(right, rightModule, &rightLegacyAcl);
+    const tcpLstnParams_t *const leftParams = left->cnf_params;
+    const tcpLstnParams_t *const rightParams = right->cnf_params;
+
+    if (leftParams == NULL || rightParams == NULL) return 0;
+    return left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax &&
+           left->numWrkr == right->numWrkr && reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+           reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
+                              right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
+           reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
+                              right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ) &&
+           left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
+           left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
+           left->maxFrameSize == right->maxFrameSize && left->bUseFlowControl == right->bUseFlowControl &&
+           left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
+           left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
+           left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
+           reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
+                             reloadEffectiveNamespace(right, rightModule)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrName, leftModule->pszStrmDrvrName),
+                              reloadEffectiveString(right->pszStrmDrvrName, rightModule->pszStrmDrvrName)) &&
+           left->iStrmDrvrMode == right->iStrmDrvrMode &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrAuthMode, leftModule->pszStrmDrvrAuthMode),
+                              reloadEffectiveString(right->pszStrmDrvrAuthMode, rightModule->pszStrmDrvrAuthMode)) &&
+           reloadUStringEqual(
+               reloadEffectiveString(left->pszStrmDrvrPermitExpiredCerts, leftModule->pszStrmDrvrPermitExpiredCerts),
+               reloadEffectiveString(right->pszStrmDrvrPermitExpiredCerts,
+                                     rightModule->pszStrmDrvrPermitExpiredCerts)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrCAFile, leftModule->pszStrmDrvrCAFile),
+                              reloadEffectiveString(right->pszStrmDrvrCAFile, rightModule->pszStrmDrvrCAFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrCRLFile, leftModule->pszStrmDrvrCRLFile),
+                              reloadEffectiveString(right->pszStrmDrvrCRLFile, rightModule->pszStrmDrvrCRLFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrKeyFile, leftModule->pszStrmDrvrKeyFile),
+                              reloadEffectiveString(right->pszStrmDrvrKeyFile, rightModule->pszStrmDrvrKeyFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrCertFile, leftModule->pszStrmDrvrCertFile),
+                              reloadEffectiveString(right->pszStrmDrvrCertFile, rightModule->pszStrmDrvrCertFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->gnutlsPriorityString, leftModule->gnutlsPriorityString),
+                              reloadEffectiveString(right->gnutlsPriorityString, rightModule->gnutlsPriorityString)) &&
+           left->iStrmDrvrExtendedCertCheck == right->iStrmDrvrExtendedCertCheck &&
+           left->iStrmDrvrSANPreference == right->iStrmDrvrSANPreference &&
+           left->iStrmTlsVerifyDepth == right->iStrmTlsVerifyDepth &&
+           left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck && left->bKeepAlive == right->bKeepAlive &&
+           left->iKeepAliveIntvl == right->iKeepAliveIntvl && left->iKeepAliveProbes == right->iKeepAliveProbes &&
+           left->iKeepAliveTime == right->iKeepAliveTime && left->starvationMaxReads == right->starvationMaxReads &&
+           left->compressionMode == right->compressionMode && left->compressionDriver == right->compressionDriver &&
+           left->compressionMaxExpansionRatio == right->compressionMaxExpansionRatio &&
+           left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
+           left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
+           left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet &&
+           reloadUStringEqual(leftParams->pszPort, rightParams->pszPort) &&
+           reloadUStringEqual(leftParams->pszAddr, rightParams->pszAddr) &&
+           leftParams->bSuppOctetFram == rightParams->bSuppOctetFram &&
+           reloadUStringEqual(leftParams->pszLstnPortFileName, rightParams->pszLstnPortFileName) &&
+           leftParams->bMultiLine == rightParams->bMultiLine &&
+           reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
+           reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
+           leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
+           reloadPermittedPeersEqual(reloadEffectivePermittedPeers(left, leftModule),
+                                     reloadEffectivePermittedPeers(right, rightModule));
+}
+
+static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
+                                                const void *const pNewCnf,
+                                                eModReloadCapability_t *const pCapability) {
+    const modConfData_t *const oldConfig = pOldCnf;
+    const modConfData_t *const newConfig = pNewCnf;
+    const instanceConf_t *oldInst;
+    const instanceConf_t *newInst;
+
+    if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
+    *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
+    if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
+    oldInst = oldConfig->root;
+    newInst = newConfig->root;
+    while (oldInst != NULL && newInst != NULL) {
+        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig)) return RS_RET_OK;
+        oldInst = oldInst->next;
+        newInst = newInst->next;
+    }
+    if (oldInst == NULL && newInst == NULL) *pCapability = eMOD_RELOAD_REUSE;
+    return RS_RET_OK;
+}
+
+static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
+                                        const size_t __attribute__((unused)) parseOrdinal,
+                                        void *const context) {
+    imtcpReloadBuildContext_t *const build = context;
+    struct cnfparamvals *pvals = NULL;
+    struct nvlst *paramsClone = NULL;
+    instanceConf_t *inst = NULL;
+    DEFiRet;
+
+    if (object->objType == CNFOBJ_MODULE && sourceModuleIsImtcp(object)) {
+        const struct nvlst *const load = findSourceParam(object->nvlst, "load");
+        if (build->moduleSeen) ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
+        if (findSourceParam(object->nvlst, "allowedsender") != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        CHKiRet(validateSourceParams(object->nvlst, &modpblk, "load"));
+        CHKmalloc(build->config->reloadModuleLoadName = es_str2cstr(load->val.d.estr, NULL));
+        CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
+        pvals = nvlstGetParams(paramsClone, &modpblk, NULL);
+        if (pvals == NULL) ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+        CHKiRet(applyModuleParams(build->config, pvals, RSFALSE));
+        build->moduleSeen = 1;
+        FINALIZE;
+    }
+    if (object->objType != CNFOBJ_INPUT || !sourceInputIsImtcp(object)) FINALIZE;
+    if (!build->moduleSeen) ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    if (findSourceParam(object->nvlst, "allowedsender") != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    CHKiRet(validateSourceParams(object->nvlst, &inppblk, "type"));
+    CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
+    pvals = nvlstGetParams(paramsClone, &inppblk, NULL);
+    if (pvals == NULL) ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+    CHKiRet(createDetachedInstance(build->config, &inst));
+    if (build->config->tail == NULL)
+        build->config->root = build->config->tail = inst;
+    else {
+        build->config->tail->next = inst;
+        build->config->tail = inst;
+    }
+    inst = NULL; /* the detached candidate configuration now owns it */
+    CHKiRet(applyInputParams(build->config, build->config->tail, pvals, RSFALSE));
+
+finalize_it:
+    if (pvals != NULL) cnfparamvalsDestruct(pvals, object->objType == CNFOBJ_MODULE ? &modpblk : &inppblk);
+    nvlstDestruct(paramsClone);
+    if (inst != NULL) {
+        free(inst->cnf_params);
+        free(inst);
+    }
+    RETiRet;
+}
+
+static rsRetVal buildReloadSourceCandidateV1(const modReloadSourceBuildContextV1_t *const context,
+                                             void **const pCandidateCnf) {
+    modConfData_t *candidate = NULL;
+    imtcpReloadBuildContext_t build;
+    instanceConf_t *inst;
+    DEFiRet;
+
+    if (context == NULL || context->version != MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1 ||
+        context->structSize < sizeof(*context) || (context->flags & MOD_RELOAD_SOURCE_BASE_UNCHANGED) == 0 ||
+        context->sourceCatalog == NULL || context->activeBase == NULL || pCandidateCnf == NULL ||
+        *pCandidateCnf != NULL)
+        return RS_RET_PARAM_ERROR;
+    CHKmalloc(candidate = calloc(1, sizeof(*candidate)));
+    candidate->pConf = (rsconf_t *)context->activeBase;
+    initModuleDefaults(candidate);
+    build.config = candidate;
+    build.moduleSeen = 0;
+    CHKiRet(rsReloadCandidateVisitObjectsV1(context->sourceCatalog, lowerReloadSourceObject, &build));
+    if (!build.moduleSeen) ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    for (inst = candidate->root; inst != NULL; inst = inst->next) {
+        if (inst->cnf_params->bSuppOctetFram == FRAMING_UNSET)
+            inst->cnf_params->bSuppOctetFram = candidate->bSuppOctetFram;
+        if (inst->cnf_params->pszLstnPortFileName == NULL &&
+            reloadUStringEqual(inst->cnf_params->pszPort, UCHAR_CONSTANT("0"))) {
+            uchar *normalizedPort = (uchar *)strdup("514");
+            CHKmalloc(normalizedPort);
+            free((void *)inst->cnf_params->pszPort);
+            inst->cnf_params->pszPort = normalizedPort;
+        }
+    }
+    *pCandidateCnf = candidate;
+    candidate = NULL;
+
+finalize_it:
+    if (candidate != NULL) {
+        destructModuleConfigContents(candidate);
+        free(candidate);
+    }
+    RETiRet;
+}
+
+static void destructReloadSourceCandidateV1(void **const pCandidateCnf) {
+    modConfData_t *candidate;
+    if (pCandidateCnf == NULL || *pCandidateCnf == NULL) return;
+    candidate = *pCandidateCnf;
+    *pCandidateCnf = NULL;
+    destructModuleConfigContents(candidate);
+    free(candidate);
+}
+
+static rsRetVal getReloadSourceInterfaceV1(modReloadSourceInterfaceV1_t *const interface) {
+    const size_t minimumSize =
+        offsetof(modReloadSourceInterfaceV1_t, destructCandidate) + sizeof(interface->destructCandidate);
+    const size_t classifierSize =
+        offsetof(modReloadSourceInterfaceV1_t, classifyCandidate) + sizeof(interface->classifyCandidate);
+    if (interface == NULL || interface->version != eMOD_RELOAD_SOURCE_INTERFACE_V1 ||
+        interface->structSize < minimumSize)
+        return RS_RET_MISSING_INTERFACE;
+    interface->buildCandidate = buildReloadSourceCandidateV1;
+    interface->destructCandidate = destructReloadSourceCandidateV1;
+    if (interface->structSize >= classifierSize) interface->classifyCandidate = classifyReloadSourceCandidateV1;
+    return RS_RET_OK;
+}
 
 
 BEGINendCnfLoad
@@ -1309,7 +1788,7 @@ BEGINendCnfLoad
             cs.pszStrmDrvrAuthMode = NULL;
         }
         pModConf->bPreserveCase = cs.bPreserveCase;
-        iRet = applySecureDefaultsToModuleConfig(pModConf);
+        iRet = applySecureDefaultsToModuleConfig(pModConf, RSTRUE);
         if (iRet != RS_RET_OK) {
             free(cs.pszStrmDrvrAuthMode);
             cs.pszStrmDrvrAuthMode = NULL;
@@ -1359,8 +1838,8 @@ BEGINactivateCnfPrePrivDrop
         const rsRetVal localRet = addListner(runModConf, inst);
         if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
-    if (tcpsrv_root == NULL) ABORT_FINALIZE(RS_RET_NO_RUN);
-    tcpsrv_etry_t *etry = tcpsrv_root;
+    if (endpoint_registry.head == NULL) ABORT_FINALIZE(RS_RET_NO_RUN);
+    tcpsrv_etry_t *etry = endpoint_registry.head;
     while (etry != NULL) {
         CHKiRet(tcpsrv.ConstructFinalize(etry->tcpsrv));
         etry = etry->next;
@@ -1375,10 +1854,11 @@ BEGINactivateCnf
 ENDactivateCnf
 
 
-BEGINfreeCnf
+static void destructModuleConfigContents(modConfData_t *const pModConf) {
     instanceConf_t *inst, *del;
-    CODESTARTfreeCnf;
+    if (pModConf == NULL) return;
     free(pModConf->gnutlsPriorityString);
+    free(pModConf->reloadModuleLoadName);
     free(pModConf->pszNetworkNamespace);
     free(pModConf->pszStrmDrvrName);
     free(pModConf->pszStrmDrvrAuthMode);
@@ -1430,6 +1910,12 @@ BEGINfreeCnf
         inst = inst->next;
         free(del);
     }
+}
+
+
+BEGINfreeCnf
+    CODESTARTfreeCnf;
+    destructModuleConfigContents(pModConf);
 ENDfreeCnf
 
 static void *RunServerThread(void *myself) {
@@ -1494,16 +1980,16 @@ static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
  */
 BEGINrunInput
     CODESTARTrunInput;
-    tcpsrv_etry_t *etry = tcpsrv_root->next;
+    tcpsrv_etry_t *etry = endpoint_registry.head->next;
     while (etry != NULL) {
         startSrvWrkr(etry);
         etry = etry->next;
     }
 
-    iRet = tcpsrv.Run(tcpsrv_root->tcpsrv);
+    iRet = tcpsrv.Run(endpoint_registry.head->tcpsrv);
 
     /* de-init remaining servers */
-    etry = tcpsrv_root->next;
+    etry = endpoint_registry.head->next;
     while (etry != NULL) {
         stopSrvWrkr(etry);
         etry = etry->next;
@@ -1520,14 +2006,16 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
-    tcpsrv_etry_t *etry = tcpsrv_root;
+    tcpsrv_etry_t *etry = endpoint_registry.head;
     tcpsrv_etry_t *del;
     while (etry != NULL) {
         iRet = tcpsrv.Destruct(&etry->tcpsrv);
         del = etry;
         etry = etry->next;
-        free(del);
+        endpointRegistryRemove(del);
     }
+    endpoint_registry.head = NULL;
+    endpoint_registry.count = 0;
     net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
@@ -1590,6 +2078,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
     CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
     CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+    CODEqueryEtryPt_RELOAD_SOURCE_V1_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
@@ -1597,7 +2086,8 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    CODEmodInit_QueryRegCFSLineHdlr tcpsrv_root = NULL;
+    CODEmodInit_QueryRegCFSLineHdlr endpoint_registry.head = NULL;
+    endpoint_registry.count = 0;
     /* request objects we use */
     CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));

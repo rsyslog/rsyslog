@@ -98,15 +98,15 @@ typedef enum eModKeepType_ { eMOD_NOKEEP, eMOD_KEEP } eModKeepType_t;
  * configuration pair.  A module must never return a less restrictive class
  * unless it can preserve the stated lifecycle guarantee.
  *
- * The enum deliberately describes a capability, not a request to reload. No
- * current caller acts on it; a future configuration-diff manager may use it
- * to decide whether a running process can apply a change.
+ * The enum describes a capability, not a request to reload. Classification
+ * alone never authorizes activation; the controller applies its scope gates.
  */
 typedef enum eModReloadCapability_ {
     eMOD_RELOAD_RESTART_REQUIRED = 0, /**< Conservative default; process restart needed. */
     eMOD_RELOAD_LIVE_SWAP = 1, /**< Switch existing users to the replacement. */
     eMOD_RELOAD_NEW_SESSIONS = 2, /**< Existing users retain the old configuration. */
-    eMOD_RELOAD_DRAIN_REPLACE = 3 /**< Drain old users before using the replacement. */
+    eMOD_RELOAD_DRAIN_REPLACE = 3, /**< Drain old users before using the replacement. */
+    eMOD_RELOAD_REUSE = 4 /**< Effective configuration is unchanged. */
 } eModReloadCapability_t;
 
 /**
@@ -164,7 +164,9 @@ typedef rsRetVal (*modReloadRetireV1_t)(void *pReloadState);
 typedef enum eModReloadCapabilityFlags_ {
     eMOD_RELOAD_CAP_VALIDATE_PRIVATE = 1U << 0, /**< Validation has no external effects. */
     eMOD_RELOAD_CAP_PREPARE = 1U << 1, /**< Fallible preparation can be unwound. */
-    eMOD_RELOAD_CAP_REUSE = 1U << 2, /**< Active reused resources retain their owner. */
+    /** Unchanged effective configuration retains current runtime state;
+     * this alone does not imply support for a mutating transition. */
+    eMOD_RELOAD_CAP_REUSE = 1U << 2,
     eMOD_RELOAD_CAP_COMMIT = 1U << 3, /**< Commit cannot fail. */
     eMOD_RELOAD_CAP_RETIRE = 1U << 4 /**< Old resources survive until quiescence. */
 } eModReloadCapabilityFlags_t;
@@ -187,6 +189,58 @@ typedef struct modReloadInterfaceV1_s {
  * modules remain supported by not exporting this optional entry point.
  */
 typedef rsRetVal (*modReloadGetInterfaceV1_t)(modReloadInterfaceV1_t *pInterface);
+
+/** @brief Optional source-lowering companion for modules whose effective
+ * configuration cannot be reconstructed generically by the core. */
+struct rsReloadCandidate_s;
+/** @brief Controller-proven assumptions available during private lowering. */
+typedef enum modReloadSourceBuildFlagsV1_e {
+    /* The controller proved that globals/base settings used by the module did
+     * not change. V1 lowerers may therefore consult activeBase. */
+    MOD_RELOAD_SOURCE_BASE_UNCHANGED = 1U << 0
+} modReloadSourceBuildFlagsV1_t;
+/** @brief Borrowed inputs valid only for the duration of buildCandidate(). */
+typedef struct modReloadSourceBuildContextV1_s {
+    unsigned version; /**< MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1. */
+    size_t structSize; /**< Available context bytes, for versioned extension. */
+    unsigned flags; /**< Controller proofs from modReloadSourceBuildFlagsV1_t. */
+    const struct rsReloadCandidate_s *sourceCatalog; /**< Immutable module/input syntax catalog. */
+    const rsconf_t *activeBase; /**< Borrowed active base; consult only with BASE_UNCHANGED. */
+} modReloadSourceBuildContextV1_t;
+#define MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1 1
+/** @brief Lower a catalog into a privately owned effective snapshot.
+ *
+ * buildCandidate borrows the context and catalog and publishes output only on
+ * success. The controller owns that effective source snapshot and keeps the
+ * module referenced. It lowers both the published active source catalog and
+ * the candidate catalog for comparison, so consumed runtime module configs are
+ * never used as baselines. Classification and preparation only borrow these
+ * snapshots; preparation must deep-own anything retained. The controller
+ * destroys both snapshots after prepare and atomically publishes the candidate
+ * source catalog only if commit succeeds. */
+typedef rsRetVal (*modReloadSourceBuildV1_t)(const modReloadSourceBuildContextV1_t *context, void **pCandidateCnf);
+/** @brief Destroy a module-allocated snapshot and clear its caller-owned pointer. */
+typedef void (*modReloadSourceDestructV1_t)(void **pCandidateCnf);
+/** @brief Compare borrowed snapshots without mutating them or live configuration.
+ * @param pOldCnf Independently lowered active source snapshot.
+ * @param pNewCnf Independently lowered candidate source snapshot.
+ * @param pCapability Output capability; failure must not authorize activation.
+ * @return RS_RET_OK for a classification, or the lowering-specific error.
+ */
+typedef rsRetVal (*modReloadSourceClassifyV1_t)(const void *pOldCnf,
+                                                const void *pNewCnf,
+                                                eModReloadCapability_t *pCapability);
+/** @brief Size-versioned source companion; module must outlive its snapshots. */
+typedef struct modReloadSourceInterfaceV1_s {
+    unsigned version; /**< eMOD_RELOAD_SOURCE_INTERFACE_V1. */
+    size_t structSize; /**< Available bytes; older providers may omit classification. */
+    modReloadSourceBuildV1_t buildCandidate; /**< Required private snapshot builder. */
+    modReloadSourceDestructV1_t destructCandidate; /**< Required matching destructor. */
+    /** Optional exact comparison of two independently lowered snapshots. */
+    modReloadSourceClassifyV1_t classifyCandidate;
+} modReloadSourceInterfaceV1_t;
+#define eMOD_RELOAD_SOURCE_INTERFACE_V1 1
+typedef rsRetVal (*modReloadSourceGetInterfaceV1_t)(modReloadSourceInterfaceV1_t *pInterface);
 
 struct modInfo_s {
     struct modInfo_s *pPrev; /* support for creating a double linked module list */
@@ -267,14 +321,16 @@ struct modInfo_s {
 #endif
     /** Optional reload lifecycle; unavailable hooks mean restart required. */
     modReloadInterfaceV1_t reloadV1;
+    /* Optional private source lowerer used before reload classification. */
+    modReloadSourceInterfaceV1_t reloadSourceV1;
 };
 
-/** @brief Test whether a module advertises every required v1 lifecycle hook.
+/** @brief Test the complete lifecycle required for a mutating reload transition.
  * @param pMod Borrowed module record, or NULL for unsupported.
  * @return True only for a valid interface, complete flags, and lifecycle hooks.
- * A future diff manager must use this predicate before accepting any
- * non-restart capability.  It also makes partially implemented optional
- * interfaces conservative.
+ * REUSE changes no runtime state: it requires a valid classifier and
+ * eMOD_RELOAD_CAP_REUSE but not prepare/commit/retire hooks. Use
+ * modReloadClassify() to apply that distinction conservatively.
  */
 sbool modReloadHasLifecycleHooks(const modInfo_t *pMod);
 /** @brief Check version and minimum size without invoking callbacks.
@@ -282,6 +338,30 @@ sbool modReloadHasLifecycleHooks(const modInfo_t *pMod);
  * @return True for a supported v1 header, false otherwise.
  */
 sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
+/** @brief Check source companion version, size, builder, and destructor. */
+sbool modReloadHasValidSourceInterfaceV1(const modInfo_t *pMod);
+/** @brief Build a privately owned snapshot; clean up partial output on failure.
+ * @param pMod Referenced module, retained until snapshot destruction.
+ * @param context Borrowed catalog/base context for the callback duration.
+ * @param pCandidateCnf Non-NULL output address initially containing NULL.
+ * @return RS_RET_OK with non-NULL output, or an error with output cleaned up.
+ */
+rsRetVal modReloadBuildSourceCandidateV1(const modInfo_t *pMod,
+                                         const modReloadSourceBuildContextV1_t *context,
+                                         void **pCandidateCnf);
+/** @brief Release a snapshot through its still-referenced module; NULL is harmless. */
+void modReloadDestructSourceCandidateV1(const modInfo_t *pMod, void **pCandidateCnf);
+/** @brief Compare borrowed source snapshots, defaulting absent callbacks to restart.
+ * @param pMod Referenced module with a valid source companion.
+ * @param pOldCnf Borrowed active snapshot, non-NULL.
+ * @param pNewCnf Borrowed candidate snapshot, non-NULL.
+ * @param pCapability Non-NULL output; restart-required on callback failure.
+ * @return Callback status, or RS_RET_PARAM_ERROR for invalid inputs/results.
+ */
+rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *pMod,
+                                            const void *pOldCnf,
+                                            const void *pNewCnf,
+                                            eModReloadCapability_t *pCapability);
 
 /** @brief Conservatively classify a change using borrowed immutable objects.
  * @param pMod Borrowed module record, or NULL for unsupported.

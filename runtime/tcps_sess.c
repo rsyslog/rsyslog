@@ -114,7 +114,7 @@ static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
 #ifdef FEATURE_REGEXP
-    if (pThis->pLstnInfo->bHasStartRegex) {
+    if (pThis->bHasStartRegex) {
         size_t regexBufSize;
         uchar *pMsgTmp;
 
@@ -280,12 +280,12 @@ static ATTR_NONNULL() rsRetVal maybeDetectTlsClientHello(tcps_sess_t *pThis, con
     DEFiRet;
     if (pThis->tlsProbeDone) FINALIZE;
 
-    if (pThis->pSrv->pszOrigin == NULL || strcmp((const char *)pThis->pSrv->pszOrigin, "imtcp") != 0) {
+    if (pThis->pszOrigin == NULL || strcmp((const char *)pThis->pszOrigin, "imtcp") != 0) {
         pThis->tlsProbeDone = 1;
         FINALIZE;
     }
 
-    if (pThis->pSrv->iDrvrMode != 0) {
+    if (pThis->iDrvrMode != 0) {
         pThis->tlsProbeDone = 1;
         FINALIZE;
     }
@@ -338,10 +338,27 @@ static rsRetVal SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
     assert(pLstnInfo != NULL);
+    if (pThis->pSrv == NULL) return RS_RET_PARAM_ERROR;
     pThis->pLstnInfo = pLstnInfo;
     /* set cached elements */
     pThis->bSuppOctetFram = pLstnInfo->cnf_params->bSuppOctetFram;
     pThis->bSPFramingFix = pLstnInfo->cnf_params->bSPFramingFix;
+    pThis->pRuleset = pLstnInfo->cnf_params->pRuleset;
+    pThis->pInputName = pLstnInfo->cnf_params->pInputName;
+    pThis->pszInputName = pLstnInfo->cnf_params->pszInputName;
+    memcpy(pThis->dfltTZ, pLstnInfo->cnf_params->dfltTZ, sizeof(pThis->dfltTZ));
+    pThis->bMultiLine = pLstnInfo->cnf_params->bMultiLine;
+    pThis->bDisableLFDelim = pThis->pSrv->bDisableLFDelim;
+    pThis->addtlFrameDelim = pThis->pSrv->addtlFrameDelim;
+    pThis->maxFrameSize = pThis->pSrv->maxFrameSize;
+    pThis->discardTruncatedMsg = pThis->pSrv->discardTruncatedMsg;
+    pThis->bUseFlowControl = pThis->pSrv->bUseFlowControl;
+    pThis->pszOrigin = pThis->pSrv->pszOrigin;
+    pThis->iDrvrMode = pThis->pSrv->iDrvrMode;
+#ifdef FEATURE_REGEXP
+    pThis->bHasStartRegex = pLstnInfo->bHasStartRegex;
+    pThis->pStartRegex = pThis->bHasStartRegex ? &pLstnInfo->start_preg : NULL;
+#endif
     pThis->compressionMode = pLstnInfo->compressionMode;
     pThis->compressionDriver = pLstnInfo->compressionDriver;
     pThis->compressionMaxExpansionRatio = pLstnInfo->compressionMaxExpansionRatio;
@@ -384,7 +401,6 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcps_sess);
-    const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
 
     if (pThis->iMsg == 0) {
         DBGPRINTF("discarding zero-sized message\n");
@@ -399,9 +415,9 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     /* we now create our own message object and submit it to the queue */
     CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
     MsgSetRawMsg(pMsg, (char *)pThis->pMsg, pThis->iMsg);
-    MsgSetInputName(pMsg, cnf_params->pInputName);
-    if (cnf_params->dfltTZ[0] != '\0') MsgSetDfltTZ(pMsg, (char *)cnf_params->dfltTZ);
-    MsgSetFlowControlType(pMsg, pThis->pSrv->bUseFlowControl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
+    MsgSetInputName(pMsg, pThis->pInputName);
+    if (pThis->dfltTZ[0] != '\0') MsgSetDfltTZ(pMsg, (char *)pThis->dfltTZ);
+    MsgSetFlowControlType(pMsg, pThis->bUseFlowControl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
     pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
     if (pThis->streamDecompressed) {
         pMsg->msgFlags |= NO_LEGACY_Z_DECOMPRESS;
@@ -409,7 +425,7 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     MsgSetRcvFrom(pMsg, pThis->fromHost);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
     CHKiRet(MsgSetRcvFromPort(pMsg, pThis->fromHostPort));
-    MsgSetRuleset(pMsg, cnf_params->pRuleset);
+    MsgSetRuleset(pMsg, pThis->pRuleset);
     if (pThis->bFrameOversize) {
         writeOversizeMessageLog(pMsg);
     }
@@ -517,8 +533,7 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
         pThis->iCurrLine = pThis->iMsg;
     } else if (pThis->iCurrLine > 0) {
         /* A new frame can only start after a line boundary. */
-        const int isMatch =
-            !regexp.regexec(&pThis->pLstnInfo->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
+        const int isMatch = !regexp.regexec(pThis->pStartRegex, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
         if (isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
             const size_t len_save = pThis->iMsg - pThis->iCurrLine;
@@ -580,11 +595,10 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                                                 unsigned *const __restrict__ pnMsgs) {
     DEFiRet;
     const char c = **buff;
-    const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
 
 #ifdef FEATURE_REGEXP
-    if (pThis->pLstnInfo->bHasStartRegex) {
+    if (pThis->bHasStartRegex) {
         processDataRcvd_regexFraming(pThis, buff, stTime, ttGenTime, pMultiSub, pnMsgs);
         FINALIZE;
     }
@@ -632,10 +646,10 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
 			c, pThis->iOctetsRemain);
 #endif
 
-        if ((((c == '\n') && !pThis->pSrv->bDisableLFDelim) ||
-             ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))) &&
+        if ((((c == '\n') && !pThis->bDisableLFDelim) ||
+             ((pThis->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->addtlFrameDelim))) &&
             pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
-            if (cnf_params->bMultiLine) {
+            if (pThis->bMultiLine) {
                 if (buffLen > 1) {
                     if (*(*buff + 1) == '<') {
                         defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
@@ -666,11 +680,11 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
             } else {
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 DBGPRINTF("error: message received is larger than max msg size, we %s it - c=%x\n",
-                          pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split", c);
+                          pThis->discardTruncatedMsg == 1 ? "truncate" : "split", c);
                 pThis->bFrameOversize = 1;
                 defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
                 ++(*pnMsgs);
-                if (pThis->pSrv->discardTruncatedMsg == 1) {
+                if (pThis->discardTruncatedMsg == 1) {
                     if (pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
                         pThis->iOctetsRemain--;
                         if (pThis->iOctetsRemain == 0) {
@@ -703,8 +717,8 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                 pThis->inputState = eAtStrtFram;
             }
         } else {
-            if (((c == '\n') && !pThis->pSrv->bDisableLFDelim) ||
-                ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))) {
+            if (((c == '\n') && !pThis->bDisableLFDelim) ||
+                ((pThis->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->addtlFrameDelim))) {
                 pThis->inputState = eAtStrtFram;
             }
         }
@@ -727,13 +741,15 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                          "imtcp %s: Framing Error in received TCP message from "
                          "peer: (hostname) %s, (ip) %s, (port) %s: delimiter is not SP but has "
                          "ASCII value %d.",
-                         cnf_params->pszInputName, peerName, peerIP, peerPort, c);
+                         pThis->pszInputName == NULL ? "imtcp" : (char *)pThis->pszInputName, peerName, peerIP,
+                         peerPort, c);
             }
             if (pThis->iOctetsRemain < 1) {
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
                          "peer: (hostname) %s, (ip) %s, (port) %s: invalid octet count %d.",
-                         cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain);
+                         pThis->pszInputName == NULL ? "imtcp" : (char *)pThis->pszInputName, peerName, peerIP,
+                         peerPort, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else if (pThis->iOctetsRemain > pThis->iMaxLine) {
                 pThis->bFrameOversize = 1;
@@ -744,14 +760,16 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                          "imtcp %s: received oversize message from peer: "
                          "(hostname) %s, (ip) %s, (port) %s: size is %d bytes, max msg size "
                          "is %d, truncating...",
-                         cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain, pThis->iMaxLine);
+                         pThis->pszInputName == NULL ? "imtcp" : (char *)pThis->pszInputName, peerName, peerIP,
+                         peerPort, pThis->iOctetsRemain, pThis->iMaxLine);
             }
-            if (pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
+            if (pThis->iOctetsRemain > pThis->maxFrameSize) {
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
                          "peer: (hostname) %s, (ip) %s, (port) %s: frame too large: %d, change "
                          "to octet stuffing",
-                         cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain);
+                         pThis->pszInputName == NULL ? "imtcp" : (char *)pThis->pszInputName, peerName, peerIP,
+                         peerPort, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else {
                 pThis->iMsg = 0;
@@ -1253,6 +1271,7 @@ void tcps_sessFuzzExit(void) {
 }
 
 rsRetVal tcps_sessFuzzInput(const uint8_t *const data, const size_t size) {
+    static objInfo_t serverObjInfo = {.pszID = (uchar *)"tcpsrv"};
     static const int max_line_sizes[] = {32, 128, 512, 2048};
     static const int additional_delimiters[] = {TCPSRV_NO_ADDTL_DELIMITER, 0, '|', '\r'};
     static const uint64_t expansion_ratios[] = {0, 2, 8, 64};
@@ -1287,6 +1306,12 @@ rsRetVal tcps_sessFuzzInput(const uint8_t *const data, const size_t size) {
     const int max_line = max_line_sizes[data[1] & 0x03U];
 
     runConf->globals.iMaxLine = max_line;
+    /* This stack fixture has no owned server resources. Give it the same
+     * object identity as other unit fixtures so setter assertions remain live. */
+    server.objData.pObjInfo = &serverObjInfo;
+    #ifndef NDEBUG
+    server.objData.iObjCooCKiE = 0xBADEFEE;
+    #endif
     params.pszInputName = UCHAR_CONSTANT("fuzz-imtcp");
     params.bSuppOctetFram = (data[0] & 0x08U) != 0;
     params.bMultiLine = (data[0] & 0x10U) != 0;
@@ -1326,15 +1351,9 @@ rsRetVal tcps_sessFuzzInput(const uint8_t *const data, const size_t size) {
     #endif
 
     CHKiRet(tcps_sessConstruct(&session));
-    session->pSrv = &server;
-    session->pLstnInfo = &listener;
-    session->bSuppOctetFram = params.bSuppOctetFram;
-    session->bSPFramingFix = params.bSPFramingFix;
-    session->compressionMode = listener.compressionMode;
-    session->compressionDriver = listener.compressionDriver;
-    session->compressionMaxExpansionRatio = listener.compressionMaxExpansionRatio;
-    session->compressionMaxDecompressedBytesPerReceive = listener.compressionMaxDecompressedBytesPerReceive;
-    session->compressionMaxTotalZstdWindowBytes = listener.compressionMaxTotalZstdWindowBytes;
+    if (SetLstnInfo(session, &listener) != RS_RET_PARAM_ERROR) ABORT_FINALIZE(RS_RET_ERR);
+    CHKiRet(SetTcpsrv(session, &server));
+    CHKiRet(SetLstnInfo(session, &listener));
     session->tlsProbeDone = RSTRUE;
     capture.max_message_size = regex_active ? (size_t)max_line * 2U : (size_t)max_line;
     capture.hash = 5381U;

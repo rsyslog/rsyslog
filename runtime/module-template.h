@@ -551,6 +551,11 @@
         *pEtryPoint = getReloadInterfaceV1;              \
     }
 
+#define CODEqueryEtryPt_RELOAD_SOURCE_V1_QUERIES               \
+    if (!strcmp((char *)name, "getReloadSourceInterfaceV1")) { \
+        *pEtryPoint = getReloadSourceInterfaceV1;              \
+    }
+
 /**
  * \brief Standard block for output modules without transaction support.
  */

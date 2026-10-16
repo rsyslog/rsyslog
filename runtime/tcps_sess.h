@@ -92,6 +92,36 @@ struct tcps_sess_s {
         size_t zstd_frame_header_len;
         sbool zstd_frame_header_processed;
         uint64_t zstd_window_reservation;
+
+        /** @name Accept-time policy snapshot
+         * Appended to preserve the offsets of the public v4 instance layout.
+         * Frozen at accept time and borrowed from the listener generation,
+         * which must outlive every session accepted from it. Listener counters,
+         * rate limiting, and zstd window accounting intentionally remain
+         * listener-owned runtime state. SetTcpsrv must precede SetLstnInfo;
+         * SetLstnInfo freezes these values before ConstructFinalize/receive.
+         * Pointer members, including both strings, are borrowed, never freed
+         * by the session. dfltTZ is a session-owned inline copy; scalar policy
+         * fields are copied. The listener generation owns the referenced
+         * ruleset, properties, strings, and compiled regex for session lifetime.
+         * @{ */
+        ruleset_t *pRuleset;
+        prop_t *pInputName;
+        const uchar *pszInputName;
+        uchar dfltTZ[8];
+        sbool bMultiLine;
+        sbool bDisableLFDelim;
+        int addtlFrameDelim;
+        int maxFrameSize;
+        int discardTruncatedMsg;
+        sbool bUseFlowControl;
+        const uchar *pszOrigin;
+        int iDrvrMode;
+#ifdef FEATURE_REGEXP
+        sbool bHasStartRegex;
+        regex_t *pStartRegex;
+#endif
+    /** @} */
 };
 
 
@@ -105,7 +135,9 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*Close)(tcps_sess_t *pThis);
     rsRetVal (*DataRcvd)(tcps_sess_t *pThis, char *pData, size_t iLen);
     /* set methods */
+    /** Bind the borrowed server before SetLstnInfo snapshots accept-time policy. */
     rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
+    /** Borrow listener generation and freeze policy; requires SetTcpsrv first. */
     rsRetVal (*SetLstnInfo)(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo);
     rsRetVal (*SetUsrP)(tcps_sess_t *, void *);
     rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar *);

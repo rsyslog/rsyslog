@@ -3,7 +3,8 @@
  * checks structural-only graph behavior without parsing, modules, a daemon,
  * or activation: default fragments merge, ruleset identities fold, secrets
  * never appear in digests, duplicate parameter keys fail, and enumeration is
- * deterministic. An isolated elseif-marker mutation must change production
+ * deterministic; fixed imtcp endpoints are canonical and collision-safe.
+ * An isolated elseif-marker mutation must change production
  * candidate serialization; restoring it must restore byte-identical output.
  * Ruleset-only report admission rejects NULL storage, misaligned bases/strides,
  * undersized strides, size overflow and address wrap before reading entries;
@@ -158,6 +159,12 @@ struct nvlst *rsconfTranslateCloneNvlst(const struct nvlst *list) {
         tail = copy;
     }
     return head;
+}
+
+rsRetVal nvlstCloneReloadSafe(const struct nvlst *const source, struct nvlst **const output) {
+    if (output == NULL || *output != NULL) return RS_RET_PARAM_ERROR;
+    *output = rsconfTranslateCloneNvlst(source);
+    return source != NULL && *output == NULL ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
 }
 
 void cnfstmtDestructLst(struct cnfstmt *list) {
@@ -335,6 +342,31 @@ static const rsReloadNormalizedNodeV1_t *findObserved(const observed_t *observed
     return NULL;
 }
 
+typedef struct objectObserved_s {
+    enum cnfobjType types[8];
+    size_t ordinals[8];
+    char discriminator[8][32];
+    size_t count;
+    size_t failAt;
+} objectObserved_t;
+
+static rsRetVal observeObject(const struct cnfobj *const object, const size_t parseOrdinal, void *const context) {
+    objectObserved_t *const observed = context;
+    const char *value;
+    size_t length = 0;
+
+    if (observed->count >= sizeof(observed->types) / sizeof(observed->types[0])) return RS_RET_OUT_OF_MEMORY;
+    observed->types[observed->count] = object->objType;
+    value = nvlstString(object->nvlst, object->objType == CNFOBJ_MODULE ? "load" : "type", &length);
+    if (value != NULL) {
+        if (length >= sizeof(observed->discriminator[observed->count])) return RS_RET_OUT_OF_MEMORY;
+        memcpy(observed->discriminator[observed->count], value, length);
+        observed->discriminator[observed->count][length] = '\0';
+    }
+    observed->ordinals[observed->count++] = parseOrdinal;
+    return parseOrdinal == observed->failAt ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
+}
+
 int main(void) {
     rsReloadCandidate_t *candidate = calloc(1, sizeof(*candidate));
     rsReloadNormalizedGraphBuilderV1_t *builder = NULL;
@@ -507,6 +539,28 @@ int main(void) {
     addObject(candidate, object(CNFOBJ_INPUT, parameter("type", "imtcp"), NULL));
     addObject(candidate, object(CNFOBJ_INPUT, parameter("type", "imtcp"), NULL));
     CHECK(!constructionFailed);
+    {
+        objectObserved_t objectObserved = {.failAt = SIZE_MAX};
+        objectObserved_t failedObserved = {.failAt = 2};
+        objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
+        rsReloadCandidate_t *objectCatalog = NULL;
+
+        CHECK(rsReloadCandidateVisitObjectsV1(NULL, observeObject, &objectObserved) == RS_RET_PARAM_ERROR);
+        CHECK(rsReloadCandidateVisitObjectsV1(candidate, NULL, &objectObserved) == RS_RET_PARAM_ERROR);
+        CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &objectObserved) == RS_RET_OK);
+        CHECK(objectObserved.count == 6);
+        CHECK(objectObserved.types[0] == CNFOBJ_GLOBAL && objectObserved.ordinals[0] == 0);
+        CHECK(objectObserved.types[1] == CNFOBJ_RULESET && objectObserved.ordinals[1] == 1);
+        CHECK(objectObserved.types[5] == CNFOBJ_INPUT && objectObserved.ordinals[5] == 5);
+        CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &failedObserved) == RS_RET_NOT_IMPLEMENTED);
+        CHECK(failedObserved.count == 3);
+        CHECK(rsReloadCandidateBuildObjectCatalogV1(candidate, &objectCatalog) == RS_RET_OK);
+        CHECK(rsReloadCandidateVisitObjectsV1(objectCatalog, observeObject, &catalogObserved) == RS_RET_OK);
+        CHECK(catalogObserved.count == 2);
+        CHECK(catalogObserved.types[0] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[0], "imtcp"));
+        CHECK(catalogObserved.types[1] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[1], "imtcp"));
+        rsReloadCandidateDestruct(&objectCatalog);
+    }
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(builder, &graph) == RS_RET_OK);
     CHECK(graph.enumerate(graph.context, observe, &observed) == RS_RET_OK);
@@ -544,6 +598,94 @@ int main(void) {
     }
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     rsReloadCandidateDestruct(&candidate);
+
+    /* Fixed imtcp listeners use their endpoint. Bare port zero follows
+     * imtcp's effective fixed-port fallback to 514. Port-file allocation,
+     * other zero spellings, and unknown inherited namespaces stay unkeyed. */
+    {
+        rsReloadCandidate_t *endpoints = calloc(1, sizeof(*endpoints));
+        rsReloadNormalizedGraphBuilderV1_t *endpointBuilder = NULL;
+        rsReloadNormalizedGraphV1_t endpointGraph;
+        observed_t endpointObserved = {0};
+        struct nvlst *fixed = parameter("type", "ImTcP");
+        struct nvlst *dynamic = parameter("type", "imtcp");
+        struct nvlst *portFile = parameter("type", "imtcp");
+        struct nvlst *zeroAlias = parameter("type", "imtcp");
+        struct nvlst *inheritedNamespace = parameter("type", "imtcp");
+        CHECK(endpoints != NULL && fixed != NULL && dynamic != NULL && portFile != NULL);
+        CHECK(zeroAlias != NULL && inheritedNamespace != NULL);
+        fixed->next = parameter("port", "0514");
+        fixed->next->next = parameter("address", "2001:db8::1");
+        fixed->next->next->next = parameter("networknamespace", "blue:prod");
+        dynamic->next = parameter("port", "0");
+        dynamic->next->next = parameter("networknamespace", "");
+        portFile->next = parameter("port", "10514");
+        portFile->next->next = parameter("listenportfilename", "dynamic.port");
+        zeroAlias->next = parameter("port", "00");
+        inheritedNamespace->next = parameter("port", "5514");
+        CHECK(zeroAlias->next != NULL && inheritedNamespace->next != NULL);
+        CHECK(fixed->next != NULL && fixed->next->next != NULL && fixed->next->next->next != NULL &&
+              dynamic->next != NULL && portFile->next != NULL && portFile->next->next != NULL);
+        addObject(endpoints, object(CNFOBJ_INPUT, fixed, NULL));
+        addObject(endpoints, object(CNFOBJ_TPL, parameter("name", "unrelated"), NULL));
+        addObject(endpoints, object(CNFOBJ_INPUT, dynamic, NULL));
+        addObject(endpoints, object(CNFOBJ_INPUT, portFile, NULL));
+        addObject(endpoints, object(CNFOBJ_INPUT, zeroAlias, NULL));
+        addObject(endpoints, object(CNFOBJ_INPUT, inheritedNamespace, NULL));
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(endpoints, &endpointBuilder) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(endpointBuilder, &endpointGraph) == RS_RET_OK);
+        CHECK(endpointGraph.enumerate(endpointGraph.context, observe, &endpointObserved) == RS_RET_OK);
+        CHECK(findObserved(&endpointObserved, "input:imtcp:endpoint:n9:blue:proda11:2001:db8::1p514") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:imtcp:endpoint:n0:a1:*p514") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:anonymous:5:imtcp:3") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:anonymous:5:imtcp:4") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:anonymous:5:imtcp:5") != NULL);
+        rsReloadNormalizedGraphBuilderV1Destruct(&endpointBuilder);
+        rsReloadCandidateDestruct(&endpoints);
+
+        /* Canonical decimal spelling and length-prefixing are properties of
+         * the endpoint identity itself, independent of graph enumeration. */
+        {
+            struct cnfobj *canonical = object(CNFOBJ_INPUT, parameter("port", "514"), NULL);
+            struct cnfobj *defaults = object(CNFOBJ_INPUT, parameter("port", "5514"), NULL);
+            struct cnfobj *separatorLeft = object(CNFOBJ_INPUT, parameter("port", "6514"), NULL);
+            struct cnfobj *separatorRight = object(CNFOBJ_INPUT, parameter("port", "6514"), NULL);
+            char *canonicalIdentity = NULL;
+            char *defaultIdentity = NULL;
+            char *separatorLeftIdentity = NULL;
+            char *separatorRightIdentity = NULL;
+            CHECK(canonical != NULL && defaults != NULL && separatorLeft != NULL && separatorRight != NULL);
+            canonical->nvlst->next = parameter("address", "2001:db8::1");
+            canonical->nvlst->next->next = parameter("networknamespace", "blue:prod");
+            CHECK(canonical->nvlst->next != NULL && canonical->nvlst->next->next != NULL);
+            separatorLeft->nvlst->next = parameter("address", "b:c");
+            separatorLeft->nvlst->next->next = parameter("networknamespace", "a");
+            separatorRight->nvlst->next = parameter("address", "c");
+            separatorRight->nvlst->next->next = parameter("networknamespace", "a:b");
+            CHECK(separatorLeft->nvlst->next != NULL && separatorLeft->nvlst->next->next != NULL &&
+                  separatorRight->nvlst->next != NULL && separatorRight->nvlst->next->next != NULL);
+            CHECK(makeImtcpEndpointIdentity(canonical, &canonicalIdentity) == RS_RET_OK);
+            CHECK(!strcmp(canonicalIdentity, "input:imtcp:endpoint:n9:blue:proda11:2001:db8::1p514"));
+            CHECK(makeImtcpEndpointIdentity(defaults, &defaultIdentity) == RS_RET_NOT_FOUND);
+            CHECK(defaultIdentity == NULL);
+            unsigned parsedPort = 0;
+            CHECK(parseFixedTcpPort("0", 1, &parsedPort) == RS_RET_OK && parsedPort == 514);
+            CHECK(parseFixedTcpPort("0514", 4, &parsedPort) == RS_RET_OK && parsedPort == 514);
+            CHECK(parseFixedTcpPort("00", 2, &parsedPort) == RS_RET_NOT_FOUND);
+            CHECK(parseFixedTcpPort("000", 3, &parsedPort) == RS_RET_NOT_FOUND);
+            CHECK(makeImtcpEndpointIdentity(separatorLeft, &separatorLeftIdentity) == RS_RET_OK);
+            CHECK(makeImtcpEndpointIdentity(separatorRight, &separatorRightIdentity) == RS_RET_OK);
+            CHECK(strcmp(separatorLeftIdentity, separatorRightIdentity));
+            free(canonicalIdentity);
+            free(defaultIdentity);
+            free(separatorLeftIdentity);
+            free(separatorRightIdentity);
+            cnfobjDestruct(canonical);
+            cnfobjDestruct(defaults);
+            cnfobjDestruct(separatorLeft);
+            cnfobjDestruct(separatorRight);
+        }
+    }
 
     /* Property filters have only an effective then branch: poison in the
      * unused else slot must not affect graph construction or destruction.
@@ -738,6 +880,7 @@ int main(void) {
         rsReloadCandidate_t *emptyCandidate = calloc(1, sizeof(*emptyCandidate));
         rsReloadNormalizedGraphBuilderV1_t *emptyCandidateBuilder = NULL;
         rsReloadNormalizedGraphBuilderV1_t *emptySourceBuilder = NULL;
+        rsReloadCandidate_t *emptySourceCatalog = NULL;
         rsReloadNormalizedGraphV1_t emptyCandidateGraph;
         rsReloadNormalizedGraphV1_t emptySourceGraph;
         observed_t emptyCandidateObserved = OBSERVED_INIT;
@@ -750,7 +893,8 @@ int main(void) {
         CHECK(rsReloadCandidateBuildNormalizedGraphV1(emptyCandidate, &emptyCandidateBuilder) == RS_RET_OK);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceCaptureObject(&emptySourceObject);
-        CHECK(rsReloadCandidateSourceFinish(&emptySourceBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateSourceFinish(&emptySourceBuilder, &emptySourceCatalog) == RS_RET_OK);
+        CHECK(rsReloadCandidateObjectCount(emptySourceCatalog) == 0);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptyCandidateBuilder, &emptyCandidateGraph) == RS_RET_OK);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptySourceBuilder, &emptySourceGraph) == RS_RET_OK);
         CHECK(emptyCandidateGraph.enumerate(emptyCandidateGraph.context, observe, &emptyCandidateObserved) ==
@@ -760,6 +904,7 @@ int main(void) {
         CHECK(!strcmp(emptyCandidateObserved.nodes[0]->fingerprint, emptySourceObserved.nodes[0]->fingerprint));
         rsReloadNormalizedGraphBuilderV1Destruct(&emptyCandidateBuilder);
         rsReloadNormalizedGraphBuilderV1Destruct(&emptySourceBuilder);
+        rsReloadCandidateDestruct(&emptySourceCatalog);
         rsReloadCandidateDestruct(&emptyCandidate);
     }
 
@@ -767,10 +912,12 @@ int main(void) {
      * baseline may be handed to the report-only HUP path afterwards. */
     {
         rsReloadNormalizedGraphBuilderV1_t *dirtySourceBuilder = NULL;
+        rsReloadCandidate_t *dirtySourceCatalog = NULL;
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceNoteError();
-        CHECK(rsReloadCandidateSourceFinish(&dirtySourceBuilder) == RS_RET_NOT_IMPLEMENTED);
+        CHECK(rsReloadCandidateSourceFinish(&dirtySourceBuilder, &dirtySourceCatalog) == RS_RET_NOT_IMPLEMENTED);
         CHECK(dirtySourceBuilder == NULL);
+        CHECK(dirtySourceCatalog == NULL);
     }
 
     /* The startup source mirror uses the same per-type anonymous input
@@ -778,34 +925,53 @@ int main(void) {
      * ordinal, and casing of the input type must not split that namespace. */
     {
         rsReloadNormalizedGraphBuilderV1_t *observedSourceBuilder = NULL;
+        rsReloadCandidate_t *observedSourceCatalog = NULL;
         rsReloadNormalizedGraphV1_t sourceGraph;
         observed_t sourceObserved = OBSERVED_INIT;
         struct nvlst *namedInput = parameter("type", "IMTCP");
+        struct nvlst *moduleParams = parameter("load", "imtcp");
+        struct cnfobj *moduleObject;
         struct cnfobj *namedObject;
         struct cnfobj *otherObject;
         struct cnfobj *anonymousObject;
 
-        CHECK(namedInput != NULL);
+        CHECK(namedInput != NULL && moduleParams != NULL);
+        moduleParams->next = parameter("networknamespace", "blue");
+        CHECK(moduleParams->next != NULL);
         namedInput->next = parameter("name", "named-before");
         CHECK(namedInput->next != NULL);
+        moduleObject = object(CNFOBJ_MODULE, moduleParams, NULL);
         namedObject = object(CNFOBJ_INPUT, namedInput, NULL);
         otherObject = object(CNFOBJ_INPUT, parameter("type", "imudp"), NULL);
         anonymousObject = object(CNFOBJ_INPUT, parameter("type", "ImTcP"), NULL);
-        CHECK(namedObject != NULL && otherObject != NULL && anonymousObject != NULL && otherObject->nvlst != NULL &&
-              anonymousObject->nvlst != NULL);
+        CHECK(moduleObject != NULL && namedObject != NULL && otherObject != NULL && anonymousObject != NULL &&
+              otherObject->nvlst != NULL && anonymousObject->nvlst != NULL);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceCaptureObject(moduleObject);
         rsReloadCandidateSourceCaptureObject(namedObject);
         rsReloadCandidateSourceCaptureObject(otherObject);
         rsReloadCandidateSourceCaptureObject(anonymousObject);
-        CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder) == RS_RET_OK);
-        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
-        CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
-        CHECK(sourceObserved.count == 3);
-        CHECK(findObserved(&sourceObserved, "input:anonymous:5:imtcp:1") != NULL);
-        rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
+        CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder, &observedSourceCatalog) == RS_RET_OK);
+        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 4);
+        cnfobjDestruct(moduleObject);
         cnfobjDestruct(namedObject);
         cnfobjDestruct(otherObject);
         cnfobjDestruct(anonymousObject);
+        {
+            objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
+            CHECK(rsReloadCandidateVisitObjectsV1(observedSourceCatalog, observeObject, &catalogObserved) == RS_RET_OK);
+            CHECK(catalogObserved.count == 4);
+            CHECK(catalogObserved.types[0] == CNFOBJ_MODULE);
+            CHECK(!strcmp(catalogObserved.discriminator[0], "imtcp"));
+            CHECK(catalogObserved.types[3] == CNFOBJ_INPUT);
+            CHECK(!strcmp(catalogObserved.discriminator[3], "ImTcP"));
+        }
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
+        CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
+        CHECK(sourceObserved.count == 4);
+        CHECK(findObserved(&sourceObserved, "input:anonymous:5:imtcp:1") != NULL);
+        rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
+        rsReloadCandidateDestruct(&observedSourceCatalog);
     }
 
     candidate = calloc(1, sizeof(*candidate));
