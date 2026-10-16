@@ -17,6 +17,11 @@ installs four conditional native BuildRequires (`libnet-devel`,
 `zypper source-install` does not resolve, so the native feature set is not
 silently reduced.
 
+The overlay explicitly disables the new optional `omkinesis` module, which
+current upstream auto-enables when libcurl supports it. The native Leap spec
+has no package for it; keeping it disabled preserves the native feature set
+and prevents unowned module and debug files from failing the RPM build.
+
 Leap packages documentation separately. Each run therefore builds the current
 main-branch HTML and source documentation and replaces the native documentation
 source tarball, preserving the `rsyslog-doc` package without shipping stale
