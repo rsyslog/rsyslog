@@ -1479,6 +1479,17 @@ finalize_it:
  * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
+#ifdef RSYSLOG_PARSER_POLICY_TEST
+static int (*programNamePolicyTestGetter)(rsconf_t *);
+/** @brief Install a serial unit-only policy getter; NULL restores the real accessor.
+ * No workers may run while this hook is installed. Message bodies stay unchanged.
+ */
+void msgPolicyTestSetSlashGetter(int (*getter)(rsconf_t *));
+void msgPolicyTestSetSlashGetter(int (*getter)(rsconf_t *)) {
+    programNamePolicyTestGetter = getter;
+}
+#endif
+
 static rsRetVal acquireProgramName(smsg_t *const pM) {
     int i;
     uchar *pszTag, *pszProgName;
@@ -1486,8 +1497,16 @@ static rsRetVal acquireProgramName(smsg_t *const pM) {
 
     assert(pM != NULL);
     pszTag = (uchar *)((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+    /* The locked lazy scan samples one policy, not the reception generation.
+     * An already cached property is retained until the TAG changes. */
+#ifdef RSYSLOG_PARSER_POLICY_TEST
+    const int permitSlash = programNamePolicyTestGetter != NULL ? programNamePolicyTestGetter(runConf)
+                                                                : glblGetParserPermitSlashInProgramName(runConf);
+#else
+    const int permitSlash = glblGetParserPermitSlashInProgramName(runConf);
+#endif
     for (i = 0; (i < pM->iLenTAG) && isprint((int)pszTag[i]) && (pszTag[i] != '\0') && (pszTag[i] != ':') &&
-                (pszTag[i] != '[') && (runConf->globals.parser.bPermitSlashInProgramname || (pszTag[i] != '/'));
+                (pszTag[i] != '[') && (permitSlash || (pszTag[i] != '/'));
          ++i); /* just search end of PROGNAME */
     if (i < CONF_PROGNAME_BUFSIZE) {
         pszProgName = pM->PROGNAME.szBuf;

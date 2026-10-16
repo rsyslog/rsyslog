@@ -14,6 +14,7 @@ runtime_reload_global_scalars:
     - Startup, reset and live writes use the same atomic accessors as runtime readers.
     - Sanitizer samples each independent policy before first use, retaining scan samples through rewrite; no atomic generation snapshot.
     - Main thread alone owns controller mode and pending scalar publication under the existing commit guard.
+    - Prefix uses int-sized atomic storage; program-name slash policy is sampled once per locked lazy TAG scan, retaining already cached values until TAG replacement.
 runtime_queue:
   operator_docs:
     - "doc/source/concepts/queues.rst#local-queue-operation"

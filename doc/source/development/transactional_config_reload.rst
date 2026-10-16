@@ -159,7 +159,12 @@ program structure, not complete action configuration, queues, or parser chains.
 Exactly one supported global scalar may change per candidate:
 ``config.reloadOnHUP``, ``reportChildProcessExits``, ``oversizemsg.report``,
 ``compactJsonString``, ``parser.dropTrailingCROnReception`` or
-``parser.dropTrailingLFOnReception``. Every other global parameter must retain
+``parser.dropTrailingLFOnReception``; the parser subset also includes
+``parser.escapeControlCharactersOnReceive``, ``parser.spaceLFOnReceive``,
+``parser.escape8BitCharactersOnReceive``, ``parser.escapeControlCharacterTab``,
+``parser.escapeControlCharactersCStyle``, ``parser.permitSlashInProgramName``
+and the one-byte ``parser.controlCharacterEscapePrefix``.
+Every other global parameter must retain
 its canonical source value. The active source value must also match its runtime
 baseline before publication. Combined scalar changes and unsupported global
 settings reject without partial publication; the local/mixed queue restriction
@@ -169,12 +174,18 @@ Only a currently active ``on`` mode can publish a new reload mode. A committed
 ``off`` or ``validate`` value governs the next HUP; ``off`` cannot enable itself
 by rereading configuration. Legacy hooks still run unconditionally.
 
-Parser workers atomically read the independently published LF/CR scalars.
+Parser workers atomically read independently published parser scalars.
 The sanitizer samples each setting once before its first use and retains scan
 samples through rewrite. Rewrite-only options are first sampled when rewriting
 is actually necessary. These independent samples do not promise an atomic
 configuration-generation snapshot. Child-exit reporting similarly samples its
 mode once per event, and JSON formatting atomically reads its formatting option.
+
+Program-name slash policy is sampled once while scanning a locked TAG during
+lazy property evaluation. Already cached program names are retained until TAG
+replacement invalidates them; this policy does not bind property evaluation to
+the message's reception generation. The escape-prefix scalar occupies int-sized
+storage for 32-bit atomic access, while the public value remains one byte.
 
 The lifecycle and mode descriptions below specify the staged target design,
 not functionality available at this existing-listener policy boundary.

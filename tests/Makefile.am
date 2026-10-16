@@ -1029,6 +1029,13 @@ TESTS_IMTCP = \
 	global-reloadonhup-unnamed-rainerscript.sh \
 	global-reloadonhup-on-local-rainerscript.sh \
 	global-reloadonhup-on-mixed-rainerscript.sh \
+	global-reloadonhup-escapecontrol-rainerscript.sh \
+	global-reloadonhup-spacelf-rainerscript.sh \
+	global-reloadonhup-escape8bit-rainerscript.sh \
+	global-reloadonhup-escapetab-rainerscript.sh \
+	global-reloadonhup-escapecstyle-rainerscript.sh \
+	global-reloadonhup-permitslash-rainerscript.sh \
+	global-reloadonhup-escapeprefix-rainerscript.sh \
 	global-reloadonhup-droptrailinglf-rainerscript.sh \
 	global-reloadonhup-droptrailingcr-rainerscript.sh \
 	fromhost-port.sh \
@@ -1133,6 +1140,13 @@ TESTS_IMTCP_STREAM_ALWAYS_OSSL = \
 
 TESTS_IMTCP_YAML = \
 	global-reloadonhup-ruleset-metadata-yaml.sh \
+	global-reloadonhup-escapecontrol-yaml.sh \
+	global-reloadonhup-spacelf-yaml.sh \
+	global-reloadonhup-escape8bit-yaml.sh \
+	global-reloadonhup-escapetab-yaml.sh \
+	global-reloadonhup-escapecstyle-yaml.sh \
+	global-reloadonhup-permitslash-yaml.sh \
+	global-reloadonhup-escapeprefix-yaml.sh \
 	global-reloadonhup-droptrailinglf-yaml.sh \
 	global-reloadonhup-droptrailingcr-yaml.sh \
 	yaml-parser-drop-trailing-cr.sh \

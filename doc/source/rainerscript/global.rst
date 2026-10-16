@@ -41,7 +41,10 @@ The following parameters can be set:
   A currently active ``on`` mode may publish one supported scalar change:
   this mode, ``reportChildProcessExits``, ``oversizemsg.report``,
   ``compactJsonString``, ``parser.dropTrailingCROnReception`` or
-  ``parser.dropTrailingLFOnReception``. Every other global parameter must
+  ``parser.dropTrailingLFOnReception``. The parser subset additionally permits control escaping,
+  LF spacing, 8-bit escaping, TAB escaping, C-style escaping, program-name
+  slash handling and the one-byte control-character escape prefix, still
+  only one scalar per candidate. Every other global parameter must
   remain unchanged. Committed ``off`` or ``validate`` governs the next HUP;
   ``off`` does not reread configuration and cannot enable itself.
 
@@ -362,6 +365,10 @@ The following parameters can be set:
   ``app/foo[1234]`` will result in a ``programname`` value of
   ``app/foo``.
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Program names evaluated after the commit use
+  the new value; combined global changes remain fail-closed.
+
 - **parser.escapeControlCharacterTab** [on/off] available since 8.7.0
 
   **Default:** on
@@ -371,6 +378,10 @@ The following parameters can be set:
   Note that escaping is the traditional behavior and existing scripts
   may get into trouble if this is changed to "off".
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; combined global changes remain fail-closed.
+
 - **parser.controlCharacterEscapePrefix** [char]
 
   **Default:** '#'
@@ -378,6 +389,10 @@ The following parameters can be set:
   This option specifies the prefix character to be used for control
   character escaping (see option
   *parser.escapeControlCharactersOnReceive*).
+
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Escapes produced after the commit use the new
+  prefix; combined global changes remain fail-closed.
 
 - **parser.escape8BitCharactersOnReceive** [on/off]
 
@@ -393,6 +408,10 @@ The following parameters can be set:
   local script. If this option is turned on, all control-characters are
   converted to a 3-digit octal number and be prefixed with the
   *parser.controlCharacterEscapePrefix* character (being '#' by default).
+
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; combined global changes remain fail-closed.
 
   **Warning:**
 
@@ -420,6 +439,11 @@ The following parameters can be set:
   (ctrl-g) is included in the message, it would be converted to '#007'.
   To be compatible to sysklogd, this option must be turned on.
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; a candidate that also changes another global parameter is rejected
+  without partially publishing either change.
+
   **Warning:**
 
   -  turning on this option most probably destroys non-western character
@@ -431,6 +455,23 @@ The following parameters can be set:
      because control characters are already removed upon message
      reception. If you intend to use these property replacer options, you
      must turn off *parser.escapeControlCharactersOnReceive*.
+
+- **parser.escapeControlCharactersCStyle** [on/off]
+
+  **Default:** off
+
+  If enabled, control characters are escaped with C-style sequences such as
+  ``\\a`` instead of the traditional prefixed octal form such as ``#007``.
+  A sole change can be activated transactionally by
+  ``config.reloadOnHUP="on"``; combined global changes remain fail-closed.
+
+- **parser.spaceLFOnReceive** [on/off]
+
+  **Default:** off
+
+  This parameter replaces embedded LF control characters with spaces during
+  message reception. A sole change can be activated transactionally by
+  ``config.reloadOnHUP="on"``; combined global changes remain fail-closed.
 
 
 - **senders.keepTrack** [on/off] available 8.17.0+

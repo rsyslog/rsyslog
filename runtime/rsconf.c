@@ -407,15 +407,15 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
     pThis->pMsgQueue = NULL;
 
-    pThis->globals.parser.cCCEscapeChar = '#';
+    glblSetParserControlCharacterEscapePrefix(pThis, '#');
     glblSetParserDropTrailingLFOnReception(pThis, 1);
     glblSetParserDropTrailingCROnReception(pThis, 0);
-    pThis->globals.parser.bEscapeCCOnRcv = 1;
-    pThis->globals.parser.bSpaceLFOnRcv = 0;
-    pThis->globals.parser.bEscape8BitChars = 0;
-    pThis->globals.parser.bEscapeTab = 1;
-    pThis->globals.parser.bParserEscapeCCCStyle = 0;
-    pThis->globals.parser.bPermitSlashInProgramname = 0;
+    glblSetParserEscapeControlCharactersOnReceive(pThis, 1);
+    glblSetParserSpaceLFOnReceive(pThis, 0);
+    glblSetParserEscape8BitCharactersOnReceive(pThis, 0);
+    glblSetParserEscapeControlCharacterTab(pThis, 1);
+    glblSetParserEscapeControlCharactersCStyle(pThis, 0);
+    glblSetParserPermitSlashInProgramName(pThis, 0);
     pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
 
     pThis->globalParamVals = NULL;
