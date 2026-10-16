@@ -36,7 +36,7 @@ runtime/ruleset.c
 runtime/ruleset-addition.h
   s_8e5583f88a5d06::t_064e9319156b5b 1-37
 tests/unit/reload_callgraph_fence_test.c
-  s_f8a738e4bdfaee::t_5ae4b94e66a0a3 85-144,184-189,217-254,264-284,296-297,299-312
+  s_f8a738e4bdfaee::t_5ae4b94e66a0a3 85-144,85-109,123-144,184-189,217-254,264-284,296-297,299-312
 runtime/reload-candidate.c
   s_f8a738e4bdfaee::t_12b42b51c2e8ef 1599-1610,1612-1634,1666-1669
   s_f2c089be484e12::t_adff96cce04722 1640-1643
