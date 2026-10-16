@@ -86,8 +86,19 @@ EXTRA_DIST = $(man5_MANS) $(man8_MANS) \
 	recover_qi.pl \
 	rsyslog-segqueue.rst
 
+noinst_PROGRAMS =
+if ENABLE_TESTBENCH
+# Reuse the daemon link closure and platform flags, without invoking its main.
+# Explicit parser object supplies a narrow getter seam; its archive twin stays unused.
+noinst_PROGRAMS += parser_policy_unit
+parser_policy_unit_SOURCES = $(rsyslogd_SOURCES) ../runtime/parser.c ../tests/unit/parser_policy_test.c
+parser_policy_unit_CPPFLAGS = $(rsyslogd_CPPFLAGS) -DRSYSLOG_PARSER_POLICY_TEST -Dmain=rsyslogd_main
+parser_policy_unit_LDADD = $(rsyslogd_LDADD)
+parser_policy_unit_LDFLAGS = $(rsyslogd_LDFLAGS)
+endif
+
 if ENABLE_FUZZING
-noinst_PROGRAMS = fuzz_rsyslog_message fuzz_imtcp_session
+noinst_PROGRAMS += fuzz_rsyslog_message fuzz_imtcp_session
 fuzz_rsyslog_message_SOURCES = $(rsyslogd_SOURCES) fuzz_rsyslog_message.c
 fuzz_rsyslog_message_CPPFLAGS = $(rsyslogd_CPPFLAGS) -DRSYSLOG_FUZZ_TARGET -Dmain=rsyslogd_main
 fuzz_rsyslog_message_LDADD = $(rsyslogd_LDADD)

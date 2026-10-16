@@ -142,7 +142,8 @@ static rsRetVal appendObjectCatalogClone(rsReloadCandidate_t *const catalog, con
     if (catalog == NULL || object == NULL) return RS_RET_PARAM_ERROR;
     if (!isImtcpInput(object)) CHKiRet(captureOtherRateReferences(catalog, object->nvlst));
     CHKiRet(captureStatementRateReferences(catalog, object->script));
-    if (object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT && object->objType != CNFOBJ_RATELIMIT)
+    if (object->objType != CNFOBJ_GLOBAL && object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT &&
+        object->objType != CNFOBJ_RATELIMIT)
         return RS_RET_OK;
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &parameters));
     copy = cnfobjNew(object->objType, parameters);
@@ -486,7 +487,26 @@ static int equalFoldedName(const es_str_t *left, const es_str_t *right) {
     return 1;
 }
 
-static rsRetVal appendGlobalMap(es_str_t **out, const struct nvlst *list) {
+static int equalFoldedCName(const es_str_t *const left, const char *const right) {
+    size_t i;
+    const size_t leftLen = left == NULL ? 0 : es_strlen((es_str_t *)left);
+    const size_t rightLen = right == NULL ? 0 : strlen(right);
+
+    if (leftLen == 0 || leftLen != rightLen) return 0;
+    for (i = 0; i < leftLen; ++i) {
+        unsigned char a = es_getBufAddr((es_str_t *)left)[i];
+        unsigned char b = (unsigned char)right[i];
+        if (a >= 'A' && a <= 'Z') a += 'a' - 'A';
+        if (b >= 'A' && b <= 'Z') b += 'a' - 'A';
+        if (a != b) return 0;
+    }
+    return 1;
+}
+
+static rsRetVal appendGlobalMapExcept(es_str_t **out,
+                                      const struct nvlst *list,
+                                      const char *const excludedName,
+                                      const struct nvlst **const excludedValue) {
     const struct nvlst *entry;
     const struct nvlst **entries = NULL;
     size_t count = 0;
@@ -494,7 +514,12 @@ static rsRetVal appendGlobalMap(es_str_t **out, const struct nvlst *list) {
     size_t i;
     DEFiRet;
 
+    if (excludedValue != NULL) *excludedValue = NULL;
     for (entry = list; entry != NULL; entry = entry->next) {
+        if (excludedName != NULL && equalFoldedCName(entry->name, excludedName)) {
+            if (excludedValue != NULL) *excludedValue = entry;
+            continue;
+        }
         for (i = 0; i < count; ++i) {
             if (equalFoldedName(entries[i]->name, entry->name)) break;
         }
@@ -516,6 +541,10 @@ static rsRetVal appendGlobalMap(es_str_t **out, const struct nvlst *list) {
 finalize_it:
     free(entries);
     RETiRet;
+}
+
+static rsRetVal appendGlobalMap(es_str_t **out, const struct nvlst *list) {
+    return appendGlobalMapExcept(out, list, NULL, NULL);
 }
 
 static rsRetVal validateNvlst(const struct nvlst *list) {
@@ -1287,6 +1316,65 @@ finalize_it:
     RETiRet;
 }
 
+rsRetVal rsReloadCandidateGlobalStringProfileV1(const rsReloadCandidate_t *const candidate,
+                                                const char *const parameterName,
+                                                char **const ownedValue,
+                                                char **const ownedOtherFingerprint) {
+    const rsReloadCandidateObject_t *candidateEntry;
+    const struct nvlst *selected = NULL;
+    struct nvlst *params = NULL;
+    struct nvlst *tail = NULL;
+    es_str_t *serialized = NULL;
+    char *value = NULL;
+    DEFiRet;
+
+    if (candidate == NULL || parameterName == NULL || *parameterName == '\0' || ownedValue == NULL ||
+        *ownedValue != NULL || ownedOtherFingerprint == NULL || *ownedOtherFingerprint != NULL)
+        return RS_RET_PARAM_ERROR;
+    for (candidateEntry = candidate->head; candidateEntry != NULL; candidateEntry = candidateEntry->next) {
+        if (candidateEntry->object->objType != CNFOBJ_GLOBAL) continue;
+        if (candidateEntry->object->script != NULL || candidateEntry->object->subobjs != NULL)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        CHKiRet(validateNvlst(candidateEntry->object->nvlst));
+        {
+            struct nvlst *copy = rsconfTranslateCloneNvlst(candidateEntry->object->nvlst);
+            if (candidateEntry->object->nvlst != NULL && copy == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            if (tail == NULL)
+                params = copy;
+            else
+                tail->next = copy;
+            if (copy != NULL) {
+                tail = copy;
+                while (tail->next != NULL) tail = tail->next;
+            }
+        }
+    }
+    CHKmalloc(serialized = es_newStr(256));
+    CHKiRet(appendToken(&serialized, "rsyslog.reload.global-string-profile.v1;"));
+    CHKiRet(appendBytes(&serialized, parameterName, strlen(parameterName)));
+    CHKiRet(appendGlobalMapExcept(&serialized, params, parameterName, &selected));
+    if (selected != NULL) {
+        size_t length;
+        if (selected->val.datatype != 'S' || selected->val.d.estr == NULL) ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+        length = es_strlen(selected->val.d.estr);
+        if (length == SIZE_MAX) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (length != 0 && memchr(es_getBufAddr(selected->val.d.estr), '\0', length) != NULL)
+            ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+        CHKmalloc(value = malloc(length + 1));
+        if (length != 0) memcpy(value, es_getBufAddr(selected->val.d.estr), length);
+        value[length] = '\0';
+    }
+    CHKiRet(sha256Fingerprint(serialized, ownedOtherFingerprint));
+    *ownedValue = value;
+    value = NULL;
+
+finalize_it:
+    free(value);
+    nvlstDestruct(params);
+    if (serialized != NULL) es_deleteStr(serialized);
+    RETiRet;
+}
+
 rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
                                                  rsReloadNormalizedGraphBuilderV1_t **ppBuilder) {
     rsReloadNormalizedGraphBuilderV1_t *builder = NULL;
@@ -1508,12 +1596,14 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
-                                                    const rsReloadCandidate_t *const candidate,
-                                                    const rsReloadReportV1_t *const report) {
+rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
+                                                  const rsReloadCandidate_t *const candidate,
+                                                  const rsReloadReportV1_t *const report,
+                                                  const unsigned authorizations) {
     size_t i;
-    if (candidate == NULL || report == NULL || report->version != RS_RELOAD_REPORT_V1 ||
-        report->structSize < sizeof(*report) || report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
+    if ((authorizations & ~(RS_RELOAD_AUTHORIZE_IMTCP_V1 | RS_RELOAD_AUTHORIZE_BASE_V1)) != 0 || candidate == NULL ||
+        report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report) ||
+        report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0 ||
         (uintptr_t)(const void *)report->entries % _Alignof(rsReloadReportEntryV1_t) != 0 ||
         (report->entryCount != 0 && report->entries == NULL) || report->entryCount > SIZE_MAX / report->entryStride ||
@@ -1523,7 +1613,15 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *c
         const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
         const rsReloadReportEntryV1_t *entry = (const rsReloadReportEntryV1_t *)(const void *)address;
         if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
+        if (entry->objectKind == RS_RELOAD_OBJ_GLOBAL && (authorizations & RS_RELOAD_AUTHORIZE_BASE_V1) != 0) {
+            if (entry->identity == NULL || strcmp(entry->identity, "global") ||
+                (entry->diffKind != RS_RELOAD_DIFF_ADDED && entry->diffKind != RS_RELOAD_DIFF_REMOVED &&
+                 entry->diffKind != RS_RELOAD_DIFF_MODIFIED))
+                return RS_RET_NOT_IMPLEMENTED;
+            continue;
+        }
         if (entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
+            if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
             const rsRetVal ret = authorizeRateChange(activeSourceCatalog, candidate, entry);
             if (ret != RS_RET_OK) return ret;
             continue;
@@ -1531,6 +1629,7 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *c
         if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_RULESET) continue;
         if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {
+            if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
             int found;
             if (entry->identity == NULL) return RS_RET_PARAM_ERROR;
             const rsRetVal ret = candidateHasImtcpIdentity(candidate, entry->objectKind, entry->identity, &found);
@@ -1540,6 +1639,13 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *c
         return RS_RET_NOT_IMPLEMENTED;
     }
     return RS_RET_OK;
+}
+
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
+                                                    const rsReloadCandidate_t *const candidate,
+                                                    const rsReloadReportV1_t *const report) {
+    return rsReloadCandidateCheckAuthorizedReportV1(activeSourceCatalog, candidate, report,
+                                                    RS_RELOAD_AUTHORIZE_IMTCP_V1);
 }
 
 rsRetVal rsReloadCandidateSourceBegin(void) {

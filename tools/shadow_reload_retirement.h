@@ -6,6 +6,21 @@
 #define INCLUDED_SHADOW_RELOAD_RETIREMENT_H
 #include <stdint.h>
 #include "rsyslog.h"
+#include "rsconf.h"
+
+/** @brief Select only the mode-specific rejection counter, if any.
+ * OFF requests still count as general retirement rejections, but have no
+ * mode-specific rejection counter. A committed ON-to-OFF change can leave
+ * retirement pending when the subsequent module resume fails.
+ */
+static void shadowReloadRetirementReject(const reloadOnHUPMode_t mode,
+                                         void (*rejectValidate)(void),
+                                         void (*rejectOn)(void)) {
+    if (mode == RELOAD_ON_HUP_VALIDATE)
+        rejectValidate();
+    else if (mode == RELOAD_ON_HUP_ON)
+        rejectOn();
+}
 
 /** @brief One retained retirement episode, mutated only by the control thread. */
 typedef struct shadowReloadRetirement_s {

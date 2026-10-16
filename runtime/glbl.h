@@ -120,6 +120,24 @@ ENDinterface(glbl)
 PROTOTYPEObj(glbl);
 
 extern int glblJsonFormatOpt;
+/** @brief Atomically read the reload policy; NULL configuration means off. */
+int glblGetReloadOnHUPMode(const rsconf_t *cnf);
+/** @brief Publish one validated reload mode without changing other scalars. */
+void glblSetReloadOnHUPMode(rsconf_t *cnf, int mode);
+/** @brief Atomically sample the JSON library formatting option. */
+int glblGetJsonFormatOpt(void);
+/** @brief Return whether the independent JSON formatting scalar is compact. */
+int glblGetCompactJsonString(void);
+/** @brief Publish compact/spaced JSON formatting for future serializations. */
+void glblSetCompactJsonString(int enabled);
+/** @brief Publish trailing-LF policy; NULL configuration is ignored. */
+void glblSetParserDropTrailingLFOnReception(rsconf_t *cnf, int enabled);
+/** @brief Sample trailing-LF policy; NULL configuration uses startup default on. */
+int glblGetParserDropTrailingLFOnReception(rsconf_t *cnf);
+/** @brief Publish trailing-CR policy; NULL configuration is ignored. */
+void glblSetParserDropTrailingCROnReception(rsconf_t *cnf, int enabled);
+/** @brief Sample trailing-CR policy; NULL configuration uses startup default off. */
+int glblGetParserDropTrailingCROnReception(rsconf_t *cnf);
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;
@@ -160,6 +178,12 @@ uchar *glblGetOversizeMsgErrorFile(rsconf_t *cnf);
 const uchar *glblGetOperatingStateFile(rsconf_t *cnf);
 int glblGetOversizeMsgInputMode(rsconf_t *cnf);
 int glblReportOversizeMessage(rsconf_t *cnf);
+/** @brief Publish oversize reporting for future messages; NULL is ignored. */
+void glblSetReportOversizeMessage(rsconf_t *cnf, int enabled);
+/** @brief Sample child-exit mode once per reporting event; NULL means errors. */
+int glblGetReportChildProcessExits(rsconf_t *cnf);
+/** @brief Publish a validated child-exit mode; NULL is ignored. */
+void glblSetReportChildProcessExits(rsconf_t *cnf, int mode);
 void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
 uchar *glblGetLocalHostName(void);
 rsRetVal glblSetMaxOpenFiles(void *pVal, int iFiles);

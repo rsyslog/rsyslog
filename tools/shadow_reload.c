@@ -5,9 +5,9 @@
  * This owns request state, observability, and the active generation's
  * source-syntactic configuration graph. It parses candidates into an owned
  * representation without dispatching configuration objects into modules or
- * runtime globals. Existing ruleset plans and explicitly classified live
- * imtcp fields can be prepared and atomically activated; all other changes
- * remain fail-closed.
+ * runtime globals. Existing ruleset plans, explicitly classified imtcp
+ * profiles, and the independently lowered config.reloadOnHUP policy can be
+ * prepared and atomically activated; all other changes remain fail-closed.
  * Historic HUP hooks remain outside this manager.
  */
 #include "config.h"
@@ -24,6 +24,7 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "glbl.h"
 #include "obj.h"
 #include "reload-candidate.h"
 #include "reload-report.h"
@@ -85,6 +86,19 @@ static shadowReloadRetirement_t retirementSchedule;
 static shadowReloadRetirement_t retirementStatus; /* Observer copy protected by statusMut. */
 static rsRetVal lastLoggedRetirementError = RS_RET_OK;
 static int pendingGenerationActivated = 0;
+static reloadOnHUPMode_t pendingReloadMode = RELOAD_ON_HUP_OFF;
+static int pendingReportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+static int pendingBaseAuthorized = 0;
+static int pendingReloadModeUpdate = 0;
+static int pendingReportChildProcessExitsUpdate = 0;
+static int pendingReportOversizeMsg = 1;
+static int pendingReportOversizeMsgUpdate = 0;
+static int pendingCompactJsonString = 0;
+static int pendingCompactJsonStringUpdate = 0;
+static int pendingParserDropTrailingLF = 1;
+static int pendingParserDropTrailingLFUpdate = 0;
+static int pendingParserDropTrailingCR = 0;
+static int pendingParserDropTrailingCRUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -443,12 +457,196 @@ static cfgmodules_etry_t *findActiveInputModule(const char *const configName) {
     return NULL;
 }
 
+static rsRetVal parseCandidateReloadMode(const char *const value, reloadOnHUPMode_t *const mode) {
+    if (mode == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL || !strcasecmp(value, "off")) {
+        *mode = RELOAD_ON_HUP_OFF;
+    } else if (!strcasecmp(value, "validate")) {
+        *mode = RELOAD_ON_HUP_VALIDATE;
+    } else if (!strcasecmp(value, "on")) {
+        *mode = RELOAD_ON_HUP_ON;
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
+static rsRetVal parseCandidateReportChildProcessExits(const char *const value, int *const mode) {
+    if (mode == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL || !strcasecmp(value, "errors")) {
+        *mode = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    } else if (!strcasecmp(value, "none")) {
+        *mode = REPORT_CHILD_PROCESS_EXITS_NONE;
+    } else if (!strcasecmp(value, "all")) {
+        *mode = REPORT_CHILD_PROCESS_EXITS_ALL;
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
+static rsRetVal parseCandidateBinary(const char *const value, const int defaultValue, int *const parsed) {
+    if (parsed == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL) {
+        *parsed = defaultValue;
+    } else if (!strcasecmp(value, "on")) {
+        *parsed = 1;
+    } else if (!strcasecmp(value, "off")) {
+        *parsed = 0;
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
+/** @brief Authorize one scalar only after proving every other global value unchanged.
+ * Both profiles are request-local owned strings. Runtime baseline checks reject
+ * source/runtime drift before any pending value can reach the commit callback.
+ */
+static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
+    char *activeValue = NULL;
+    char *candidateValue = NULL;
+    char *activeOther = NULL;
+    char *candidateOther = NULL;
+    reloadOnHUPMode_t activeMode;
+    int activeReportChildProcessExits;
+    int activeReportOversizeMsg;
+    int activeCompactJsonString;
+    int activeParserDropTrailingLF;
+    int activeParserDropTrailingCR;
+    DEFiRet;
+
+    if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
+    if (activeSourceObjectCatalog == NULL || pendingSourceObjectCatalog == NULL) return RS_RET_NOT_IMPLEMENTED;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "config.reloadonhup", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "config.reloadonhup", &candidateValue,
+                                                   &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateReloadMode(activeValue, &activeMode));
+        CHKiRet(parseCandidateReloadMode(candidateValue, &pendingReloadMode));
+        if (activeMode != configuredMode || activeMode != rsconfGetReloadOnHUPMode(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingReloadModeUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "reportchildprocessexits", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "reportchildprocessexits",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateReportChildProcessExits(activeValue, &activeReportChildProcessExits));
+        CHKiRet(parseCandidateReportChildProcessExits(candidateValue, &pendingReportChildProcessExits));
+        if (activeReportChildProcessExits != glblGetReportChildProcessExits(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingReportChildProcessExitsUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "oversizemsg.report", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "oversizemsg.report", &candidateValue,
+                                                   &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 1, &activeReportOversizeMsg));
+        CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingReportOversizeMsg));
+        if (activeReportOversizeMsg != glblReportOversizeMessage(runConf)) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingReportOversizeMsgUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "compactjsonstring", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "compactjsonstring", &candidateValue,
+                                                   &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeCompactJsonString));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingCompactJsonString));
+        if (activeCompactJsonString != glblGetCompactJsonString()) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingCompactJsonStringUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.droptrailinglfonreception",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.droptrailinglfonreception",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserDropTrailingLF));
+        CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserDropTrailingLF));
+        if (activeParserDropTrailingLF != glblGetParserDropTrailingLFOnReception(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserDropTrailingLFUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.droptrailingcronreception",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.droptrailingcronreception",
+                                                   &candidateValue, &candidateOther));
+    if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserDropTrailingCR));
+    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserDropTrailingCR));
+    if (activeParserDropTrailingCR != glblGetParserDropTrailingCROnReception(runConf))
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    pendingBaseAuthorized = 1;
+    pendingParserDropTrailingCRUpdate = 1;
+
+finalize_it:
+    free(activeValue);
+    free(candidateValue);
+    free(activeOther);
+    free(candidateOther);
+    RETiRet;
+}
+
 static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report) {
     cfgmodules_etry_t *const activeModule = findActiveInputModule("imtcp");
     modReloadSourceBuildContextV1_t context;
 
     if (activeModule == NULL || !modReloadHasValidSourceInterfaceV1(activeModule->pMod)) return RS_RET_OK;
-    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
+    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL) && !pendingBaseAuthorized) return RS_RET_OK;
     memset(&context, 0, sizeof(context));
     context.version = MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1;
     context.structSize = sizeof(context);
@@ -651,6 +849,19 @@ void shadowReloadBeginRequest(void) {
     pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
     pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
     pendingSourceModuleCapabilityEvaluated = 0;
+    pendingReloadMode = configuredMode;
+    pendingReportChildProcessExits = glblGetReportChildProcessExits(runConf);
+    pendingReportOversizeMsg = glblReportOversizeMessage(runConf);
+    pendingCompactJsonString = glblGetCompactJsonString();
+    pendingParserDropTrailingLF = glblGetParserDropTrailingLFOnReception(runConf);
+    pendingParserDropTrailingCR = glblGetParserDropTrailingCROnReception(runConf);
+    pendingBaseAuthorized = 0;
+    pendingReloadModeUpdate = 0;
+    pendingReportChildProcessExitsUpdate = 0;
+    pendingReportOversizeMsgUpdate = 0;
+    pendingCompactJsonStringUpdate = 0;
+    pendingParserDropTrailingLFUpdate = 0;
+    pendingParserDropTrailingCRUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -700,6 +911,13 @@ void shadowReloadBeginRequest(void) {
                         pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
                         goto candidate_done;
                     }
+                    if (configuredMode == RELOAD_ON_HUP_ON) {
+                        pendingCandidateResult = classifyReloadBase(pendingReport);
+                        if (pendingCandidateResult != RS_RET_OK) {
+                            pendingFailurePhase = sourceLoweringFailurePhase(pendingCandidateResult);
+                            goto candidate_done;
+                        }
+                    }
                     pendingCandidateResult = lowerImtcpSourceCandidate(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) {
                         pendingFailurePhase = sourceLoweringFailurePhase(pendingCandidateResult);
@@ -728,17 +946,17 @@ void shadowReloadBeginRequest(void) {
                                                   pendingSourceModuleCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
-                    pendingCandidateResult = sourceReloadable
-                                                 ? rsReloadCandidateCheckRulesetImtcpReportV1(
-                                                       activeSourceObjectCatalog, pendingCandidate, pendingReport)
-                                                 : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                    unsigned authorizations = pendingBaseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
+                    if (sourceReloadable) authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
+                    pendingCandidateResult = rsReloadCandidateCheckAuthorizedReportV1(
+                        activeSourceObjectCatalog, pendingCandidate, pendingReport, authorizations);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
                             runConf, activeSourceObjectCatalog, pendingCandidate, pendingReport,
                             sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
-                            &pendingPlan);
+                            pendingBaseAuthorized, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                         if (pendingCandidateResult == RS_RET_OK && moduleNeedsCommit) {
                             pendingCandidateResult =
@@ -929,20 +1147,33 @@ static void publishActivatedGeneration(void *const context) {
         modReloadCommit(pendingSourceModule, pendingModuleReloadState);
         pendingModuleReloadCommitted = 1;
     }
+    if (pendingReloadModeUpdate) {
+        configuredMode = pendingReloadMode;
+        glblSetReloadOnHUPMode(runConf, pendingReloadMode);
+    }
+    if (pendingReportChildProcessExitsUpdate) glblSetReportChildProcessExits(runConf, pendingReportChildProcessExits);
+    if (pendingReportOversizeMsgUpdate) glblSetReportOversizeMessage(runConf, pendingReportOversizeMsg);
+    if (pendingCompactJsonStringUpdate) glblSetCompactJsonString(pendingCompactJsonString);
+    if (pendingParserDropTrailingLFUpdate) glblSetParserDropTrailingLFOnReception(runConf, pendingParserDropTrailingLF);
+    if (pendingParserDropTrailingCRUpdate) glblSetParserDropTrailingCROnReception(runConf, pendingParserDropTrailingCR);
     publishActivatedGraph(context);
+}
+
+static void accountRetirementRejectedValidate(void) {
+    ++rejectedValidateTotal;
+    STATSCOUNTER_INC(ctrRejectedValidate, mutCtrRejectedValidate);
+}
+
+static void accountRetirementRejectedOn(void) {
+    ++rejectedOnTotal;
+    STATSCOUNTER_INC(ctrRejectedOn, mutCtrRejectedOn);
 }
 
 /** @brief Reject a completed legacy HUP without replacing the published status. */
 static void completeRetirementBlockedRequest(void *const context ATTR_UNUSED) {
     ++rejectedTotal;
     STATSCOUNTER_INC(ctrRejected, mutCtrRejected);
-    if (configuredMode == RELOAD_ON_HUP_VALIDATE) {
-        ++rejectedValidateTotal;
-        STATSCOUNTER_INC(ctrRejectedValidate, mutCtrRejectedValidate);
-    } else {
-        ++rejectedOnTotal;
-        STATSCOUNTER_INC(ctrRejectedOn, mutCtrRejectedOn);
-    }
+    shadowReloadRetirementReject(configuredMode, accountRetirementRejectedValidate, accountRetirementRejectedOn);
     accountDuration();
     PREFER_STORE_INT(&requestInProgress, 0);
     PREFER_STORE_INT(&pendingGauge, signalRequestPending != 0);

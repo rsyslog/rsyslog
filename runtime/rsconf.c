@@ -90,7 +90,7 @@ rsconf_t *loadConf = NULL; /* the config currently being loaded (no concurrent c
 static const char cfgModRefSrc[] = "cfgmodules";
 
 reloadOnHUPMode_t rsconfGetReloadOnHUPMode(const rsconf_t *cnf) {
-    return cnf == NULL ? RELOAD_ON_HUP_OFF : cnf->globals.reloadOnHUP;
+    return (reloadOnHUPMode_t)glblGetReloadOnHUPMode(cnf);
 }
 
 #ifdef HAVE_LIBSYSTEMD
@@ -301,7 +301,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.compatConfigFormatSyslogd = COMPAT_CONFIGFORMAT_ENABLE;
     pThis->globals.compatConfigFormatProperty = COMPAT_CONFIGFORMAT_ENABLE;
     pThis->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_WARN;
-    pThis->globals.reloadOnHUP = RELOAD_ON_HUP_OFF;
+    glblSetReloadOnHUPMode(pThis, RELOAD_ON_HUP_OFF);
     pThis->globals.bReduceRepeatMsgs = 0;
     pThis->globals.bDebugPrintTemplateList = 1;
     pThis->globals.bDebugPrintModuleList = 0;
@@ -332,9 +332,9 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
     pThis->globals.pszDfltNetstrmDrvr = NULL;
     pThis->globals.oversizeMsgErrorFile = NULL;
-    pThis->globals.reportOversizeMsg = 1;
+    glblSetReportOversizeMessage(pThis, 1);
     pThis->globals.oversizeMsgInputMode = 0;
-    pThis->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    glblSetReportChildProcessExits(pThis, REPORT_CHILD_PROCESS_EXITS_ERRORS);
     pThis->globals.bActionReportSuspension = 1;
     pThis->globals.bActionReportSuspensionCont = 0;
     pThis->globals.janitorInterval = 10;
@@ -408,8 +408,8 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->pMsgQueue = NULL;
 
     pThis->globals.parser.cCCEscapeChar = '#';
-    pThis->globals.parser.bDropTrailingLF = 1;
-    pThis->globals.parser.bDropTrailingCR = 0;
+    glblSetParserDropTrailingLFOnReception(pThis, 1);
+    glblSetParserDropTrailingCROnReception(pThis, 0);
     pThis->globals.parser.bEscapeCCOnRcv = 1;
     pThis->globals.parser.bSpaceLFOnRcv = 0;
     pThis->globals.parser.bEscape8BitChars = 0;

@@ -360,6 +360,7 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
                                       const eModReloadCapability_t sourceCapability,
+                                      const int baseAuthorized,
                                       rsReloadRulesetPlanV1_t **out) {
     prepareContextV1_t prepare = {0};
     rsReloadRulesetPlanV1_t *plan = NULL;
@@ -378,12 +379,11 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     if (report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
         return RS_RET_PARAM_ERROR;
+    unsigned authorizations = baseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
     if (sourceCapability == eMOD_RELOAD_REUSE || sourceCapability == eMOD_RELOAD_LIVE_SWAP ||
-        sourceCapability == eMOD_RELOAD_NEW_SESSIONS || sourceCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS) {
-        CHKiRet(rsReloadCandidateCheckRulesetImtcpReportV1(activeSourceCatalog, candidate, report));
-    } else {
-        CHKiRet(rsReloadCandidateCheckRulesetOnlyReportV1(report));
-    }
+        sourceCapability == eMOD_RELOAD_NEW_SESSIONS || sourceCapability == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS)
+        authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
+    CHKiRet(rsReloadCandidateCheckAuthorizedReportV1(activeSourceCatalog, candidate, report, authorizations));
     for (size_t i = 0; i < report->entryCount; ++i) {
         const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
         const rsReloadReportEntryV1_t *const entry = (const rsReloadReportEntryV1_t *)(const void *)address;

@@ -141,9 +141,10 @@ validation are not constructed. Dirty startup configurations cannot become a
 trusted baseline.
 
 ``on`` follows the private parse/report path and activates only supported
-changes to existing named ruleset bodies and the existing-listener fields above.
+changes to existing named ruleset bodies, the existing-listener fields above,
+and the bounded global scalars below.
 Default-ruleset body changes remain unsupported at this stage.
-Action definitions, global settings, queues, and other non-supported objects must remain unchanged;
+Action definitions, queues, and other non-supported objects must remain unchanged;
 unsupported statement dependencies or action ownership changes fail closed.
 Active local-queue graphs, including mixed local/global graphs, are unsupported
 for activation: producer-owned frontend workers are outside the legacy queue
@@ -154,6 +155,26 @@ This is not general live configuration reload. Failed preparation or barrier
 acquisition leaves the current generation in place. The established legacy
 HUP hooks still run in every mode. The active runtime graph covers ruleset
 program structure, not complete action configuration, queues, or parser chains.
+
+Exactly one supported global scalar may change per candidate:
+``config.reloadOnHUP``, ``reportChildProcessExits``, ``oversizemsg.report``,
+``compactJsonString``, ``parser.dropTrailingCROnReception`` or
+``parser.dropTrailingLFOnReception``. Every other global parameter must retain
+its canonical source value. The active source value must also match its runtime
+baseline before publication. Combined scalar changes and unsupported global
+settings reject without partial publication; the local/mixed queue restriction
+still applies. This is a bounded exception, not full configuration reload.
+
+Only a currently active ``on`` mode can publish a new reload mode. A committed
+``off`` or ``validate`` value governs the next HUP; ``off`` cannot enable itself
+by rereading configuration. Legacy hooks still run unconditionally.
+
+Parser workers atomically read the independently published LF/CR scalars.
+The sanitizer samples each setting once before its first use and retains scan
+samples through rewrite. Rewrite-only options are first sampled when rewriting
+is actually necessary. These independent samples do not promise an atomic
+configuration-generation snapshot. Child-exit reporting similarly samples its
+mode once per event, and JSON formatting atomically reads its formatting option.
 
 The lifecycle and mode descriptions below specify the staged target design,
 not functionality available at this existing-listener policy boundary.

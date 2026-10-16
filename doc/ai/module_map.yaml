@@ -2,6 +2,18 @@
 # Per-module metadata (support status, maturity, contacts) lives in each module
 # directory as `MODULE_METADATA.yaml`; update both the metadata file and this map
 # when concurrency guidance changes.
+runtime_reload_global_scalars:
+  paths:
+    - "runtime/glbl.c"
+    - "runtime/parser.c"
+    - "runtime/msg.c"
+    - "runtime/reload-candidate.c"
+    - "tools/shadow_reload.c"
+  concurrency:
+    - One supported global scalar per candidate, with exclude-one source fingerprint and runtime-baseline check.
+    - Startup, reset and live writes use the same atomic accessors as runtime readers.
+    - Sanitizer samples each independent policy before first use, retaining scan samples through rewrite; no atomic generation snapshot.
+    - Main thread alone owns controller mode and pending scalar publication under the existing commit guard.
 runtime_queue:
   operator_docs:
     - "doc/source/concepts/queues.rst#local-queue-operation"

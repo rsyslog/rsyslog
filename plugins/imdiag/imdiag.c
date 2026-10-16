@@ -351,6 +351,7 @@ finalize_it:
 /* This function injects messages. Command format:
  * injectmsg <fromnbr> <number-of-messages>
  * injectmsg <fromnbr> <number-of-messages> <delay-between-messages-ms>
+ * injectmsg oversized <marker> generates one fixed 1024-byte core submission.
  * Additional trailing arguments are ignored for backward compatibility with
  * older testbench helpers.
  * rgerhards, 2009-05-27
@@ -374,6 +375,18 @@ static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
         /* user has provided content for a message */
         ++pszCmd; /* ignore following space */
         CHKiRet(doInjectMsg(pszCmd, ratelimit));
+        nMsgs = 1;
+    } else if (ustrcmp(UCHAR_CONSTANT("oversized"), wordBuf) == 0) {
+        /* The short command survives a small diagnostic TCP framing limit.
+         * Generate AFTER framing so submitMsg2 sees a genuinely oversized
+         * message, without changing any production policy or size limit. */
+        char message[1025];
+        getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), 0);
+        if (wordBuf[0] == '\0' || ustrlen(wordBuf) > 48) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        const int prefix = snprintf(message, sizeof(message), "<167>Mar 10 01:00:00 host app: %.48s ", wordBuf);
+        memset(message + prefix, '0', sizeof(message) - 1 - prefix);
+        message[sizeof(message) - 1] = '\0';
+        CHKiRet(doInjectMsg((uchar *)message, ratelimit));
         nMsgs = 1;
     } else { /* assume 2 args, (from_idx, count) */
         CHKiRet(parseInt64Arg(wordBuf, "from", &iFrom));
@@ -1446,6 +1459,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(getReloadRulesetFingerprint(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreloadstatus"))) {
         CHKiRet(getReloadStatus(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreportoversizemsg"))) {
+        CHKiRet(sendResponse(pSess, "%d\n", glblReportOversizeMessage(runConf)));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {

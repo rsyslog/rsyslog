@@ -43,6 +43,7 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
                                       eModReloadCapability_t sourceCapability,
+                                      int baseAuthorized,
                                       rsReloadRulesetPlanV1_t **out);
 /** @brief Free private plan resources and NULL the caller's pointer.
  * Before commit, borrowed actions are not destroyed. After commit, roots and

@@ -23,6 +23,9 @@ TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
 TESTS_RELEASE_PACKAGING = rpm-baseline-patch-policy.sh
+TESTS_PARSER_POLICY_UNIT = parser-policy-unit.sh
+EXTRA_DIST += $(TESTS_PARSER_POLICY_UNIT)
+EXTRA_DIST += testsuites/reload-mode-off-driver.sh
 FUZZING_CORPUS = \
 	fuzz/README.md \
 	fuzz/prepare-imtcp-session-corpus.py \
@@ -358,6 +361,9 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 
 TESTS_DEFAULT = \
 	record-container-validation.sh \
+	global-reloadonhup-mode-off-rainerscript.sh \
+	global-reloadonhup-compactjson-rainerscript.sh \
+	global-reloadonhup-oversizemsg-report-rainerscript.sh \
 	codex-pre-push-container-gate.sh \
 	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
@@ -945,6 +951,9 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	global-reloadonhup-mode-off-yaml.sh \
+	global-reloadonhup-compactjson-yaml.sh \
+	global-reloadonhup-oversizemsg-report-yaml.sh \
 	config-translate-rs-to-yaml.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
@@ -1020,6 +1029,8 @@ TESTS_IMTCP = \
 	global-reloadonhup-unnamed-rainerscript.sh \
 	global-reloadonhup-on-local-rainerscript.sh \
 	global-reloadonhup-on-mixed-rainerscript.sh \
+	global-reloadonhup-droptrailinglf-rainerscript.sh \
+	global-reloadonhup-droptrailingcr-rainerscript.sh \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
 	fromhost-port-async-ruleset.sh \
@@ -1122,6 +1133,8 @@ TESTS_IMTCP_STREAM_ALWAYS_OSSL = \
 
 TESTS_IMTCP_YAML = \
 	global-reloadonhup-ruleset-metadata-yaml.sh \
+	global-reloadonhup-droptrailinglf-yaml.sh \
+	global-reloadonhup-droptrailingcr-yaml.sh \
 	yaml-parser-drop-trailing-cr.sh \
 	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
@@ -1388,6 +1401,7 @@ TESTS_MMDARWIN_VALGRIND = \
 
 TESTS_OMPROG = \
 	queue-fixedarray-outoforder.sh \
+	global-reloadonhup-reportchild-rainerscript.sh \
 	omprog-defaults.sh \
 	omprog-output-capture.sh \
 	omprog-output-capture-mt.sh \
@@ -1409,6 +1423,9 @@ TESTS_OMPROG = \
 	omprog-if-error.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
+
+TESTS_OMPROG_IMTCP_YAML = \
+	global-reloadonhup-reportchild-yaml.sh
 
 TESTS_OMPROG_VALGRIND = \
 	omprog-defaults-vg.sh \
@@ -2743,6 +2760,7 @@ EXTRA_DIST += $(TESTS_IMPROG_VALGRIND)
 EXTRA_DIST += $(TESTS_MMDARWIN)
 EXTRA_DIST += $(TESTS_MMDARWIN_VALGRIND)
 EXTRA_DIST += $(TESTS_OMPROG)
+EXTRA_DIST += $(TESTS_OMPROG_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_OMPROG_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP)
 EXTRA_DIST += $(TESTS_OMHTTP_VALGRIND)
@@ -2909,6 +2927,9 @@ TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri r
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_module_reload runtime_unit_reload_report runtime_unit_reload_normalized_graph \
 	runtime_unit_reload_candidate_graph runtime_unit_reload_syntax_clone runtime_unit_wtp_quiesce \
 	runtime_unit_tcpsrv_fence
+if ENABLE_TESTBENCH
+TESTS += $(TESTS_PARSER_POLICY_UNIT)
+endif
 
 if ENABLE_IMTCP_TESTS
 check_PROGRAMS += runtime_unit_imtcp_policy_owner
@@ -3778,6 +3799,11 @@ endif # ENABLE_IMPROG
 
 if ENABLE_OMPROG
 TESTS += $(TESTS_OMPROG)
+if ENABLE_IMTCP_TESTS
+if HAVE_LIBYAML
+TESTS += $(TESTS_OMPROG_IMTCP_YAML)
+endif
+endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMPROG_VALGRIND)
 endif
