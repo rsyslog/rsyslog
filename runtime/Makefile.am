@@ -58,6 +58,12 @@ librsyslog_la_SOURCES = \
 	modules.c \
 	modules.h \
 	module-reload.c \
+	reload-normalized-graph.c \
+	reload-normalized-graph.h \
+	reload-ruleset-graph.c \
+	reload-ruleset-graph.h \
+	reload-report.c \
+	reload-report.h \
 	statsobj.c \
 	statsobj.h \
 	compat_queue.h \

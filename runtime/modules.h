@@ -292,7 +292,8 @@ sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
  * Classify a module change without enabling reload.  Legacy modules and
  * missing, failing, or invalid classifiers are deliberately classified as
  * restart-required.  Callers that need the classifier's exact failure can
- * invoke reloadV1.classify directly after this conservative preflight.
+ * invoke the validated pMod->reloadV1.classify callback directly after this
+ * conservative preflight.
  */
 eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
 

@@ -98,6 +98,7 @@ struct action_s {
     qqueue_t *pQueue; /* action queue */
     pthread_mutex_t mutAction; /* primary action mutex */
     uchar *pszName; /* action name */
+    sbool bNameWasGenerated; /* provenance, not inferred from user-controlled spelling */
     uchar *pszRatelimitName; /* optional output ratelimit policy name */
     ratelimit_t *ratelimiter; /* optional action-level output ratelimiter */
     DEF_ATOMIC_HELPER_MUT(mutCAS);

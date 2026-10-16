@@ -221,6 +221,7 @@ void rsyslogdDoDie(int sig);
 static volatile sig_atomic_t bChildDied = 0;
 static volatile sig_atomic_t bHadHUP = 0;
 static volatile sig_atomic_t bHUPInProgress = 0;
+static volatile sig_atomic_t hupProcessedCount = 0;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
 static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
@@ -274,6 +275,12 @@ int get_bHadHUP(void) {
     const int ret = PREFER_LOAD_INT(&bHadHUP) || PREFER_LOAD_INT(&bHUPInProgress);
     /* note: at this point ret can already be invalid */
     return ret;
+}
+
+/* Testbench synchronization point. The main thread publishes a new value only
+ * after all legacy HUP hooks and reload-manager accounting have completed. */
+int getHUPProcessedCount(void) {
+    return PREFER_LOAD_INT(&hupProcessedCount);
 }
 
 /* we need a pointer to the conf, because in early startup stage we
@@ -2385,7 +2392,6 @@ static void mainloop(void) {
     uint64_t next_janitor_run_ms;
 
     sigemptyset(&sigblockset);
-    sigaddset(&sigblockset, SIGTERM);
     sigaddset(&sigblockset, SIGCHLD);
     sigaddset(&sigblockset, SIGHUP);
     next_janitor_run_ms = mainloopMonotonicMs() + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
@@ -2400,20 +2406,19 @@ static void mainloop(void) {
             reapChild();
         }
 
-        /* A TERM received with (or before) HUP wins: never begin another HUP
-         * cycle while shutdown is pending. This is also before the reload
-         * manager, which never restarts or activates anything in Release B. */
-        sigset_t pending;
-        /* SIGTERM may already be pending while masked, before its handler
-         * has set bFinished. POSIX sigpending also works on macOS. */
-        if (sigpending(&pending) == 0 && sigismember(&pending, SIGTERM) == 1) bFinished = SIGTERM;
+        /* SIGTERM stays unblocked while HUP and SIGCHLD flags are claimed, so
+         * a termination request cannot remain pending behind this check. The
+         * handler publishes bFinished and wakes this thread. */
         if (bFinished) break;
 
         if (PREFER_LOAD_INT(&bHadHUP)) {
+            /* Publish ownership before clearing pending: observers must not
+             * mistake the handoff for an idle coordinator. */
+            PREFER_STORE_INT(&bHUPInProgress, 1);
             PREFER_STORE_INT(&bHadHUP, 0);
             shadowReloadBeginRequest();
-            PREFER_STORE_INT(&bHUPInProgress, 1);
             doHUP();
+            PREFER_STORE_INT(&hupProcessedCount, PREFER_LOAD_INT(&hupProcessedCount) + 1);
             PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 

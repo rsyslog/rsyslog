@@ -28,6 +28,15 @@ void shadowReloadExit(void);
  * candidate configuration. */
 void shadowReloadConfigure(reloadOnHUPMode_t mode);
 
+/** @brief Borrow the active generation's normalized ruleset fingerprint.
+ * This control-path accessor lets diagnostics avoid rebuilding the graph.
+ * @param name Borrowed ruleset name to find in the active graph.
+ * @param ppFingerprint Output borrowed string, valid until manager teardown.
+ * @return RS_RET_OK on success; parameter, allocation or not-found error
+ * otherwise. No ownership is transferred.
+ */
+rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFingerprint);
+
 /** @brief Record a coalesced signal-safe request without logging or allocation.
  * This is called from the SIGHUP handler. It must remain limited to setting
  * a sig_atomic_t flag; the main thread performs all accounting and logging. */
