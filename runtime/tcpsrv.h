@@ -95,13 +95,17 @@ struct tcpLstnPortList_s {
     sbool bHasStartRegex;
 #endif
     tcpLstnPortList_t *pNext; /**< next port or NULL */
+#ifdef FEATURE_REGEXP
+    sbool bStartRegexCompiled; /**< start_preg owns compiled state, independent of the accept profile. */
+#endif
 };
 
 
 /**
  * @brief Prepared live and accept-time values published under a TCP fence.
  * Preparation validates these scalars and pins the resolved ruleset. Commit
- * copies them without allocation; existing accept-time snapshots remain unchanged.
+ * copies them without allocation and consumes startRegex ownership; existing
+ * session snapshots remain unchanged.
  */
 typedef struct tcpsrv_reload_profile_s {
     int useFlowControl; /**< Live flow-control policy. */
@@ -127,6 +131,7 @@ typedef struct tcpsrv_reload_profile_s {
     uint64_t compressionMaxDecompressedBytesPerReceive; /**< Accept-time decompressed receive bound. */
     uint64_t compressionMaxTotalZstdWindowBytes; /**< Accept-time aggregate zstd window bound. */
     int multiLine; /**< Accept-time multiline framing flag. */
+    uchar *startRegex; /**< Owned prepared pattern; transfers to the listener during fenced commit. */
     uchar defaultTZ[8]; /**< Copied live default timezone. */
     ruleset_t *ruleset; /**< Borrowed materialized ruleset, pinned by the active generation. */
 } tcpsrv_reload_profile_t;
@@ -425,11 +430,12 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /** @brief Publish a prepared profile while the caller owns the server fence.
      * @param pThis Fenced server, pinned through commit and resume.
      * @param profile Validated values and pinned ruleset; copied synchronously.
+     * Its startRegex ownership transfers to the listener (profile extension v37).
      */
     void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 36 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 37 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -529,6 +535,14 @@ void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *pThis,
                                           uint64_t maxTotalZstdWindowBytes);
 /** Update multiline acceptance for future sessions only. */
 void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *pThis, int enabled);
+/**
+ * @brief Transfer a prevalidated delimiter pattern to the fenced accept profile.
+ * @param pThis Server with exactly one listener; caller owns its acquired fence.
+ * @param preparedRegex Owned pattern, or NULL to disable regex framing.
+ * Ownership transfers synchronously without allocation; existing sessions own
+ * independent compiled patterns. Preparation must validate the listener shape.
+ */
+void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *pThis, uchar *preparedRegex);
 /** Copy the default timezone into server, listeners and established sessions;
  * NULL clears it. The caller retains ownership of the string. */
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);

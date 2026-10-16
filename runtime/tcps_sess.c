@@ -1,4 +1,7 @@
 /* tcps_sess.c
+ * Concurrency & Locking: accepted sessions own their compiled delimiter regex.
+ * Listener reload replaces only the accept-time pattern while fenced; it
+ * cannot invalidate a pattern used by an existing session's receive worker.
  *
  * This implements a session of the tcpsrv object. For general
  * comments, see header of tcpsrv.c.
@@ -195,6 +198,14 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
 #endif
     if (pThis->pStrm != NULL) netstrm.Destruct(&pThis->pStrm);
 
+#ifdef FEATURE_REGEXP
+    if (pThis->bOwnStartRegex) {
+        regexp.regfree(&pThis->ownedStartRegex);
+        pThis->bOwnStartRegex = RSFALSE;
+        pThis->pStartRegex = NULL;
+    }
+#endif
+
     if (pThis->pSrv->pOnSessDestruct != NULL) {
         pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
     }
@@ -334,6 +345,14 @@ static rsRetVal SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv) {
 
 
 /* set our parent listener info*/
+/**
+ * @brief Snapshot listener policy and compile a session-owned delimiter regex.
+ * @param pThis Newly accepted session, owned exclusively by the accept path.
+ * @param pLstnInfo Listener whose accept profile is stable during this call.
+ * @return RS_RET_OK, or a compilation/parameter error requiring caller cleanup.
+ * The session borrows stable listener metadata, but its compiled pattern is
+ * independent of later reloads and is released by session destruction.
+ */
 static rsRetVal SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -357,13 +376,32 @@ static rsRetVal SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
     pThis->iDrvrMode = pThis->pSrv->iDrvrMode;
 #ifdef FEATURE_REGEXP
     pThis->bHasStartRegex = pLstnInfo->bHasStartRegex;
-    pThis->pStartRegex = pThis->bHasStartRegex ? &pLstnInfo->start_preg : NULL;
+    pThis->pStartRegex = NULL;
+    if (pThis->bOwnStartRegex) {
+        regexp.regfree(&pThis->ownedStartRegex);
+        pThis->bOwnStartRegex = RSFALSE;
+    }
+    if (pThis->bHasStartRegex) {
+        const uchar *const pattern = pLstnInfo->cnf_params->pszStartRegex;
+        if (pattern == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        const int errcode = regexp.regcomp(&pThis->ownedStartRegex, (const char *)pattern, REG_EXTENDED);
+        if (errcode != 0) {
+            const rsRetVal regexRet = errcode == REG_ESPACE ? RS_RET_OUT_OF_MEMORY : RS_RET_INVALID_VALUE;
+            char errbuff[512];
+            regexp.regerror(errcode, &pThis->ownedStartRegex, errbuff, sizeof(errbuff));
+            LogError(0, regexRet, "imtcp: could not compile accepted-session framing regex: %s", errbuff);
+            ABORT_FINALIZE(regexRet);
+        }
+        pThis->bOwnStartRegex = RSTRUE;
+        pThis->pStartRegex = &pThis->ownedStartRegex;
+    }
 #endif
     pThis->compressionMode = pLstnInfo->compressionMode;
     pThis->compressionDriver = pLstnInfo->compressionDriver;
     pThis->compressionMaxExpansionRatio = pLstnInfo->compressionMaxExpansionRatio;
     pThis->compressionMaxDecompressedBytesPerReceive = pLstnInfo->compressionMaxDecompressedBytesPerReceive;
     pThis->compressionMaxTotalZstdWindowBytes = pLstnInfo->compressionMaxTotalZstdWindowBytes;
+finalize_it:
     RETiRet;
 }
 
@@ -1340,6 +1378,7 @@ rsRetVal tcps_sessFuzzInput(const uint8_t *const data, const size_t size) {
     #ifdef FEATURE_REGEXP
     if (use_regex) {
         const size_t regex_index = ((data[1] >> 4) & 0x03U) % (sizeof(start_regexes) / sizeof(start_regexes[0]));
+        params.pszStartRegex = (uchar *)start_regexes[regex_index];
         const int regex_ret = regexp.regcomp(&listener.start_preg, start_regexes[regex_index], REG_EXTENDED);
         if (regex_ret != 0) ABORT_FINALIZE(RS_RET_ERR);
         listener.bHasStartRegex = RSTRUE;

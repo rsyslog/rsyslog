@@ -7,6 +7,8 @@
  * exact callback counts and result values are the deterministic retry oracle.
  * The production imtcp resume guard also proves same-generation failure/retry
  * ownership and suppresses callbacks for stopped-generation runtime sentinels.
+ * The production regex preparer is exercised at the session-buffer bound,
+ * above it, and disabled, without allocating any large session buffers.
  */
 #include "config.h"
 #include <stddef.h>
@@ -19,6 +21,14 @@
 #include "../../runtime/module-reload.c"
 #include "../../tools/shadow_reload_lifecycle.h"
 #include "../../plugins/imtcp/imtcp-reload-resume.h"
+#include "../../plugins/imtcp/imtcp-reload-regex.h"
+
+/* Only diagnostic transport is stubbed; regex preparation is production code. */
+void LogError(const int error, const int code, const char *fmt, ...) {
+    (void)error;
+    (void)code;
+    (void)fmt;
+}
 
 #define CHECK(condition)                                                                    \
     do {                                                                                    \
@@ -31,6 +41,33 @@
 static unsigned guardedReleaseCalls;
 static rsRetVal guardedReleaseResult;
 static int guardedRuntime;
+
+static int reloadRegexBounds(void) {
+    uchar *prepared = NULL;
+    const int bound = (INT_MAX - 1) / 2;
+    CHECK(prepareReloadStartRegex(NULL, INT_MAX, &prepared) == RS_RET_OK);
+    CHECK(prepared == NULL);
+#ifdef FEATURE_REGEXP
+    CHECK(prepareReloadStartRegex((const uchar *)"^start", bound, &prepared) == RS_RET_OK);
+    CHECK(prepared != NULL && !strcmp((const char *)prepared, "^start"));
+    free(prepared);
+    prepared = NULL;
+    CHECK(prepareReloadStartRegex((const uchar *)"", bound, &prepared) == RS_RET_OK);
+    CHECK(prepared != NULL && prepared[0] == '\0');
+    free(prepared);
+    prepared = NULL;
+    CHECK(prepareReloadStartRegex((const uchar *)"[", bound, &prepared) == RS_RET_INVALID_VALUE);
+    CHECK(prepared == NULL);
+    CHECK(prepareReloadStartRegex((const uchar *)"^start", bound + 1, &prepared) == RS_RET_ERR);
+    CHECK(prepared == NULL);
+    CHECK(prepareReloadStartRegex((const uchar *)"", INT_MAX, &prepared) == RS_RET_ERR);
+    CHECK(prepared == NULL);
+#else
+    CHECK(prepareReloadStartRegex((const uchar *)"^start", bound, &prepared) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(prepared == NULL);
+#endif
+    return 0;
+}
 
 static rsRetVal guardedRelease(void *const runtime, const uint64_t token) {
     ++guardedReleaseCalls;
@@ -174,6 +211,7 @@ static rsRetVal source_classify_invalid(const void __attribute__((unused)) * old
 }
 
 int main(void) {
+    CHECK(reloadRegexBounds() == 0);
     CHECK(stoppedRuntimeResume() == 0);
     /* Pin the published ABI, not just symbolic comparisons within one build. */
     CHECK(eMOD_RELOAD_RESTART_REQUIRED == 0);

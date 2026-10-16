@@ -743,8 +743,15 @@ void shadowReloadBeginRequest(void) {
                             pendingCandidateResult =
                                 modReloadPrepare(pendingSourceModule, pendingActiveSourceModuleCnf,
                                                  pendingSourceModuleCnf, &pendingModuleReloadState);
-                            if (pendingCandidateResult != RS_RET_OK)
-                                pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                            if (pendingCandidateResult != RS_RET_OK) {
+                                /* An invalid prepared regex is an activation
+                                 * failure after accepted source capability.
+                                 * Unsupported constraints and unexpected
+                                 * errors retain their existing classification. */
+                                pendingFailurePhase = pendingCandidateResult == RS_RET_INVALID_VALUE
+                                                          ? SHADOW_RELOAD_FAILURE_ACTIVATION
+                                                          : SHADOW_RELOAD_FAILURE_CAPABILITY;
+                            }
                         }
                         if (pendingCandidateResult == RS_RET_OK && pendingPlan != NULL &&
                             (pendingReport->modifiedCount != 0 || pendingReport->addedCount != 0 ||
@@ -806,7 +813,7 @@ static int rejectedResult(void) {
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_ACTIVATION &&
             (pendingCandidateResult == RS_RET_NO_RUN || pendingCandidateResult == RS_RET_TIMED_OUT ||
              pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
-             pendingCandidateResult == RS_RET_ERR);
+             pendingCandidateResult == RS_RET_INVALID_VALUE || pendingCandidateResult == RS_RET_ERR);
         if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure &&
             !expectedActivationFailure)
             return SHADOW_RELOAD_REJECTED_INTERNAL;

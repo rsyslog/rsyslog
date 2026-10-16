@@ -4,6 +4,8 @@
  * Commit runs with every affected event-loop/worker fence held; it neither
  * allocates nor changes listener topology. Unnamed limiter reset shares that
  * exclusion; accepted sessions retain their accept-time snapshots.
+ * Session table replacement copies stable slot IDs only while fenced; old
+ * pointer arrays stay transaction-owned until resume/retirement succeeds.
  * This is the implementation of the TCP input module.
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
@@ -70,6 +72,7 @@
 #include "glbl.h"
 #include "tcpsrv.h"
 #include "imtcp-reload-resume.h"
+#include "imtcp-reload-regex.h"
 #include "ruleset.h"
 #include "rainerscript.h"
 #include "parserif.h"
@@ -1688,7 +1691,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
     const tcpLstnParams_t *const rightParams = right->cnf_params;
 
     if (leftParams == NULL || rightParams == NULL) return 0;
-    return left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax &&
+    return (ignoreLiveFields || left->iTCPSessMax == right->iTCPSessMax) && left->iTCPLstnMax == right->iTCPLstnMax &&
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
@@ -1740,7 +1743,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet)) &&
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
-           reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
+           (ignoreNewSessionFields || reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex)) &&
            reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
            leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
            reloadPermittedPeersEqual(reloadEffectivePermittedPeers(left, leftModule),
@@ -1858,6 +1861,10 @@ static void mergeReloadCapability(eModReloadCapability_t *const capability,
     else if (haveNewSessions)
         *capability = eMOD_RELOAD_NEW_SESSIONS;
 }
+static int reloadEffectiveSynBacklog(const instanceConf_t *const inst) {
+    return inst->iSynBacklog == 0 ? inst->iTCPSessMax / 10 + 5 : inst->iSynBacklog;
+}
+
 static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
                                          const modConfData_t *const oldConfig,
                                          const instanceConf_t *const newInst,
@@ -1867,6 +1874,11 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     int newSessionsChanged;
 
     if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
+    /* Capacity is live only when cold-start listen-backlog semantics stay
+     * unchanged. The occupied-tail shrink check requires the runtime fence. */
+    if (oldInst->iTCPSessMax != newInst->iTCPSessMax &&
+        reloadEffectiveSynBacklog(oldInst) != reloadEffectiveSynBacklog(newInst))
+        return 0;
     if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) return 0;
     liveChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 1);
     newSessionsChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0);
@@ -1953,8 +1965,12 @@ typedef struct imtcpReloadEntryV1_s {
     uint64_t compressionMaxDecompressedBytesPerReceive;
     uint64_t compressionMaxTotalZstdWindowBytes;
     int multiLine;
+    uchar *startRegex;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
+    tcps_sess_t **preparedSessionSlots;
+    tcps_sess_t **retiredSessionSlots;
+    int sessionMax;
     uint64_t fenceToken;
     int fenceAcquired;
 } imtcpReloadEntryV1_t;
@@ -1964,6 +1980,19 @@ typedef struct imtcpReloadStateV1_s {
     uint64_t runtimeGeneration; /**< Captured registry lifetime, not a configuration generation. */
     imtcpReloadEntryV1_t entries[];
 } imtcpReloadStateV1_t;
+
+/** @brief Release only prepared or retired storage owned by the transaction. */
+static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
+    if (state == NULL) return;
+    for (size_t i = 0; i < state->count; ++i) {
+        free(state->entries[i].startRegex);
+        state->entries[i].startRegex = NULL;
+        free(state->entries[i].preparedSessionSlots);
+        state->entries[i].preparedSessionSlots = NULL;
+        free(state->entries[i].retiredSessionSlots);
+        state->entries[i].retiredSessionSlots = NULL;
+    }
+}
 
 static tcpsrv_etry_t *findRuntimeEndpoint(const char *const key) {
     tcpsrv_etry_t *entry;
@@ -2030,6 +2059,17 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         free(key);
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        if (state->entries[index].runtime->tcpsrv->pLstnPorts == NULL ||
+            state->entries[index].runtime->tcpsrv->pLstnPorts->pNext != NULL ||
+            state->entries[index].runtime->tcpsrv->pLstnPorts->cnf_params == NULL)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        state->entries[index].sessionMax = newInst->iTCPSessMax;
+        if (state->entries[index].sessionMax < 1) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        if (state->entries[index].sessionMax != state->entries[index].runtime->tcpsrv->iSessMax) {
+            CHKmalloc(state->entries[index].preparedSessionSlots =
+                          calloc((size_t)state->entries[index].sessionMax,
+                                 sizeof(state->entries[index].preparedSessionSlots[0])));
+        }
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].ratelimitInterval = (unsigned)newInst->ratelimitInterval;
@@ -2054,6 +2094,8 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             newInst->compressionMaxDecompressedBytesPerReceive;
         state->entries[index].compressionMaxTotalZstdWindowBytes = newInst->compressionMaxTotalZstdWindowBytes;
         state->entries[index].multiLine = newInst->cnf_params->bMultiLine;
+        CHKiRet(prepareReloadStartRegex(newInst->cnf_params->pszStartRegex, glblGetMaxLine(newConfig->pConf),
+                                        &state->entries[index].startRegex));
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -2068,6 +2110,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
     state = NULL;
 
 finalize_it:
+    freeReloadPreparedValues(state);
     free(state);
     RETiRet;
 }
@@ -2085,6 +2128,26 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
         if (ret != RS_RET_OK) break;
         state->entries[i].fenceAcquired = 1;
         ++acquired;
+    }
+    if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i];
+            tcpsrv_t *const server = entry->runtime->tcpsrv;
+            if (entry->preparedSessionSlots == NULL) continue;
+            /* Existing descriptors retain their slot IDs. Do not compact an
+             * occupied tail or close sessions merely to satisfy a shrink. */
+            for (int slot = entry->sessionMax; slot < server->iSessMax; ++slot) {
+                if (server->pSessions[slot] != NULL) {
+                    ret = RS_RET_NOT_IMPLEMENTED;
+                    break;
+                }
+            }
+            if (ret != RS_RET_OK) break;
+            const size_t copiedSlots =
+                (size_t)(server->iSessMax < entry->sessionMax ? server->iSessMax : entry->sessionMax);
+            memcpy(entry->preparedSessionSlots, server->pSessions,
+                   copiedSlots * sizeof(entry->preparedSessionSlots[0]));
+        }
     }
     if (ret != RS_RET_OK) {
         while (acquired != 0) {
@@ -2125,6 +2188,12 @@ static void commitReloadV1(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
     for (size_t i = 0; i < state->count; ++i) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
+        if (state->entries[i].preparedSessionSlots != NULL) {
+            state->entries[i].retiredSessionSlots = server->pSessions;
+            server->pSessions = state->entries[i].preparedSessionSlots;
+            server->iSessMax = state->entries[i].sessionMax;
+            state->entries[i].preparedSessionSlots = NULL;
+        }
         tcpsrv_reload_profile_t profile = {
             .useFlowControl = state->entries[i].flowControl,
             .starvationMaxReads = state->entries[i].starvationMaxReads,
@@ -2149,16 +2218,19 @@ static void commitReloadV1(void *const pReloadState) {
             .compressionMaxDecompressedBytesPerReceive = state->entries[i].compressionMaxDecompressedBytesPerReceive,
             .compressionMaxTotalZstdWindowBytes = state->entries[i].compressionMaxTotalZstdWindowBytes,
             .multiLine = state->entries[i].multiLine,
+            .startRegex = state->entries[i].startRegex,
             .ruleset = state->entries[i].ruleset,
         };
         u_cstr_copy(profile.defaultTZ, state->entries[i].defaultTZ, sizeof(profile.defaultTZ));
         tcpsrv.ApplyReloadProfile(server, &profile);
+        state->entries[i].startRegex = NULL;
     }
 }
 
 static void abortReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return;
     (void)resumeReloadV1(pReloadState);
+    freeReloadPreparedValues(pReloadState);
     free(pReloadState);
 }
 
@@ -2167,6 +2239,7 @@ static rsRetVal retireReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
     ret = resumeReloadV1(pReloadState);
     if (ret != RS_RET_OK) return ret;
+    freeReloadPreparedValues(pReloadState);
     free(pReloadState);
     return RS_RET_OK;
 }
@@ -2453,6 +2526,7 @@ static void destructModuleConfigContents(modConfData_t *const pModConf) {
             free((void *)inst->cnf_params->pszNetworkNamespace);
             free((void *)inst->cnf_params->pszStrmDrvrName);
             free((void *)inst->cnf_params->pszInputName);
+            free((void *)inst->cnf_params->pszStartRegex);
             free((void *)inst->cnf_params->pszRatelimitName);
             free((void *)inst->cnf_params);
         }

@@ -67,6 +67,18 @@ an already activated generation, while the additive retirement fields describe
 the current condition. A newer signal arriving during those legacy hooks remains
 pending for its own normal HUP cycle.
 
+This boundary also supports ``maxSessions`` resizing when the effective
+listen backlog stays unchanged. Growth reserves a new session-pointer table
+before fencing. Shrink is eligible only when no occupied slot would be
+truncated; rejection retains the generation and every established session.
+An unchanged explicit ``socketBacklog`` permits growth across implicit
+backlog buckets, while a changed effective backlog still requires restart.
+``maxListeners`` pointer-table resizing is not included in this boundary.
+
+Delimiter-regex changes are accept-profile updates: existing sessions own
+their compiled old pattern, and later accepts compile the new prevalidated
+pattern. Invalid patterns fail preparation without advancing the generation.
+
 Detached candidate lowering remains side-effect-free. There is no live
 listener addition, removal, replacement, or TLS/ACL replacement.
 Those changes, incompatible dependencies, and unsupported source lowering
@@ -395,8 +407,9 @@ framing profile—Cisco framing correction, the additional delimiter, maximum
 frame size, LF-delimiter disablement, and truncated-message policy—also changes
 only for later connections, as do octet-counted framing support and the
 compression mode, driver, and resource limits.  Multiline framing without a
-changed delimiter regex is also an accept-profile update.  Regular expression
-framing, TLS, endpoint, ACL, named rate-limit, and
+changed delimiter regex is also an accept-profile update. Delimiter regex
+changes use session-owned compiled state and preparation-time validation.
+TLS, endpoint, ACL, named rate-limit, and
 listener-structure fields remain conservatively restart-required until their
 corresponding prepare, ownership, and reconciliation contracts are implemented.
 Unnamed Linux-like interval and burst values are copied and the listener-local
