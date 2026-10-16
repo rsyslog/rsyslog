@@ -1,0 +1,35 @@
+doc/ai/module_map.yaml
+  s_f8a738e4bdfaee::t_0da64501a90381 18-27
+runtime/queue-barrier.c
+  s_f8a738e4bdfaee::t_0aff71f2e6e229 8-15,26-28,61,71,74-75,80-81,86-92,104-111,116-118,130-136
+runtime/queue.c
+  s_f8a738e4bdfaee::t_b6ace4cdecadc8 4148-4211,4253,4289-4297,4308
+runtime/queue.h
+  s_f8a738e4bdfaee::t_281facb16dbff3 344-351
+runtime/wti.c
+  s_f8a738e4bdfaee::t_d73ea2bc8bfc95 4-7,533-536
+runtime/wtp-quiesce.c
+  s_f8a738e4bdfaee::t_708de1a15a8d74 9-11,20,29-30,32-35,44-85,101,105-109,113,119-126,129,140-141,150-188
+runtime/wtp.h
+  s_f8a738e4bdfaee::t_19eba5fdc77ed1 67-70,109-117
+tests/queue-lease-attribution.sh
+  s_f8a738e4bdfaee::t_92e19fcbefeba7 9-11
+tests/unit/wtp_quiesce_test.c
+  s_f8a738e4bdfaee::t_95275e495aedd6 8-11,186,476-726,728-731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "47db995866a27215d5eec142cd66c006e48ecd8c",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
