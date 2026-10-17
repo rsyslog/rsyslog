@@ -3,10 +3,11 @@
 # waits poll an observable impstats snapshot or a test-owned file, never a
 # guessed scheduling delay.
 # Positive runtime fixtures require the primitives selected by queue_local.c.
-# Darwin lacks POSIX condition-variable clock selection, so local scope is
-# intentionally unavailable there; configuration-rejection tests do not source
-# this runtime helper and continue to run when their own prerequisites exist.
-skip_platform "Darwin" "local queues require POSIX monotonic condition variables"
+# Where they are missing (Darwin, builds without 64-bit atomic builtins),
+# local scope is intentionally unavailable; configuration-rejection tests do
+# not source this runtime helper and continue to run when their own
+# prerequisites exist.
+skip_without_local_queue_support
 
 localq_wait_stats() {
 	local stats_file="$1"
