@@ -106,7 +106,6 @@ rulesets:
     actions:
       - type: omfwd
         target: "127.0.0.1"
-        protocol: "udp"
 YAML_EOF
 }
 
@@ -280,5 +279,221 @@ write_yaml_tls_anon_warn_config "${RSYSLOG_DYNNAME}.tls-anon-warn.yaml"
 run_expect_success "${RSYSLOG_DYNNAME}.tls-anon-warn.yaml" "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
 content_check 'imtcp uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
 content_check 'omfwd uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
+
+# YAML parity for the explicit streamdriver.mode="0" cases (bStrmDrvrModeSet).
+cat >"${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "tcp"
+        streamdriver.mode: 0
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.yaml" "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+check_not_present 'omfwd action uses protocol="tcp" with streamdriver.mode="0"' "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+
+cat >"${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imtcp/.libs/imtcp"
+inputs:
+  - type: imtcp
+    address: "127.0.0.1"
+    port: "0"
+    listenPortFileName: "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.port"
+    streamdriver.mode: 0
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.yaml" "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+check_not_present 'imtcp input uses streamdriver.mode="0"' "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+
+# YAML parity for the explicit protocol="udp" cases: the YAML frontend must set
+# bProtocolSet the same way. Explicit UDP is acknowledged (silent), a global
+# defaultNetstreamDriver stays irrelevant to UDP (silent), but action-level TLS
+# settings still warn.
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+check_not_present 'omfwd action uses protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+        streamdriver.name: "gtls"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+        streamdriver.cafile: "${RSYSLOG_DYNNAME}-ca.pem"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+  defaultNetstreamDriver: "gtls"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+check_not_present 'protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+
+# YAML parity for the explicit RELP tls="off" cases (bEnableTLSSet).
+if ls ../plugins/omrelp/.libs/omrelp.* >/dev/null 2>&1 && ls ../plugins/imrelp/.libs/imrelp.* >/dev/null 2>&1; then
+    cat >"${RSYSLOG_DYNNAME}.omrelp-explicit.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/omrelp/.libs/omrelp"
+rulesets:
+  - name: main
+    actions:
+      - type: omrelp
+        target: "127.0.0.1"
+        port: "514"
+        tls: "off"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-explicit.yaml" "${RSYSLOG_DYNNAME}.omrelp-explicit.log"
+    check_not_present 'omrelp action uses tls="off"' "${RSYSLOG_DYNNAME}.omrelp-explicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-tls.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/omrelp/.libs/omrelp"
+rulesets:
+  - name: main
+    actions:
+      - type: omrelp
+        target: "127.0.0.1"
+        port: "514"
+        tls: "off"
+        tls.authmode: "anon"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.yaml" "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-zip.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/omrelp/.libs/omrelp"
+rulesets:
+  - name: main
+    actions:
+      - type: omrelp
+        target: "127.0.0.1"
+        port: "514"
+        tls: "off"
+        tls.compression: "on"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.yaml" "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imrelp/.libs/imrelp"
+inputs:
+  - type: imrelp
+    port: "0"
+    tls: "off"
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" "${RSYSLOG_DYNNAME}.imrelp-explicit.log"
+    check_not_present 'imrelp input uses tls="off"' "${RSYSLOG_DYNNAME}.imrelp-explicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-tls.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imrelp/.libs/imrelp"
+inputs:
+  - type: imrelp
+    port: "0"
+    tls: "off"
+    tls.authmode: "anon"
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.yaml" "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imrelp/.libs/imrelp"
+inputs:
+  - type: imrelp
+    port: "0"
+    tls: "off"
+    tls.compression: "on"
+    tls.dhbits: "1024"
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.yaml" "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
+fi
 
 exit_test
