@@ -40,8 +40,8 @@ not the current PR head or current validation state.
 
 - Coordinator: integration, evidence, configuration decisions, stage acceptance
   and maintainer discussion. Performance trials run without competing agent builds.
-- `s0_contract_audit`, Terra/high: enqueue, lease, completion and shutdown audit.
-- `s0_benchmark_audit`, Terra/high: existing harness and deterministic test oracles.
+- `s0_contract_audit`, Luna/high: enqueue, lease, completion and shutdown audit.
+- `s0_benchmark_audit`, Luna/high: existing harness and deterministic test oracles.
 - `s0_config_contract`, Astra/high: option matrix and enforceable MVP boundaries.
 - Existing `critical_queue_design_review`, Astra/medium: independent stage review.
 
