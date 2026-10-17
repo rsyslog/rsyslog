@@ -135,6 +135,12 @@ jobs:
         run: |
           set -euo pipefail
           source_sha="$(git -C rsyslog-source rev-parse HEAD)"
+          # Lets the baseline patch policy recognize distribution backports
+          # of commits that the packaged source already contains.
+          git -C rsyslog-source log --format='%H %s' HEAD \
+            > "$RUNNER_TEMP/upstream-commits.txt"
+          echo "RSYSLOG_UPSTREAM_COMMIT_INDEX=$RUNNER_TEMP/upstream-commits.txt" \
+            >> "$GITHUB_ENV"
           {
             echo "source_sha=$source_sha"
             echo "SOURCE_GIT_SHA=$source_sha"
@@ -201,6 +207,7 @@ jobs:
             -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
             -e "DOC_TARBALL=/workspace/$(basename "$DOC_TARBALL")" \
             -v "$GITHUB_WORKSPACE:/workspace" \
+            -e RSYSLOG_UPSTREAM_COMMIT_INDEX=/runner-temp/upstream-commits.txt \
             -v "$RUNNER_TEMP:/runner-temp" \
             -w /workspace \
             opensuse/leap:16.0 bash -lc '
@@ -699,9 +706,16 @@ jobs:
       (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     runs-on: ubuntu-24.04
     permissions:
+      actions: read
       issues: write
       contents: read
     steps:
+      - name: Checkout failure reporter
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
       - name: Create or update failure issue
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
@@ -712,37 +726,16 @@ jobs:
           VERIFY_RESULT: ${{ needs.verify.result }}
         with:
           script: |
-            const version = process.env.VERSION || `run-${context.runId}`;
-            const title = '[opensuse-leap160-daily-stable] package archive failure';
-            const body = [
-              `Automated openSUSE Leap 16.0 daily stable failed for \`${version}\`.`,
-              '',
-              `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              `Workflow commit: ${context.sha}`,
-              '',
-              'Job results:',
-              `- preflight: ${process.env.PREFLIGHT_RESULT}`,
-              `- build: ${process.env.BUILD_RESULT}`,
-              `- publish: ${process.env.PUBLISH_RESULT}`,
-              `- verify: ${process.env.VERIFY_RESULT}`
-            ].join('\n');
-            const {owner, repo} = context.repo;
-            const existing = await github.paginate(github.rest.issues.listForRepo, {
-              owner, repo, state: 'open', per_page: 100
+            const report = require('./.github/scripts/report-daily-stable-failure.js');
+            await report({github, context, core}, {
+              title: '[opensuse-leap160-daily-stable] package archive failure',
+              distro: 'openSUSE Leap 16.0',
+              labels: ['release', 'packaging', 'daily-stable', 'automated'],
+              version: process.env.VERSION,
+              results: {
+                preflight: process.env.PREFLIGHT_RESULT,
+                build: process.env.BUILD_RESULT,
+                publish: process.env.PUBLISH_RESULT,
+                verify: process.env.VERIFY_RESULT
+              }
             });
-            const issue = existing.find(item => item.title === title && !item.pull_request);
-            if (issue) {
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: issue.number, body
-              });
-              return;
-            }
-            const created = await github.rest.issues.create({owner, repo, title, body});
-            try {
-              await github.rest.issues.addLabels({
-                owner, repo, issue_number: created.data.number,
-                labels: ['release', 'packaging', 'daily-stable', 'automated']
-              });
-            } catch (error) {
-              core.warning(`Could not add labels: ${error.message}`);
-            }

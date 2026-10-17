@@ -7,7 +7,15 @@
 # reviewed patch must be removed from both its source and explicit %patch
 # application, while an unreviewed baseline patch must reject packaging before
 # a build can apply a stale downstream change to current upstream sources.
+#
+# With an upstream commit index (RSYSLOG_UPSTREAM_COMMIT_INDEX), an unreviewed
+# or changed patch is also removed when its header proves the packaged source
+# already contains it.  The oracle is the rewritten spec plus the warning
+# annotation; a patch referencing a commit outside the index, or only
+# mentioning an indexed commit in free text, must still reject packaging.
+# A reviewed entry the baseline no longer carries only warns.
 set -eu
+unset RSYSLOG_UPSTREAM_COMMIT_INDEX
 
 test_dir=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
 helper="$test_dir/../devtools/release/validate-rpm-baseline-patches.py"
@@ -173,3 +181,61 @@ if result=$(python3 "$helper" "$work_dir/duplicate/SPECS/rsyslog.spec" "$work_di
 	exit 1
 fi
 printf '%s\n' "$result" | grep -F 'duplicate test baseline patch declaration' >/dev/null
+
+# Upstream commit index fixture: the packaged source contains these commits.
+upstream_sha=1111111111111111111111111111111111111111
+other_sha=2222222222222222222222222222222222222222
+printf '%s %s\n' "$upstream_sha" 'imptcp: guard regex framing match at line start' \
+	"$other_sha" 'omfwd: add proper variable sync' >"$work_dir/upstream-commits.txt"
+
+mkdir -p "$work_dir/auto/SPECS" "$work_dir/auto/SOURCES"
+cat >"$work_dir/auto/SPECS/rsyslog.spec" <<'EOF2'
+Patch1000: CVE-backport.patch
+Patch1001: changed-backport.patch
+%prep
+%patch1000 -p1
+%patch1001 -p1
+EOF2
+printf 'From %s Mon Sep 17 00:00:00 2001\nSubject: [PATCH] imptcp fix\n---\n' "$upstream_sha" \
+	>"$work_dir/auto/SOURCES/CVE-backport.patch"
+printf 'Subject: omfwd fix\n\n(cherry picked from commit %s)\n---\n' "${other_sha%????????????????????????????}" \
+	>"$work_dir/auto/SOURCES/changed-backport.patch"
+cat >"$work_dir/auto/policy.json" <<'EOF2'
+{
+  "integrated_baseline_patches": [
+    {"name": "changed-backport.patch", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "reason": "fixture"},
+    {"name": "dropped-by-distro.patch", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "reason": "fixture"}
+  ]
+}
+EOF2
+result=$(RSYSLOG_UPSTREAM_COMMIT_INDEX="$work_dir/upstream-commits.txt" \
+	python3 "$helper" "$work_dir/auto/SPECS/rsyslog.spec" "$work_dir/auto/policy.json" test)
+test "$(grep -c '^%patch\|^Patch' "$work_dir/auto/SPECS/rsyslog.spec" || true)" -eq 0
+test ! -e "$work_dir/auto/SOURCES/CVE-backport.patch"
+test ! -e "$work_dir/auto/SOURCES/changed-backport.patch"
+printf '%s\n' "$result" | grep -F '::warning title=test baseline patch already upstream::removed CVE-backport.patch: upstream commit 111111111111' >/dev/null
+printf '%s\n' "$result" | grep -F 'removed changed-backport.patch' >/dev/null
+printf '%s\n' "$result" | grep -F 'stale patch policy' | grep -F 'dropped-by-distro.patch' >/dev/null
+
+# A commit outside the packaged history, or a free-text mention of an indexed
+# commit (typically the commit that introduced the regression being fixed),
+# is no proof that the fix is upstream.
+for header in \
+	"From 3333333333333333333333333333333333333333 Mon Sep 17 00:00:00 2001" \
+	"Commit $other_sha added proper variable sync, but dropped a check."; do
+	fixture="$work_dir/auto-reject"
+	rm -rf "$fixture"
+	mkdir -p "$fixture/SPECS" "$fixture/SOURCES"
+	printf '%s\n' 'Patch7: local-fix.patch' '%prep' '%patch7 -p1' >"$fixture/SPECS/rsyslog.spec"
+	printf '%s\nSubject: local distribution fix\n---\n' "$header" >"$fixture/SOURCES/local-fix.patch"
+	printf '%s\n' '{"integrated_baseline_patches": []}' >"$fixture/policy.json"
+	cp "$fixture/SPECS/rsyslog.spec" "$fixture/original.spec"
+	if result=$(RSYSLOG_UPSTREAM_COMMIT_INDEX="$work_dir/upstream-commits.txt" \
+		python3 "$helper" "$fixture/SPECS/rsyslog.spec" "$fixture/policy.json" test 2>&1); then
+		echo "patch without upstream proof was accepted: $header" >&2
+		exit 1
+	fi
+	printf '%s\n' "$result" | grep -F 'baseline gained unreviewed patches' >/dev/null
+	cmp "$fixture/original.spec" "$fixture/SPECS/rsyslog.spec"
+	test -f "$fixture/SOURCES/local-fix.patch"
+done

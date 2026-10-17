@@ -62,8 +62,12 @@ token for regular publication.
   public signed metadata from a clean matching environment, install the exact
   published package, and run the target's rsyslog smoke test.
 - Scheduled failures create or update a distribution-specific GitHub issue.
-  Manual recovery runs report through their Actions run and should be reviewed
-  before enabling or changing a schedule.
+  The report quotes the likely cause from the failed job logs.  A repeat
+  failure with the same cause updates the existing report's "still failing"
+  line; a new cause adds a comment.  The reporter is
+  `.github/scripts/report-daily-stable-failure.js`.  Manual recovery runs
+  report through their Actions run and should be reviewed before enabling or
+  changing a schedule.
 
 ## Package policy and feature contract
 
@@ -73,9 +77,33 @@ build dependencies, newly produced core files, and baseline-patch decisions.
 
 RPM downstream patches require particular care.  A patch may only be removed
 when it is explicitly reviewed as integrated or superseded in current `main`,
-with its SHA-256 and rationale recorded in policy.  The generic validator is
+with its SHA-256 and rationale recorded in policy, or when the build proves it
+integrated (below).  The generic validator is
 `devtools/release/validate-rpm-baseline-patches.py`; do not restore broad patch
 skip lists.
+
+Distributions mostly carry backports of upstream commits, often several at
+once after a security release.  To keep such routine backports from stopping
+every nightly build, each build job writes an index of the packaged source
+history (`RSYSLOG_UPSTREAM_COMMIT_INDEX`).  A patch that is not reviewed, or
+whose reviewed content changed, is removed only when
+`devtools/release/upstream_patch_detect.py` finds proof in its header: a
+`git format-patch` origin, a cherry-pick or backport note, or a DEP-3 origin
+naming a commit the packaged source contains, or else a subject identical to
+an upstream commit subject.  Free-text commit mentions are not proof.  The
+Debian and Ubuntu quilt loop applies the same rule to failing patches that are
+not in `allowed_patch_skips`.  Every such removal emits a GitHub warning
+annotation; fold it into the policy after review.  A patch without proof still
+fails the build, as before.  A reviewed RPM entry that the baseline no longer
+carries only warns, so the policy can be pruned later.
+
+Current upstream may auto-enable an optional module (configure default
+`optional`) that a native baseline predates; its files would then be
+unpackaged.  RPM policies list such modules in `disabled_optional_modules`,
+and Debian policies list their files in `not_installed_paths`.
+`devtools/release/check-optional-module-policy.py` runs in the regular
+testbench and fails the pull request that adds an auto-enabled module
+without that policy.
 
 The cross-distribution feature contract is
 `.github/daily-stable-package-features.yml`; its human-facing explanation is

@@ -57,5 +57,11 @@
       "anchor": "%{_mandir}/man5/rsyslog.conf.5.gz",
       "reason": "Current upstream installs the segmented queue maintenance utility manual page in the base package."
     }
+  ],
+  "disabled_optional_modules": [
+    {
+      "module": "omkinesis",
+      "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native EL10 spec has no package for this optional module."
+    }
   ]
 }

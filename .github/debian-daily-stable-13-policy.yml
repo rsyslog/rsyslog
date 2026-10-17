@@ -24,5 +24,10 @@
       "reason": "Current upstream adds mmleefparse after Debian 13's rsyslog install manifest; it belongs in the core package with the other message-modification modules."
     }
   ],
-  "not_installed_paths": []
+  "not_installed_paths": [
+    {
+      "path": "usr/lib/*/rsyslog/omkinesis.so",
+      "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Debian 13 packaging has no package for this optional module."
+    }
+  ]
 }
