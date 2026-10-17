@@ -1,0 +1,2 @@
+# Unix timestamp format
+<164>1577836800 localhost test: message with Unix timestamp
