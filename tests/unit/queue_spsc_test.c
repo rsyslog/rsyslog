@@ -15,8 +15,19 @@
  * full and empty retry paths yield after no progress, so their deliberate
  * contention does not monopolize the scheduler under instrumentation. After
  * a run of fruitless yields they sleep briefly: on loaded macOS TSan runners
- * yield alone can let the spinning peers starve each other past the alarm. A
- * 60-second alarm bounds a regression hang; it is not the success oracle.
+ * yield alone can let the spinning peers starve each other past the alarm.
+ *
+ * The 31-slot ring and 11/13 batch maxima are intentional: they keep both
+ * threads at the full and empty boundaries, so the cached-index refresh and
+ * cursor-wrap paths run concurrently rather than only in the sequential cases.
+ * The test therefore also requires at least one full and one empty episode.
+ * Each episode is a producer/consumer handoff whose wall-clock cost is set by
+ * the scheduler, not the queue; on a loaded macOS TSan runner it can approach
+ * a scheduler quantum.  TSan builds therefore move fewer items: TSan flags a
+ * missing happens-before edge on the first unordered access, so item volume
+ * adds little there, while uninstrumented builds keep 100k items to give real
+ * weakly ordered hardware more chances to expose a stale payload checksum.
+ * A 60-second alarm bounds a regression hang; it is not the success oracle.
  */
 #include "config.h"
 
@@ -213,7 +224,19 @@ static int test_cached_full_and_slot_reuse(void) {
     return 0;
 }
 
-#define CONCURRENT_ITEMS 100000U
+#if defined(__SANITIZE_THREAD__)
+    #define SPSC_TEST_UNDER_TSAN 1
+#elif defined(__has_feature)
+    #if __has_feature(thread_sanitizer)
+        #define SPSC_TEST_UNDER_TSAN 1
+    #endif
+#endif
+
+#ifdef SPSC_TEST_UNDER_TSAN
+    #define CONCURRENT_ITEMS 20000U
+#else
+    #define CONCURRENT_ITEMS 100000U
+#endif
 #define PAYLOAD_BYTES 64U
 
 typedef struct publication_payload_s {
@@ -232,6 +255,8 @@ typedef struct spsc_thread_test_state_s {
     int started;
     int abort_start;
     int consumer_result;
+    unsigned long full_episodes;
+    unsigned long empty_episodes;
 } spsc_thread_test_state_t;
 
 static uint32_t payload_checksum(const publication_payload_t *payload) {
@@ -290,6 +315,7 @@ static void *producer_main(void *arg) {
             next_id += count;
             misses = 0;
         } else {
+            if (misses == 0) ++state->full_episodes;
             retry_backoff(&misses);
         }
     }
@@ -307,6 +333,7 @@ static void *consumer_main(void *arg) {
         const size_t count = rsSpscQueuePop(&state->queue, batch, (received % 13U) + 1U);
 
         if (count == 0) {
+            if (misses == 0) ++state->empty_episodes;
             retry_backoff(&misses);
             continue;
         }
@@ -358,6 +385,11 @@ static int test_variable_batch_threads(void) {
     (void)alarm(0);
     CHECK(state.consumer_result == 0);
     for (uint32_t i = 0; i < CONCURRENT_ITEMS; ++i) CHECK(state.seen[i]);
+    /* Joined threads: their counters are now visible here. */
+    printf("SPSC thread test: %u items, %lu full and %lu empty episodes\n", CONCURRENT_ITEMS, state.full_episodes,
+           state.empty_episodes);
+    CHECK(state.full_episodes > 0);
+    CHECK(state.empty_episodes > 0);
     return 0;
 }
 
