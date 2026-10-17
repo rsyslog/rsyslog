@@ -1666,7 +1666,11 @@ jobs:
               export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
               export LDFLAGS="-fsanitize=address"
               export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
-              export CC=gcc
+              # clang/compiler-rt ASan instead of gcc-13 + libasan8: the
+              # GCC libsanitizer intermittently aborts in its own thread
+              # registry at worker start on aarch64
+              # (sanitizer_thread_registry.cpp:316, no rsyslog frames).
+              export CC=clang
               export TEST_MAX_RUNTIME=1200
               time_phase() {
                 phase="$1"
@@ -1680,6 +1684,9 @@ jobs:
                 echo "timing: arm64 $phase $((end - start))s"
                 return "$rc"
               }
+              "$CC" --version | head -n1
+              uname -r
+              cat /proc/sys/vm/mmap_rnd_bits || true
               time_phase autoreconf autoreconf -fvi
               time_phase configure ./configure --enable-silent-rules --enable-testbench \
                 --enable-imdiag --disable-imdocker \
