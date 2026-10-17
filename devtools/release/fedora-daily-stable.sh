@@ -107,6 +107,8 @@ cmd_prepare_sources() {
 
 	python3 "$(dirname "$0")/validate-rpm-baseline-patches.py" \
 		"$spec_file" "$policy_file" "Fedora 44"
+	python3 "$(dirname "$0")/rpm-disable-optional-modules.py" \
+		"$spec_file" "$policy_file" "Fedora 44"
 
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
 import fnmatch

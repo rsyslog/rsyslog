@@ -18,17 +18,32 @@
 Daily-stable packages replace a distribution's source archive with current
 upstream.  Every downstream patch must therefore be explicitly reviewed,
 content-pinned, and removed before the RPM spec is reused.
+
+When RSYSLOG_UPSTREAM_COMMIT_INDEX names a ``git log --format='%H %s'`` index
+of the packaged source, a patch that is not reviewed (or whose reviewed
+content changed) is also removed if upstream_patch_detect proves the packaged
+source already contains it.  Such removals are reported as GitHub warning
+annotations so they can be folded into the policy later; patches that cannot
+be proven integrated still stop the build.
 """
 
 import hashlib
 import json
+import os
 import pathlib
 import re
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import upstream_patch_detect  # noqa: E402
+
 
 def fail(message):
     raise SystemExit(message)
+
+
+def warn(title, message):
+    print(f"::warning title={title}::{message}", flush=True)
 
 
 def main():
@@ -82,30 +97,54 @@ def main():
             details.append("names: " + ", ".join(duplicate_names))
         fail(f"duplicate {distro} baseline patch declaration (" + "; ".join(details) + ")")
 
+    sources_dir = spec_path.parent.parent / "SOURCES"
+    index_path = os.environ.get("RSYSLOG_UPSTREAM_COMMIT_INDEX", "")
+    commit_index = upstream_patch_detect.load_commit_index(index_path) if index_path else None
+
     baseline_names = set(names)
-    unreviewed = sorted(baseline_names - set(reviewed_hashes))
     missing = sorted(set(reviewed_hashes) - baseline_names)
+    if missing:
+        warn(
+            f"{distro} stale patch policy",
+            f"reviewed baseline patches are absent from {distro} baseline and can be "
+            "dropped from the policy: " + ", ".join(missing),
+        )
+
+    unreviewed = []
+    changed = []
+    auto_detected = []
+    for name in names:
+        patch_path = sources_dir / name
+        if not patch_path.is_file():
+            fail(f"baseline patch is missing: {name}")
+        if name in reviewed_hashes and \
+                hashlib.sha256(patch_path.read_bytes()).hexdigest() == reviewed_hashes[name]:
+            continue
+        evidence = "no upstream commit index provided"
+        if commit_index is not None:
+            integrated, evidence = upstream_patch_detect.detect(
+                patch_path.read_text(encoding="utf-8", errors="replace"), *commit_index
+            )
+            if integrated:
+                auto_detected.append((name, evidence))
+                continue
+        (changed if name in reviewed_hashes else unreviewed).append(f"{name} ({evidence})")
     if unreviewed:
         fail(
             f"{distro} baseline gained unreviewed patches; review them before packaging main: "
             + ", ".join(unreviewed)
         )
-    if missing:
-        fail(
-            f"reviewed baseline patches are absent from {distro} baseline: "
-            + ", ".join(missing)
+    if changed:
+        fail("reviewed baseline patch changed: " + ", ".join(changed))
+    for name, evidence in auto_detected:
+        warn(
+            f"{distro} baseline patch already upstream",
+            f"removed {name}: {evidence}; add it to integrated_baseline_patches after review",
         )
 
-    sources_dir = spec_path.parent.parent / "SOURCES"
     patch_paths = []
     for number, name in declarations:
-        patch_path = sources_dir / name
-        if not patch_path.is_file():
-            fail(f"reviewed baseline patch is missing: {name}")
-        digest = hashlib.sha256(patch_path.read_bytes()).hexdigest()
-        if digest != reviewed_hashes[name]:
-            fail(f"reviewed baseline patch changed: {name}")
-        patch_paths.append(patch_path)
+        patch_paths.append(sources_dir / name)
 
         spec, declaration_count = re.subn(
             rf"(?m)^Patch{re.escape(number)}:\s*{re.escape(name)}\s*\n", "", spec

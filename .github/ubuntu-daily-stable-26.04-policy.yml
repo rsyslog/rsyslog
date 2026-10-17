@@ -34,5 +34,10 @@
     }
   ],
   "install_manifest_additions": [],
-  "not_installed_paths": []
+  "not_installed_paths": [
+    {
+      "path": "usr/lib/*/rsyslog/omkinesis.so",
+      "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Ubuntu 26.04 packaging has no package for this optional module."
+    }
+  ]
 }

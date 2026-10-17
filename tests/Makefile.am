@@ -22,7 +22,10 @@ EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL) $(TESTS_LOCAL_OMFILE_ACTIVATION) $(TE
 TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
-TESTS_RELEASE_PACKAGING = rpm-baseline-patch-policy.sh
+TESTS_RELEASE_PACKAGING = \
+	rpm-baseline-patch-policy.sh \
+	daily-stable-package-drift.sh \
+	daily-stable-failure-report.sh
 FUZZING_CORPUS = \
 	fuzz/README.md \
 	fuzz/prepare-imtcp-session-corpus.py \
