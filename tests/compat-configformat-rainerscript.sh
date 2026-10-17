@@ -7,6 +7,10 @@ have_imtcp_module=0
 if ls ../plugins/imtcp/.libs/imtcp.* >/dev/null 2>&1; then
     have_imtcp_module=1
 fi
+have_relp_modules=0
+if ls ../plugins/omrelp/.libs/omrelp.* >/dev/null 2>&1 && ls ../plugins/imrelp/.libs/imrelp.* >/dev/null 2>&1; then
+    have_relp_modules=1
+fi
 
 run_expect_success() {
     local cfg="$1"
@@ -104,6 +108,99 @@ run_expect_success "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.conf" "${RSYSLOG
 content_check 'omfwd has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
     "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
 
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-implicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-implicit.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-implicit.log"
+content_check 'omfwd action uses protocol="udp" (without TLS)' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-implicit.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="udp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+check_not_present 'omfwd action uses protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+
+# explicit protocol="udp" combined with TLS settings is contradictory (UDP is
+# always plaintext) and must still warn, even though the protocol is explicit
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="udp" streamdriver.name="gtls")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+
+# the contradiction is not limited to streamdriver.name/authmode: CA/cert/key,
+# permitted peers, SNI, priority string etc. are equally ineffective on UDP and
+# must warn even without a TLS-capable driver name
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="udp" streamdriver.cafile="${RSYSLOG_DYNNAME}-ca.pem")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+
+# same contradiction on explicit plain TCP (streamdriver.mode="0"): a CA file
+# without a TLS-capable driver name is still ineffective and must warn
+cat >"${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.mode="0" streamdriver.cafile="${RSYSLOG_DYNNAME}-ca.pem")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.log"
+content_check 'omfwd has TLS-related settings but streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.log"
+
+# a global defaultNetstreamDriver is irrelevant to a UDP action (UDP never uses a
+# stream driver), so explicit protocol="udp" must stay silent despite it - only
+# action-level TLS settings count
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn" defaultNetstreamDriver="gtls")
+action(type="omfwd" target="127.0.0.1" protocol="udp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+check_not_present 'protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+
+# the legacy "@target" sigil is an insecure default (plain UDP) carried over for
+# backward compatibility, not an explicit modern opt-in, so it still warns
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-legacy.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn" compatibility.configformat.legacy="enable")
+*.* @127.0.0.1:514
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-legacy.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-legacy.log"
+content_check 'omfwd action uses protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-legacy.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.log"
+content_check 'omfwd action uses protocol="tcp" with streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.mode="0")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+check_not_present 'omfwd action uses protocol="tcp" with streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+
 cat >"${RSYSLOG_DYNNAME}.omfwd-strict-promote.conf" <<CONF_EOF
 global(compatibility.defaults.secure="strict")
 action(type="omfwd" targetSrv="_syslog._tcp.example.invalid" protocol="tcp" streamdriver.name="gtls")
@@ -145,7 +242,7 @@ global(compatibility.defaults.secure="warn")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.tlswarn.port" streamdriver.mode="0"
       streamdriver.name="gtls" streamdriver.authmode="x509/name")
-action(type="omfwd" target="127.0.0.1" protocol="udp")
+action(type="omfwd" target="127.0.0.1")
 CONF_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.tls-warn.conf" "${RSYSLOG_DYNNAME}.tls-warn.log"
     content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' "${RSYSLOG_DYNNAME}.tls-warn.log"
@@ -161,6 +258,44 @@ CONF_EOF
         "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.log"
     content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
         "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.port")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.log"
+    content_check 'imtcp input uses streamdriver.mode="0" (plain TCP without TLS)' \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.log"
+
+    # explicit module-level mode 0 acknowledges plain TCP; instances inherit
+    # both the mode and its explicitness flag, so no warning at either level
+    cat >"${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imtcp/.libs/imtcp" streamdriver.mode="0")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.port")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+    check_not_present 'imtcp input uses streamdriver.mode="0"' \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+
+    # an instance-level explicit mode 0 is sufficient on its own: listeners are
+    # only checked with their effective values, there is no module-level warning
+    cat >"${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.port"
+      streamdriver.mode="0")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.log"
+    check_not_present 'imtcp input uses streamdriver.mode="0"' \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.log"
 
     cat >"${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.conf" <<CONF_EOF
 global(compatibility.defaults.secure="strict" defaultNetstreamDriver="gtls")
@@ -184,6 +319,100 @@ CONF_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.tls-anon-warn.conf" "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
     content_check 'imtcp uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
     content_check 'omfwd uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
+fi
+
+if [ ${have_relp_modules} -eq 1 ]; then
+    cat >"${RSYSLOG_DYNNAME}.omrelp-plain-implicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-plain-implicit.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-implicit.log"
+    content_check 'omrelp action uses tls="off" (plain RELP without TLS)' \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-implicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.omrelp-plain-explicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514" tls="off")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.log"
+    check_not_present 'omrelp action uses tls="off"' \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.log"
+
+    # explicit tls="off" combined with TLS-specific options is a contradiction
+    # (the options are ignored and traffic stays plaintext), so it must warn
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-tls.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514" tls="off" tls.authmode="anon")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+
+    # tls.compression is likewise consumed only on the TLS path, so tls="off"
+    # combined with it is also a contradiction
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-zip.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514" tls="off" tls.compression="on")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-plain-implicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-plain-implicit.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-implicit.log"
+    content_check 'imrelp input uses tls="off" (plain RELP without TLS)' \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-implicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-plain-explicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0" tls="off")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.log"
+    check_not_present 'imrelp input uses tls="off"' \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.log"
+
+    # explicit tls="off" combined with TLS-specific options is a contradiction
+    # (the options are ignored and traffic stays plaintext), so it must warn
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-tls.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0" tls="off" tls.authmode="anon")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+
+    # tls.compression and the imrelp-only tls.dhbits are consumed only on the TLS
+    # path, so tls="off" combined with them is also a contradiction
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0" tls="off" tls.compression="on" tls.dhbits="1024")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
 fi
 
 cat >"${RSYSLOG_DYNNAME}.invalid.conf" <<CONF_EOF
