@@ -54,7 +54,6 @@ if $msg contains "msgnum:" then {
 		queue.lowWatermark="2"
 		queue.dequeueBatchSize="1"
 		queue.timeoutEnqueue="10000"
-		queue.timeoutShutdown="500"
 		queue.saveOnShutdown="on")
 }
 '
