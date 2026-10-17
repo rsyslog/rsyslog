@@ -294,6 +294,7 @@ BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! 
     INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
     pthread_cond_init(&pThis->pcondBusy, NULL);
     pThis->bExiting = 0;
+    pThis->bRestartRequested = 0;
     pThis->callback_outcome = WTI_CALLBACK_UNKNOWN;
     pThis->source_queue = NULL;
     pThis->logical_owner = NULL;
@@ -502,7 +503,7 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
      * - critical cleanup/state transitions run with cancellation disabled
      */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DBGPRINTF("wti %p: worker starting\n", pThis);
+    DBGPRINTF("%s: wti %p: worker starting\n", wtiGetDbgHdr(pThis), pThis);
     /* now we have our identity, on to real processing */
 
     /* note: in this loop, the mutex is "never" unlocked. Of course,

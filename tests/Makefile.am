@@ -96,7 +96,7 @@ EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG) ../benchmarks/queue-con
 	../benchmarks/queue-contention/compare.py
 TESTS_QUEUE_BENCHMARK_THROUGHPUT_LOCAL = queue-benchmark-throughput-local.sh
 EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_LOCAL)
-TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh
+TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh wtp-exiting-worker-restart.sh
 EXTRA_DIST += $(TESTS_WTP_TARGETED_WAKEUP) unit/wtp_wakeup_test.c
 TESTS_OMPIPE_LEGACY_PATH = ompipe-legacy-path-length.sh
 TESTS_OMPIPE_LEGACY_PATH_VALGRIND = ompipe-legacy-path-length-vg.sh
