@@ -1106,7 +1106,7 @@ static int inputTermFixtureWaitFull(qqueue_t *const queue, const uint64_t before
     deadline.tv_sec += 5;
     do {
         pthread_mutex_lock(queue->mut);
-        const int full = __atomic_load_n(&queue->ctrFull, __ATOMIC_RELAXED) > before;
+        const int full = PREFER_LOAD_uint64(&queue->ctrFull) > before;
         pthread_mutex_unlock(queue->mut);
         if (full) return 1;
         srSleep(0, 1000);
@@ -1174,7 +1174,7 @@ static int inputTermFixtureConserved(void) {
     do {
         int conserved = 1;
         for (size_t i = 0; i < inputTermFixtureCount; ++i)
-            if (__atomic_load_n(&inputTermFixtureRefs[i]->iRefCount, __ATOMIC_RELAXED) != 1) conserved = 0;
+            if (PREFER_LOAD_INT(&inputTermFixtureRefs[i]->iRefCount) != 1) conserved = 0;
         if (conserved) return 1;
         srSleep(0, 1000);
         clock_gettime(CLOCK_MONOTONIC, &now);
@@ -1215,7 +1215,7 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     /* Untrusted caller fills the real BE and holds its dedicated callback. */
     for (size_t i = 0; i < 16; ++i) CHKiRet(qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[i]));
     if (!inputTermFixtureAwait(&inputTermFixtureEntered, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
-    const uint64_t fullBefore = __atomic_load_n(&destination->ctrFull, __ATOMIC_RELAXED);
+    const uint64_t fullBefore = PREFER_LOAD_uint64(&destination->ctrFull);
     if (pthread_create(&producer, NULL, inputTermFixtureProducer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
     started = 1;
     if (!inputTermFixtureWaitFull(destination, fullBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
@@ -1243,7 +1243,7 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     if (legacy != RS_RET_FORCE_TERM || messages[0]->iRefCount != 2) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     msgDestruct(&messages[0]);
     /* A real graph worker must wait, and later successfully hand off its lease. */
-    const uint64_t handoffBefore = __atomic_load_n(&destination->ctrFull, __ATOMIC_RELAXED);
+    const uint64_t handoffBefore = PREFER_LOAD_uint64(&destination->ctrFull);
     CHKiRet(inputTermFixtureMessages(messages, 1));
     CHKiRet(qqueueEnqMsg(inputTermFixtureSource, eFLOWCTL_NO_DELAY, messages[0]));
     if (!inputTermFixtureWaitFull(destination, handoffBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);

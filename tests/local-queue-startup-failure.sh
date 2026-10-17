@@ -20,6 +20,8 @@ timeout_cmd=${timeout_cmd:-timeout}
 }
 require_plugin imtcp
 require_plugin imdiag
+# The injected faults live in the real local graph startup path.
+skip_without_local_queue_support
 startup_checker=()
 pidfile="$PWD/${RSYSLOG_DYNNAME}.pid"
 if [ "$USE_VALGRIND" = YES ]; then

@@ -104,6 +104,7 @@ typedef struct _instanceData {
     char *barrier_cancel_second_file;
     char *barrier_cleanup_release_fifo;
     unsigned barrier_cancel_cleanup_count;
+    DEF_ATOMIC_HELPER_MUT(mutBarrierCancelCleanupCount);
     pthread_mutex_t mut;
     pthread_cond_t barrier_cond;
 } instanceData;
@@ -127,6 +128,7 @@ BEGINcreateInstance
     pData->iWaitSeconds = 1;
     pData->iWaitUSeconds = 0;
     pthread_mutex_init(&pData->mut, NULL);
+    INIT_ATOMIC_HELPER_MUT(pData->mutBarrierCancelCleanupCount);
     pthread_cond_init(&pData->barrier_cond, NULL);
 ENDcreateInstance
 
@@ -259,8 +261,10 @@ static void cancelCleanupBarrierCleanup(void *const arg) {
 
     /* Cleanup handlers execute during pthread cancellation.  Give the two
      * independent callbacks an atomic election, so the ordinal remains visible
-     * to race detectors without depending on cleanup-unwind mutex bookkeeping. */
-    ordinal = __atomic_add_fetch(&pData->barrier_cancel_cleanup_count, 1u, __ATOMIC_RELAXED);
+     * to race detectors without depending on cleanup-unwind mutex bookkeeping.
+     * Without atomic builtins, a dedicated helper mutex (never pData->mut)
+     * provides the election. */
+    ordinal = ATOMIC_INC_AND_FETCH_unsigned(&pData->barrier_cancel_cleanup_count, &pData->mutBarrierCancelCleanupCount);
     if (ordinal == 1) {
         const int fd = open(pData->barrier_cleanup_release_fifo, O_RDWR | O_CLOEXEC);
         writeBarrierMarker(pData->barrier_cancel_first_file, 0);
@@ -471,6 +475,7 @@ BEGINfreeInstance
     free(pData->barrier_cleanup_release_fifo);
     pthread_cond_destroy(&pData->barrier_cond);
     pthread_mutex_destroy(&pData->mut);
+    DESTROY_ATOMIC_HELPER_MUT(pData->mutBarrierCancelCleanupCount);
 ENDfreeInstance
 
 

@@ -316,7 +316,7 @@ static void local_stats_store(intctr_t *const counter, const uint64_t value) {
 }
 
 static void local_stats_run_test_pre_read_hook(qqueue_local_stats_t *const stats) {
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
     const qqueue_local_stats_test_pre_read_hook_t hook = __atomic_load_n(&stats->test_pre_read_hook, __ATOMIC_ACQUIRE);
     if (hook != NULL) hook(__atomic_load_n(&stats->test_pre_read_context, __ATOMIC_RELAXED));
 #else
@@ -505,7 +505,7 @@ void qqueue_local_stats_destruct(qqueue_local_stats_t **const stats_ptr) {
     *stats_ptr = NULL;
 }
 
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
 static rsRetVal local_stats_test_pre_read_barrier(void *const context __attribute__((unused)),
                                                   const uchar *const object_name __attribute__((unused)),
                                                   const uchar *const object_origin __attribute__((unused)),
@@ -709,6 +709,20 @@ rsRetVal qqueue_local_stats_test_lifetime(qqueue_t *const owner) {
     CHKiRet(local_stats_lifetime_case(owner, 0));
 finalize_it:
     RETiRet;
+}
+#elif defined(ENABLE_TESTBENCH)
+/* Local queues need atomic builtins; without them no local stats exist. */
+void qqueue_local_stats_set_test_pre_read_hook(qqueue_local_stats_t *const stats,
+                                               qqueue_local_stats_test_pre_read_hook_t const hook,
+                                               void *const context) {
+    (void)stats;
+    (void)hook;
+    (void)context;
+}
+
+rsRetVal qqueue_local_stats_test_lifetime(qqueue_t *const owner) {
+    (void)owner;
+    return RS_RET_NOT_IMPLEMENTED;
 }
 #endif
 

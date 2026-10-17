@@ -116,12 +116,14 @@ static rsRetVal doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *cons
 static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWti);
 static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti);
 
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
 /* Cold-selected, one-shot dispatch stimulus for the local ownership test.
  * The real module is bypassed exactly once with SUSPENDED. This is not a
  * claim that omfile itself returns FORCE_TERM: the ordinary actionCommit
  * retry loop must observe source shutdown and produce that result. All
- * settings are initialized before input startup and freed after workers. */
+ * settings are initialized before input startup and freed after workers.
+ * Local queues need atomic builtins, so the fixture is compiled out without
+ * them (e.g. Solaris Studio builds). */
 static struct {
     action_t *action;
     char *entry;
@@ -385,7 +387,7 @@ rsRetVal actionDestruct(action_t *const pThis) {
     if (pThis->pQueue != NULL) {
         qqueueDestruct(&pThis->pQueue);
     }
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
     if (localTestCommit.action == pThis) {
         if (localTestCommit.releaseFd >= 0) close(localTestCommit.releaseFd);
         free(localTestCommit.entry);
@@ -1548,7 +1550,7 @@ static rsRetVal ATTR_NONNULL() actionCallCommitTransaction(action_t *const pThis
     DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n", pThis->pszName,
               getActStateName(pThis, pWti), nparams);
 
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
     if (localTestCommit.action == pThis && qqueueLocalWorker(pWti) &&
         !__atomic_exchange_n(&localTestCommit.fired, 1, __ATOMIC_RELAXED)) {
         localTestCommitWait();
@@ -2443,7 +2445,7 @@ DEFFUNC_llExecFunc(doActivateActions) {
     action_t *const pThis = (action_t *)pData;
     rsRetVal *const preparationResult = pParam;
     if (*preparationResult != RS_RET_OK) return *preparationResult;
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
     localRet = localTestCommitPrepare(pThis);
     if (localRet != RS_RET_OK) {
         *preparationResult = localRet;

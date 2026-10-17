@@ -13,7 +13,9 @@
  * and checked after dequeue, making visibility after release/acquire part of
  * the concurrent-publication oracle rather than only pointer-ID ordering. The
  * full and empty retry paths yield after no progress, so their deliberate
- * contention does not monopolize the scheduler under instrumentation. A
+ * contention does not monopolize the scheduler under instrumentation. After
+ * a run of fruitless yields they sleep briefly: on loaded macOS TSan runners
+ * yield alone can let the spinning peers starve each other past the alarm. A
  * 60-second alarm bounds a regression hang; it is not the success oracle.
  */
 #include "config.h"
@@ -22,6 +24,7 @@
 #include <sched.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "queue_spsc.h"
@@ -254,10 +257,23 @@ static int wait_for_start(spsc_thread_test_state_t *state) {
     return abort_start;
 }
 
+/* Yield first; sleep after repeated misses so the peer is scheduled. */
+static void retry_backoff(unsigned *const misses) {
+    if (++*misses < 64U) {
+        (void)sched_yield();
+    } else {
+        const struct timespec pause = {0, 50000};
+
+        (void)nanosleep(&pause, NULL);
+        *misses = 0;
+    }
+}
+
 static void *producer_main(void *arg) {
     spsc_thread_test_state_t *const state = arg;
     void *batch[11];
     uint32_t next_id = 1;
+    unsigned misses = 0;
 
     if (wait_for_start(state)) return NULL;
     while (next_id <= CONCURRENT_ITEMS) {
@@ -270,10 +286,12 @@ static void *producer_main(void *arg) {
             initialize_payload(payload, next_id + i);
             batch[i] = payload;
         }
-        if (rsSpscQueueTryPush(&state->queue, batch, count))
+        if (rsSpscQueueTryPush(&state->queue, batch, count)) {
             next_id += count;
-        else
-            (void)sched_yield();
+            misses = 0;
+        } else {
+            retry_backoff(&misses);
+        }
     }
     return NULL;
 }
@@ -282,15 +300,17 @@ static void *consumer_main(void *arg) {
     spsc_thread_test_state_t *const state = arg;
     void *batch[13];
     uint32_t received = 0;
+    unsigned misses = 0;
 
     if (wait_for_start(state)) return NULL;
     while (received < CONCURRENT_ITEMS) {
         const size_t count = rsSpscQueuePop(&state->queue, batch, (received % 13U) + 1U);
 
         if (count == 0) {
-            (void)sched_yield();
+            retry_backoff(&misses);
             continue;
         }
+        misses = 0;
         for (size_t i = 0; i < count; ++i) {
             const publication_payload_t *const payload = batch[i];
             const uint32_t id = payload->id;

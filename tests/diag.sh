@@ -185,6 +185,19 @@ skip_platform() {
 
 }
 
+# Skip runtime local-queue tests where queue_local.c builds only its
+# fail-closed stubs: Darwin lacks POSIX monotonic condition variables, and
+# builds without 64-bit atomic builtins (e.g. Solaris Studio) lack the
+# lock-free primitives. Local scope then cannot start, so such tests would
+# fail instead of exercising anything.
+skip_without_local_queue_support() {
+	skip_platform "Darwin" "local queues require POSIX monotonic condition variables"
+	if ! ../tools/rsyslogd -v 2>/dev/null | grep -q '64bit Atomic operations supported:.Yes'; then
+		printf 'local queues require 64-bit atomic builtins, which this build lacks\n'
+		exit 77
+	fi
+}
+
 # function to skip a test if TSAN is enabled
 # This is necessary as TSAN does not properly handle thread creation
 # after fork() - which happens regularly in rsyslog if backgrounding

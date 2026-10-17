@@ -18,6 +18,8 @@
 #include <time.h>
 #include <unistd.h>
 
+/* Local queues need atomic builtins; without them this fixture is not used. */
+#ifdef HAVE_ATOMIC_BUILTINS
 static ssize_t (*real_write)(int, const void *, size_t);
 static int (*real_lock)(pthread_mutex_t *);
 static __thread pthread_mutex_t *last_lock;
@@ -123,3 +125,7 @@ ssize_t write(int fd, const void *buf, size_t len) {
     pthread_setcancelstate(oldstate, NULL);
     return real_write(fd, buf, len);
 }
+#else
+/* ISO C requires a non-empty translation unit. */
+typedef int local_queue_omfile_cancel_preload_unused_t;
+#endif
