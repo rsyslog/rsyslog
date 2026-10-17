@@ -7,13 +7,18 @@
 # its worker-exit cleanup before a later filtered enqueue restarts w1. This
 # avoids a fixed sleep while preserving exact two-ID delivery as the data
 # oracle.
+#
+# The debug-line thread prefix is written without synchronization and can
+# carry another thread's name, so the predicates below match only the worker
+# name that wti.c and wtp.c put into the message text itself ("<pool>/wN:"
+# directly followed by the event).
 . ${srcdir:=.}/diag.sh init
 export RSYSLOG_DEBUG="debug nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.wtp-debug.log"
 
 count_w1_starts() {
 	if test -f "$RSYSLOG_DEBUGLOG"; then
-		grep -c 'main Q:Reg/w1.*worker starting' "$RSYSLOG_DEBUGLOG" || true
+		grep -c 'main Q:Reg/w1: wti [^:]*: worker starting' "$RSYSLOG_DEBUGLOG" || true
 	else
 		echo 0
 	fi
@@ -25,8 +30,8 @@ first_worker_remains_live() {
 		return
 	fi
 	awk '
-		/main Q:Reg\/w0.*:.*worker starting/ { ++starts }
-		/main Q:Reg\/w0.*Worker thread [0-9a-f]+, terminated/ { exited = 1 }
+		/main Q:Reg\/w0: wti [^:]*: worker starting/ { ++starts }
+		/main Q:Reg\/w0: Worker thread [0-9a-f]+, terminated/ { exited = 1 }
 		END { print starts == 1 && !exited ? 1 : 0 }
 	' "$RSYSLOG_DEBUGLOG"
 }
@@ -45,7 +50,7 @@ completed_w1_lifecycle() {
 		/minDeqBatchSize timeout/ { saw_minbatch_timeout = 1 }
 		/main Q:Reg\/w1: worker IDLE, waiting for work/ { saw_w1_idle = 1 }
 		saw_w1_idle && /main Q:Reg\/w1: inactivity timeout, worker terminating/ { saw_w1_timeout = 1 }
-		saw_w1_timeout && /main Q:Reg\/w1.*Worker thread [0-9a-f]+, terminated/ { saw_w1_exit = 1 }
+		saw_w1_timeout && /main Q:Reg\/w1: Worker thread [0-9a-f]+, terminated/ { saw_w1_exit = 1 }
 		END { print saw_wait && saw_minbatch_timeout && saw_w1_exit ? 1 : 0 }
 	' "$RSYSLOG_DEBUGLOG"
 }

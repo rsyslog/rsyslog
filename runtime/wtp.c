@@ -455,7 +455,10 @@ static int wtpWrkrPublishTerminated(wti_t *pWti) {
      * hard to get it 100% accurate (as curently done, it is not).
      */
     const int numWorkersNow = ATOMIC_LOAD_32BIT_RELAXED(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
-    DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtpGetDbgHdr(pThis), (unsigned long)pWti,
+    /* Name the worker in the message text: the debug-line thread prefix is
+     * not reliable under concurrency, and tests key on this line.
+     */
+    DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtiGetDbgHdr(pWti), (unsigned long)pWti,
               numWorkersNow);
     return numWorkersNow;
 }

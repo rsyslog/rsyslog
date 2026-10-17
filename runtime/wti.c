@@ -503,7 +503,7 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
      * - critical cleanup/state transitions run with cancellation disabled
      */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DBGPRINTF("wti %p: worker starting\n", pThis);
+    DBGPRINTF("%s: wti %p: worker starting\n", wtiGetDbgHdr(pThis), pThis);
     /* now we have our identity, on to real processing */
 
     /* note: in this loop, the mutex is "never" unlocked. Of course,
