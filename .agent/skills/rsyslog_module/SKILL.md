@@ -48,7 +48,10 @@ Every module must implement and register standard entry points:
 - **Synchronization**: Keep `doc/ai/module_map.yaml` in sync with locking and concurrency changes.
 
 ### 4. Build Configuration
-- Update `plugins/Makefile.am` and `configure.ac` when adding new modules.
+- When adding a new module, create `plugins/<module>/Makefile.am`, add the
+  enable option and `plugins/<module>/Makefile` (`AC_CONFIG_FILES`) to
+  `configure.ac`, and add a conditional `SUBDIRS +=` entry to the top-level
+  `Makefile.am`. There is no `plugins/Makefile.am`.
 - **Test Registration**: Follow the "Define at Top, Distribute Unconditionally, Register Conditionally" pattern in `tests/Makefile.am`. See the `rsyslog_test` skill for details. This is critical for `make distcheck` validity.
 - Use `MODULE_TYPE(eMOD_OUT)` and other macros from `runtime/module-template.h`.
 

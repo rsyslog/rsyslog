@@ -25,7 +25,7 @@ collection, and process orchestration).
 - `timezones.c`, `datetime.c`: time conversion helpers.
 - `yamlconf.c` / `yamlconf.h`: YAML configuration frontend — parses `.yaml`/`.yml`
   files and produces the same `cnfobj`+`nvlst` trees that the RainerScript grammar
-  produces, then feeds them into the shared `cnfDoObj()` backend in `conf.c`.
+  produces, then feeds them into the shared `cnfDoObj()` backend in `rsconf.c`.
   **Any change to config objects, statement types, template modifiers, or global
   parameters must be reflected here as well as in `grammar/`.** See the
   `rsyslog_config` skill for parity rules.

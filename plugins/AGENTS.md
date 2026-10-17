@@ -82,8 +82,11 @@ support expectations change.
 - Update the module's top-of-file "Concurrency & Locking" comment when
   behavior changes.
 - Update `doc/ai/module_map.yaml` if concurrency expectations change.
-- When adding a new module, update `plugins/Makefile.am`, `configure.ac`, and
-  provide tests under `tests/` to cover the new behavior.
+- When adding a new module, create its own `plugins/<module>/Makefile.am`, add
+  the `--enable-<module>` option and `plugins/<module>/Makefile` to
+  `AC_CONFIG_FILES` in `configure.ac`, add a conditional `SUBDIRS +=` entry in
+  the top-level `Makefile.am` (there is no `plugins/Makefile.am`), and provide
+  tests under `tests/` to cover the new behavior.
 - **Documentation**: Every new configuration parameter **must** be documented in
   `doc/source/reference/parameters/` and linked from the module's `.rst` file.
   Include a YAML example alongside the RainerScript example so operators using
