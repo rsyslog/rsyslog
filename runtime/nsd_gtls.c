@@ -1557,6 +1557,19 @@ static rsRetVal gtlsEndSess(nsd_gtls_t *pThis) {
     RETiRet;
 }
 
+/* Drop the session without gnutls_bye(). The transport fd cached by
+ * gnutls_transport_set_ptr() may already have been closed and reused.
+ */
+static void gtlsAbortSess(nsd_gtls_t *pThis) {
+    if (pThis->bHaveSess) {
+        gnutls_deinit(pThis->sess);
+        pThis->bHaveSess = 0;
+    }
+    pThis->bAbortConn = 1;
+    pThis->iMode = 0;
+    pThis->rtryCall = gtlsRtry_None;
+}
+
 
 /* a small wrapper for gnutls_transport_set_ptr(). The main intension for
  * creating this wrapper is to get the annoying "cast to pointer from different
@@ -2056,16 +2069,28 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
 }
 
 
-/* This function checks if the connection is still alive - well, kind of...
- * This is a dummy here. For details, check function common in ptcp driver.
+/* This function checks if the connection is still alive.
+ * When the underlying ptcp layer detects a closed/broken connection it closes
+ * the fd. In that case we must immediately abort the GnuTLS session
+ * (gnutls_deinit without gnutls_bye), because the fd number cached inside the
+ * GnuTLS transport pointer may already have been reused by another part of
+ * the same process (e.g. an omfile open()); any later gnutls_bye would then
+ * write a TLS close_notify into that unrelated fd.
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
+    DEFiRet;
     nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
-    return nsd_ptcp.CheckConnection(pThis->pTcp);
+    iRet = nsd_ptcp.CheckConnection(pThis->pTcp);
+    if (iRet != RS_RET_OK) {
+        /* ptcp closed the fd; drop the session without gnutls_bye so the
+         * cached transport fd cannot be written again. */
+        gtlsAbortSess(pThis);
+    }
+    RETiRet;
 }
 
 

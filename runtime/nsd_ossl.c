@@ -865,16 +865,28 @@ static rsRetVal LstnInit(netstrms_t *pNS,
 }
 
 
-/* This function checks if the connection is still alive - well, kind of...
- * This is a dummy here. For details, check function common in ptcp driver.
+/* This function checks if the connection is still alive.
+ * When the underlying ptcp layer detects a closed/broken connection it closes
+ * the fd. In that case we must immediately abort the SSL session (SSL_free
+ * without SSL_shutdown), because the fd number cached inside the OpenSSL BIO
+ * may already have been reused by another part of the same process (e.g. an
+ * omfile open()); any later SSL_write/SSL_shutdown would then write TLS data
+ * into that unrelated fd.
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
+    DEFiRet;
     nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
-    return nsd_ptcp.CheckConnection(pThis->pTcp);
+    iRet = nsd_ptcp.CheckConnection(pThis->pTcp);
+    if (iRet != RS_RET_OK) {
+        /* ptcp closed the fd; free the SSL object without SSL_shutdown so the
+         * stale BIO fd cannot be used again. */
+        osslAbortSess(pThis);
+    }
+    RETiRet;
 }
 
 

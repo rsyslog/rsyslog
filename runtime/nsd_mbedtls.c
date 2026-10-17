@@ -228,6 +228,19 @@ static rsRetVal mbedtlsEndSess(nsd_mbedtls_t *pThis) {
     RETiRet;
 }
 
+/* Drop the session without mbedtls_ssl_close_notify(). Do not free the SSL
+ * context here: the destructor always calls mbedtls_ssl_free(). The recv
+ * callback uses the fd cached in pThis->sock, which ptcp may already have
+ * closed and the process may have reused.
+ */
+static void mbedtlsAbortSess(nsd_mbedtls_t *pThis) {
+    pThis->bHaveSess = 0;
+    pThis->sock = -1;
+    mbedtls_ssl_set_bio(&(pThis->ssl), NULL, NULL, NULL, NULL);
+    pThis->bAbortConn = 1;
+    pThis->iMode = 0;
+}
+
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_mbedtls) /* be sure to specify the object type also in END macro! */
     iRet = nsd_ptcp.Construct(&pThis->pTcp);
@@ -1407,16 +1420,26 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
     RETiRet;
 }
 
-/* This function checks if the connection is still alive - well, kind of...
- * This is a dummy here. For details, check function common in ptcp driver.
+/* This function checks if the connection is still alive.
+ * When the underlying ptcp layer detects a closed/broken connection it closes
+ * the fd. Abort the Mbed TLS session without mbedtls_ssl_close_notify(): the
+ * recv callback still holds that fd number in pThis->sock, and a later
+ * shutdown must not use it after another thread has reused the number.
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t *pNsd) {
+    DEFiRet;
     nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
-    return nsd_ptcp.CheckConnection(pThis->pTcp);
+    iRet = nsd_ptcp.CheckConnection(pThis->pTcp);
+    if (iRet != RS_RET_OK) {
+        /* ptcp closed the fd; drop the session without close_notify and
+         * invalidate the cached recv fd. */
+        mbedtlsAbortSess(pThis);
+    }
+    RETiRet;
 }
 
 /* Provide access to the underlying OS socket.
