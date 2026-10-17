@@ -55,6 +55,10 @@ collection, and process orchestration).
 - Keep worker/thread behavior aligned with `MODULE_AUTHOR_CHECKLIST.md` rules:
   per-worker state stays in `wrkrInstanceData_t`, shared state is guarded in
   per-action data structures.
+- Use `atomic.h` helpers instead of raw `__atomic_*` / `__sync_*` builtins.
+  Raw builtins must sit inside an `HAVE_ATOMIC_BUILTINS` (or
+  `HAVE_ATOMIC_BUILTINS64`) branch so builds without them still compile;
+  `devtools/check-raw-atomics.py` enforces this in CI.
 - Update `doc/ai/module_map.yaml` when locking guarantees, queue semantics, or
   exported helper APIs change so module authors know what to depend on.
 - Update or create unit helpers (e.g. under `tests/` or `runtime/hashtable/`)

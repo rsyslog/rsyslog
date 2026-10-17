@@ -28,6 +28,8 @@ jobs:
             **/*.c
             **/*.h
             devtools/format-code.sh
+            devtools/check-raw-atomics.py
+            devtools/raw-atomics-baseline.txt
 
       - name: Enforce code style
         env:
@@ -47,3 +49,9 @@ jobs:
             echo "can help apply formatting fixes if needed."
             exit 1
           fi
+
+      - name: Check for unguarded atomic builtins
+        # Same script contributors run locally; builds without atomic
+        # builtins (e.g. Solaris Studio) break on raw __atomic_*/__sync_*.
+        if: ${{ !cancelled() && steps.code_changes.outputs.any_changed == 'true' }}
+        run: python3 devtools/check-raw-atomics.py
