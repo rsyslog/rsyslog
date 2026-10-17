@@ -23,7 +23,10 @@
 # cycle. With the fix the exiting worker resumes after the delay; the
 # producer waits about 1s per cycle, well below queue.timeoutEnqueue (10s).
 # The oracle is lossless persistence: all messages must survive into the disk
-# queue and be delivered after restart. With the bug, every cycle loses its
+# queue and be delivered after restart. The reference action follows the DA
+# action, so the first instance is only stopped once every enqueue attempt
+# has finished; otherwise shutdown could cancel a producer still waiting for
+# room and lose a message that the fix did not drop. With the bug, every cycle loses its
 # advice, the producer times out and discards a message, so the recovered
 # file stays short and the comparison fails.
 . ${srcdir:=.}/diag.sh init
@@ -42,7 +45,6 @@ global(workDirectory="'"$SPOOL_DIR"'")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 if $msg contains "msgnum:" then {
-	action(type="omfile" file="'"$REFERENCE_FILE"'" template="outfmt")
 	action(type="omfile" file="'"$1"'" template="outfmt"
 		createDirs="off"
 		action.resumeRetryCount="-1"
@@ -55,6 +57,10 @@ if $msg contains "msgnum:" then {
 		queue.dequeueBatchSize="1"
 		queue.timeoutEnqueue="10000"
 		queue.saveOnShutdown="on")
+	# Runs after the enqueue above has returned for the same message, so a
+	# full reference file means no message is still waiting to enter the
+	# DA queue when the first instance is shut down.
+	action(type="omfile" file="'"$REFERENCE_FILE"'" template="outfmt")
 }
 '
 }
