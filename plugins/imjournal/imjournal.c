@@ -110,6 +110,7 @@ static struct configSettings_s {
     int bWorkAroundJournalBug; /* deprecated, left for backwards compatibility only */
     int bFsync;
     int bRemote;
+    int bScopeByBootId;
     char *dfltTag;
 } cs;
 
@@ -132,7 +133,8 @@ static struct cnfparamdescr modpdescr[] = {{"statefile", eCmdHdlrGetWord, 0},
                                            {"fsync", eCmdHdlrBinary, 0},
                                            {"remote", eCmdHdlrBinary, 0},
                                            {"namespace", eCmdHdlrString, 0},
-                                           {"defaulttag", eCmdHdlrGetWord, 0}};
+                                           {"defaulttag", eCmdHdlrGetWord, 0},
+                                           {"scopebybootid", eCmdHdlrBinary, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* input instance parameters */
@@ -185,12 +187,17 @@ struct journalContext_s { /* structure encapsulating all the journald_API-relate
     sbool warnedFutureJournalTime; /* warning already emitted for journal entries ahead of current system time */
     uint64_t nextFutureJournalProbeUsec; /* next permitted future-time diagnostic probe */
     char *cursor; /* should point to last valid journald entry we processed */
+    sd_id128_t bootId; /* boot the journal is restricted to, only valid if bootIdSet */
+    sbool bootIdSet; /* journal is restricted to entries of bootId (ScopeByBootId) */
+    sbool drainingOldBoot; /* bootId is an earlier boot, continue with the next boot once it is read */
+    sd_id128_t *doneBoots; /* earlier boots that were completely read during this run */
+    size_t nDoneBoots;
 };
 
 #define MAX_JOURNAL 8
 static struct journalContext_s journalContextArray[MAX_JOURNAL] = {
-    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
-    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
+    {.atHead = 1}, {.atHead = 1}, {.atHead = 1}, {.atHead = 1},
+    {.atHead = 1}, {.atHead = 1}, {.atHead = 1}, {.atHead = 1},
 };
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process */
@@ -311,6 +318,26 @@ static int openJournalHandle(sd_journal **j) {
     return sd_journal_open(j, flags);
 }
 
+/* Restrict the journal to the entries of journalContext->bootId. Any
+ * previously added match is removed.
+ */
+static rsRetVal applyBootIdMatch(struct journalContext_s *journalContext) {
+    char id[SD_ID128_STRING_MAX];
+    char match[sizeof("_BOOT_ID=") + SD_ID128_STRING_MAX];
+    int r;
+    DEFiRet;
+
+    sd_journal_flush_matches(journalContext->j);
+    snprintf(match, sizeof(match), "_BOOT_ID=%s", sd_id128_to_string(journalContext->bootId, id));
+    if ((r = sd_journal_add_match(journalContext->j, match, 0)) < 0) {
+        LogError(-r, RS_RET_ERR, "imjournal: sd_journal_add_match() failed for '%s'", match);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal openJournal(struct journalContext_s *journalContext) {
     int r;
     DEFiRet;
@@ -331,6 +358,10 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
     if ((r = sd_journal_set_data_threshold(journalContext->j, glbl.GetMaxLine(runModConf->pConf))) < 0) {
         LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_set_data_threshold() failed");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (journalContext->bootIdSet) {
+        /* matches belong to the handle, restore them when the journal is reopened */
+        CHKiRet(applyBootIdMatch(journalContext));
     }
     journalContext->atHead = 1;
 
@@ -1007,6 +1038,232 @@ done:
     }
 }
 
+/* Return a pointer to the "b=" (boot id) field of a journal cursor, or NULL
+ * if the cursor does not contain one. Cursors produced by
+ * sd_journal_get_cursor() have the form "s=..;i=..;b=..;m=..;t=..;x=..".
+ */
+static const char *cursorBootIdField(const char *cursor) {
+    const char *p;
+
+    if (cursor == NULL) {
+        return NULL;
+    }
+    if (strncmp(cursor, "b=", 2) == 0) {
+        return cursor;
+    }
+    p = strstr(cursor, ";b=");
+    return (p == NULL) ? NULL : p + 1;
+}
+
+/* Check whether the journal is currently positioned on the entry described
+ * by cursor.
+ *
+ * sd_journal_test_cursor() rejects a cursor as soon as its seqnum id ("s=")
+ * differs from the file holding the current entry. journald assigns a new
+ * seqnum id when it copies entries from the runtime journal (/run) to the
+ * persistent journal (/var), e.g. on "journalctl --flush", so the very same
+ * entry is not recognized after it has been moved. In that case compare the
+ * remaining fields (boot id, monotonic and realtime timestamps and the xor
+ * hash of the entry payload), which journald preserves when copying.
+ *
+ * Returns 1 if the current entry matches, 0 if it does not and a negative
+ * errno-style value if the current entry could not be inspected.
+ */
+static int journalAtCursor(sd_journal *j, const char *cursor) {
+    char *current = NULL;
+    const char *want;
+    const char *have;
+    int r;
+
+    r = sd_journal_test_cursor(j, cursor);
+    if (r != 0) {
+        return r;
+    }
+    r = sd_journal_get_cursor(j, &current);
+    if (r < 0) {
+        return r;
+    }
+    want = cursorBootIdField(cursor);
+    have = cursorBootIdField(current);
+    r = (want != NULL && have != NULL && strcmp(want, have) == 0) ? 1 : 0;
+    free(current);
+    return r;
+}
+
+/* Extract the boot id from a journal cursor. Returns 0 on success and a
+ * negative errno-style value otherwise.
+ */
+static int cursorBootId(const char *cursor, sd_id128_t *bootId) {
+    char id[SD_ID128_STRING_MAX];
+    const char *field = cursorBootIdField(cursor);
+
+    if (field == NULL) {
+        return -EINVAL;
+    }
+    field += 2; /* skip "b=" */
+    if (strnlen(field, SD_ID128_STRING_MAX) < SD_ID128_STRING_MAX - 1 ||
+        (field[SD_ID128_STRING_MAX - 1] != ';' && field[SD_ID128_STRING_MAX - 1] != '\0')) {
+        return -EINVAL;
+    }
+    memcpy(id, field, SD_ID128_STRING_MAX - 1);
+    id[SD_ID128_STRING_MAX - 1] = '\0';
+    return sd_id128_from_string(id, bootId);
+}
+
+/* Remove a restriction added by scopeToBoot(). */
+static void clearBootScope(struct journalContext_s *journalContext) {
+    if (journalContext->bootIdSet) {
+        sd_journal_flush_matches(journalContext->j);
+    }
+    journalContext->bootIdSet = 0;
+    journalContext->drainingOldBoot = 0;
+}
+
+/* Restrict the journal to the entries of bootId (ScopeByBootId). If bootId is
+ * not the current boot, doRun() switches to the following boot once all of
+ * its entries have been read. On error the journal is left unrestricted.
+ */
+static rsRetVal scopeToBoot(struct journalContext_s *journalContext, sd_id128_t bootId) {
+    sd_id128_t current;
+    int r;
+    DEFiRet;
+
+    if ((r = sd_id128_get_boot(&current)) < 0) {
+        LogError(-r, RS_RET_ERR, "imjournal: sd_id128_get_boot() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    journalContext->bootId = bootId;
+    journalContext->bootIdSet = 1;
+    journalContext->drainingOldBoot = !sd_id128_equal(bootId, current);
+    CHKiRet(applyBootIdMatch(journalContext));
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        sd_journal_flush_matches(journalContext->j);
+        journalContext->bootIdSet = 0;
+        journalContext->drainingOldBoot = 0;
+    }
+    RETiRet;
+}
+
+/* Start reading at the first entry of the current boot (ScopeByBootId). Used
+ * when there is no usable saved position.
+ */
+static rsRetVal scopeToCurrentBoot(struct journalContext_s *journalContext) {
+    sd_id128_t current;
+    int r;
+    DEFiRet;
+
+    if ((r = sd_id128_get_boot(&current)) < 0) {
+        LogError(-r, RS_RET_ERR, "imjournal: sd_id128_get_boot() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKiRet(scopeToBoot(journalContext, current));
+    if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
+        LogError(-r, RS_RET_ERR, "imjournal: sd_journal_seek_head() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    journalContext->atHead = 1;
+
+finalize_it:
+    RETiRet;
+}
+
+static int isBootDone(const struct journalContext_s *journalContext, sd_id128_t bootId) {
+    size_t i;
+
+    for (i = 0; i < journalContext->nDoneBoots; ++i) {
+        if (sd_id128_equal(journalContext->doneBoots[i], bootId)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static rsRetVal markBootDone(struct journalContext_s *journalContext, sd_id128_t bootId) {
+    sd_id128_t *newDone;
+    DEFiRet;
+
+    if (isBootDone(journalContext, bootId)) {
+        FINALIZE;
+    }
+    CHKmalloc(newDone = realloc(journalContext->doneBoots, (journalContext->nDoneBoots + 1) * sizeof(sd_id128_t)));
+    newDone[journalContext->nDoneBoots++] = bootId;
+    journalContext->doneBoots = newDone;
+
+finalize_it:
+    RETiRet;
+}
+
+/* All entries of the earlier boot journalContext->bootId have been read.
+ * Continue with the first entry of the boot that follows it.
+ *
+ * The following boot is the boot of the first entry after the last processed
+ * one that does not belong to a boot we have already read completely. Its
+ * entries are then read from the beginning, because they may be sorted before
+ * the last processed entry, e.g. when they carry a wall clock time from before
+ * the clock was synchronized.
+ */
+static rsRetVal switchToNextBoot(struct journalContext_s *journalContext) {
+    char prevId[SD_ID128_STRING_MAX];
+    char nextId[SD_ID128_STRING_MAX];
+    sd_id128_t current;
+    sd_id128_t next;
+    sd_id128_t entryBoot;
+    uint64_t usec;
+    int found = 0;
+    int r;
+    DEFiRet;
+
+    if ((r = sd_id128_get_boot(&current)) < 0) {
+        LogError(-r, RS_RET_ERR, "imjournal: sd_id128_get_boot() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKiRet(markBootDone(journalContext, journalContext->bootId));
+
+    sd_journal_flush_matches(journalContext->j);
+    if (journalContext->cursor != NULL && sd_journal_seek_cursor(journalContext->j, journalContext->cursor) == 0) {
+        while ((r = sd_journal_next(journalContext->j)) > 0) {
+            if ((r = sd_journal_get_monotonic_usec(journalContext->j, &usec, &entryBoot)) < 0) {
+                break;
+            }
+            if (!isBootDone(journalContext, entryBoot)) {
+                next = entryBoot;
+                found = 1;
+                break;
+            }
+        }
+        if (r < 0) {
+            LogError(-r, RS_RET_ERR, "imjournal: failed to determine the boot following boot %s",
+                     sd_id128_to_string(journalContext->bootId, prevId));
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+    }
+    if (!found) {
+        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+               "imjournal: could not determine the boot following boot %s, continuing with the current boot",
+               sd_id128_to_string(journalContext->bootId, prevId));
+        next = current;
+    }
+
+    LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: finished reading boot %s, continuing with boot %s",
+           sd_id128_to_string(journalContext->bootId, prevId), sd_id128_to_string(next, nextId));
+    CHKiRet(scopeToBoot(journalContext, next));
+    if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
+        LogError(-r, RS_RET_ERR, "imjournal: sd_journal_seek_head() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    journalContext->atHead = 1;
+    /* the saved cursor refers to the previous boot and must not be used to
+     * position the journal of the new one; the state file keeps pointing to
+     * the previous boot until the first entry of the new one was processed. */
+    free(journalContext->cursor);
+    journalContext->cursor = NULL;
+
+finalize_it:
+    RETiRet;
+}
+
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile) {
@@ -1019,6 +1276,9 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n", journalContext->atHead,
               journalContext->reloaded);
 
+    /* the boot restriction is re-established from the state file */
+    clearBootScope(journalContext);
+
     fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW);
     if (fd == -1 && errno == ENOENT) {
         if (cs.bIgnorePrevious) {
@@ -1029,6 +1289,10 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
                "imjournal: No statefile exists, "
                "%s will be created (ignore if this is first run)",
                stateFile);
+        if (!cs.bIgnorePrevious && cs.bScopeByBootId) {
+            /* Start with the current boot instead of the oldest journal entry. */
+            scopeToCurrentBoot(journalContext);
+        }
         FINALIZE;
     }
     if (fd == -1) {
@@ -1036,6 +1300,9 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
             skipOldMessages(journalContext);
+        } else if (cs.bScopeByBootId) {
+            /* Start with the current boot instead of the oldest journal entry. */
+            scopeToCurrentBoot(journalContext);
         }
         FINALIZE;
     }
@@ -1054,6 +1321,20 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
         fd = -1;
         char readCursor[128 + 1];
         if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
+            if (cs.bScopeByBootId) {
+                sd_id128_t cursorBoot;
+                /* Read the boot of the saved position to its end before moving on to
+                 * later boots, so that sd_journal_seek_cursor() cannot position us
+                 * by wall clock time in a different boot. */
+                if (cursorBootId(readCursor, &cursorBoot) < 0) {
+                    LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+                           "imjournal: saved cursor `%s' has no valid boot id, "
+                           "not restricting the journal to a single boot",
+                           readCursor);
+                } else {
+                    scopeToBoot(journalContext, cursorBoot);
+                }
+            }
             if (sd_journal_seek_cursor(journalContext->j, readCursor) != 0) {
                 LogError(0, RS_RET_ERR,
                          "imjournal: "
@@ -1076,7 +1357,12 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
                 * but if cursor has been intentionally compromised it could stop logging even
                 * with persistent journal.
                 * */
-                if ((r = sd_journal_get_cursor(journalContext->j, &tmp_cursor)) < 0) {
+                r = sd_journal_get_cursor(journalContext->j, &tmp_cursor);
+                if (r < 0 && journalContext->drainingOldBoot) {
+                    /* Nothing of the earlier boot is left after the saved position,
+                     * doRun() continues with the following boot. */
+                    DBGPRINTF("imjournal: no unread entries left in the boot of the saved cursor\n");
+                } else if (r < 0) {
                     LogError(-r, RS_RET_IO_ERROR,
                              "imjournal: "
                              "loaded invalid cursor, seeking to the head of journal\n");
@@ -1087,6 +1373,33 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
                         iRet = RS_RET_ERR;
                     }
                     journalContext->atHead = 1;
+                } else if (journalAtCursor(journalContext->j, readCursor) == 0) {
+                    /*
+                     * The entry referenced by the saved cursor no longer exists
+                     * (e.g. it was vacuumed or its file was rotated away), so
+                     * sd_journal_seek_cursor() placed us next to where it used to be
+                     * and sd_journal_next() already moved onto the first entry that
+                     * has not been processed yet. doRun() calls sd_journal_next()
+                     * before reading, so step back to avoid dropping that entry.
+                     */
+                    r = sd_journal_previous(journalContext->j);
+                    if (r == 0) {
+                        /* the first unread entry is the first entry of the journal */
+                        if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
+                            LogError(-r, RS_RET_ERR, "imjournal: sd_journal_seek_head() failed\n");
+                            iRet = RS_RET_ERR;
+                        }
+                        journalContext->atHead = 1;
+                    } else if (r < 0) {
+                        LogError(-r, RS_RET_ERR, "imjournal: sd_journal_previous() failed\n");
+                        iRet = RS_RET_ERR;
+                    }
+                }
+                if (journalContext->drainingOldBoot && iRet == RS_RET_OK) {
+                    /* doRun() needs the last processed entry to find the boot that
+                     * follows the earlier one once it has been read completely. */
+                    free(journalContext->cursor);
+                    journalContext->cursor = strdup(readCursor);
                 }
                 free(tmp_cursor);
             }
@@ -1104,8 +1417,11 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
             /* ignore state file errors */
             iRet = RS_RET_OK;
             LogError(0, NO_ERRCODE, "imjournal: ignoring invalid state file %s", stateFile);
+            clearBootScope(journalContext);
             if (cs.bIgnorePrevious) {
                 skipOldMessages(journalContext);
+            } else if (cs.bScopeByBootId) {
+                scopeToCurrentBoot(journalContext);
             }
         }
     } else {
@@ -1113,6 +1429,9 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
             skipOldMessages(journalContext);
+        } else if (cs.bScopeByBootId) {
+            /* Start with the current boot instead of the oldest journal entry. */
+            scopeToCurrentBoot(journalContext);
         }
     }
 
@@ -1188,6 +1507,9 @@ static rsRetVal doRun(journal_etry_t const *etry) {
     } else if (cs.bIgnorePrevious) {
         /* Seek to the very end of the journal and ignore all older messages. */
         skipOldMessages(etry->journalContext);
+    } else if (cs.bScopeByBootId) {
+        /* Start with the current boot instead of the oldest journal entry. */
+        scopeToCurrentBoot(etry->journalContext);
     }
 
     if (cs.dfltTag == NULL) {
@@ -1225,14 +1547,16 @@ static rsRetVal doRun(journal_etry_t const *etry) {
              * returns 1, indicating the current entry matches the specified cursor,
              * we need to manually advance the cursor. This is because, after calling sd_journal_next,
              * the cursor should point to a new entry; otherwise, we read the same entry twice.
+             * journalAtCursor() also recognizes the entry when it has been copied to a file
+             * with a different seqnum id (e.g. by "journalctl --flush").
              */
             if (etry->journalContext->cursor != NULL) {
-                int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
+                int test = journalAtCursor(etry->journalContext->j, etry->journalContext->cursor);
                 if (test == 1) {
                     DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
                     continue;
                 } else if (test < 0) {
-                    LogError(-test, RS_RET_ERR, "imjournal: sd_journal_test_cursor() failed");
+                    LogError(-test, RS_RET_ERR, "imjournal: checking the journal cursor failed");
                     CHKiRet(tryRecover(etry->journalContext, stateFile));
                     continue;
                 }
@@ -1272,6 +1596,16 @@ static rsRetVal doRun(journal_etry_t const *etry) {
         }
 
         /* At this point r == 0, which means no new messages are available. */
+        if (etry->journalContext->drainingOldBoot) {
+            /* All entries of an earlier boot have been read (ScopeByBootId). */
+            if (stateFile) {
+                persistJournalState(etry->journalContext, stateFile);
+            }
+            if (switchToNextBoot(etry->journalContext) != RS_RET_OK) {
+                CHKiRet(tryRecover(etry->journalContext, stateFile));
+            }
+            continue;
+        }
         if (etry->journalContext->atHead) {
             LogMsg(0, RS_RET_OK, LOG_WARNING,
                    "imjournal: "
@@ -1396,6 +1730,7 @@ BEGINbeginCnfLoad
     cs.bWorkAroundJournalBug = 1;
     cs.bFsync = 0;
     cs.bRemote = 0;
+    cs.bScopeByBootId = 0;
     pModConf->pszNamespace = NULL;
     cs.dfltTag = NULL;
 ENDbeginCnfLoad
@@ -1437,6 +1772,10 @@ BEGINcheckCnf
                  "imjournal: Namespace requires libsystemd support for sd_journal_open_namespace()");
         ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 #endif
+    }
+    if (cs.bScopeByBootId && cs.bRemote) {
+        LogError(0, RS_RET_INVALID_PARAMS, "imjournal: ScopeByBootId and Remote cannot be enabled together");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
     }
 finalize_it:
 ENDcheckCnf
@@ -1590,6 +1929,12 @@ BEGINafterRun
         }
         closeJournal(etry->journalContext);
         free(etry->journalContext->cursor);
+        etry->journalContext->cursor = NULL;
+        free(etry->journalContext->doneBoots);
+        etry->journalContext->doneBoots = NULL;
+        etry->journalContext->nDoneBoots = 0;
+        etry->journalContext->bootIdSet = 0;
+        etry->journalContext->drainingOldBoot = 0;
         // TODO: check iRet, reprot error
         del = etry;
         etry = etry->next;
@@ -1682,6 +2027,8 @@ BEGINsetModCnf
             CHKmalloc(loadModConf->pszNamespace = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "defaulttag")) {
             CHKmalloc(cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "scopebybootid")) {
+            cs.bScopeByBootId = (int)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "imjournal: program error, non-handled "
