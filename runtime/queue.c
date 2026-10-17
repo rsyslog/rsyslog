@@ -1962,7 +1962,12 @@ static rsRetVal queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingE
         DBGOPRINT((obj_t *)pThis, "DA queue is in emergency mode, disabling DA in parent\n");
         pThis->pqParent->bIsDA = 0;
         if (pThis->local_graph_conf != NULL) pThis->pqParent->local_retired_da = pThis;
+#ifdef HAVE_ATOMIC_BUILTINS
         __atomic_store_n(&pThis->pqParent->pqDA, NULL, __ATOMIC_RELEASE);
+#else
+        /* lock-free local-queue readers of pqDA need atomics and are not built */
+        pThis->pqParent->pqDA = NULL;
+#endif
         if (graphMember && pThis->pqParent->local != NULL) {
             /* A DA child shares this locked mutex with its parent. The
              * transfer pool may hold a parent batch or be parked. Once
@@ -4373,7 +4378,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     }
 
     CHKiRet(DequeueForConsumer(pThis, pWti, &skippedMsgs));
-#ifdef ENABLE_TESTBENCH
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
     /* Force the same child-detach transition that a fatal child read makes
      * while the transfer worker owns a parent batch. The real emergency path
      * takes this shared mutex, so release and reacquire it as that path does. */
