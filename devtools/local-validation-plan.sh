@@ -206,7 +206,7 @@ if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\
 fi
 
 validation_tooling_only=0
-if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/|^doc/ai/|^doc/security/|^doc/README\.md$|^doc/AGENTS\.md$|^doc/BUILDS_README\.md$|^doc/STRATEGY\.md$|^doc/IMPLEMENTATION_PLAN\.md$|^devtools/(local-validation-plan\.sh|check-test-antipatterns\.sh|format-code\.sh|format-python\.sh|list-git-changed-c-h-files\.sh)$'; then
+if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/|^doc/ai/|^doc/security/|^doc/README\.md$|^doc/AGENTS\.md$|^doc/BUILDS_README\.md$|^doc/STRATEGY\.md$|^doc/IMPLEMENTATION_PLAN\.md$|^devtools/(local-validation-plan\.sh|check-test-antipatterns\.sh|format-code\.sh|format-python\.sh|list-git-changed-c-h-files\.sh|check-raw-atomics\.py|raw-atomics-baseline\.txt)$'; then
 	validation_tooling_only=1
 fi
 
@@ -284,6 +284,7 @@ print_plan() {
 	testbench-plumbing | code-or-ci | general)
 		echo "  - Available cheap diff-scoped linters."
 		echo "  - Advisory raw allocation scan for changed C/H files."
+		echo "  - devtools/check-raw-atomics.py when C/H files changed (fails on unguarded atomic builtins)."
 		echo "  - devtools/check-test-antipatterns.sh on changed tests."
 		echo "  - Change-gated Ubuntu 26.04 run-ci.sh check."
 		echo "  - Ubuntu 26.04 static analyzer for C/testbench/code changes."
@@ -385,6 +386,19 @@ run_raw_alloc_scan() {
 	if [ -n "$findings" ]; then
 		echo "warning: raw allocation calls found in changed C/H lines; prefer rsyslog allocation helpers where practical" >&2
 		printf '%s\n' "$findings" >&2
+	fi
+}
+
+run_raw_atomics_check() {
+	if [ ! -s "$tmp_c" ] && ! grep -qE '^devtools/(check-raw-atomics\.py|raw-atomics-baseline\.txt)$' "$tmp_changed"; then
+		return 0
+	fi
+	# Whole-tree scan so the baseline of known findings applies; this is
+	# a hard check because CI runs the same script.
+	if command -v python3 >/dev/null 2>&1; then
+		python3 devtools/check-raw-atomics.py
+	else
+		echo "warning: python3 missing; skipping raw atomic builtin check" >&2
 	fi
 }
 
@@ -614,6 +628,7 @@ run_shellcheck
 run_python_style
 run_format_code_check
 run_raw_alloc_scan
+run_raw_atomics_check
 run_test_antipattern_scan
 git diff --check "$base_ref"...HEAD
 git diff --cached --check

@@ -23,6 +23,11 @@ Rsyslog v8 has a high-concurrency worker model.
   [doc/ai/rejected_engineering_paths.md](../../../doc/ai/rejected_engineering_paths.md).
 - **Shared State (`pData`)**: Mutable state shared across workers MUST be protected by a mutex in `pData`.
 - **Per-Worker State (`WID`)**: Never share `wrkrInstanceData_t`.
+- **Atomics**: Use the `runtime/atomic.h` helpers. Raw `__atomic_*` /
+  `__sync_*` builtins are allowed only inside an `HAVE_ATOMIC_BUILTINS`
+  (or `HAVE_ATOMIC_BUILTINS64`) branch, because builds without them
+  (e.g. Solaris Studio) must still compile. `devtools/check-raw-atomics.py`
+  enforces this locally and in the Code Style Check workflow.
 - **Belt and Suspenders**:
   ```c
   assert(pData != NULL);
