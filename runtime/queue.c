@@ -4360,10 +4360,11 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pWti, wti);
 
     /* Graph DA keeps its one activated transfer thread parked between spills.
-     * Retiring the only slot at low water leaves a refill window where advice
-     * sees an exiting, not-yet-joinable WTI and cannot restart it. No producer
-     * need arrive after that slot finally becomes free. Retaining the idle
-     * thread closes that window without changing high/low-water hysteresis.
+     * Retiring the only slot at low water opens a refill window where advice
+     * sees an exiting, not-yet-joinable WTI. wtpAdviseMaxWorkers() hands such
+     * a start to the exiting thread (classic DA relies on that); parking
+     * additionally avoids retire/resume churn between spills, without
+     * changing high/low-water hysteresis.
      *
      * Complete the prior lease before parking. Completion may drop the queue
      * mutex for deferred destruction, so recheck the activation predicate on

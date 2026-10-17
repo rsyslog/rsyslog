@@ -436,7 +436,7 @@ rsRetVal wtpWaitShutdownUntil(wtp_t *const pThis, const struct timespec *const d
  * as this introduces a race in the debug system (RETiRet system).
  * rgerhards, 2009-10-26
  */
-static void wtpWrkrExecCleanup(wti_t *pWti) {
+static int wtpWrkrPublishTerminated(wti_t *pWti) {
     wtp_t *pThis;
 
     ISOBJ_TYPE_assert(pWti, wti);
@@ -457,6 +457,12 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
     const int numWorkersNow = ATOMIC_LOAD_32BIT_RELAXED(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
     DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtpGetDbgHdr(pThis), (unsigned long)pWti,
               numWorkersNow);
+    return numWorkersNow;
+}
+
+static void wtpWrkrLogTerminated(wti_t *pWti, const int numWorkersNow) {
+    wtp_t *const pThis = pWti->pWtp;
+
     /* Local terminal publication must remain under mutWtp until broadcast.
      * Emitting a queue message here could recurse into that local BE/pool.
      * Debug output and the explicit local lifetime counters remain available. */
@@ -467,6 +473,26 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
                (unsigned long)pWti, (uintptr_t)pthread_self(), numWorkersNow);
     }
 }
+
+static void wtpWrkrExecCleanup(wti_t *pWti) {
+    wtpWrkrLogTerminated(pWti, wtpWrkrPublishTerminated(pWti));
+}
+
+#ifdef ENABLE_TESTBENCH
+/* Widen the window between a worker leaving its queue loop and publishing
+ * WAIT_JOIN, so tests can deterministically hit worker-start advice while the
+ * only slot of a pool is exiting. The pool is selected by a substring of its
+ * debug header, e.g. ":DAwpool" for disk-assisted transfer pools.
+ */
+static void wtpTestDelayWorkerExit(wtp_t *const pThis) {
+    const char *const pool = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL");
+    if (pool == NULL || *pool == '\0' || strstr((const char *)wtpGetDbgHdr(pThis), pool) == NULL) return;
+    const char *const delay = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS");
+    long ms = delay == NULL ? 500 : strtol(delay, NULL, 10);
+    if (ms > 60000) ms = 60000;
+    if (ms > 0) srSleep((int)(ms / 1000), (int)((ms % 1000) * 1000));
+}
+#endif
 
 
 /* cancellation cleanup handler for executing worker decrements the worker counter.
@@ -550,14 +576,36 @@ PRAGMA_IGNORE_Wempty_body static void *wtpWorker(
     pthread_cond_broadcast(&pThis->condThrdInitDone);
     d_pthread_mutex_unlock(&pThis->mutWtp);
 
-    wtiWorker(pWti);
+    /* wtiWorker() returns with this slot marked exiting and pmutUsr released.
+     * Until WAIT_JOIN is published the slot can be neither started nor
+     * signalled, so wtpAdviseMaxWorkers() hands any start it needs to this
+     * thread as a restart request. Check for it under pmutUsr and keep that
+     * mutex until WAIT_JOIN is visible: advice then either sees the request
+     * consumed here or a joinable slot it can start. No start is lost.
+     */
+    while (1) {
+        wtiWorker(pWti);
+#ifdef ENABLE_TESTBENCH
+        wtpTestDelayWorkerExit(pThis);
+#endif
+        d_pthread_mutex_lock(pThis->pmutUsr);
+        if (!wtiConsumeRestartRequest(pWti)) break;
+        d_pthread_mutex_unlock(pThis->pmutUsr);
+        DBGPRINTF("%s: worker %p resumes on start advice received while exiting\n", wtpGetDbgHdr(pThis), (void *)pWti);
+    }
     pthread_cleanup_pop(0);
+    /* Lock order pmutUsr -> mutWtp matches wtpStartWrkr(). */
+    int numWorkersNow;
     d_pthread_mutex_lock(&pThis->mutWtp);
     pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
-    wtpWrkrExecCleanup(pWti);
+    numWorkersNow = wtpWrkrPublishTerminated(pWti);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
 
     pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
     pthread_cleanup_pop(1); /* unlock mutex */
+    /* Log only after both mutexes are released, as before WAIT_JOIN became
+     * guarded by pmutUsr: keep the exit path free of logging under locks. */
+    wtpWrkrLogTerminated(pWti, numWorkersNow);
     if (dbgTimeoutToStderr) {
         fprintf(stderr, "rsyslog debug: %p: worker exiting\n", pWti);
     }
@@ -707,6 +755,22 @@ rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, co
         for (i = 0; i < nStartable; ++i) {
             const rsRetVal startRet = wtpStartWrkr(pThis, permit_during_shutdown);
             if (startRet != RS_RET_OK && iRet == RS_RET_OK) iRet = startRet;
+        }
+        /* A slot that has left its queue loop but not yet reached WAIT_JOIN
+         * is not startable, and as an exiting worker it is not wakeable
+         * either. If it is the only slot (e.g. the single DA transfer worker
+         * retiring at low water), dropping the advice here stalls producers
+         * until their enqueue timeout. Hand the remaining starts to such
+         * slots instead; wtpWorker() resumes them before publishing WAIT_JOIN.
+         */
+        int nRestart = nMissing - nStartable;
+        const wtpState_t wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
+        if (wtpState != wtpState_RUNNING && !permit_during_shutdown) nRestart = 0;
+        for (i = 0; i < pThis->iNumWorkerThreads && nRestart > 0; ++i) {
+            if (wtiRequestRestart(pThis->pWrkr[i])) {
+                DBGPRINTF("%s: start advice handed to exiting worker %d\n", wtpGetDbgHdr(pThis), i);
+                --nRestart;
+            }
         }
     }
 
