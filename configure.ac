@@ -64,9 +64,14 @@ then
 	# Note: we *really* want to have this error out during CI testing!
 	# rgerhards, 2018-05-09
 	WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
+	# GCC-style flag that lets a single target opt out of -Winline;
+	# non-GCC compilers (e.g. Solaris Studio cc) reject it, so keep it empty there.
+	WNO_INLINE_CFLAGS="-Wno-inline"
 else
 	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
+	WNO_INLINE_CFLAGS=""
 fi
+AC_SUBST(WNO_INLINE_CFLAGS)
 
 PKG_PROG_PKG_CONFIG
 
