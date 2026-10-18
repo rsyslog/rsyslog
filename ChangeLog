@@ -1,6 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-??
 
+- 2026-10-17: queue: do not lose disk-assisted transfer worker restarts
+  When the in-memory part of a disk-assisted queue refilled while its
+  single transfer worker was retiring at the low watermark, the restart
+  request could be dropped. Producers then waited for the full enqueue
+  timeout and discarded a message. The retiring worker now takes over such
+  a request and resumes work instead.
 - 2026-10-03: omkinesis: add Kinesis Data Streams output
   The new action sends signed PutRecord requests with configurable stream,
   region, credentials, payload template, and fixed or template-based
