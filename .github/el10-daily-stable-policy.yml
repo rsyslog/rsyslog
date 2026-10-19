@@ -25,6 +25,12 @@
       "sha256": "b59b0ab26da84c6c6baf408e697f71b8a320fa74e360c5a5a88ff0629ce8e1e5",
       "upstream_commit": "07b3c40a5a78c79ed9109251f842ca7e955dd586",
       "reason": "The EL10 imptcp regex framing fix is already present in the daily-stable source."
+    },
+    {
+      "name": "rainerscript-fix-replace-sizing-rewind.patch",
+      "sha256": "1fefe12d6686d118d13cf7b2b1f8d25cd2abc279d7d772d87fe0a3d427e031c0",
+      "upstream_commit": "667e3f61aec5ee02c5c2ee6f0f8accf6fe4301a9",
+      "reason": "The EL10 RainerScript replace() sizing fix is already present in the daily-stable source."
     }
   ],
   "supplemental_build_requires": [
