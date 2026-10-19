@@ -160,10 +160,16 @@ static rsRetVal add_time(encbuf_t *b, uint16_t f, const struct syslogTime *t) {
     return add_tlv(b, f, TLV_TIME, 0, d, sizeof(d));
 }
 
-static rsRetVal add_json(encbuf_t *b, uint16_t f, smsg_t *msg, struct json_object *json) {
+/* root is read under the message mutex: another holder may replace or free
+ * the tree until it is taken */
+static rsRetVal add_json(encbuf_t *b, uint16_t f, smsg_t *msg, struct json_object **root) {
     char *copy = NULL;
-    if (json == NULL) return RS_RET_OK;
     MsgLock(msg);
+    struct json_object *const json = *root;
+    if (json == NULL) {
+        MsgUnlock(msg);
+        return RS_RET_OK;
+    }
     const char *text = json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
     if (text != NULL) copy = strdup(text);
     MsgUnlock(msg);
@@ -212,8 +218,12 @@ rsRetVal segdiskCodecEncode(smsg_t *msg, unsigned char **buf, size_t *len) {
     text = getRcvFromPort(msg);
     ADD(add_bytes(&b, F_RCVFROMPORT, text, strlen((char *)text)));
     if (msg->pszStrucData != NULL) ADD(add_bytes(&b, F_STRUCTURED_DATA, msg->pszStrucData, msg->lenStrucData));
-    ADD(add_json(&b, F_JSON, msg, msg->json));
-    ADD(add_json(&b, F_LOCALVARS, msg, msg->localvars));
+#ifdef HAVE_LOGNORM_TURBO
+    /* the turbo snapshot is module-owned and cannot cross a queue file */
+    ADD(MsgTurboMaterialize(msg));
+#endif
+    ADD(add_json(&b, F_JSON, msg, &msg->json));
+    ADD(add_json(&b, F_LOCALVARS, msg, &msg->localvars));
     ADD(add_cstr(&b, F_APPNAME, msg, msg->pCSAPPNAME));
     ADD(add_cstr(&b, F_PROCID, msg, msg->pCSPROCID));
     ADD(add_cstr(&b, F_MSGID, msg, msg->pCSMSGID));

@@ -301,6 +301,7 @@ EXTRA_DIST += unit/queue_spsc_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 EXTRA_DIST += unit/mmaitag_gemini_response_test.c
+EXTRA_DIST += unit/turbo_msgdup_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -1933,7 +1934,19 @@ TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-message-lifecycle.sh \
 	mmnormalize-turbo-json-discard.sh \
 	mmnormalize-turbo-json-nested.sh \
-	mmnormalize-turbo-hup-tsan.sh
+	mmnormalize-turbo-hup-tsan.sh \
+	mmnormalize-turbo-msgdup-share.sh \
+	mmnormalize-turbo-shared-getter-tsan.sh \
+	mmnormalize-turbo-shared-set-tsan.sh \
+	mmnormalize-turbo-exists.sh \
+	mmnormalize-turbo-jsonmesg.sh \
+	mmnormalize-turbo-unset.sh \
+	mmnormalize-turbo-second-normalize.sh \
+	mmnormalize-turbo-subtree-template.sh \
+	mmnormalize-turbo-segdisk-lifecycle.sh
+
+TESTS_MMNORMALIZE_TURBO_OMRULESET = \
+	mmnormalize-turbo-msgdup-concurrent-tsan.sh
 
 TESTS_MMNORMALIZE_TURBO_IMPSTATS = \
 	mmnormalize-turbo-truncated-stat.sh
@@ -2759,6 +2772,7 @@ EXTRA_DIST += $(TESTS_MMNORMALIZE)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_DEBUG)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO)
+EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_OMRULESET)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_IMPSTATS)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_VALGRIND)
@@ -2961,6 +2975,36 @@ runtime_unit_mmaitag_gemini_response_SOURCES = \
 
 runtime_unit_mmaitag_gemini_response_CPPFLAGS = \
 	-I$(top_srcdir)/plugins/mmaitag
+endif
+
+if LOGNORM_TURBO_SUPPORTED
+if LD_LINK_WHOLE_RUNTIME
+check_PROGRAMS += runtime_unit_turbo_msgdup
+TESTS += runtime_unit_turbo_msgdup
+
+runtime_unit_turbo_msgdup_SOURCES = \
+	unit/turbo_msgdup_test.c
+
+runtime_unit_turbo_msgdup_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+# Drives the full message runtime, so it links the runtime and the config
+# grammar like rsyslogd does. The whole runtime archive goes in and is
+# exported: the helper modules the runtime loads at init (lmnet, ...)
+# resolve their symbols from the executable, and the runtime and grammar
+# archives reference each other.
+if LD_WHOLE_ARCHIVE
+runtime_unit_turbo_msgdup_LDFLAGS = -export-dynamic \
+	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+else
+runtime_unit_turbo_msgdup_LDFLAGS = -export-dynamic \
+	-Wl,-force_load,$(top_builddir)/runtime/.libs/librsyslog.a
+endif
+runtime_unit_turbo_msgdup_LDADD = $(top_builddir)/grammar/libgrammar.la \
+	$(top_builddir)/runtime/librsyslog.la $(top_builddir)/compat/compat.la \
+	$(ZLIB_LIBS) $(ZSTD_LIBS) $(PTHREADS_LIBS) $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) \
+	$(LIBSYSTEMD_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) \
+	$(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
+endif
 endif
 
 runtime_unit_linkedlist_CPPFLAGS = \
@@ -3959,6 +4003,9 @@ endif
 
 if LOGNORM_TURBO_SUPPORTED
 TESTS += $(TESTS_MMNORMALIZE_TURBO)
+if ENABLE_OMRULESET
+TESTS += $(TESTS_MMNORMALIZE_TURBO_OMRULESET)
+endif
 if LOGNORM_TURBO_TRUNCATION_SUPPORTED
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_MMNORMALIZE_TURBO_IMPSTATS)
