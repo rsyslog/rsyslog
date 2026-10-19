@@ -1182,6 +1182,14 @@ static int inputTermFixtureConserved(void) {
     return 0;
 }
 
+    /* Records which oracle of local_queue_input_term_test() rejected the run in
+     * its local failDetail buffer, then fails with RS_RET_INTERNAL_ERROR. */
+    #define INPUT_TERM_FAIL(...)                                   \
+        do {                                                       \
+            snprintf(failDetail, sizeof(failDetail), __VA_ARGS__); \
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);                 \
+        } while (0)
+
 /* This command is terminal for the input server: it publishes the real one-way
  * global termination flag. The shell subsequently uses signal-based shutdown
  * and the daemon's proper-termination file, without another imdiag command. */
@@ -1193,6 +1201,9 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     int started = 0;
     rsRetVal (*consumer)(void *, batch_t *, wti_t *) = destination->pConsumer;
     qqueueLocalSnapshot_t snapshot;
+    /* Names the oracle that rejected the run; RS_RET_INTERNAL_ERROR alone
+     * does not say which of the checks below failed in an intermittent CI run. */
+    char failDetail[256] = "";
     DEFiRet;
     if (pthread_once(&inputTermFixtureCondOnce, inputTermFixtureInitCond) != 0 || !inputTermFixtureCondReady)
         return RS_RET_ERR;
@@ -1226,21 +1237,22 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     if (!inputTermFixtureAwait(&inputTermFixtureDone, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
     pthread_join(producer, NULL);
     started = 0;
-    if (inputTermFixtureInput != RS_RET_FORCE_TERM) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    if (inputTermFixtureInput != RS_RET_FORCE_TERM) INPUT_TERM_FAIL("input=%d", inputTermFixtureInput);
     /* Test direct BE single-message fallback with the same full destination. */
     CHKiRet(inputTermFixtureMessages(messages, 1));
     const rsRetVal backend = qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[0]);
     if (backend == RS_RET_FORCE_TERM && destination->local == NULL) {
-        if (messages[0]->iRefCount != 2) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        if (messages[0]->iRefCount != 2) INPUT_TERM_FAIL("backend-refs=%d", messages[0]->iRefCount);
         msgDestruct(&messages[0]);
     }
-    if (backend != RS_RET_FORCE_TERM) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    if (backend != RS_RET_FORCE_TERM) INPUT_TERM_FAIL("backend=%d", backend);
     /* Non-graph global queues preserve the legacy retained-ref outcome. */
     CHKiRet(inputTermFixtureMessages(messages, 1));
     CHKiRet(qqueueEnqMsg(global, eFLOWCTL_NO_DELAY, messages[0]));
     CHKiRet(inputTermFixtureMessages(messages, 1));
     const rsRetVal legacy = qqueueEnqMsg(global, eFLOWCTL_NO_DELAY, messages[0]);
-    if (legacy != RS_RET_FORCE_TERM || messages[0]->iRefCount != 2) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    if (legacy != RS_RET_FORCE_TERM || messages[0]->iRefCount != 2)
+        INPUT_TERM_FAIL("legacy=%d legacy-refs=%d", legacy, messages[0]->iRefCount);
     msgDestruct(&messages[0]);
     /* A real graph worker must wait, and later successfully hand off its lease. */
     const uint64_t handoffBefore = PREFER_LOAD_uint64(&destination->ctrFull);
@@ -1256,12 +1268,18 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     pthread_mutex_lock(&inputTermFixtureMut);
     const rsRetVal handoff = inputTermFixtureHandoff;
     pthread_mutex_unlock(&inputTermFixtureMut);
-    if (!stillWaiting || !conserved || handoff != RS_RET_OK) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    if (!stillWaiting || !conserved || handoff != RS_RET_OK)
+        INPUT_TERM_FAIL("handoff stillWaiting=%d conserved=%d handoff=%d", stillWaiting, conserved, handoff);
     if (destination->local != NULL) {
         qqueueLocalGetSnapshot(destination, &snapshot);
         if (snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected || snapshot.outstanding != 0 ||
             snapshot.preadmission_rejected != 3 || snapshot.be_nofit != 2 || snapshot.be_capacity_exhausted != 1)
-            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+            INPUT_TERM_FAIL(
+                "snapshot attempts=%llu terminal=%llu preadmission_rejected=%llu outstanding=%llu "
+                "be_nofit=%llu be_capacity_exhausted=%llu",
+                (unsigned long long)snapshot.attempts, (unsigned long long)snapshot.terminal,
+                (unsigned long long)snapshot.preadmission_rejected, (unsigned long long)snapshot.outstanding,
+                (unsigned long long)snapshot.be_nofit, (unsigned long long)snapshot.be_capacity_exhausted);
     }
 finalize_it:
     /* An early failed gate must not strand the input's 60-second capacity
@@ -1286,7 +1304,10 @@ finalize_it:
     }
     if (global != NULL) qqueueDestruct(&global);
     const int cleanupConserved = inputTermFixtureConserved();
-    if (!cleanupConserved && iRet == RS_RET_OK) iRet = RS_RET_INTERNAL_ERROR;
+    if (!cleanupConserved && iRet == RS_RET_OK) {
+        iRet = RS_RET_INTERNAL_ERROR;
+        snprintf(failDetail, sizeof(failDetail), "cleanup refs not conserved");
+    }
     pthread_mutex_lock(destination->mut);
     destination->pConsumer = consumer;
     pthread_mutex_unlock(destination->mut);
@@ -1300,7 +1321,8 @@ finalize_it:
         iRet = sendResponse(session,
                             "OK input=FORCE_TERM backend=FORCE_TERM global=FORCE_TERM handoff=OK refs=conserved\n");
     else
-        sendResponse(session, "ERROR: input termination fixture failed: %d\n", iRet);
+        sendResponse(session, "ERROR: input termination fixture failed: %d%s%s\n", iRet, failDetail[0] ? " " : "",
+                     failDetail);
     RETiRet;
 }
 

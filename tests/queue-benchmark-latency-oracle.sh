@@ -9,8 +9,16 @@
 # use the stricter sub-millisecond invalidation limits. The trial is a fresh
 # child testbench session so its diag.sh initialization cannot reuse this
 # wrapper's generated-name state.
+# The benchmark harness needs Python 3.8+ (assignment expressions,
+# time.monotonic_ns, subprocess text/capture_output); older interpreters such
+# as CentOS 8's 3.6 cannot run it, so the test skips there instead of failing
+# on a SyntaxError.
 . ${srcdir:=.}/diag.sh init
 command -v python3 >/dev/null 2>&1 || exit 77
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 8))'; then
+	echo "SKIP: queue benchmark harness requires Python 3.8 or newer"
+	skip_test
+fi
 python3 "$srcdir/../benchmarks/queue-contention/latency-observer-selftest.py" || error_exit 1
 python3 - "$srcdir/../benchmarks/queue-contention/compare-latency.py" <<'PY' || error_exit 1
 import json

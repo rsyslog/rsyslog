@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix='rsyslog-validation-recorder-') as tempo
         args = [sys.executable, str(recorder), '--target', str(target), '--evidence', str(manifest)]
         if accepted:
             args += ['--accept-flakes', 'Maintainer accepts the isolated successful retry for this campaign']
-        result = subprocess.run(args, text=True, capture_output=True)
+        result = subprocess.run(args, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         assert (result.returncode == 0) == expected, result.stdout + result.stderr
         if not expected:
             assert 'Validation not recorded:' in result.stderr and 'Traceback' not in result.stderr

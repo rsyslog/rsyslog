@@ -1654,8 +1654,17 @@ jobs:
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
           chmod -R go+rw .
+          # Write cores to a plain path instead of the host's systemd-coredump
+          # pipe, so the intermittent ASan thread-registry CHECK abort
+          # (sanitizer_thread_registry.cpp:316) leaves a core that the
+          # testbench backtraces and the flake-evidence upload collects.
+          sudo mkdir -p /cores
+          sudo chmod 1777 /cores
+          sudo sysctl -w kernel.core_pattern=/cores/core.%e.%p
           docker run --rm --platform linux/arm64 \
             -e ARCH=arm64 \
+            -v /cores:/cores \
+            --ulimit core=-1 \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
