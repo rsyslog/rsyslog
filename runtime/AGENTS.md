@@ -49,6 +49,9 @@ collection, and process orchestration).
   `tests/local-queue-startup-failure.sh` (imtcp and imdiag required).
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
+- Classic disk-queue serializer callback ABI and message round-trip coverage is
+  in `tests/diskqueue-serializer-abi.sh`, including reduced macOS builds.
+
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in
   files that manage shared state (queues, network sessions, statistics).

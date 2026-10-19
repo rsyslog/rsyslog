@@ -2218,7 +2218,11 @@ static rsRetVal ATTR_NONNULL(1, 2) qAddDisk(qqueue_t *const pThis, smsg_t *pMsg)
     const int oldfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
 
     CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, &nWriteCount));
-    CHKiRet((objSerialize(pMsg))(pMsg, pThis->tVars.disk.pWrite));
+    /* The object table has a variadic storage type. Restore the concrete
+     * serializer prototype before calling it: Darwin ARM64 passes variadic
+     * arguments on the stack, while MsgSerialize expects two fixed arguments. */
+    rsRetVal (*const serialize)(smsg_t *, strm_t *) = (rsRetVal(*)(smsg_t *, strm_t *))objSerialize(pMsg);
+    CHKiRet(serialize(pMsg, pThis->tVars.disk.pWrite));
     CHKiRet(strm.Flush(pThis->tVars.disk.pWrite));
     CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, NULL)); /* no more counting for now... */
 
