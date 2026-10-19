@@ -157,6 +157,11 @@ typedef struct _instanceData {
     uint8_t compressionMode;
     sbool strmCompFlushOnTxEnd; /* flush stream compression on transaction end? */
     unsigned poolResumeInterval;
+#define POOL_RR 0 /* round-robin target selection (default) */
+#define POOL_HASH 1 /* deterministic hash(key) target selection */
+    int pool_policy; /* POOL_RR | POOL_HASH: how a target is picked from the pool */
+    uchar *pool_hash_key_tpl; /* template rendering the routing key (POOL_HASH only) */
+    int num_tpls; /* # of templates requested for this action (1, or 2 with pool.hashkey) */
     int ratelimitInterval;
     int ratelimitBurst;
     uchar *pszRatelimitName;
@@ -185,6 +190,16 @@ typedef struct targetData {
     /* we know int is sufficient, as we have the fixed buffer size above! so no need for size_t */
     int maxLenSndBuf; /* max usable length of sendbuf - primarily for testing */
     int offsSndBuf; /* next free spot in send buffer */
+    /* sndBuf bytes queued before the current commitTransaction; 0 once the
+     * buffer was written out. pool.policy="hash" rolls back to it on a
+     * deferred send, because the action engine replays the batch. */
+    int offs_snd_buf_tx_start;
+    /* pool.policy="hash": a write on this connection returned RS_RET_RETRY
+     * and is still owed with the same bytes, so the send buffer must not
+     * shrink. Cleared when the buffer is written out or the connection is
+     * torn down (a new TLS session owes nothing). */
+    sbool hash_write_pending;
+    sbool hash_write_pending_tx; /* hash_write_pending was set by the current commitTransaction */
     time_t ttResume;
     targetStats_t *pTargetStats;
 /* sndBuf buffer size is intensionally fixed -- see no good reason to make configurable */
@@ -282,6 +297,8 @@ static struct cnfparamdescr actpdescr[] = {
     {"udp.sendbuf", eCmdHdlrSize, 0},
     {"template", eCmdHdlrGetWord, 0},
     {"pool.resumeinterval", eCmdHdlrPositiveInt, 0},
+    {"pool.policy", eCmdHdlrGetWord, 0},
+    {"pool.hashkey", eCmdHdlrGetWord, 0},
     {"ratelimit.interval", eCmdHdlrInt, 0},
     {"ratelimit.burst", eCmdHdlrInt, 0},
     {"ratelimit.name", eCmdHdlrString, 0}};
@@ -816,6 +833,8 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         rsRetVal localRet = TCPSendBuf(pTarget, pTarget->sndBuf, pTarget->offsSndBuf, IS_FLUSH);
         if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_PREVIOUS_COMMITTED) {
             pTarget->offsSndBuf = 0;
+            pTarget->offs_snd_buf_tx_start = 0;
+            pTarget->hash_write_pending = 0;
         }
     }
 
@@ -844,6 +863,7 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         pTarget->ttResume += pTarget->pData->poolResumeInterval;
     }
     pTarget->bIsConnected = 0;
+    pTarget->hash_write_pending = 0;
     pTarget->bInDestruct = RSFALSE;
     DBGPRINTF("omfwd: DestructTargetData: %p %s:%s, connected %d, ttResume %lld\n", pTarget, pTarget->target_name,
               pTarget->port, pTarget->bIsConnected, (long long)pTarget->ttResume);
@@ -973,6 +993,8 @@ BEGINcreateInstance
     pData->nActiveTargets = 0;
     INIT_ATOMIC_HELPER_MUT(pData->mut_nActiveTargets);
     pData->nPorts = 1;
+    pData->num_tpls = 1; /* one message template unless pool.hashkey adds a 2nd */
+    pData->pool_policy = POOL_RR;
     pData->target_name = NULL;
     if (cs.pszStrmDrvr != NULL) CHKmalloc(pData->pszStrmDrvr = (uchar *)strdup((char *)cs.pszStrmDrvr));
     pData->bStrmDrvrModeSet = cs.bStrmDrvrModeSet;
@@ -1010,6 +1032,8 @@ BEGINcreateWrkrInstance
             (runModConf->maxLenSndBuf == -1) ? SNDBUF_FIXED_BUFFER_SIZE : runModConf->maxLenSndBuf;
         pWrkrData->target[i].bInDestruct = RSFALSE;
         pWrkrData->target[i].offsSndBuf = 0;
+        pWrkrData->target[i].offs_snd_buf_tx_start = 0;
+        pWrkrData->target[i].hash_write_pending = 0;
         pWrkrData->target[i].ttResume = ttNow;
     }
     iRet = initTCP(pWrkrData);
@@ -1068,6 +1092,7 @@ BEGINfreeInstance
     free((void *)pData->pszStrmDrvrKeyFile);
     free((void *)pData->pszStrmDrvrCertFile);
     free(pData->pszRatelimitName);
+    free(pData->pool_hash_key_tpl);
     net.DestructPermittedPeers(&pData->pPermPeers);
     if (pData->ratelimiter != NULL) {
         ratelimitDestruct(pData->ratelimiter);
@@ -1536,11 +1561,14 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, const size_t len) {
             "lead to duplication of messages");
         CHKiRet(TCPSendBuf(pTarget, pTarget->sndBuf, pTarget->offsSndBuf, NO_FLUSH));
         pTarget->offsSndBuf = 0;
+        pTarget->offs_snd_buf_tx_start = 0;
+        pTarget->hash_write_pending = 0;
     }
 
     /* check if the message is too large to fit into buffer */
     if (len > sizeof(pTarget->sndBuf)) {
         CHKiRet(TCPSendBuf(pTarget, (uchar *)msg, len, NO_FLUSH));
+        pTarget->hash_write_pending = 0;
         ABORT_FINALIZE(RS_RET_OK); /* committed everything so far */
     }
 
@@ -1890,6 +1918,40 @@ BEGINbeginTransaction
 ENDbeginTransaction
 
 
+/* djb2 string hash + a fixed avalanche finalizer, for pool.policy="hash" target
+ * selection. Dependency-free so omfwd needs no extra include; deterministic
+ * across restarts and across mesh nodes for a given key (no per-instance seed).
+ *
+ * djb2's multiplier (33) is congruent to 1 modulo every power of two up to 32,
+ * so for the realistic pool sizes (2/4/8 targets) "h % nTargets" on the raw
+ * accumulator would reduce to a plain byte-sum checksum of the key: any
+ * anagram or byte-permutation collides, and an attacker can steer a message to
+ * a chosen target by adjusting a single byte. The murmur3 fmix32 finalizer
+ * below mixes every input bit into the low bits before the caller reduces mod
+ * nTargets, without reintroducing a seed (which would break the cross-node
+ * determinism the feature exists for). */
+#if defined(__clang__)
+    #pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
+static unsigned
+#if defined(__clang__)
+    __attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
+    omfwd_hash_key(const uchar *key, const size_t len) {
+    unsigned h = 5381;
+    if (key != NULL) {
+        /* the rendered length, so an embedded NUL does not cut the key short */
+        for (size_t i = 0; i < len; ++i) h = ((h << 5) + h) + key[i]; /* h * 33 + c */
+    }
+    h ^= h >> 16;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16;
+    return h;
+}
+
+
 static rsRetVal processMsg(targetData_t *__restrict__ const pTarget, actWrkrIParams_t *__restrict__ const iparam) {
     wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)pTarget->pWrkrData;
     uchar *psz; /* temporary buffering */
@@ -1966,12 +2028,48 @@ finalize_it:
     RETiRet;
 }
 
+/* pool.policy="hash" deferred send (RS_RET_RETRY: TLS waits for a read
+ * before it can write). The send is repeated in place, with the same buffer
+ * and length, as OpenSSL and GnuTLS require of a retried write. Suspending
+ * right away would make the action engine replay the whole batch: frames
+ * still in a send buffer would go out twice, messages of one key could be
+ * reordered, and the ratelimiter would count them again. The wait is
+ * bounded, like the engine's own local retry of one second. */
+#define HASH_RETRY_ATTEMPTS 100
+#define HASH_RETRY_SLEEP_USEC 10000
+
+/* After the bounded wait the action is suspended and the engine replays the
+ * batch, so the frames this transaction queued are dropped, except on a
+ * target whose write became pending in this transaction: it owes the whole
+ * buffer, which must be offered again with at least the same bytes. A write
+ * owed from an earlier transaction lies within offs_snd_buf_tx_start, so
+ * that target is rolled back like the others. Bytes queued by earlier
+ * transactions stay. Data the kernel already accepted (other targets'
+ * flushed share of the batch included) and the share of a target that
+ * became pending here can be delivered twice. */
+static void snd_buf_rollback_tx(wrkrInstanceData_t *const pWrkrData) {
+    for (int j = 0; j < pWrkrData->pData->nTargets; ++j) {
+        targetData_t *const pTarget = &pWrkrData->target[j];
+        if (pTarget->hash_write_pending && pTarget->hash_write_pending_tx) continue;
+        if (pTarget->offsSndBuf > pTarget->offs_snd_buf_tx_start) pTarget->offsSndBuf = pTarget->offs_snd_buf_tx_start;
+    }
+}
+
 BEGINcommitTransaction
     unsigned i;
     int nActiveTargets;
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
     sbool bFlushRetry = 0;
+    /* pool.policy="hash": a connected target returned RS_RET_RETRY. Do not
+     * probe another slot. Mapped to RS_RET_SUSPENDED below, because the
+     * action engine treats a raw RS_RET_RETRY from commitTransaction as a
+     * permanent data failure and drops the batch. */
+    sbool hash_send_retry = 0;
     CODESTARTcommitTransaction;
+    for (int j = 0; j < pWrkrData->pData->nTargets; ++j) {
+        pWrkrData->target[j].offs_snd_buf_tx_start = pWrkrData->target[j].offsSndBuf;
+        pWrkrData->target[j].hash_write_pending_tx = 0;
+    }
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
      * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to
      * the new targets. DestructInstanceData() drops the transport state and
@@ -2016,26 +2114,87 @@ BEGINcommitTransaction
 
         int trynbr = 0;
         int dotry = 1;
+        /* pool.policy="hash": route by hash(routing-key) so the same key always
+         * lands on the same target. A down target (not connected, or a send
+         * that suspended it) linear-probes the pool so failover still works.
+         * RS_RET_RETRY is not that case: the target is still connected and the
+         * send was only deferred, so the probe stops and the action retries.
+         * Default (round-robin) keeps the historical per-worker counter
+         * behaviour untouched, including its handling of RS_RET_RETRY. */
+        /* Reduced mod nTargets here, once, rather than in the loop below: trynbr
+         * is bounded by nTargets, so (hash_base + trynbr) can never overflow
+         * unsigned, and the probe sequence can't skip or repeat a slot on wrap. */
+        const unsigned hash_base = (pWrkrData->pData->pool_policy == POOL_HASH)
+                                       ? omfwd_hash_key(actParam(pParams, pWrkrData->pData->num_tpls, i, 1).param,
+                                                        actParam(pParams, pWrkrData->pData->num_tpls, i, 1).lenStr) %
+                                             pWrkrData->pData->nTargets
+                                       : 0;
         while (dotry && trynbr < pWrkrData->pData->nTargets) {
             /* In the future we may consider if we would like to have targets on
                a per-worker or global basis. We now use worker because otherwise we
                have thread interdependence, which hurts performance. But this
                can lead to uneven distribution of messages when multiple workers run.
              */
-            const unsigned actualTarget = (pWrkrData->actualTarget++) % pWrkrData->pData->nTargets;
+            const unsigned actualTarget = (pWrkrData->pData->pool_policy == POOL_HASH)
+                                              ? (hash_base + (unsigned)trynbr) % pWrkrData->pData->nTargets
+                                              : (pWrkrData->actualTarget++) % pWrkrData->pData->nTargets;
             targetData_t *pTarget = &(pWrkrData->target[actualTarget]);
-            DBGPRINTF("load balancer: trying actualTarget %u [%u]: try %d, isConnected %d, wrkr %p\n", actualTarget,
-                      (pWrkrData->actualTarget - 1), trynbr, pTarget->bIsConnected, pWrkrData);
+            DBGPRINTF("load balancer: trying actualTarget %u [%u]: policy %d, try %d, isConnected %d, wrkr %p\n",
+                      actualTarget,
+                      (pWrkrData->pData->pool_policy == POOL_RR) ? pWrkrData->actualTarget - 1 : actualTarget,
+                      pWrkrData->pData->pool_policy, trynbr, pTarget->bIsConnected, pWrkrData);
             if (pTarget->bIsConnected) {
                 DBGPRINTF("RGER: sending to actualTarget %d: try %d\n", actualTarget, trynbr);
-                iRet = processMsg(pTarget, &actParam(pParams, 1, i, 0));
+                iRet = processMsg(pTarget, &actParam(pParams, pWrkrData->pData->num_tpls, i, 0));
+                /* A deferred send stays on its target. processMsg is
+                 * repeatable: a deferred buffer flush leaves the buffer as
+                 * it was and the frame unqueued, so the repeat offers the
+                 * same bytes again. */
+                /* a target already pending got its wait: suspend at once
+                 * instead of waiting again for every replayed message */
+                for (int attempt = 0; pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
+                                      !pTarget->hash_write_pending && attempt < HASH_RETRY_ATTEMPTS;
+                     ++attempt) {
+                    srSleep(0, HASH_RETRY_SLEEP_USEC);
+                    iRet = processMsg(pTarget, &actParam(pParams, pWrkrData->pData->num_tpls, i, 0));
+                }
                 if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
                     dotry = 0;
+                } else if (pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
+                           pTarget->offsSndBuf == 0) {
+                    /* A frame larger than the send buffer is written from its
+                     * own rendering, so the owed bytes are not kept anywhere
+                     * a later commit could offer again. Treat the target as
+                     * down: a new session owes nothing, and the next pool
+                     * member is probed as for any failed target. */
+                    LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+                           "omfwd: [wrkr %u] target %s:%s kept deferring a send larger than the "
+                           "send buffer, dropping the connection",
+                           pWrkrData->wrkrID, pTarget->target_name, pTarget->port);
+                    DestructTargetData(pTarget, 0);
+                } else if (pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY) {
+                    DBGPRINTF(
+                        "omfwd: hash target %u send still deferred after the bounded wait, "
+                        "not probing another pool member\n",
+                        actualTarget);
+                    dotry = 0;
+                    hash_send_retry = 1;
+                    pTarget->hash_write_pending = 1;
+                    pTarget->hash_write_pending_tx = 1;
                 }
             }
             trynbr++;
         }
 
+        if (hash_send_retry) {
+            /* The action engine replays the whole batch: drop what this
+             * transaction queued instead of flushing it first. iRet must not
+             * stay RS_RET_RETRY: that code is a data-fail once it leaves
+             * commitTransaction. */
+            snd_buf_rollback_tx(pWrkrData);
+            iRet = RS_RET_OK;
+            break;
+        }
         if (dotry == 1) {
             LogMsg(0, RS_RET_SUSPENDED, LOG_INFO,
                    "omfwd: [wrkr %u] found no working target server when trying to send "
@@ -2050,12 +2209,33 @@ BEGINcommitTransaction
         if (pWrkrData->target[j].bIsConnected && pWrkrData->target[j].offsSndBuf != 0) {
             iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf, pWrkrData->target[j].offsSndBuf,
                               IS_FLUSH);
+            for (int attempt = 0; pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
+                                  !pWrkrData->target[j].hash_write_pending && attempt < HASH_RETRY_ATTEMPTS;
+                 ++attempt) {
+                srSleep(0, HASH_RETRY_SLEEP_USEC);
+                iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf, pWrkrData->target[j].offsSndBuf,
+                                  IS_FLUSH);
+            }
             if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
                 pWrkrData->target[j].offsSndBuf = 0;
+                pWrkrData->target[j].offs_snd_buf_tx_start = 0;
+                pWrkrData->target[j].hash_write_pending = 0;
             } else if (iRet == RS_RET_RETRY) {
                 DBGPRINTF("omfwd: TCP buffer flush deferred for retry to %s:%s\n", pWrkrData->target[j].target_name,
                           pWrkrData->target[j].port);
-                bFlushRetry = 1;
+                if (pWrkrData->pData->pool_policy == POOL_HASH) {
+                    /* still pending after the bounded wait: the batch is
+                     * replayed, so do not flush this transaction's frames to
+                     * the other targets; this one keeps its buffer for the
+                     * pending write. Suspending is decided by
+                     * hash_send_retry, so the pool-down warning stays off */
+                    hash_send_retry = 1;
+                    pWrkrData->target[j].hash_write_pending = 1;
+                    pWrkrData->target[j].hash_write_pending_tx = 1;
+                    snd_buf_rollback_tx(pWrkrData);
+                } else {
+                    bFlushRetry = 1;
+                }
                 iRet = RS_RET_OK;
             } else {
                 LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
@@ -2084,25 +2264,41 @@ finalize_it:
      *   RS_RET_RETRY while flushing its pending TCP buffer. The target remains
      *   connected, but the action engine still needs to schedule another commit
      *   attempt for the retained buffered data.
-     * - If at least one target remains active and no flush retry is pending,
-     *   we keep returning OK here so that the action is not suspended at pool
-     *   level. Any buffered frames for failed targets remain in that target's
-     *   send buffer and will be flushed once doTryResume() re-establishes the
-     *   connection on a subsequent transaction.
+     * - Also return RS_RET_SUSPENDED when pool.policy="hash" still gets
+     *   RS_RET_RETRY from the selected target after the bounded in-place
+     *   retry. That target stays selected. Probing the next slot would move
+     *   the message to a different shard.
+     * - If at least one target remains active and no flush or hash send retry
+     *   is pending, we keep returning OK here so that the action is not
+     *   suspended at pool level. Any buffered frames for failed targets remain
+     *   in that target's send buffer and will be flushed once doTryResume()
+     *   re-establishes the connection on a subsequent transaction.
      */
     /* do pool stats */
     nActiveTargets = countActiveTargets(pWrkrData);
 
-    if (bFlushRetry || nActiveTargets == 0) {
+    if (bFlushRetry || hash_send_retry || nActiveTargets == 0) {
         /*
-         * All pool members are currently unavailable, or a connected target
-         * needs a retry to finish flushing retained TCP data. Return
-         * RS_RET_SUSPENDED so the action engine schedules retry handling.
+         * All pool members are currently unavailable, a connected target
+         * needs a retry to finish flushing retained TCP data, or hash
+         * selection deferred a send. Return RS_RET_SUSPENDED so the action
+         * engine schedules retry handling. Do not return RS_RET_RETRY:
+         * handleActionExecResult treats that as a permanent data failure.
          */
         iRet = RS_RET_SUSPENDED;
     }
+    if (iRet == RS_RET_SUSPENDED && pWrkrData->pData->pool_policy == POOL_HASH) snd_buf_rollback_tx(pWrkrData);
 
-    if (iRet == RS_RET_SUSPENDED) {
+    if (hash_send_retry) {
+        DBGPRINTF(
+            "omfwd: [wrkr %u] pool.policy=hash send deferred, staying on that "
+            "target and suspending the action for retry\n",
+            pWrkrData->wrkrID);
+    }
+    /* The pool-down warning predates hash send retry. Keep it for every
+     * suspend except a pure deferred hash send, where targets are still up
+     * and the text would be wrong. */
+    if (iRet == RS_RET_SUSPENDED && !(hash_send_retry && !bFlushRetry && nActiveTargets != 0)) {
         LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                "omfwd: [wrkr %d/%" PRIuPTR "] no working target servers in pool available, suspending action",
                pWrkrData->wrkrID, (uintptr_t)pthread_self());
@@ -2577,6 +2773,24 @@ BEGINnewActInst
             pData->ipfreebind = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "pool.resumeinterval")) {
             pData->poolResumeInterval = (unsigned int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "pool.policy")) {
+            uchar *pol;
+            CHKmalloc(pol = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (!strcasecmp((char *)pol, "roundrobin")) {
+                pData->pool_policy = POOL_RR;
+            } else if (!strcasecmp((char *)pol, "hash")) {
+                pData->pool_policy = POOL_HASH;
+            } else {
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "omfwd: invalid value for 'pool.policy' parameter "
+                         "(given is '%s', expected 'roundrobin' or 'hash')",
+                         pol);
+                free(pol);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            free(pol);
+        } else if (!strcmp(actpblk.descr[i].name, "pool.hashkey")) {
+            CHKmalloc(pData->pool_hash_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
             pData->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
@@ -2677,10 +2891,31 @@ BEGINnewActInst
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
-    CODE_STD_STRING_REQUESTnewActInst(1);
+    if (pData->pool_policy == POOL_HASH && pData->protocol == FORW_UDP) {
+        /* UDPSend() always uses target[0]. Accepting hash here would load
+         * a config that silently does not shard. Default protocol is UDP. */
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: pool.policy=\"hash\" requires protocol=\"tcp\" "
+                 "(UDP forwarding uses only the first target)");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->pool_policy == POOL_HASH && pData->pool_hash_key_tpl == NULL) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: pool.policy=\"hash\" requires pool.hashkey to name the "
+                 "template that renders the routing key");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    /* pool.policy="hash" needs a 2nd template (index 1) to render the routing key */
+    pData->num_tpls = (pData->pool_policy == POOL_HASH) ? 2 : 1;
+    CODE_STD_STRING_REQUESTnewActInst(pData->num_tpls);
 
     tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+    if (pData->num_tpls == 2) {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->pool_hash_key_tpl), OMSR_NO_RQD_TPL_OPTS));
+    }
 
     if (pData->bSendToAll == -1) {
         pData->bSendToAll = send_to_all;

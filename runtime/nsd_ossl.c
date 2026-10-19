@@ -373,8 +373,10 @@ static rsRetVal osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* ,
         ABORT_FINALIZE(RS_RET_TLS_BASEINIT_FAIL);
     }
 
-    // Set SSL_MODE_AUTO_RETRY to SSL obj
-    SSL_set_mode(pThis->pNetOssl->ssl, SSL_MODE_AUTO_RETRY);
+    // Set SSL_MODE_AUTO_RETRY to SSL obj. A write that returned RS_RET_RETRY
+    // is repeated with the same bytes, not always from the same buffer
+    // address (omfwd re-renders a frame larger than its send buffer).
+    SSL_set_mode(pThis->pNetOssl->ssl, SSL_MODE_AUTO_RETRY | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
     if (pThis->pNetOssl->authMode != OSSL_AUTH_CERTANON) {
         dbgprintf("osslInitSession: enable certificate checking (Mode=%d, VerifyDepth=%d)\n", pThis->pNetOssl->authMode,
