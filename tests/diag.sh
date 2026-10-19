@@ -4311,6 +4311,15 @@ dump_zookeeper_serverlog() {
 }
 
 
+# A truncated Elasticsearch tarball used to be cached silently and then
+# failed every ES test of the run at startup ("gzip: unexpected end of
+# file", "Plugins path ... must be a directory"). Only archives that list
+# cleanly are ever placed into the dependency cache.
+es_archive_valid() {
+	[ -s "$1" ] || return 1
+	tar -tzf "$1" > /dev/null 2>&1
+}
+
 # download elasticsearch files, if necessary
 download_elasticsearch() {
 	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
@@ -4318,18 +4327,46 @@ download_elasticsearch() {
 	fi
 	if [ ! -d $dep_cache_dir ]; then
 		echo "Creating dependency cache dir $dep_cache_dir"
-		mkdir $dep_cache_dir
+		mkdir -p $dep_cache_dir
 	fi
-	if [ ! -f $dep_es_cached_file ]; then
-		if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
-			printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
-			cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
-		else
-			dep_es_url="https://www.rsyslog.com/files/download/rsyslog/$ES_DOWNLOAD"
-			printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
-			wget -q $dep_es_url -O $dep_es_cached_file
+	if [ -f "$dep_es_cached_file" ] && ! es_archive_valid "$dep_es_cached_file"; then
+		printf 'ElasticSearch: cached archive %s is invalid, removing it\n' "$dep_es_cached_file"
+		rm -f "$dep_es_cached_file"
+	fi
+	if [ -f "$dep_es_cached_file" ]; then
+		return 0
+	fi
+	dep_es_tmp_file="${dep_es_cached_file}.$$"
+	rm -f "$dep_es_tmp_file"
+	if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
+		printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
+		cp /local_dep_cache/$ES_DOWNLOAD "$dep_es_tmp_file"
+		if es_archive_valid "$dep_es_tmp_file"; then
+			mv -f "$dep_es_tmp_file" "$dep_es_cached_file"
+			return 0
 		fi
+		printf 'ElasticSearch: system cache archive is invalid; downloading fresh copy.\n'
+		rm -f "$dep_es_tmp_file"
 	fi
+	dep_es_url="https://www.rsyslog.com/files/download/rsyslog/$ES_DOWNLOAD"
+	for dep_es_try in 1 2 3; do
+		printf 'ElasticSearch: satisfying dependency %s from %s (try %d)\n' \
+			"$ES_DOWNLOAD" "$dep_es_url" "$dep_es_try"
+		rm -f "$dep_es_tmp_file"
+		if wget -q --tries=3 --timeout=60 "$dep_es_url" -O "$dep_es_tmp_file" \
+		   && es_archive_valid "$dep_es_tmp_file"; then
+			mv -f "$dep_es_tmp_file" "$dep_es_cached_file"
+			return 0
+		fi
+		printf 'ElasticSearch: download try %d failed or archive invalid (size %s bytes)\n' \
+			"$dep_es_try" "$(wc -c < "$dep_es_tmp_file" 2>/dev/null || echo 0)"
+		if [ "$dep_es_try" -lt 3 ]; then
+			sleep $((dep_es_try * 5))
+		fi
+	done
+	rm -f "$dep_es_tmp_file"
+	echo "FAIL: unable to obtain a valid Elasticsearch archive from $dep_es_url"
+	error_exit 1
 }
 
 
@@ -4365,7 +4402,11 @@ prepare_elasticsearch() {
 	fi
 	rm -rf $dep_work_dir/es
 	echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
-	(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
+	if ! (cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null; then
+		echo "FAIL: unable to extract Elasticsearch archive $dep_es_cached_file"
+		rm -f "$dep_es_cached_file"
+		error_exit 1
+	fi
 	if [ -n "${ES_PORT:-}" ] ; then
 		rm -f $dep_work_dir/es/config/elasticsearch.yml
 		sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
