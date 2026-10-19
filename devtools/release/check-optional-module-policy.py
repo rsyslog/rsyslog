@@ -47,7 +47,11 @@ FEATURE_CONTRACT = ".github/daily-stable-package-features.yml"
 
 
 def auto_enabled_modules(configure_ac):
-    blocks = re.split(r"(?=AC_ARG_ENABLE\()", configure_ac)
+    # Split before each AC_ARG_ENABLE( without a zero-width re.split(),
+    # which Python 3.6 (CentOS 8 testbench) rejects.
+    starts = [m.start() for m in re.finditer(r"AC_ARG_ENABLE\(", configure_ac)]
+    bounds = [0] + starts + [len(configure_ac)]
+    blocks = [configure_ac[a:b] for a, b in zip(bounds, bounds[1:])]
     modules = []
     for block in blocks:
         match = re.match(r"AC_ARG_ENABLE\(\s*\[?([A-Za-z0-9_-]+)\]?\s*,", block)
