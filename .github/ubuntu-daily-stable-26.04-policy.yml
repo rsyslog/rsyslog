@@ -23,6 +23,10 @@
     {
       "patch": "CVE-2026-61548.patch",
       "reason": "Ubuntu 26.04 backports custom structured-data container handling already present in current main."
+    },
+    {
+      "patch": "CVE-2026-78002.patch",
+      "reason": "Ubuntu 26.04 backports upstream commit 667e3f61 (RainerScript replace() sizing fix), which is already part of current main."
     }
   ],
   "supplemental_build_deps": [],
