@@ -7,11 +7,17 @@
 # source and search string both exceed the limit: the old in-progress check
 # rejected this complete match, while its final one-byte result must pass.
 # A separate multi-match case checks the exact shrinking output.
-# Clean shutdown rules out a crash.
+# The warning is asserted through configured output after synchronized
+# shutdown, which also rules out a crash.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(maxMessageSize="256")
+template(name="warningfmt" type="string" string="%msg%\n")
+if $syslogtag contains "rsyslogd" then {
+    action(type="omfile" file="'${RSYSLOG_DYNNAME}'.warnings" template="warningfmt")
+    stop
+}
 template(name="outfmt" type="string"
          string="normal=%$.normal%;replace=\"%$.large%\";wrap=\"%$.wrapped%\";wrap2=\"%$.wrapped2%\";shrink=\"%$.shrink%\";shrink_many=\"%$.shrink_many%\";source_len=%$.source_len%\n")
 
@@ -43,5 +49,5 @@ content_check 'shrink="b"'
 b50=$(printf '%50s' '' | tr ' ' b)
 content_check "shrink_many=\" $b50 $b50\""
 content_check 'source_len=302'
-content_count_check 'RainerScript replace()/wrap() result exceeds maxMessageSize' 1 "$RSYSLOG_DYNNAME.started"
+content_count_check 'RainerScript replace()/wrap() result exceeds maxMessageSize' 1 "$RSYSLOG_DYNNAME.warnings"
 exit_test
