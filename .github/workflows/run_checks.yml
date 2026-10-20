@@ -43,6 +43,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       c_headers: ${{ steps.c_headers.outputs.any_changed }}
       code: ${{ steps.code.outputs.any_changed }}
@@ -61,6 +62,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -71,6 +73,7 @@ jobs:
         id: c_headers
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -81,6 +84,7 @@ jobs:
         id: code
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -100,6 +104,7 @@ jobs:
         id: package_ubuntu
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -120,6 +125,7 @@ jobs:
         id: package_rpm
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -141,6 +147,7 @@ jobs:
         id: journal
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -161,6 +168,7 @@ jobs:
         id: analyzer
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -177,6 +185,7 @@ jobs:
         id: elasticsearch
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -221,6 +230,7 @@ jobs:
         id: victorialogs
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -235,6 +245,7 @@ jobs:
         id: kafka
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -311,6 +322,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      pull-requests: read
     strategy:
       fail-fast: true
       matrix:
@@ -325,6 +337,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
             **/*.c
             **/*.h
@@ -437,6 +450,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 50
     strategy:
@@ -458,6 +472,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -468,6 +483,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -674,6 +690,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_ubuntu == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 35
     strategy:
@@ -692,6 +709,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -702,6 +720,7 @@ jobs:
         id: package_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -761,6 +780,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_rpm == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     strategy:
@@ -783,6 +803,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -794,6 +815,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -865,6 +887,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: true
@@ -898,6 +921,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1238,6 +1262,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.victorialogs == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     name: victorialogs-tests
@@ -1259,6 +1284,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1326,6 +1352,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.analyzer == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     name: clang static analyzer
     steps:
@@ -1339,6 +1366,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1475,6 +1503,7 @@ jobs:
     needs: [changes]
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 180
     name: dev container definition CI
@@ -1486,6 +1515,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -1496,6 +1526,7 @@ jobs:
         id: dev_container_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1596,6 +1627,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 150
     name: arm64 CI (native, asan), asan
@@ -1607,6 +1639,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -1617,6 +1650,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1747,6 +1781,7 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && vars.RSYSLOG_CI_LINUX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 75
     name: i386 CI (Debian 13, linux/386)
@@ -1758,6 +1793,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -1768,6 +1804,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
