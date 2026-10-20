@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! imuxsock; RateLimit.Name
 
 .. _param-imuxsock-ratelimit-name:

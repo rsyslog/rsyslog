@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-keepalive-probes:
 .. _imtcp.parameter.module.keepalive-probes:
 .. _imtcp.parameter.input.keepalive-probes:

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # The sole purpose of this test is to check that rsyslog "survives" the
 # duplicate ruleset definition and emits the proper error message. So we
 # do NOT need to have elasticsearch running to carry it out. We avoid

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmcount.c
  * count messages by priority or json property of given app-name.
  *

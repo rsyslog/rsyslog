@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* smb_parser.c
  *
  * This file contains functions to parse SMB (version 2 and 3) headers.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 echo \[imuxsock_logger_ratelimit.sh\]: test rate limiting with imuxsock
 . ${srcdir:=.}/diag.sh init
 

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! imrelp; RateLimit.Name
 
 .. _param-imrelp-ratelimit-name:

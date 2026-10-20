@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test imtcp/TLS with many dropping connections
 # added 2011-06-09 by Rgerhards
 #

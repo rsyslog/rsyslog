@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2015-03-04 by rainer gerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 check_logger_has_option_d

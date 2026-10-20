@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imtcp.c
  * This is the implementation of the TCP input module.
  *

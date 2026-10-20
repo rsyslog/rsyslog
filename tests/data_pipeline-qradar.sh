@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2025-10-06 by rgerhards
 # check hypothetical data pipeline w/ qradar and unflatten transformation
 # This file is part of the rsyslog project, released under ASL 2.0

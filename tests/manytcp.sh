@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test many concurrent tcp connections
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD" "This test currently does not work on FreeBSD"

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _tut-06-remote-server:
 
 Your First Remote Log Server

@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Don't read a file with old timestamp
 # touch the file, then read it
 echo [imfile-ignore-old-file-2.sh]

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdocker-defaultseverity:
 .. _imdocker.parameter.module.defaultseverity:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Remove a middle sealed segment from valid segmentedDisk state. Lazy dequeue
 # must diagnose one missing segment, increment its counter, skip the unknowable
 # lost range, and continue through the final later record without startup scan.

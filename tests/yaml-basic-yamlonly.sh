@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests that the YAML-only testbench mode works end-to-end:
 #   - generate_conf --yaml-only writes a pure YAML preamble using
 #     testbench_modules: for the imdiag setup (no RainerScript)

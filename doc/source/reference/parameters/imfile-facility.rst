@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-facility:
 .. _imfile.parameter.input.facility:
 .. _imfile.parameter.facility:

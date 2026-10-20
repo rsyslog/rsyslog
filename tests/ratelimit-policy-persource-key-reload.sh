@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## HUP reload must atomically replace the per-source key policy while input
 ## workers are active. The oracle first observes one allowance for each of two
 ## hostname keys, then reloads to fromhost-ip and observes one shared allowance

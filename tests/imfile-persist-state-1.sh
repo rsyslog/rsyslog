@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify imfile persists its state after consuming a complete multiline input.
 # Waiting for the expected sequence before shutdown prevents a loaded runner
 # from persisting a partial read and turning this into a timing-dependent test.

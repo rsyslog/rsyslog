@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imkubernetes-cacheentryttl:
 .. _imkubernetes.parameter.module.cacheentryttl:
 

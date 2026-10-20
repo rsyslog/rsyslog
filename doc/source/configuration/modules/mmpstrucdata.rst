@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 ****************************************************
 mmpstrucdata: RFC5424 structured data parsing module
 ****************************************************

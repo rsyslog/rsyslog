@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* This test checks runtime initialization and exit. Other than that, it
  * also serves as the most simplistic sample of how a test can be coded.
  *

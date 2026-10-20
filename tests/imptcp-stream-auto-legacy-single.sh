@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Backward compatibility test for imptcp compression.mode="stream:auto" when
 # the session is plain TCP carrying omfwd's legacy "@@(zN)" single-message
 # compression. AUTO must first check the zlib stream header; if the connection

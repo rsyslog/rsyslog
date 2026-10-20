@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## HUP reloads of canonical ratelimit policy YAML must treat an omitted
 ## perSource.topN as the documented default, not as "keep the previous value".
 ## The oracle uses impstats top-drop counters: after reloading from topN=1 to

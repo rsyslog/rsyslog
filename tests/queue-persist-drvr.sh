@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for queue data persisting at shutdown. LinkedList and FixedArray cases
 # inspect the classic .qi format, so their modern queue configuration pins the
 # classic DA engine. A fast shutdown must persist the remainder and restart

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # this checks against a situation where a deadlock was caused in
 # practice.
 # added 2018-10-17 by Jan Gerhards, released under ASL 2.0

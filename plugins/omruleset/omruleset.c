@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omruleset.c
  * This is a very special output module. It permits to pass a message object
  * to another rule set. While this is a very simple action, it enables very

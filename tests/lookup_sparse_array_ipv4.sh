@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verification test for issue #4906: sparseArray lookup with ipv42num
 # This checks if the proposed documentation example strategy actually works.
 . ${srcdir:=.}/diag.sh init

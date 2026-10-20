@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify segmentedDisk recovers unprocessed queue data after an interrupted
 # shutdown. The output action is blocked and rsyslogd is killed before shutdown
 # can drain the full backlog; the oracle is final sequence completeness with

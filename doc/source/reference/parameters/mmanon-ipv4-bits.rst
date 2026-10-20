@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmanon-ipv4-bits:
 .. _mmanon.parameter.input.ipv4-bits:
 

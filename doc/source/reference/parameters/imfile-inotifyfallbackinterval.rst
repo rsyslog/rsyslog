@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-inotifyfallbackinterval:
 .. _imfile.parameter.module.inotifyfallbackinterval:
 .. _imfile.parameter.inotifyfallbackinterval:

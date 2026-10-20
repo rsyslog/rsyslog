@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check translation of Debian-style legacy default rules into YAML statements.
 #
 # Part of the testbench for rsyslog.

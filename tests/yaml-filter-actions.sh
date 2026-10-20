@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML Phase 2 structured filter+actions shortcut:
 #   - filter: "*.* " (PRI filter) with a single action
 #   - filter: ":msg, contains, ..." (property filter) with multiple actions

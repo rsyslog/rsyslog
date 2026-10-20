@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Two consecutive dirty restarts create two recovery tails. The final start
 # must process them in segment-ID order before the new active segment; ordered
 # sequence validation permits checkpoint duplicates but no gaps or reordering.

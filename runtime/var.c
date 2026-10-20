@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* var.c - a typeless variable class
  *
  * This class is used to represent variable values, which may have any type.

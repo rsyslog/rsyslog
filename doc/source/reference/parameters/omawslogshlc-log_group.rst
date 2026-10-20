@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omawslogshlc-log_group:
 .. _omawslogshlc.parameter.action.log_group:
 

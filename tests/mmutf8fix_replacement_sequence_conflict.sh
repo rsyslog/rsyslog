@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmutf8fix configuration rejects replacementChar and
 # replacementSequence on the same action. This is a startup validation test:
 # rsyslog must refuse the configuration before any normal message path exists.

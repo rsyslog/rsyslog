@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-persiststateinterval:
 .. _imfile.parameter.input.persiststateinterval:
 .. _imfile.parameter.persiststateinterval:

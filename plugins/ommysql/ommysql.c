@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ommysql.c
  * This is the implementation of the build-in output module for MySQL.
  *

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for issue #4941: an imuxsock datagram containing an embedded
 # NUL byte must be processed using the received datagram length, sanitized as
 # "#000", and written without leaking uninitialized bytes from the receive

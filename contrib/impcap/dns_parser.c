@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* dns_parser.c
  *
  * This file contains functions to parse DNS headers.

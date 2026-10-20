@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imkafka-consumergroup:
 .. _imkafka.parameter.input.consumergroup:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify a sequence reset on an established connection is rejected without
 # submitting or acknowledging the invalid event.
 . ${srcdir:=.}/diag.sh init

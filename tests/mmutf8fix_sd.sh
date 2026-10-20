@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmutf8fix structured data handling for invalid UTF-8.
 # mmutf8fix must sanitize pszStrucData so that mmpstrucdata
 # parses clean UTF-8 values into the $! property tree.

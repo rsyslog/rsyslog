@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* lmsig_ksi-ls12.c
  *
  * An implementation of the sigprov interface for KSI-LS12.

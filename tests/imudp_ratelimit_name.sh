@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test named rate limits for imudp
 # This uses tcpflood -Tudp to send messages directly to imudp.
 

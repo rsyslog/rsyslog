@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test real-world Windows events (4624, 4634, 5140) with runtime field override for "Source Address"
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

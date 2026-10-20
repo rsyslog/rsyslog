@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* strgen.c
  * Module to handle string generators. These are C modules that receive
  * the message object and return a custom-built string. The primary purpose

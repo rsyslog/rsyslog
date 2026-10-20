@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Protect the imhttp health check endpoint with HTTP Basic Authentication.
    :keywords: rsyslog, imhttp, healthcheck, basicauthfile, http basic authentication

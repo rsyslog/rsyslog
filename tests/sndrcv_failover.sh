@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests failover capabilities. Data is sent to a local port, where
 # no process shall listen. Then it fails over to a second instance, then to
 # a file. The second instance is started. So all data should be received

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-trimlineoverbytes:
 .. _imfile.parameter.input.trimlineoverbytes:
 .. _imfile.parameter.trimlineoverbytes:

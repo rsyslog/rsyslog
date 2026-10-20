@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omrelp.c
  *
  * This is the implementation of the RELP output module.

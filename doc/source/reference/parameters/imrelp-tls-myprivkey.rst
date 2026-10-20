@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imrelp-tls-myprivkey:
 .. _imrelp.parameter.input.tls-myprivkey:
 

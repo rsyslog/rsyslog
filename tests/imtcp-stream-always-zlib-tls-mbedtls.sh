@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Verifies zlib stream:always decompression over an mbedtls imtcp listener fed
 # by omfwd; the oracle is the complete ordered message sequence after TLS transit.

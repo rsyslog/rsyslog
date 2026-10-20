@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-impstats-push-label-origin:
 .. _impstats.parameter.module.push-label-origin:
 

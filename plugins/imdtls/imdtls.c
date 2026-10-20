@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * The dtls input module, uses OpenSSL as library to implement DTLS.
  *

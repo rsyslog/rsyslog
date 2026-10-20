@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* This is a stand-alone test driver for grammar processing. We try to
  * keep this separate as it simplyfies grammer development.
  *

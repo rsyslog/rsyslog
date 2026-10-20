@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for https://github.com/rsyslog/rsyslog/issues/7546, reported
 # by LuciyVI. A classic PRI selector ending in ';' must complete configuration
 # validation without reading past its terminating NUL. The Valgrind wrapper

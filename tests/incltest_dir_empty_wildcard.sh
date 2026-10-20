@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a non-optional $IncludeConfig wildcard that matches no files is
 # accepted silently. The oracle is successful config validation and runtime
 # message processing, with no include no-match, warning, or error diagnostic in

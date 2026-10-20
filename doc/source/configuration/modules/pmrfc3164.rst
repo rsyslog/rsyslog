@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 *******************************************
 pmrfc3164: RFC3164-formatted message parser
 *******************************************

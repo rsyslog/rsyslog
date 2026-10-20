@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 ***********************************************
 omstdout: stdout output module (testbench tool)
 ***********************************************

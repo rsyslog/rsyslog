@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Test that imudp inherits per-source limiting through ratelimitAddMsg().
 ## The key template is `%fromhost-ip%`, an optimized mode that must not need
 ## generic template evaluation; the observable oracle is that one UDP source is

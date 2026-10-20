@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Hold the final JSON destructor while the empty-queue worker is unlocked and
 # not registered as a waiter, then request shutdown. The debug marker proves
 # shutdown has set the pool state and sent its wakeup before disposal resumes.

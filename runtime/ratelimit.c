@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ratelimit.c
  * support for rate-limiting sources, including "last message
  * repeated n times" processing.

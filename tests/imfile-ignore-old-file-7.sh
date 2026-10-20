@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Read a file and ignore another one from an old symlink
 echo [imfile-ignore-old-file-7.sh]
 . ${srcdir:=.}/diag.sh init

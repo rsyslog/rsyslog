@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML parsing of the imtcp StreamDriver.PrioritizeSAN parameter for
 # OpenSSL x509/name authorization. The fixture certificate has
 # CN=rsyslog-client and DNS SAN testbench.rsyslog.com. The listener is loaded

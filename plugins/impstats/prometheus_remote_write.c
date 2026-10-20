@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* prometheus_remote_write.c
  * Minimal Prometheus Remote Write protobuf encoding
  *

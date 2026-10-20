@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # An existing empty segmented queue directory has no backlog to reconstruct.
 # The oracle is successful startup and clean shutdown: missing state is fatal
 # only when queue files exist, while this case must create fresh state.

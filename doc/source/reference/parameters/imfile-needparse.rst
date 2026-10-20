@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-needparse:
 .. _imfile.parameter.input.needparse:
 .. _imfile.parameter.needparse:

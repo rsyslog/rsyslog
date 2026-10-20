@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2020-08-25 by alorbach, released under ASL 2.0
 # Verify RELP forwarding with OpenSSL TLS certificate chains. The imrelp
 # receiver binds an ephemeral IPv4 listener and the testbench discovers that

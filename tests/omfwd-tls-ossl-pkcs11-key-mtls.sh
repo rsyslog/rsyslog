@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omfwd with the ossl driver can establish a mutual-TLS session to
 # an OpenSSL-based remote peer when the CA certificate and client certificate
 # are loaded from PEM files but the client private key is loaded via a strict

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* iminternal.c
  * This file set implements the internal messages input module for rsyslog.
  * Note: we currently do not have an input module spec, but

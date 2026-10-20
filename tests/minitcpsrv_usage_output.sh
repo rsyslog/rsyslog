@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that minitcpsrv's failure usage includes required addressing and the
 # bounded receive-buffer option used by deterministic backpressure tests. The
 # oracle is the exact option text in the diagnostic output; no timing is used.

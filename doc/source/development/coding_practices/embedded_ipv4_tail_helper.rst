@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Antipattern for the embedded IPv4-in-IPv6 tail helper that lacked explicit preconditions; includes the corrected pattern with documented contract.
    :keywords: rsyslog, coding practice, antipattern, IPv6, IPv4 tail, mmanon

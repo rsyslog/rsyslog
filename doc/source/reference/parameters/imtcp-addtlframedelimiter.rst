@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-addtlframedelimiter:
 .. _imtcp.parameter.module.addtlframedelimiter:
 .. _imtcp.parameter.input.addtlframedelimiter:

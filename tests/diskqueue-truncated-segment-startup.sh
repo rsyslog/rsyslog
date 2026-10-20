@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate queue.onCorruption handling when bytes inside a persisted disk-queue
 # segment are corrupted in the middle of the queue sequence. Restart must
 # process the valid prefix, quarantine the unread tail into mainq.bad.*,

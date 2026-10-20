@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify issue #1324: an input bound to a ruleset without its own non-direct
 # queue emits a config warning, while a ruleset with queue.type="LinkedList"
 # stays warning-free. The oracle is rsyslogd -N1 output, so no listener is

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML configuration accepts a basic imbeats event and preserves JSON
 # fields, reserved metadata, and the cumulative ACK.
 . ${srcdir:=.}/diag.sh init

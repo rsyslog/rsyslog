@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that an action disabled via config.enabled="off" is not instantiated at
 # all - in both the RainerScript and YAML frontends (YAML parsing produces the
 # same nvlst and calls the same cnfstmtNewAct() path). Its parameters must not be

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* obj.c
  *
  * This file implements a generic object "class". All other classes can

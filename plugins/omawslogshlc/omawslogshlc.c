@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omawslogshlc.c
  * Output module for Amazon CloudWatch Logs via the HTTP Log Collector (HLC)
  * endpoint. Uses bearer-token authentication — no AWS SDK required.

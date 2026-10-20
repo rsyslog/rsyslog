@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-ratelimit-burst:
 .. _omhttp.parameter.input.ratelimit-burst:
 

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-maxframesize:
 .. _imtcp.parameter.module.maxframesize:
 .. _imtcp.parameter.input.maxframesize:

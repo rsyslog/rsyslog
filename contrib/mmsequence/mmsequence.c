@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmsequence.c
  * Generate a number based on some sequence.
  *

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for GitHub issue #5132. A transactional action that has
 # exhausted its immediate resume attempts must not call the module commit hook
 # again while its next retry timestamp is still in the future. The oracle is

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imsolaris-imsolarislogsocketname:
 .. _imsolaris.parameter.module.imsolarislogsocketname:
 

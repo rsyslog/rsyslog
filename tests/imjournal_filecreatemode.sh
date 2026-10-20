@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for checking the fileCreateMode imjournal parameter
 # Basically we set 3 different file creation modes for the state file
 # and test if those are really set

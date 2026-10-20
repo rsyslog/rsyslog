@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-ignoreolderthan:
 .. _imfile.parameter.input.ignoreolderthan:
 .. _imfile.parameter.ignoreolderthan:

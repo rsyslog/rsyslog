@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # rgerhards, 2016-02-18 released under ASL 2.0
 echo \[imuxsock_logger_ruleset_ratelimit.sh\]: test imuxsock with ruleset definition
 . ${srcdir:=.}/diag.sh init

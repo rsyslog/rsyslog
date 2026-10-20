@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test hardens pmrfc3164 force.tagEndingByColon handling. The oracle is
 # that a no-colon token rewinds exactly the consumed bytes, not one byte before
 # the message, and a following marker message is still processed.

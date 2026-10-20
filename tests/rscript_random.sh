@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2015-06-22 by singh.janmejay
 # Verifies that random(max) emits bounded non-negative values. The oracle is
 # the omfile output after synchronized shutdown, so the check covers the value

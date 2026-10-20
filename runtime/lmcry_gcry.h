@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* An implementation of the cryprov interface for libgcrypt.
  *
  * Copyright 2013 Adiscon GmbH.

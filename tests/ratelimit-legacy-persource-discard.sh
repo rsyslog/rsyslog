@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Regression test for legacy split per-source ratelimit configuration.
 ## `perSource=on` plus `perSourcePolicy` and `perSourceKeyTpl` must still be
 ## enforced through the unified ratelimitAddMsg() path. The oracle checks both

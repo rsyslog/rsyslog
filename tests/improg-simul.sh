@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2019-04-04 by Philippe DUVEAU, released under ASL 2.0
 mysleep=./msleep
 ACK=0

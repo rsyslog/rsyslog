@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the "call" statement inside a YAML script: block.
 # Two rulesets (rs1 and rs2) are defined in the same YAML file.
 # Messages arrive on the input bound to rs1; rs1 calls rs2; rs2 writes

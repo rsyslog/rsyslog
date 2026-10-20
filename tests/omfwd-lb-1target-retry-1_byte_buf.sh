@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This wrapper retries the shared skeleton once more when TCP timing races
 # trigger the known omfwd load-balancer flake. The second attempt keeps the
 # same 1-byte-buffer scenario; it only avoids failing the suite on one unlucky

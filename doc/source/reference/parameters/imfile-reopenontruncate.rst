@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-reopenontruncate:
 .. _imfile.parameter.input.reopenontruncate:
 .. _imfile.parameter.reopenontruncate:

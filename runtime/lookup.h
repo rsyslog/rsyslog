@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* header for lookup.c
  *
  * Copyright 2013-2023 Adiscon GmbH.

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _tut-01-installation:
 
 Installing rsyslog

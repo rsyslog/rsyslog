@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The statsobj object.
  *
  * Copyright 2010-2026 Rainer Gerhards and Adiscon GmbH.

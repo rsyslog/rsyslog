@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The datetime object. It contains date and time related functions.
  *
  * Module begun 2008-03-05 by Rainer Gerhards, based on some code

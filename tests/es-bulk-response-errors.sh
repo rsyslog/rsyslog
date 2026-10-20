@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 # Verify that a Bulk API response with errors=true is inspected even when
 # retryfailures and errorfile are unset. Invalid integer documents must raise

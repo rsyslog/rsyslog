@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This covers runaway synchronous ruleset recursion. The test deliberately
 # creates a self-calling ruleset and proves that rsyslog logs the recursion
 # guard diagnostic through its configured omfile destination after synchronized

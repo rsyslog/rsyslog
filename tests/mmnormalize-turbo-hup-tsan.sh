@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Reproduce concurrent access to an mmnormalize Turbo worker context while HUP
 # replaces that context. A large TCP flood keeps all main-queue workers inside
 # normalization while acknowledged HUPs repeatedly rebuild their private

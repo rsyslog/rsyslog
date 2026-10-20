@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* wti.c
  *
  * This file implements the worker thread instance (wti) class.

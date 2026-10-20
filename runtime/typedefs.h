@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* This defines some types commonly used. Do NOT include any other
  * rsyslog runtime file.
  *

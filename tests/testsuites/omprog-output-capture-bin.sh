@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 
 echo "[stdout] Starting"
 >&2 echo "[stderr] Starting"

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 
 omawslogshlc_require_env() {
 	if [[ -z "${AWS_CWL_BEARER_TOKEN}" ]]; then

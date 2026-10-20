@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 # Verifies the receiver-side TLS diagnostic for clients that do not present a
 # certificate. The diagnostic must include the remote IP address so operators

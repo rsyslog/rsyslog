@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test tests listening on ports in another network namespace.
 echo ===============================================================================
 echo \[imtcp-netns.sh\]: test for listening in another network namespace

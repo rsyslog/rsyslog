@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* header for parser.c
  *
  * Copyright 2008-2026 Adiscon GmbH.

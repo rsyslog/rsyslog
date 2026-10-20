@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests async writing functionality under a set of additional
 # conditions (see config for details). This covers non-async cases as
 # well. This test was created while actually hunting a bug that was

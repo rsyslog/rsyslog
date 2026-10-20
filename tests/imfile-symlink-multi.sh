@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies imfile wildcard handling for multiple symlinks to one target file.
 # The oracle is exact output metadata: rsyslog must report one record for the
 # original watched file and one record for each wildcard symlink, each with the

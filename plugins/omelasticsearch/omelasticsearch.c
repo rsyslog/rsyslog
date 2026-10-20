@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omelasticsearch.c
  * This is the http://www.elasticsearch.org/ output module.
  *

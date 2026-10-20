@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 
 ..
   This file is included by the common header file, which is itself

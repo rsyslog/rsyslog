@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2018-04-26 by Pascal Withopf, released under ASL 2.0
 echo [imrelp-maxDataSize-error.sh]
 . ${srcdir:=.}/diag.sh init

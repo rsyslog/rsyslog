@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2021-10-12 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"

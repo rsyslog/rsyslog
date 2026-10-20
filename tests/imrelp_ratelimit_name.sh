@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test named rate limits for imrelp
 # added 2025-07-15 by Copilot, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

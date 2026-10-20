@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmpstrucdata-container:
 .. _mmpstrucdata.parameter.action.container:
 

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The var object.
  *
  * Copyright 2008-2026 Adiscon GmbH.

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Troubleshoot rsyslog service sandboxing, AppArmor, SELinux, and permission issues affecting external programs and file access.
    :keywords: rsyslog, troubleshooting, systemd, sandbox, AppArmor, SELinux, omprog, sudo, permissions

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* unlimited_select.h
  * Tweak the macros for accessing fd_set so that the select() syscall
  * won't be limited to a particular number of file descriptors.

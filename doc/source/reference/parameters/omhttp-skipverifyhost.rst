@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-skipverifyhost:
 .. _omhttp.parameter.input.skipverifyhost:
 

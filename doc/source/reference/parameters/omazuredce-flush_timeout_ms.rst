@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazuredce-flush_timeout_ms:
 .. _omazuredce.parameter.action.flush_timeout_ms:
 

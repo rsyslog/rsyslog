@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The systemd journal import module
  *
  * To test under Linux:

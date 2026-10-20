@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2020-01-19 by RGerhards, released under ASL 2.0
 export USE_VALGRIND="YES"
 . ${srcdir:=.}/fac_local0.sh

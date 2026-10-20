@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-ompgsql-template:
 .. _ompgsql.parameter.input.template:
 

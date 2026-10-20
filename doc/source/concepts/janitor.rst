@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 The Janitor Process
 ===================
 The janitor process carries out periodic cleanup tasks. For example,

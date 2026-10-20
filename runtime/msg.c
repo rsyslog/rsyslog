@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* msg.c
  * The msg object. Implementation of all msg-related functions
  *

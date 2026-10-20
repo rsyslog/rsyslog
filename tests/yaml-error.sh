@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests that an invalid YAML config file produces a clean error message and
 # that rsyslog exits with a non-zero status (does not crash or hang).
 #

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* libossl.h - rsyslog's ossl crypto provider support library
  *
  * This file is part of rsyslog.

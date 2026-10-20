@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Pause final msg0 JSON destruction using an external-library interposer.
 # While the worker is outside the queue mutex and not yet a queue waiter,
 # enqueue msg1 and then release the destructor. Successful bounded admission

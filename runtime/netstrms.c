@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* netstrms.c
  *
  * Work on this module begun 2008-04-23 by Rainer Gerhards.

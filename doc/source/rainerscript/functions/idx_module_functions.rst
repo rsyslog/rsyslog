@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Overview of RainerScript module functions and how to load them.
    :keywords: rsyslog, rainerscript, module functions, fmpcre, pcre_match

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmjsontransform policyWatch in yaml-only mode.
 
 . ${srcdir:=.}/diag.sh init

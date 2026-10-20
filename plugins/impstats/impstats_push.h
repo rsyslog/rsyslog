@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* impstats_push.h
  * Header for native Prometheus Remote Write push support in impstats
  *

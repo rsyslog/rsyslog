@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # [polling mode] Multiple files with different timestamp, ignore those files with old timestamp
 
 echo [imfile-ignore-old-file-6.sh]

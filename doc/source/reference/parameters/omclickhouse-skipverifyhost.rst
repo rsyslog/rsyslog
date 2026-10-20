@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omclickhouse-skipverifyhost:
 .. _omclickhouse.parameter.input.skipverifyhost:
 

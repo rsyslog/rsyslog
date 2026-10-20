@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2016-07-11 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 setvar_RS_HOSTNAME

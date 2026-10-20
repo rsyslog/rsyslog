@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmcisconames.c
  *
  * this detects logs sent by Cisco devices that mangle their syslog output when you tell them to log by name

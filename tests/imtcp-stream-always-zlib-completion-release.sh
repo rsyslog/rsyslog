@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-07-21 by Codex, released under ASL 2.0
 # Verifies that imtcp releases a completed zlib inflater while its TCP socket
 # remains open. The debug lifecycle marker proves inflateEnd() already ran;

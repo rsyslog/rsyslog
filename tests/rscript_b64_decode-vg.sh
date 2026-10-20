@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test for b64_decode function in rainerscript
 # added 2024-06-11 by KGuillemot
 # This file is part of the rsyslog project, released under ASL 2.0

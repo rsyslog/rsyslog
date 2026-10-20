@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # Smoke-test the opt-in syslog parser fuzzer against its seed corpus. A clean
 # fixed iteration run is the oracle; any crash, sanitizer report, or invariant
 # failure makes libFuzzer return non-zero. The work corpus recreates the

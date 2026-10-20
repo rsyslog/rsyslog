@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-ommail-subject-template:
 .. _ommail.parameter.input.subject-template:
 

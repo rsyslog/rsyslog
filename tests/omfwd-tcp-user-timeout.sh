@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify omfwd accepts tcp_user_timeout and still forwards over TCP. The oracle
 # is the message received by minitcpsrvr, proving the configured action wrote to
 # its destination after the socket option path was exercised.

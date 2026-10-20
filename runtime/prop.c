@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* prop.c - rsyslog's prop object
  *
  * This object is meant to support message properties that are stored

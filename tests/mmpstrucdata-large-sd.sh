@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify mmpstrucdata handles RFC5424 structured data larger than 65535 bytes.
 # The oracle is a small field after the large value. If the cached structured
 # data length wraps or the parser stops early, that trailing field is not written

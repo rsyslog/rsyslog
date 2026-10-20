@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that mmnormalize directs enabled liblognorm tracing to its configured
 # file. A non-empty trace file after a normalized message is the success oracle.
 . ${srcdir:=.}/diag.sh init

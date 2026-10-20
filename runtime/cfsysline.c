@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* cfsysline.c
  * Implementation of the configuration system line object.
  *

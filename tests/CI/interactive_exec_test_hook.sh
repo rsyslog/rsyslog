@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 cd tests || exit 1
 export srcdir
 srcdir=$(pwd)

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmsnareparse parsing against Microsoft Sysmon events using definition file.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

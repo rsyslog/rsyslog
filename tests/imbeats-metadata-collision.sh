@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify client JSON cannot overwrite the reserved imbeats protocol metadata
 # attached during message submission.
 . ${srcdir:=.}/diag.sh init

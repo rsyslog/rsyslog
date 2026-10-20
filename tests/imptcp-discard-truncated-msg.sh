@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2016-05-13 by RGerhards, released under ASL 2.0
 # Verifies that imptcp discards the excess portion of each oversized LF-framed
 # message while continuing to process following messages. Separate TCP client

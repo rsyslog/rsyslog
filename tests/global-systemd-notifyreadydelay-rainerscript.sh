@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate the global(systemd.notifyReadyDelay=...) operator opt-in. The
 # oracle is config validation accepting both binary values, which exercises the
 # RainerScript global-parameter backend without depending on a systemd runtime.

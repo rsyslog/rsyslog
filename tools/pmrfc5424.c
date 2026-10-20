@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmrfc5424.c
  * This is a parser module for RFC5424-formatted messages.
  *

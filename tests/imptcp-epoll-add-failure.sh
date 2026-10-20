@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test injects an imptcp session epoll_ctl(ADD) failure after startup.
 # The oracle is twofold: rsyslog must log the forced accept failure, proving the
 # post-accept error path ran, and then shut down cleanly without walking a

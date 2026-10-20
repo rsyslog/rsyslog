@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ffaup.c
  * This is a function module for URL parsing.
  *

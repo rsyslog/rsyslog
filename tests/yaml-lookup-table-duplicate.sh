@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that duplicate YAML lookup_tables names are rejected by the shared
 # lookup_table backend. The oracle is a failed -N1 config check with the same
 # duplicate-name diagnostic as RainerScript, before runtime reloader resources

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imptcp discardTruncatedMsg recovery within one TCP
 # session. The issue reproducer sends an oversized LF-framed message and the
 # next message over the same connection; success proves that the first byte

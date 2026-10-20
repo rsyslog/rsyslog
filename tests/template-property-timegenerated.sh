@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This focused template/property test uses faketime to make generated-time
 # MsgGetProp formatting deterministic. It covers UTC conversion and generated
 # timestamp date-part variants without depending on wall-clock time.

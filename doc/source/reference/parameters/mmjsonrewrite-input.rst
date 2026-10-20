@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmjsonrewrite-input:
 .. _mmjsonrewrite.parameter.input.input:
 

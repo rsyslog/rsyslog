@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* A yet very simple tool to talk to imdiag (this replaces the
  * previous Java implementation in order to get fewer dependencies).
  *

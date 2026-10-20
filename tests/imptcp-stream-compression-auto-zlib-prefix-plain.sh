@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imptcp compression.mode="stream:auto" when a plain
 # octet-stuffed session starts with bytes that also look like a zlib header
 # (ASCII "x^"). The oracle is that the line reaches omfile and a second

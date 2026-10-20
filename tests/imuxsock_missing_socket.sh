@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a bare imuxsock input reports how to configure the intended
 # socket. The oracle is rsyslogd -N1 failing with the imuxsock-specific
 # diagnostic: additional imuxsock inputs require Socket, while the system log

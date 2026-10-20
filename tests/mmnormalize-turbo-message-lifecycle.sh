@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that turbo mmnormalize CEE fields survive both MsgDup() through a
 # queued ruleset and disk-queue serialization. Also exercise RainerScript JSON
 # expression reads before and after a mutation: the first read may use the

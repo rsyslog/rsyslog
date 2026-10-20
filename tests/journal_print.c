@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* A testing tool that tries to emit message given as argument
  * to the journal, and, if succceds (at least per journald retcode).
  * If whole operation is successful there is need to actually check

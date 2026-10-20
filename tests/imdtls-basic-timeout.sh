@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2023-10-05 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 # Verify that imdtls keeps accepting DTLS traffic across spaced send bursts

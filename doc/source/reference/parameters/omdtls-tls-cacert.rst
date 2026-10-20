@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omdtls-tls-cacert:
 .. _omdtls.parameter.input.tls-cacert:
 

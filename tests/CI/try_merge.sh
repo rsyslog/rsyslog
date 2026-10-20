@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 oldbranch=$(git rev-parse --abbrev-ref HEAD)
 # note: we usually do not have permissons to modify git config --global,
 # so we do it just to the local context, which is fine with us.

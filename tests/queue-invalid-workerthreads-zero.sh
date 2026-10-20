@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that worker-thread counts of zero are rejected in both object and
 # legacy queue configuration paths.
 . ${srcdir:=.}/diag.sh init

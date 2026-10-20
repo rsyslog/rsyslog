@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This file ensure that is at least one symbol in our compat
  * convenience library. Otherwise, at least the Solaris linker
  * bails out with an error message like this:

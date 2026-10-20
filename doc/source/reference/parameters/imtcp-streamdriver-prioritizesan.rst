@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-streamdriver-prioritizesan:
 .. _imtcp.parameter.module.streamdriver-prioritizesan:
 .. _imtcp.parameter.input.streamdriver-prioritizesan:

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify Docker json-file parsing from a Kubernetes /var/log/containers-style
 # path with API enrichment disabled. Parsed output metadata is the oracle.
 . ${srcdir:=.}/diag.sh init

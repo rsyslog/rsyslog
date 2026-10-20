@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the threading support module.
  *
  * Copyright 2007-2012 Adiscon GmbH.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2018-06-29 by Pascal Withopf, released under ASL 2.0
 # Verify UDP parser field extraction from a PIX-style message. The test uses
 # an imudp-assigned port file and a per-run payload marker, so parallel or host

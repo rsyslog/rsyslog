@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check nested include processing works correctly (and keeps proper order)
 # added 2021-03-29 by Rainer Gerhards; Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

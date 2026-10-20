@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # see that we can an error message if wrong tls lib is selected
 # addd 2019-02-09 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

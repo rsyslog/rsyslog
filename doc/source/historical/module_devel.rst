@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Developing rsyslog modules (outdated)
 =====================================
 

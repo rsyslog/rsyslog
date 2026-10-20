@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* immark.h
  * These are the definitions for the built-in mark message generation module. This
  * file may disappear when this has become a loadable module.

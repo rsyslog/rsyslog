@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This wrapper retries the shared target-failure skeleton once more when TCP
 # timing races trigger the known omfwd load-balancer flake. The second attempt
 # keeps the same forced receiver-close scenario and bounded-loss oracle; it

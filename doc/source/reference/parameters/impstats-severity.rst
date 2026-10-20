@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-impstats-severity:
 .. _impstats.parameter.module.severity:
 

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmdblookup-reloadonhup:
 .. _mmdblookup.parameter.input.reloadonhup:
 

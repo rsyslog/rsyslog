@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * logctl - a tool to access lumberjack logs in MongoDB
  *  ... and potentially other sources in the future.

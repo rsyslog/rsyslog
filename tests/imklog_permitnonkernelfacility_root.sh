@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2017-07-18 by Pascal Withopf, released under ASL 2.0
 echo \[imklog_permitnonkernelfacility_root.sh\]: test parameter permitnonkernelfacility
 echo This test must be run as root with no other active syslogd

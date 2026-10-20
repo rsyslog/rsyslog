@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Backward compatibility test for imptcp with compression.mode="none".
 # omfwd's legacy "@@(zN)" mode compresses each message independently and
 # prefixes the compressed payload with "z"; imptcp must still allow the

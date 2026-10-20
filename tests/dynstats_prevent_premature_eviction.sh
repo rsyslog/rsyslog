@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # A metric reused in each collection cycle must retain its accumulator even
 # when unusedMetricLife (1 second) is shorter than the reporting interval (4).
 # Park the stats reader before injecting each group, drain that group, then

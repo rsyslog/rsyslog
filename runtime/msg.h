@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* msg.h
  * Header file for all msg-related functions.
  *

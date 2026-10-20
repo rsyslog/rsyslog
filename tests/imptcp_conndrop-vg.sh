@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 export USE_VALGRIND="YES"
 export TB_TEST_MAX_RUNTIME=1200 # connection drops are very slow...
 export NUMMESSAGES=10000 # even if it is slow, we use a large number to be

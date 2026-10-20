@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* getline() replacement for platforms that do not have it.
  *
  * Part of the testbench for rsyslog.

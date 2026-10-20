@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that the YAML frontend accepts omfwd PKCS#11 TLS module defaults plus
 # an action-level StreamDriver.CAExtraFiles override for the ossl driver. The
 # oracle is successful -N1 config validation, which proves the YAML parser and

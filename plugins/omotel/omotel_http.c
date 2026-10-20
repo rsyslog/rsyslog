@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file omotel_http.c
  * @brief HTTP client implementation for OTLP/HTTP JSON transport

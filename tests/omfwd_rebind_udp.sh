@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test reproduces the issue where RebindInterval causes action suspension
 # with UDP forwarding. The UDP receiver is only a blackhole that keeps the
 # target port genuinely bound; success is the expected rebind debug message

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for disk-only queue mode
 # This test checks if queue files can be correctly written
 # and read back, but it does not test the transition from

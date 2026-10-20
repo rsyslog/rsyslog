@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test YAML ratelimit object policyWatch/policyWatchDebounce parsing and reload.
 
 . ${srcdir:=.}/diag.sh init

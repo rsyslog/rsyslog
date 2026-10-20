@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of globally-accessible data items.
  *
  * This module provides access methods to items of global scope. Most often,

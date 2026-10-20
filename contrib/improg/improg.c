@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* improg.c
  * This input plugin enables rsyslog to execute a program and
  * receive from it the message stream as standard input.

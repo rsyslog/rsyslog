@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdtls-tls-tlscfgcmd:
 .. _imdtls.parameter.input.tls-tlscfgcmd:
 

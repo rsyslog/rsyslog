@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* syslogd-type.h
  * This file contains type defintions used by syslogd and its modules.
  * It is a required input for any module.

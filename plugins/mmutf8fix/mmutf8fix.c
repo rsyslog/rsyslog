@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmutf8fix.c
  * fix invalid UTF8 sequences. This is begun as a very simple replacer
  * of non-control characters, and actually breaks some UTF-8 encoding

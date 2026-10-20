@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmanon-embeddedipv4-uniqueretrycount:
 .. _mmanon.parameter.input.embeddedipv4-uniqueretrycount:
 

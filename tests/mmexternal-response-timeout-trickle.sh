@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-24 by Cursor, released under ASL 2.0
 # Regression coverage for mmexternal responseTimeout with partial helper output:
 # a helper that trickles bytes but never completes the LF-framed JSON response

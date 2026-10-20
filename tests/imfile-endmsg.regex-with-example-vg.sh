@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # This test verifies imfile endmsg.regex message assembly under valgrind for
 # CRI-O and JSON container log fragments, including metadata and normalized

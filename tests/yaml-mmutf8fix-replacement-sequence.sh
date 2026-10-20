@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify mmutf8fix replacementSequence in a YAML-loaded configuration. The
 # ruleset body is supplied via YAML script so message-modification action
 # ordering matches the RainerScript action path, and success is proven by the

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmdarwin-send_partial:
 .. _mmdarwin.parameter.input.send_partial:
 

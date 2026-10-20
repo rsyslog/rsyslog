@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Validate custom pattern loading and section detection for mmsnareparse.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

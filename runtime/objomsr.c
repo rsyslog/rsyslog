@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* objomsr.c
  * Implementation of the omsr (omodStringRequest) object.
  *

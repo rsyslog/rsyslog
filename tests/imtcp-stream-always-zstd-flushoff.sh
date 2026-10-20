@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Verifies that zstd stream:always data is held until the omfwd stream closes
 # when flushOnTXEnd is off; the receiver must emit no early partial message.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definitions for dnscache module.
  *
  * Copyright 2011-2019 Adiscon GmbH.

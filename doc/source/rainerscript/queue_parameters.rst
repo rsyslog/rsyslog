@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Reference for rsyslog queue parameters, including memory, disk, and disk-assisted queue behavior.
    :keywords: rsyslog, queue parameters, disk queue, segmented disk, disk assisted, RainerScript, YAML

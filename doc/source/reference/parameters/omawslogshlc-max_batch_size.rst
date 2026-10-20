@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omawslogshlc-max_batch_size:
 .. _omawslogshlc.parameter.action.max_batch_size:
 

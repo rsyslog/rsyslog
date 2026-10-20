@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The statsobj object.
  *
  * This object provides a statistics-gathering facility inside rsyslog. This

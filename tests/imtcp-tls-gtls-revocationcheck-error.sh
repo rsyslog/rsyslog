@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for StreamDriver.TlsRevocationCheck error with gtls driver
 # Verifies that enabling OCSP revocation checking with GnuTLS driver
 # produces an appropriate error message since GnuTLS does not support OCSP.

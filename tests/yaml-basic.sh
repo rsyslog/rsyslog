@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests basic YAML configuration support:
 #   - module loading via YAML modules: section
 #   - input definition via YAML inputs: section

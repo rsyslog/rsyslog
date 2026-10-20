@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The errmsg object. It is used to emit error message inside rsyslog.
  *
  * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_TSAN	# for some reason, this test is extremely slow under tsan, causing timeout fail

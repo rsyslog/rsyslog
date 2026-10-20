@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2018-11-02 by rgerhards
 # see also https://github.com/rsyslog/rsyslog/issues/3006
 # released under ASL 2.0

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test covers diagtalker's connection retry path. minitcpsrv binds an
 # ephemeral port and publishes it before listen(), so the port stays reserved
 # while diagtalker receives deterministic connection refusals. The retry

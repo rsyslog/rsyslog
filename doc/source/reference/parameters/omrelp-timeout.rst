@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omrelp-timeout:
 .. _omrelp.parameter.input.timeout:
 

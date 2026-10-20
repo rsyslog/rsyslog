@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-maxlisteners:
 .. _imtcp.parameter.module.maxlisteners:
 .. _imtcp.parameter.input.maxlisteners:

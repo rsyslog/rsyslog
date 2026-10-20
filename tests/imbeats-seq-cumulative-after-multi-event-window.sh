@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify the next window continues after a multi-event cumulative ACK instead
 # of resetting sequence state.
 . ${srcdir:=.}/diag.sh init

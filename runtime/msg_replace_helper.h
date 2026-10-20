@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* msg_replace_helper.h
  *
  * Copyright 2026 Rainer Gerhards and Adiscon GmbH.

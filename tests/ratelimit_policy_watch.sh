@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test inotify-based reload of external rate limit policies, including
 # rename-based atomic replacement.
 

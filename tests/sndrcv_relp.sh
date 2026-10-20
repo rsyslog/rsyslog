@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2013-12-10 by Rgerhards
 # Verify basic RELP forwarding between two rsyslog instances. The receiver
 # binds an ephemeral IPv4 listener and the testbench discovers that bound port

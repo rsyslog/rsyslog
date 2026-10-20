@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-04-20 by Codex, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 check_command_available python3

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify CRI parsing, CRI partial-message merge, and Kubernetes API enrichment.
 # The helper API server binds an OS-assigned port and writes it to a readiness
 # file; the parsed/enriched JSON output is the success oracle. The timeout is

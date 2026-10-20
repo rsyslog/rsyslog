@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imfile delay.message microsecond conversion.
 # A 1000-microsecond delay must deliver one line within 10 seconds. The
 # generous bound is not a performance assertion: it tolerates loaded CI hosts

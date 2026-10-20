@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmjsontransform watch-based YAML policy reload, including
 # rename-over-save updates.
 

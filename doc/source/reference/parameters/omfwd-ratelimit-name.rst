@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! omfwd; RateLimit.Name
 
 .. _param-omfwd-ratelimit-name:

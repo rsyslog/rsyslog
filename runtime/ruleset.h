@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The ruleset object.
  *
  * This implements rulesets within rsyslog.

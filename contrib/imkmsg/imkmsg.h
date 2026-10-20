@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imkmsg.h
  * These are the definitions for the kmsg message generation module.
  *

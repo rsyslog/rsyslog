@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2016-03-24 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "This test currently does not work on Solaris."

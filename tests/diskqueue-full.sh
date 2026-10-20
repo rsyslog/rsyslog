@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # checks that nothing bad happens if a DA (disk) queue runs out
 # of configured disk space
 # addd 2017-02-07 by RGerhards, released under ASL 2.0

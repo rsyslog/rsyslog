@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-keepalive-time:
 .. _imtcp.parameter.module.keepalive-time:
 .. _imtcp.parameter.input.keepalive-time:

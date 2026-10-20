@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # detect queue corruption based on invalid property bag ordering.
 # Note: this mimics an issue actually seen in practice.
 # Triggering condition: "json" property (message variables) are present

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The zlibw object. It encapsulates the zlib functionality. The primary
  * purpose of this wrapper class is to enable rsyslogd core to be build without
  * zlib libraries.

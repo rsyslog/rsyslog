@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmexternal.c
  * This core plugin is an interface module to message modification
  * modules written in languages other than C.

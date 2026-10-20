@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test imptcp compression.mode="stream:auto": a single listener must
 # accept BOTH a zlib-compressed session and a plain (uncompressed)
 # session from independent senders on the same port. This mirrors the

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmjsontransform-policy:
 .. _mmjsontransform-policy:
 .. _mmjsontransform.parameter.input.policy:

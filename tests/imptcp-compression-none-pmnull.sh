@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for the global legacy-z decompression opt-out on imptcp input.
 # compression.mode="none" disables stream decompression only; legacy single
 # message compression is intentionally still built-in transport compatibility.

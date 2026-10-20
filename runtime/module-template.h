@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* module-template.h
  * This header contains macros that can be used to implement the
  * plumbing of modules.

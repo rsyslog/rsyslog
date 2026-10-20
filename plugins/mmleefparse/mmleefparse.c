@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmleefparse.c
  * This is a message modification module that parses LEEF events and
  * exposes them as structured data inside the message object.

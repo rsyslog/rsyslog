@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This script shall be executed before the real CI run to make sure
 # the environment is "clean enough". It is not necessary in containers,
 # where we usually get a fresh container for each run.

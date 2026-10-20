@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests the action suspension via a file and ensure that it does
 # NOT override actual target suspension state.
 # This file is part of the rsyslog project, released under ASL 2.0

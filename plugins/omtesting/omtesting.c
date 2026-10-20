@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omtesting.c
  *
  * This module is a testing aid. It is not meant to be used in production. I have

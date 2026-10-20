@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* mmsnmptrapd.c
  * This is a message modification module. It takes messages generated
  * from snmptrapd and modifies them so that the look like they

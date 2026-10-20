@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Documentation Style Guide
 =========================
 
@@ -106,7 +108,7 @@ Licensing & Legal
 
 - Keep licensing information in `licensing.rst`.
 - Use:
-  ``For license details, see :doc:`licensing`.``
+  ``For license details, see :doc:`/licensing`.``
 
 Examples and Code
 -----------------

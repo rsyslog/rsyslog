@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2017-12-01 by Rainer Gerhards, released under ASL 2.0
 # shellcheck disable=SC2154 # Server variables are assigned by diag.sh helpers.
 # Verify http_request() returns each of ten GET response bodies unchanged.

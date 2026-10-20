@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # this test checks truncation mode, and does so with multiple truncations of
 # the input file.
 # It also needs a larger load, which shall be sufficient to do begin of file

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Valgrind-enabled comprehensive test for mmsnareparse field extraction
 # Mirrors mmsnareparse-comprehensive.sh but runs rsyslogd under valgrind to
 # surface memory issues such as the reported heap-buffer-overflow.

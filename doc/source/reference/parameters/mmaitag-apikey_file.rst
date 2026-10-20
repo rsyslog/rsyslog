@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmaitag-apikey_file:
 .. _mmaitag.parameter.action.apikey_file:
 

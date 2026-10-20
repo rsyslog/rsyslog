@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests YAML list template support with property and constant elements,
 # including modifiers:
 #   - property: name, droplastlf, format (json), onempty

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate secure dynafile template defaults from YAML configuration.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp

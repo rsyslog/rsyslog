@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for replace() sizing after a failed partial match overlaps a
 # later match. The exact output values prove both replacement semantics and
 # that the shared three-argument wrap() path writes the complete result.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omhttp.c
  * This is an http output module based on omelasticsearch
  *

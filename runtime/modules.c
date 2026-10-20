@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* modules.c
  * This is the implementation of syslogd modules object.
  * This object handles plug-ins and build-in modules of all kind.

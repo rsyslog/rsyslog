@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that imgssapi forwards its configured max session count to tcpsrv.
 . ${srcdir:=.}/diag.sh init
 require_plugin imgssapi

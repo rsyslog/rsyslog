@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies that multiple imfile monitors configured for the same file receive
 # each completed line independently. The oracle is the final omfile output
 # after synchronized shutdown: the two unrestricted monitors must both receive

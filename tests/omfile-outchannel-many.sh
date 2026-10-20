@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2018-08-02 by RGerhards, released under ASL 2.0
 # Exercise outchannel rotation while tcpflood runs in the background and another
 # input path injects messages. The tcpflood pid and marker prove the background

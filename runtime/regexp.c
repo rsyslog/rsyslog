@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The regexp object.
  *
  * Module begun 2008-03-05 by Rainer Gerhards, based on some code

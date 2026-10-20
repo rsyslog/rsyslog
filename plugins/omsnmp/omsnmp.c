@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omsnmp.c
  *
  * This module sends an snmp trap.

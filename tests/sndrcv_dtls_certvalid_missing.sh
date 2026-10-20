@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 # Verify cert-valid DTLS behavior when the sender lacks a usable certificate.
 # The receiver output must stay empty after the rejected handshake.

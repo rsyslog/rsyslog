@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # alorbach, 2019-11-27
 #	Required Packages
 #	pip install pysnmp

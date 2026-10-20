@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## @brief Validate SRV discovery for omfwd when resolving targets via DNS SRV over UDP.
 ## The DNS mock and UDP receiver both bind dynamic ports and publish them before
 ## rsyslog starts. Success is proved by the receiver collecting every injected

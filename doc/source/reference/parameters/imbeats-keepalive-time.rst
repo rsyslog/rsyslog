@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imbeats-keepalive-time:
 .. _imbeats.parameter.input.keepalive-time:
 

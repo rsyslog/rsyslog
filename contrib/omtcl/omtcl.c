@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omtcl.c
  * invoke a tcl procedure for every message
  *

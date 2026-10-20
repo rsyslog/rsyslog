@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # all we want to test is if certless communication works. So we do
 # not need to send many messages.
 # This test checks legacy statements which are often given as 

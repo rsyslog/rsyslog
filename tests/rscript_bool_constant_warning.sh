@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a common RainerScript boolean mistake logs a config warning:
 # `$msg contains "a" or "b"` keeps historical truthiness semantics, but the
 # bare string literal is probably a missing repeated comparison. The warning

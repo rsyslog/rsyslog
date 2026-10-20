@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imptcp.c
  * This is a native implementation of plain tcp. It is intentionally
  * duplicate work (imtcp). The intent is to gain very fast and simple

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 ************************************
 omuxsock: Unix sockets Output Module
 ************************************

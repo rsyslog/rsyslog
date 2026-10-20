@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify imuxsock rejects contradictory socket ownership settings and reports a
 # clear runtime diagnostic for stale sockets with Unlink="off". The stale-socket
 # oracle is the default testbench omfile action for rsyslogd internal messages;

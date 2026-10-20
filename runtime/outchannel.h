@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the header for the output channel code of rsyslog.
  * begun 2005-06-21 rgerhards
  *

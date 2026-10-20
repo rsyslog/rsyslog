@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmdblookup-container:
 .. _mmdblookup.parameter.module.container:
 

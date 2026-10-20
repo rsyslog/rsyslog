@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* rsyslog parser interface.
  *
  * Copyright 2011-2016 Rainer Gerhards

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for omuxsock action isolation. One Unix datagram receiver is
 # intentionally left unread until the test releases it, which can block that
 # action's send path. Success is proven by a second omuxsock action continuing

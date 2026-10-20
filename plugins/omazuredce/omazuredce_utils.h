@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omazuredce_utils.h
  * Internal helpers shared by the omazuredce module and its unit test.
  *

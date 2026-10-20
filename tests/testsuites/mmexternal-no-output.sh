@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # Helper for mmexternal interface.output="none" tests.
 # It records received lines and intentionally emits no stdout response.
 out="$1"

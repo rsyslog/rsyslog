@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* parsing routines for the counted string class. These
  * routines provide generic parsing aid as well some fairly
  * complex routines targeted toward specific needs.

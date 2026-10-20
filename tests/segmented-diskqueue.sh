@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify the experimental segmentedDisk pure-disk queue can write, drain, and
 # delete segmented queue files. The oracle is final sequence correctness; line
 # count is used only to synchronize shutdown once all messages reached omfile.

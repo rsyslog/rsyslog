@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-pmrfc3164-headerless-ruleset:
 .. _pmrfc3164.parameter.module.headerless-ruleset:
 .. _pmrfc3164.parameter.module.headerless.ruleset:

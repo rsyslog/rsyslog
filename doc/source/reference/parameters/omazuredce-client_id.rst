@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazuredce-client_id:
 .. _omazuredce.parameter.action.client_id:
 

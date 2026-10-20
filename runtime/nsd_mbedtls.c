@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* nsd_mbedtls.c
  *
  * An implementation of the nsd interface for Mbed TLS.

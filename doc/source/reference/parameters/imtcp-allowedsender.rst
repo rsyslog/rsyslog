@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-allowedsender:
 .. _imtcp.parameter.module.allowedsender:
 .. _imtcp.parameter.input.allowedsender:

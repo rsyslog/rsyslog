@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 FAQ: Can rsyslog act as an ETL tool?
 ====================================
 

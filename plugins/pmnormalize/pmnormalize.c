@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmnormalize.c
  * This is a parser module for parsing incoming messages using liblognorm.
  *

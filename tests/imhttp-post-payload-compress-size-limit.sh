@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify that imhttp applies the request body limit after gzip decompression,
 # not only to the compressed wire body. The request uses octet-counted framing

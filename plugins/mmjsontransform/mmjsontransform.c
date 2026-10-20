@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmjsontransform.c
  * Transform dotted JSON keys into nested containers.
  *

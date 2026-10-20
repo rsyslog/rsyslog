@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _containers-user-minimal:
 .. _container.image.rsyslog-minimal:
 

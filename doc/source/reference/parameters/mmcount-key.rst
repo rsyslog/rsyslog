@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmcount-key:
 .. _mmcount.parameter.input.key:
 

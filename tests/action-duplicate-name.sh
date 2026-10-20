@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that duplicate RainerScript action names produce a config warning.
 # The oracle is successful -N1 config validation plus the diagnostic;
 # no runtime message-processing output is involved.

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imuxsock-syssock-parsetrusted:
 .. _imuxsock.parameter.module.syssock-parsetrusted:
 

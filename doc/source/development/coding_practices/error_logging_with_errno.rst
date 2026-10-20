@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _error-logging-with-errno:
 
 Error Logging with errno

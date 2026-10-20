@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmtaghostname-tag:
 .. _mmtaghostname.parameter.input.tag:
 

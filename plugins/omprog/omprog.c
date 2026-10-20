@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omprog.c
  * This output plugin enables rsyslog to execute a program and
  * feed it the message stream as standard input.

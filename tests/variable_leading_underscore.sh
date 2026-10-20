@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2015 Red Hat, Inc.
 # This file is part of the rsyslog project, released  under ASL 2.0
 # The configuration test should pass because we now support leading

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## @file omkafka-headers.sh
 ## @brief Verify Kafka headers are produced by omkafka.
 # added 2024-05-05 by AI Assistant

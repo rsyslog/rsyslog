@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test imptcp with many dropping connections
 # added 2010-08-10 by Rgerhards
 #

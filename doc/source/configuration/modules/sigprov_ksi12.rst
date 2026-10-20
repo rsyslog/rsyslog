@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 KSI Signature Provider (rsyslog-ksi-ls12)
 ============================================================
 

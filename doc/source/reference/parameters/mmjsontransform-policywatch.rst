@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: The mmjsontransform policyWatch parameter enables automatic reloads for watched policy files.
    :keywords: rsyslog, mmjsontransform, policyWatch, watched reload, yaml policy

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmsnareparse parsing against representative NXLog Security samples.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

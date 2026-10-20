@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* omudpspoof.c
  *
  * This is a udp-based output module that support spoofing.

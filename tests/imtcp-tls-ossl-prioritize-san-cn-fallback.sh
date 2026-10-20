@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify the legacy OpenSSL x509/name behavior for certificates that contain a
 # DNS SAN and a different CN. With PrioritizeSAN left at its default off value,
 # rsyslog may authorize the peer by the CN after the SAN does not match. The

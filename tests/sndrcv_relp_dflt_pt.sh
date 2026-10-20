@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omrelp uses its compiled default port when no port parameter is
 # configured. imrelp must explicitly bind the same default port because this is
 # the behavior under test; success is the full ordered delivery sequence.

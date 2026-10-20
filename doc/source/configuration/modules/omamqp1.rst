@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 *****************************************
 omamqp1: AMQP 1.0 Messaging Output Module
 *****************************************

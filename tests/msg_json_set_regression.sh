@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-29 by Copilot
 #
 # This regression covers two runtime/msg.c behaviors:

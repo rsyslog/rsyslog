@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify targeted WTP wakeups across repeated queue-idle lifecycles. The first
 # phase proves that a main-queue worker enters wtiWaitNonEmpty and the
 # minimum-dequeue-batch wait times out. Worker scheduling intentionally does

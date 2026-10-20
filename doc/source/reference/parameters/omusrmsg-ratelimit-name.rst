@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! omusrmsg; RateLimit.Name
 
 .. _param-omusrmsg-ratelimit-name:

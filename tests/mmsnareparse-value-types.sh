@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## @brief Validate GUID, IP address, and timestamp typing for mmsnareparse
 ## @description
 ## Exercises successful and failing GUID/IP/timestamp samples to ensure

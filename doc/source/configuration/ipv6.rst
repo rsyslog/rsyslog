@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Notes on IPv6 Handling in Rsyslog
 =================================
 

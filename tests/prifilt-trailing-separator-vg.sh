@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Run the trailing PRI separator regression under Valgrind so an invalid read
 # in DecodePRIFilter makes the otherwise accepted configuration test fail.
 # Sanitizer builds exercise the base test directly; Valgrind cannot launch

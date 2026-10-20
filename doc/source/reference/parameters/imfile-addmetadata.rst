@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-addmetadata:
 .. _imfile.parameter.input.addmetadata:
 .. _imfile.parameter.addmetadata:

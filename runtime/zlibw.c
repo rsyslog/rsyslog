@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The zlibwrap object.
  *
  * This is an rsyslog object wrapper around zlib.

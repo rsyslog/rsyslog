@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Test mmsnareparse module with JSON template output
 ## Validates that the module correctly parses Windows security events and outputs them in JSON format
 unset RSYSLOG_DYNNAME

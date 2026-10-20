@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-dynbulkid:
 .. _omelasticsearch.parameter.module.dynbulkid:
 

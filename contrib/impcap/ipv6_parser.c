@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ipv6_parser.c
  *
  * This file contains functions to parse IPv6 headers.

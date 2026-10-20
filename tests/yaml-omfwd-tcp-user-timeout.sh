@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify the YAML frontend accepts omfwd tcp_user_timeout and forwards over TCP.
 # The receiver output is the oracle so the test covers the configured output
 # destination, not rsyslog startup diagnostics.

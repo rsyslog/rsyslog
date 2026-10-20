@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check translation of traditional file action shorthand into YAML filter/actions.
 #
 # Many distros still ship defaults like:

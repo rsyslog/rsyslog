@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imfifo.c
  * This is the named pipe (FIFO) input module for rsyslog.
  * It reads logs line-by-line from configured FIFOs.

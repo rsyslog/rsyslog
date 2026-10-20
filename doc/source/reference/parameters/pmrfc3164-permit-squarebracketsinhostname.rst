@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-pmrfc3164-permit-squarebracketsinhostname:
 .. _pmrfc3164.parameter.module.permit-squarebracketsinhostname:
 .. _pmrfc3164.parameter.module.permit.squareBracketsInHostname:

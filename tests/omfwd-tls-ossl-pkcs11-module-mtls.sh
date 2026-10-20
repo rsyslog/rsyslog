@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that builtin:omfwd module defaults can supply PKCS#11-backed TLS
 # objects for an omfwd action that omits action-level StreamDriver.CAFile,
 # StreamDriver.CAExtraFiles, StreamDriver.CertFile, and StreamDriver.KeyFile.

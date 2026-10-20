@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## @brief Validate SRV discovery for omfwd in TCP mode, ensuring SRV weight is honored.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2018-09-13 by PascalWithopf
 # Verify RELP forwarding with TLS certificate validation. The imrelp receiver
 # binds an ephemeral IPv4 listener and the testbench discovers that bound port

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definitions for strms_sess class. This implements a session of the
  * generic stream server.
  *

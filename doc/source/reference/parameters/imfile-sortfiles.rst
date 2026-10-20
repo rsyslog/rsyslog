@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-sortfiles:
 .. _imfile.parameter.module.sortfiles:
 .. _imfile.parameter.sortfiles:

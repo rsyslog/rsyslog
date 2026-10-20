@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-sig-provider:
 .. _omfile.parameter.module.sig-provider:
 

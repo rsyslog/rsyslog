@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 
 FAQ: Encrypting MySQL Traffic with ommysql Plugin
 ==================================================

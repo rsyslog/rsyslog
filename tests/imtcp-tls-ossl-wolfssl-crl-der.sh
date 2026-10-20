@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test wolfSSL DER CRL handling.  The receiver is configured with the existing
 # CRL converted to DER while the sender presents a revoked certificate; success
 # is proved by receiver-side TLS rejection and the absence of delivered payload

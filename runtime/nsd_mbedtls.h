@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* An implementation of the nsd interface for Mbed TLS.
  *
  * Copyright 2008-2021 Adiscon GmbH.

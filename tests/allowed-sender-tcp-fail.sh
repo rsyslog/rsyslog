@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that we are able to receive messages from allowed sender
 # added 2019-08-15 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

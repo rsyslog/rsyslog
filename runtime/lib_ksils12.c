@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* lib_ksils12.c - rsyslog's KSI-LS12 support library
  *
  * Regarding the online algorithm for Merkle tree signing. Expected

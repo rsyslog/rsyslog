@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Added 2025-12-19 by 20syldev, released under ASL 2.0
 export USE_VALGRIND="YES"
 . ${srcdir:=.}/diag.sh init

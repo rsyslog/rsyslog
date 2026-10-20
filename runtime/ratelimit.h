@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* header for ratelimit.c
  *
  * Copyright 2012-2025 Adiscon GmbH.

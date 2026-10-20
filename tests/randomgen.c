@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* generates random data for later use in test cases. Of course,
  * we could generate random data during the testcase itself, but
  * the core idea is that we record the random data so that we have

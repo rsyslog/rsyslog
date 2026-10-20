@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omprog-confirmmessages:
 .. _omprog.parameter.action.confirmmessages:
 

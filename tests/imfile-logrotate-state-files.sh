@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . $srcdir/diag.sh check-inotify-only
 . ${srcdir:=.}/diag.sh init
 export TESTMESSAGES=1000

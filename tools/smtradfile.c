@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* smtradfile.c
  * This is a strgen module for the traditional file format.
  *

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Tutorial for native post-quantum TLS in rsyslog with OpenSSL and GnuTLS on supported distros.
    :keywords: rsyslog, post-quantum, pq, ml-kem, openssl 3.5, gnutls, tls

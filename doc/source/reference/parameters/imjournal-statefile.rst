@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imjournal-statefile:
 .. _imjournal.parameter.module.statefile:
 

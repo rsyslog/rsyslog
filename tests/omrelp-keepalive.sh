@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2024-08-07 by ChatGPT, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 

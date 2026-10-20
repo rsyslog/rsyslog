@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test hardens pmsnare against Snare tag matches without a following tab
 # representation. The oracle is that short tails do not underflow rewrite
 # lengths and a following marker message is still processed.

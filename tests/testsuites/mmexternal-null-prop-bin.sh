@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-08-07 by Julien Thomas, released under ASL 2.0
 # mmexternal helper that replies, for every input message, with a single core
 # property set to a bare JSON null. The property name comes from $1 (default

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # very basic check for immark module - nevertheless, there is not
 # much more to test for...
 # add 2020-12-01 by Rainer Gerhards, released under ASL 2.0

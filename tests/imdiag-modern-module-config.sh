@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify all imdiag module parameters validate with legacy $-directives disabled
 # and the testbench startup path uses module-level serverRun/listenPortFileName.
 . ${srcdir:=.}/diag.sh init

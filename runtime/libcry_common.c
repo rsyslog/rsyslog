@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* libgcry_common.c
  * This file hosts functions both being used by the rsyslog runtime as
  * well as tools who do not use the runtime (so we can maintain the

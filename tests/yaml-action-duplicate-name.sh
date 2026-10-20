@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that duplicate YAML action names warn through the shared action
 # backend. The oracle is successful -N1 config validation plus duplicate-name
 # diagnostic; no runtime message-processing output is involved.

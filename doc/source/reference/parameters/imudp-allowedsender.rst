@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imudp-allowedsender:
 .. _imudp.parameter.module.allowedsender:
 .. _imudp.parameter.input.allowedsender:

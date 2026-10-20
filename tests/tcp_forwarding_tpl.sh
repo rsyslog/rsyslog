@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify TCP forwarding uses an action-level template. The oracle is the
 # complete 0..9999 forwarded message sequence rendered by that template. The
 # receiver readiness wait avoids losing the first batch to a listener startup

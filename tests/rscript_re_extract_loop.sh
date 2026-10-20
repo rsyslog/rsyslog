@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test re_extract behavior with empty matches to prevent infinite loops/stuck behavior
 echo ===============================================================================
 echo \[rscript_re_extract_loop.sh\]: test re_extract empty match loop

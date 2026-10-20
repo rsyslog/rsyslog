@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The kernel log module.
  *
  * This is rsyslog Linux only module for reading structured kernel logs.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test covers ommail's SMTP mode against a deterministic local SMTP
 # helper. The helper writes its port file only after listen() succeeds and
 # writes a done file after QUIT, so success is proven by synchronized shutdown

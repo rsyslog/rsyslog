@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that each core queue reports mutex contention and accumulated wait
 # time through impstats while a multi-connection imtcp workload is fully
 # delivered.  The oracle requires the metric keys and all messages; contention

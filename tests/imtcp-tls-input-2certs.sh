@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2021-08-03 by Rgerhards
 # check that we do use the proper set of certificates
 # This file is part of the rsyslog project, released under ASL 2.0

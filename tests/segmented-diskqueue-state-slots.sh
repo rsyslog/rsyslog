@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a torn newest state slot falls back to the previous valid slot.
 # Phase one leaves a multi-segment backlog and corrupts only the newest slot;
 # complete sequence recovery proves bounded reserved-ID reconciliation avoids

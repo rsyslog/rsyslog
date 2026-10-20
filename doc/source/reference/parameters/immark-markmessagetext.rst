@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-immark-markmessagetext:
 .. _immark.parameter.module.markmessagetext:
 

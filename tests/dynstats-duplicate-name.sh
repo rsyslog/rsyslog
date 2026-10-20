@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that duplicate RainerScript dyn_stats bucket names produce a config
 # warning while keeping the config valid for backward compatibility. The oracle
 # is successful -N1 config validation plus the diagnostic; no runtime message

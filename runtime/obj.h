@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the generic obj class module.
  *
  * This module relies heavily on preprocessor macros in order to

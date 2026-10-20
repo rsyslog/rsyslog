@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-disablelfdelimiter:
 .. _imtcp.parameter.module.disablelfdelimiter:
 .. _imtcp.parameter.input.disablelfdelimiter:

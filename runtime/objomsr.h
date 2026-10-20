@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the omsr (omodStringRequest) object.
  *
  * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.

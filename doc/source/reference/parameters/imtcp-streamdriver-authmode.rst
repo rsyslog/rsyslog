@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-streamdriver-authmode:
 .. _imtcp.parameter.module.streamdriver-authmode:
 .. _imtcp.parameter.input.streamdriver-authmode:

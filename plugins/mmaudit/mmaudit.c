@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmaudit.c
  * This is a message modification module supporting Linux audit format
  * in various settings. The module tries to identify the provided

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML-native statements: block — basic if:/action: form.
 # Demonstrates clean separation: the filter condition is a RainerScript
 # expression string, but the action is expressed as a YAML mapping.

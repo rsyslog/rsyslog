@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for GitHub issue #4024. A missing mmdbfile must suspend the
 # mmdblookup action with a clear diagnostic instead of leaving a half-created
 # worker instance that can later crash while rsyslog shuts down.

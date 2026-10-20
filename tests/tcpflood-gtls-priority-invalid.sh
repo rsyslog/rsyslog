@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for tcpflood's GnuTLS priority-string option. The oracle is
 # that an invalid priority string is rejected during TLS initialization before a
 # network connection is attempted, proving the option is parsed and handed to

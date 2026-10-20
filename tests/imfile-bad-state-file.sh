@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that imfile ignores a malformed state file and falls back to a fresh read.
 # The sequence wait proves imfile reached EOF before each shutdown, so the
 # persisted state and the fallback assertion cannot depend on runner timing.

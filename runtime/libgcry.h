@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* libgcry.h - rsyslog's guardtime support library
  *
  * Copyright 2013 Adiscon GmbH.

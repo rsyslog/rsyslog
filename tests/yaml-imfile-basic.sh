@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests imfile input configured via YAML.
 # Uses inputfilegen to produce messages into a watched file; imfile reads
 # them and routes through a YAML-defined ruleset to the output file.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Native OpenSSL PQ smoke test. Requires an OpenSSL build with
 # X25519MLKEM768 support.
 . ${srcdir:=.}/diag.sh init

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Sends a truncated zstd stream that contains one syslog message; imtcp must
 # preserve that message and log the truncated stream.

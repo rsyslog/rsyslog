@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This header supplies atomic operations. So far, we rely on GCC's
  * atomic builtins. During configure, we check if atomic operations are
  * available. If they are not, I am making the necessary provisioning to live without them if

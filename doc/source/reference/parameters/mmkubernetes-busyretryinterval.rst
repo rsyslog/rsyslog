@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmkubernetes-busyretryinterval:
 .. _mmkubernetes.parameter.action.busyretryinterval:
 

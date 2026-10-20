@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that imhiredis rejects stream.readFrom values that exceed the fixed index buffer.
 . ${srcdir:=.}/diag.sh init
 

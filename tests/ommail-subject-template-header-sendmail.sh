@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for ommail subject hardening in sendmail mode. A
 # message-controlled JSON field is decoded by mmjsonparse and rendered by
 # subject.template. The oracle is the captured sendmail stdin: CR/LF from the

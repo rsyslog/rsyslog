@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 ***********************************************
 mmrfc5424addhmac: RFC5424 HMAC injection module
 ***********************************************

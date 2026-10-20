@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that builtin:omfwd module defaults for ordinary file-backed TLS
 # objects are inherited by an omfwd action that uses the gtls stream driver and
 # omits action-level StreamDriver.CAFile, StreamDriver.CertFile, and

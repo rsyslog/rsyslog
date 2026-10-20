@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is a tool for processing rsyslog encrypted log files.
  *
  * Copyright 2013-2019 Adiscon GmbH

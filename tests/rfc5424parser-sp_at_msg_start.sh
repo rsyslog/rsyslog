@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # checks that in RFC5424 mode SP at beginning of MSG part is properly handled
 # This file is part of the rsyslog project, released  under ASL 2.0
 # rgerhards, 2019-05-17

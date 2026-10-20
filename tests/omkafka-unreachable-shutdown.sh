@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for GitHub issue #4452. An unreachable Kafka broker can
 # trigger delivery callbacks during shutdown. This test runs rsyslogd in daemon
 # mode because the regression path is shutdown of the backgrounded process.

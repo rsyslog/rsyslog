@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for mmjsonparse find-json ownership on msgAddJSON failure.
 # The action targets a nested JSON path whose parent is already a scalar, so
 # msgAddJSON rejects the insertion after consuming the parsed object. Success is

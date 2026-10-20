@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests basic omuxsock functionality. A socket receiver is started which sends
 # all data to an output file, then a rsyslog instance is started which generates
 # messages and sends them to the unix socket. Datagram sockets are being used.

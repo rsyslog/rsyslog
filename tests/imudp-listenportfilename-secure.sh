@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imudp listenPortFileName path handling.  The listener
 # writes its bound port before privilege drop, so the oracle is an internal
 # diagnostic that rejects a symlink handoff path plus an unchanged symlink

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-rebindinterval:
 .. _omelasticsearch.parameter.module.rebindinterval:
 

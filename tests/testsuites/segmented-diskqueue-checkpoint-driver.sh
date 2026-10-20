@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Shared checkpoint-interval driver. A single large active segment prevents
 # topology writes and dequeue batches contain one record. The oracle reads the
 # durable slot generation directly before shutdown, so stats traffic cannot

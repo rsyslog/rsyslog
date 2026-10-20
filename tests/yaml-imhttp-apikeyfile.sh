@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify YAML imhttp API-key authentication while the HTTP listener uses an
 # OS-assigned port. The accepted request and output content are the oracle.

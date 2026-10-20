@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _tut-05-order-matters:
 
 Order Matters: Config and Include Files

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-notifyonconnectionclose:
 .. _imtcp.parameter.module.notifyonconnectionclose:
 .. _imtcp.parameter.input.notifyonconnectionclose:

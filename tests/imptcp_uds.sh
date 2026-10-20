@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 echo ======================================================================
 echo \[imptcp_uds.sh\]: test imptcp unix domain socket
 . ${srcdir:=.}/diag.sh init

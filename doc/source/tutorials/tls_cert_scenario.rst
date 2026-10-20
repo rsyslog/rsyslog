@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Sample Use Case: Single Central Log Server
 ==========================================
 

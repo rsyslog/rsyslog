@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2019-04-25 by rgerhards
 # check that the "statfile.directory" module parameter is accepted
 # This is part of the rsyslog testbench, licensed under ASL 2.0

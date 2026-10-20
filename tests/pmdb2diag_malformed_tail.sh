@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test hardens pmdb2diag against malformed DB2-like tails. The oracle is
 # that unterminated PID/program delimiters do not trigger unbounded searches or
 # NULL pointer arithmetic, and a following marker message is still processed.

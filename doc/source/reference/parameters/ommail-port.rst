@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-ommail-port:
 .. _ommail.parameter.input.port:
 

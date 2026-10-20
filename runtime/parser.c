@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* parser.c
  * This module contains functions for message parsers. It still needs to be
  * converted into an object (and much extended).

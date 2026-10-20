@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imdocker.c
  * This is an implementation of the docker container log input module. It uses the
  * Docker API in order to stream all container logs available on a host. Will also

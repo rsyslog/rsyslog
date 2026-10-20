@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omsendertrack-senderid:
 .. _omsendertrack.parameter.input.senderid:
 

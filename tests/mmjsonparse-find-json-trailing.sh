@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test mmjsonparse find-json mode with trailing data and allow_trailing parameter.
 # The oracle is the output template: allow_trailing=on must parse and ignore
 # suffix data, while allow_trailing=off must set parsesuccess=FAIL for any

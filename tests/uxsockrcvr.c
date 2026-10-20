@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* receives messages from a specified unix sockets and writes
  * output to specfied file.
  *

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Pattern for documenting narrow helper contracts when logic is split from larger routines, including precondition guards and defensive fallbacks.
    :keywords: rsyslog, coding practice, helper function, contract, preconditions, assertions

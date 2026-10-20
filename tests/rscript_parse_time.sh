@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Added 2017-10-28 by Stephen Workman, released under ASL 2.0
 
 # Because this script tests functionality that depends on the current date,

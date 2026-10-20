@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify cbool() converts common string and numeric boolean inputs into
 # numeric 0/1 values that jsonf datatype="bool" renders as JSON booleans.
 # The oracle is the synchronized omfile output after shutdown.

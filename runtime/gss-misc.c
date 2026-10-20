@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* gss-misc.c
  * This is a miscellaneous helper class for gss-api features.
  *

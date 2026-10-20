@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 
 if [ "${1:-}" = "--invalid" ]; then
     exit 2

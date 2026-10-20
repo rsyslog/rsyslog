@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmkubernetes.c
  * This is a message modification module. It uses metadata obtained
  * from the message to query Kubernetes and obtain additional metadata

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for config parser to check that disk queue file names are
 # unique.
 # added 2019-05-02 by Rgerhards

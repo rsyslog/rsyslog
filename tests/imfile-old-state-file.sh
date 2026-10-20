@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # this test checks that old (v1, pre 8.34.0) imfile state files are
 # properly read in. It is based on imfile-readmode2-with-persists.sh,
 # where the first part before the shutdown is removed, and an old state

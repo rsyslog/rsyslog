@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML-native statements complex routing and iteration example
 # from the YAML configuration documentation.
 #

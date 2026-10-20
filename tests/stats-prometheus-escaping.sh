@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify that the rsyslog-assigned action name, including its hyphens and
 # colon, is encoded into a valid Prometheus metric name. The emitted stats file

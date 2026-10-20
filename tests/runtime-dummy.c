@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Testbench for rsyslog
  *
  * This are dummy calls for "runtime" routines which are not yet properly

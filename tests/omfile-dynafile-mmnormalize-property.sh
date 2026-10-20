@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression reproducer for issue #3488: mmnormalize populates a JSON property
 # used by an omfile dynafile template. The old crash happened while resolving
 # that property during action processing. The oracle is clean shutdown and the

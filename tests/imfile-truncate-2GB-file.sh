@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # written 2018-11-09 by Rainer Gerhards
 # this test checks that 2GiB (31 bit) file size region is handled correctly
 # it first generates a file that is 2GiB-64 bytes, processes it, and then

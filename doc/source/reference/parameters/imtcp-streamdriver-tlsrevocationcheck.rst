@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-streamdriver-tlsrevocationcheck:
 .. _imtcp.parameter.module.streamdriver-tlsrevocationcheck:
 .. _imtcp.parameter.input.streamdriver-tlsrevocationcheck:

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmrfc5424.h
  * These are the definitions for the RFCC5424 parser module.
  *

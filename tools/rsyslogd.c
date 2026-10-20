@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the main rsyslogd file.
  * It contains code * that is known to be validly under ASL 2.0,
  * because it was either written from scratch by me (rgerhards) or

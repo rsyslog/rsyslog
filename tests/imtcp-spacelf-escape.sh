@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies that parser.spaceLFOnReceive does not mask other sanitization.
 # The octet-counted input contains an embedded LF, other control bytes, and an
 # 8-bit UTF-8 byte sequence. Success is proven by the configured omfile output:

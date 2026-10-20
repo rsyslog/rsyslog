@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test uxsockrcvr's standalone usage output when required options are missing.
 # The oracle is the helper process output because no rsyslog instance is
 # started; this covers the standalone testbench utility usage path from #3072.

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-restpath:
 .. _omhttp.parameter.input.restpath:
 
