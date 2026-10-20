@@ -1,13 +1,33 @@
 global() configuration object
 =============================
 
+.. meta::
+   :description: Global rsyslog configuration parameters and their operational scope.
+   :keywords: rsyslog, global, configuration, RainerScript, HUP, reload policy
+
+.. summary-start
+
 The global configuration object permits to set global parameters. Note
 that each parameter can only be set once and cannot be re-set
 thereafter. If a parameter is set multiple times, the behaviour is
 unpredictable. As with other configuration objects, parameters for this
 object are case-insensitive.
 
+.. summary-end
+
 The following parameters can be set:
+
+- **config.reloadOnHUP** - string, default "off"
+
+  Selects the transactional HUP policy: ``off``, ``validate``, or ``on``.
+  In the current foundation implementation, ``validate`` and ``on`` are
+  recognized but unsupported: each transactional request fails closed with
+  ``rejected_reason=unsupported_release_b``. Neither mode loads or validates
+  a candidate or activates configuration changes. The established legacy
+  HUP hooks run in every mode, including reopening output files. Keep the
+  default ``off`` for normal operation; do not use ``on`` as a live reload
+  mechanism at this implementation stage. See
+  :ref:`transactional-config-reload-adr` for the staged target design.
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
 

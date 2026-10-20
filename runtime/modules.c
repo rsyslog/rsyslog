@@ -97,6 +97,7 @@ static rsRetVal dummyEndTransaction(__attribute__((unused)) void *dummy) {
 static rsRetVal dummyIsCompatibleWithFeature(__attribute__((unused)) syslogFeature eFeat) {
     return RS_RET_INCOMPATIBLE;
 }
+
 static rsRetVal dummynewActInst(uchar *modName,
                                 struct nvlst __attribute__((unused)) * dummy1,
                                 void __attribute__((unused)) * *dummy2,
@@ -399,6 +400,9 @@ static inline void abortCnfUse(cfgmodules_etry_t **pNew) {
 rsRetVal ATTR_NONNULL(1) addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodules_etry_t *const pLast) {
     DEFiRet;
     assert(*pNew != NULL);
+    if (*pNew == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
 
     if (*pNew == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
@@ -572,6 +576,29 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
         pNew->setModCnf = NULL;
     else if (localRet != RS_RET_OK)
         ABORT_FINALIZE(localRet);
+
+    /*
+     * Reload hooks are an optional extension of the stable module interface.
+     * A missing entry point is the normal legacy case and must not affect
+     * module loading; modReloadClassify() then yields RESTART_REQUIRED.
+     */
+    modReloadGetInterfaceV1_t getReloadInterfaceV1;
+    rsRetVal (*reloadEntryPoint)();
+    memset(&pNew->reloadV1, 0, sizeof(pNew->reloadV1));
+    pNew->reloadV1.version = eMOD_RELOAD_INTERFACE_V1;
+    pNew->reloadV1.structSize = sizeof(pNew->reloadV1);
+    localRet = (*pNew->modQueryEtryPt)((uchar *)"getReloadInterfaceV1", &reloadEntryPoint);
+    if (localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+        memset(&pNew->reloadV1, 0, sizeof(pNew->reloadV1));
+    } else if (localRet != RS_RET_OK) {
+        ABORT_FINALIZE(localRet);
+    } else {
+        getReloadInterfaceV1 = (modReloadGetInterfaceV1_t)reloadEntryPoint;
+        CHKiRet(getReloadInterfaceV1(&pNew->reloadV1));
+        if (pNew->reloadV1.version != eMOD_RELOAD_INTERFACE_V1 || pNew->reloadV1.structSize < sizeof(pNew->reloadV1)) {
+            ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
+        }
+    }
 
     /* optional calls for new config system */
     localRet = (*pNew->modQueryEtryPt)((uchar *)"getModCnfName", &getModCnfName);

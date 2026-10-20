@@ -89,6 +89,10 @@ DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl)
 rsconf_t *loadConf = NULL; /* the config currently being loaded (no concurrent config load supported!) */
 static const char cfgModRefSrc[] = "cfgmodules";
 
+reloadOnHUPMode_t rsconfGetReloadOnHUPMode(const rsconf_t *cnf) {
+    return cnf == NULL ? RELOAD_ON_HUP_OFF : cnf->globals.reloadOnHUP;
+}
+
 #ifdef HAVE_LIBSYSTEMD
 /* module readiness barrier: modules that need startup time call rsconfRegisterReadiness(),
  * then rsconfSignalReady() once initialised. When global(systemd.notifyReadyDelay="on")
@@ -297,6 +301,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.compatConfigFormatSyslogd = COMPAT_CONFIGFORMAT_ENABLE;
     pThis->globals.compatConfigFormatProperty = COMPAT_CONFIGFORMAT_ENABLE;
     pThis->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_WARN;
+    pThis->globals.reloadOnHUP = RELOAD_ON_HUP_OFF;
     pThis->globals.bReduceRepeatMsgs = 0;
     pThis->globals.bDebugPrintTemplateList = 1;
     pThis->globals.bDebugPrintModuleList = 0;
@@ -413,6 +418,9 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.parser.bPermitSlashInProgramname = 0;
     pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
 
+    pThis->globalParamVals = NULL;
+    pThis->mainqCnfObj = NULL;
+
     pThis->parsers.pDfltParsLst = NULL;
     pThis->parsers.pParsLstRoot = NULL;
 }
@@ -488,11 +496,12 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     const rsRetVal graph_ret = ruleset_shutdown_local_graph(pThis);
     if (graph_ret != RS_RET_OK) LogError(0, graph_ret, "local queue graph shutdown failed during config teardown");
     ruleset_free_local_graph(pThis);
+    glblCnfDestruct(pThis);
     freeCnf(pThis);
     tplDeleteAll(pThis);
     dynstats_destroyAllBuckets(pThis);
-    perctileBucketsDestruct();
-    ochDeleteAll();
+    perctileBucketsDestruct(&pThis->perctile_buckets);
+    ochDeleteAll(pThis);
     freeTimezones(pThis);
     parser.DestructParserList(&pThis->parsers.pDfltParsLst);
     parser.destroyMasterParserList(pThis->parsers.pParsLstRoot);
@@ -510,7 +519,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     stdlog_close(pThis->globals.stdlog_hdl);
     free(pThis->globals.stdlog_chanspec);
 #endif
-    lookupDestroyCnf();
+    lookupDestroyCnf(pThis);
     freeActionNames(pThis);
     llDestroy(&(pThis->rulesets.llRulesets));
     ratelimit_cfgsDestruct(&pThis->ratelimit_cfgs);
@@ -1207,7 +1216,7 @@ static rsRetVal loadMainQueue(void) {
         FINALIZE;
     }
 finalize_it:
-    glblDestructMainqCnfObj();
+    glblDestructMainqCnfObj(loadConf);
     RETiRet;
 }
 

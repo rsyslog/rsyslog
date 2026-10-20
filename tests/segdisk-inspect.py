@@ -153,6 +153,11 @@ def state_generation(directory):
     return newest
 
 
+def record_count(directory):
+    """Return the number of physical records without dumping the full store."""
+    return inspect_store(directory)["record_count"]
+
+
 def corrupt_record(directory, record_index=None, message_number=None):
     current = 0
     for path in sorted(directory.glob("segment-*.*")):
@@ -273,6 +278,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("directory", type=pathlib.Path)
     parser.add_argument("--state-generation", action="store_true")
+    parser.add_argument("--record-count", action="store_true")
     selector = parser.add_mutually_exclusive_group()
     selector.add_argument("--corrupt-record", type=int)
     selector.add_argument("--corrupt-message-number", type=int)
@@ -286,6 +292,9 @@ def main():
     args = parser.parse_args()
     if args.state_generation:
         print(state_generation(args.directory))
+        return
+    if args.record_count:
+        print(record_count(args.directory))
         return
     if args.corrupt_record is not None or args.corrupt_message_number is not None:
         corrupt_record(args.directory, args.corrupt_record, args.corrupt_message_number)
