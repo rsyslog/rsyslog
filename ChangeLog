@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-21
+Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-20
 
 - 2026-10-20: nsd_ossl: stop using a broken TLS socket
   A detected broken forwarding connection now aborts its TLS session,
