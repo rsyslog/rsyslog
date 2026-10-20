@@ -85,6 +85,7 @@ DEFobjCurrIf(zlibw) DEFobjCurrIf(zstdw)
 static rsRetVal strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, const size_t lenBuf);
 static rsRetVal strmOpenFile(strm_t *pThis);
 static rsRetVal strmCloseFile(strm_t *pThis);
+static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter);
 static void *asyncWriterThread(void *pPtr);
 static rsRetVal doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush);
 static rsRetVal doZipFinish(strm_t *pThis);
@@ -224,7 +225,13 @@ static rsRetVal doSizeLimitProcessing(strm_t *pThis) {
          * need to preserve it.
          */
         CHKmalloc(pszCurrFName = ustrdup(pThis->pszCurrFName));
-        CHKiRet(strmCloseFile(pThis));
+        /* the stream is written to again after the rotation, so the async
+         * writer thread must survive it. stopping it here leaves the buffer
+         * queue without a consumer and the producer blocks on notFull forever.
+         * keeping it also preserves the caller's mutex, which stopWriter()
+         * would release.
+         */
+        CHKiRet(strmCloseFileInternal(pThis, 0));
         CHKiRet(resolveFileSizeLimit(pThis, pszCurrFName));
     }
 
@@ -502,6 +509,22 @@ static void stopWriter(strm_t *const pThis) {
  * close it again (this is done via strmFlushInternal and friends).
  */
 static rsRetVal strmCloseFile(strm_t *pThis) {
+    return strmCloseFileInternal(pThis, 1);
+}
+
+
+/**
+ * @brief workhorse for strmCloseFile().
+ *
+ * @param bStopAsyncWriter if set, terminates the async writer thread, which
+ * also unlocks pThis->mut as a side effect (see stopWriter()). that is what
+ * callers who are done with the stream want. if cleared, the writer keeps
+ * running and the caller's mutex stays locked; pending buffers drain via
+ * strmWaitAsyncWriterDone() instead, so the data is on disk before the fd is
+ * closed. callers that keep using the stream afterwards, such as size-limit
+ * rotation, must use this mode.
+ */
+static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter) {
     off64_t currOffs;
     DEFiRet;
 
@@ -518,7 +541,11 @@ static rsRetVal strmCloseFile(strm_t *pThis) {
             doZipFinish(pThis);
         }
         if (pThis->bAsyncWrite) {
-            stopWriter(pThis);
+            if (bStopAsyncWriter) {
+                stopWriter(pThis);
+            } else {
+                strmWaitAsyncWriterDone(pThis);
+            }
         }
     }
 
@@ -1659,6 +1686,8 @@ static void *asyncWriterThread(void *pPtr) {
         doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf, bFlush);
         // TODO: error check????? 2009-07-06
         d_pthread_mutex_lock(&pThis->mut);
+        if (pThis->iSizeLimit != 0 && pThis->fd != -1 && pThis->iCurrOffs >= pThis->iSizeLimit)
+            pThis->bSizeLimitReached = 1;
 
         --pThis->iCnt;
         if (pThis->iCnt < STREAM_ASYNC_NUMBUFS) {
@@ -2041,8 +2070,19 @@ static rsRetVal ATTR_NONNULL(1, 2)
     if (pThis->iBufPtr == pThis->sIOBufSize) {
         CHKiRet(strmFlushInternal(pThis, 0)); /* get a new buffer for rest of data */
     }
-    if (pThis->fd != -1 && pThis->iSizeLimit != 0) { /* Only check if fd already set */
-        CHKiRet(doSizeLimitProcessing(pThis));
+    if (pThis->iSizeLimit != 0) {
+        if (pThis->bAsyncWrite) {
+            /* fd and iCurrOffs belong to the writer thread while it writes;
+             * it flags the limit under mut, and we drain it before rotating.
+             */
+            if (pThis->bSizeLimitReached) {
+                pThis->bSizeLimitReached = 0;
+                strmWaitAsyncWriterDone(pThis);
+                if (pThis->fd != -1) CHKiRet(doSizeLimitProcessing(pThis));
+            }
+        } else if (pThis->fd != -1) { /* Only check if fd already set */
+            CHKiRet(doSizeLimitProcessing(pThis));
+        }
     }
 
 

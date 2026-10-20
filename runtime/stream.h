@@ -140,6 +140,7 @@ struct strm_s {
         /* support for async flush procesing */
         sbool bAsyncWrite; /* do asynchronous writes (always if a flush interval is given) */
         sbool bStopWriter; /* shall writer thread terminate? */
+        sbool bSizeLimitReached; /* writer saw iCurrOffs >= iSizeLimit (async only, guarded by mut) */
         sbool bDoTimedWait; /* instruct writer thread to do a times wait to support flush timeouts */
         sbool bzInitDone; /* did we do an init of zstrm already? */
         sbool bFlushNow; /* shall we flush with the next async write? */

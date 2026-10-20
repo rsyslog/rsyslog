@@ -47,6 +47,10 @@ collection, and process orchestration).
 - Partial local-graph startup failure, worker-pool rollback, DA child unwind,
   and legacy disabled-action cleanup are covered by
   `tests/local-queue-startup-failure.sh` (imtcp and imdiag required).
+- **Existing smoke coverage:** `tests/omfile-sizelimitcmd-async.sh` covers
+  `stream.c` size-limit rotation with `asyncWriting="on"`, i.e. that the async
+  writer thread survives a rotation. `tests/omfile-sizelimitcmd-many.sh` covers
+  the same rotation path with the default synchronous writer.
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 - Classic disk-queue serializer callback ABI and message round-trip coverage is
