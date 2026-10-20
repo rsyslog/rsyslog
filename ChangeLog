@@ -1,26 +1,150 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-??
+Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-21
 
+- 2026-10-20: nsd_ossl: stop using a broken TLS socket
+  A detected broken forwarding connection now aborts its TLS session,
+  preventing later shutdown writes through a file descriptor another
+  module may have reused.
+  See https://github.com/rsyslog/rsyslog/issues/7660
+- 2026-10-20: queue: honor named discard severity in global queues
+  queue.discardSeverity now accepts syslog severity names such as
+  "warning" for global queues, matching numeric values and local queues.
+- 2026-10-20: queue: fix classic disk serialization on Darwin ARM64
+  Disk queues now pass message and stream arguments through the expected
+  fixed calling convention, preventing a possible serialization crash.
 - 2026-10-20: msg: bound rawmsg-after-pri and regex.match offsets
   The rawmsg-after-pri property no longer looks past the end of raw
   messages shorter than a full PRI, so such frames always yield their
   complete text. Template regex.match selection now works correctly when an
   earlier match ends beyond 32 KiB in large messages.
+- 2026-10-20: omfile: keep asynchronous output running after size rotation
+  Combining asyncWriting with rotation.sizeLimit and a rotation command no
+  longer stops output after the first rotation or hangs shutdown. Size-limit
+  notification is also synchronized with the asynchronous writer.
+  Thanks to owen-rote for the contribution, with follow-up work by Claude.
+  Fixes https://github.com/rsyslog/rsyslog/issues/7477
+- 2026-10-20: imudp: validate receive buffer dimensions before startup
+  Reject oversized BatchSize and receive layouts during configuration
+  validation, avoiding overflow in allocation and receive-offset arithmetic.
+- 2026-10-20: build: stop configuration after bootstrap failure
+  The configure helper now returns an autoreconf failure immediately instead
+  of continuing with a potentially stale generated configure script.
 - 2026-10-17: queue: do not lose disk-assisted transfer worker restarts
   When the in-memory part of a disk-assisted queue refilled while its
   single transfer worker was retiring at the low watermark, the restart
   request could be dropped. Producers then waited for the full enqueue
   timeout and discarded a message. The retiring worker now takes over such
   a request and resumes work instead.
+- 2026-10-15: queue: add experimental producer-local queue scope
+  queue.scope="local" places bounded producer-specific front queues ahead
+  of a shared FixedArray or LinkedList backend, including disk assistance.
+  New sizing controls and impstats describe the local topology. This opt-in
+  mode requires lock-free 64-bit atomics and monotonic condition variables;
+  global scope remains the default. Consult the local-queue documentation
+  for ordering, persistence, and support restrictions.
+- 2026-10-14: imtcp: defer framing regex checks until a line boundary
+  Avoid repeatedly scanning an incomplete first line when receiving
+  regex-framed TCP input in small fragments.
+- 2026-10-12: inputs: add an optional strict startup policy
+  global(inputStartupPolicy="require-all") makes configured input startup
+  failures fatal, including listener and worker failures. The default
+  best-effort policy retains existing behavior. This replaces the temporary
+  module-specific bind-failure options with one global policy.
+- 2026-10-10: RainerScript: bound replace and template substring results
+  Correct overlapping replace() sizing, preserve bounded shrinking
+  results, and reject results that exceed the supported string size.
+  Negative template substring endpoints that precede the start now produce
+  an empty substring instead of crashing.
+  Thanks to hanjinpeng for the negative position fix.
+- 2026-10-07: mmnormalize: preserve complete TurboVM normalization results
+  When supported by liblognorm, truncated TurboVM results fall back to the
+  standard parser and increment turbo.truncated in impstats. Turbo JSON
+  fields retain nested objects and null values; discarded JSON fields no
+  longer crash a worker. These paths depend on the corresponding liblognorm
+  feature support.
+  Thanks to Jérémie Jourdin for the contributions.
+- 2026-10-06: parser: reject empty compressed records and bound diagnostics
+  Reject and diagnose empty legacy zlib messages, bound classic PRI separator
+  scanning, and limit imptcp debug output to the bytes actually received.
+- 2026-10-06: TLS: support newer OpenSSL X.509 accessors
+  Adapt certificate handling for OpenSSL 4 while retaining compatibility
+  with OpenSSL 1.1 and owned certificate-store snapshots.
 - 2026-10-03: omkinesis: add Kinesis Data Streams output
   The new action sends signed PutRecord requests with configurable stream,
   region, credentials, payload template, and fixed or template-based
   partition keys. RainerScript and YAML configurations are supported.
+- 2026-10-03: mmaitag: bound Gemini response size and request duration
+  Add configurable response.maxBytes and request timeout, connect-timeout,
+  and low-speed budgets. Requests exceeding a budget use the existing
+  REGULAR fallback; provider response bodies stay out of failure diagnostics.
+- 2026-10-03: imrelp: reject unsupported framing sizes
+  Validate maxDataSize and the applicable global maxMessageSize against
+  librelp's nine-digit framing limit of 999999999 bytes.
+- 2026-10-02: docs: restore diagrams in offline HTML documentation
+  Load vendored Mermaid scripts correctly from relative static paths.
+  Thanks to Mattia Marchese (FLAK-ZOSO) for the contribution.
+  Fixes https://github.com/rsyslog/rsyslog/issues/7633
+- 2026-09-25: packaging: add an Enterprise Linux imhttp subpackage
+  Enable imhttp in the EL8, EL9, and EL10 RPM specifications, with civetweb
+  as a build dependency.
+  Thanks to Peter de Ridder for the contribution.
+  See https://github.com/rsyslog/rsyslog/issues/4467
+- 2026-09-20: imdtls: close sessions that fail peer verification
+  Reject failed certificate verification instead of retaining the client
+  session. DTLS listener error handling also distinguishes OpenSSL 4 hard
+  failures from retry conditions without relying on stale errno values.
+  Thanks to Andreas Hasenack for the OpenSSL compatibility fixes.
+  Fixes https://github.com/rsyslog/rsyslog/issues/7553
+- 2026-09-09: queue: reduce shared queue lock and wakeup overhead
+  Retire FixedArray batches in constant time, dispose completed messages
+  outside the queue mutex, and target wakeups at waiting workers. Preserve
+  final-batch persistence accounting and cancellation cleanup.
+- 2026-09-09: ompipe: accept legacy paths up to the parser's limit safely
+  Size the legacy pipe path buffer to the parser's maximum rather than
+  allowing paths of 512 bytes or more to overrun the old allocation.
+  Thanks to F3dor for the contribution.
+  Closes https://github.com/rsyslog/rsyslog/issues/7547
+- 2026-09-06: RainerScript: cache repeated selector variable reads
+  Repeated direct variable reads within a structural else-if selector use
+  a lazy first-read snapshot, reducing repeated property and JSON lookups.
+  Branch bodies and braced nested conditions retain live-value semantics.
+- 2026-09-02: ompgsql: widen the supplied schema's SysLogTag column
+  The starter PostgreSQL schema now accepts tags up to 128 characters,
+  accommodating common Docker journald identifiers. Existing databases
+  require a separate schema alteration to use the wider limit.
+  Closes https://github.com/rsyslog/rsyslog/issues/7559
+- 2026-09-01: queue: add optional mutex contention statistics
+  queue.mutexContentionStats enables impstats counters for contention and
+  observed mutex wait time, helping diagnose shared queue bottlenecks.
+- 2026-09-01: omelasticsearch: expose request duration statistics
+  impstats now reports request count, total duration, and interval minimum
+  and maximum duration for completed bulk and index request attempts.
+- 2026-08-30: omelasticsearch: correct bulk size limits and improve reuse
+  Include conditional metadata in maxbytes accounting and avoid empty bulk
+  requests for an oversized first record. Enable TCP keepalive for bulk
+  posts and avoid needless successful-response parsing where possible.
+- 2026-08-25: imfile: recover file watches after rapid log rotation
+  Drain moved or deleted files and reconcile invalidated inotify watches so
+  wildcard inputs continue following replacement files and retain tail data.
+- 2026-08-25: pmrfc3164: bound bracketed hostname parsing
+  Oversized bracketed hostnames no longer write a terminating byte beyond
+  the hostname buffer when permit.SquareBracketsInHostname is enabled.
+  Thanks to hanjinpeng for the contribution.
 - 2026-08-23: omsendertrack: recover safely from invalid state files
   Sender tracking now treats missing and empty state files as a normal first
   start and can preserve corrupt JSON before starting with empty statistics. A
   strict per-action setting remains available for deployments that must fail
   closed.
+- 2026-08-22: imtcp: limit aggregate zstd decoder windows by default
+  Omitted aggregate window limits now use a finite 64 MiB listener budget.
+  An explicit zero retains the unlimited setting; strict mode continues
+  to require an explicit positive limit.
+- 2026-08-19: packaging: ship segmented queue tools in RPM packages
+  Include the segmented queue maintenance utility in Fedora and Enterprise
+  Linux packages and complete module package manifests.
+- 2026-08-18: core: improve startup and shutdown robustness
+  Initialize action suspension reporting before workers start and keep
+  impcap's shutdown signal handler async-signal-safe.
 
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-18
