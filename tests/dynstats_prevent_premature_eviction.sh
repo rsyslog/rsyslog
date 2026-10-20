@@ -4,8 +4,8 @@
 # when unusedMetricLife (1 second) is shorter than the reporting interval (4).
 # Park the stats reader before injecting each group, drain that group, then
 # release exactly one complete BEGIN/END batch. This exercises survivor-table
-# reuse without relying on scheduling or sleeps. The exact sums below prove
-# that each group appeared in the intended cycle, not merely eventually.
+# reuse without relying on scheduling or sleeps. The exact sums below check
+# accumulated totals across the three controlled cycles.
 # added 2016-04-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -49,6 +49,16 @@ collect_dynstats_cycle() {
 }
 
 startup
+# This is a diagnostic TCP command-response oracle, not a daemon log check.
+# A missing block request must return an error instead of hanging the caller.
+stats_block_status=0
+stats_block_reply=$(echo "awaitStatsReportingBlocked" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || stats_block_status=$?
+# diagtalker returns 1 for an imdiag::error protocol response.
+[ "$stats_block_status" -eq 1 ] || error_exit 1 "Expected rejection of an unblocked reporting gate"
+case "$stats_block_reply" in
+    *"imdiag::error : stats reporting was not blocked"*) ;;
+    *) echo "Unexpected reporting-gate response: $stats_block_reply"; error_exit 1 ;;
+esac
 . "$srcdir/diag.sh" block-stats-flush
 # This waits for the actual parked callback, including any initial collection
 # that had already passed the gate when the block request was acknowledged.
