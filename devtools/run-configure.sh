@@ -23,5 +23,5 @@ if [ $? -eq 0 ]; then
 	printf "==========================================================\n\n"
 	export CONFIGURE_OPTS_OVERRIDE=--disable-libfaketime
 fi
-autoreconf -fvi
+autoreconf -fvi || exit $?
 ./configure $CONFIGURE_CACHE_OPTS $RSYSLOG_CONFIGURE_OPTIONS $RSYSLOG_CONFIGURE_OPTIONS_EXTRA $CONFIGURE_OPTS_OVERRIDE
