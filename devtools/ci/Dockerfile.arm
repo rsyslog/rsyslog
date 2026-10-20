@@ -1,8 +1,9 @@
 FROM ubuntu:24.04
+ARG LLVM_VERSION=18
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       build-essential clang libclang-rt-dev llvm \
+       build-essential clang-${LLVM_VERSION} libclang-rt-${LLVM_VERSION}-dev llvm-${LLVM_VERSION} \
        autoconf autoconf-archive automake libtool libtool-bin \
        pkg-config flex bison python3-docutils \
        libgnutls28-dev libestr-dev libfastjson-dev zlib1g-dev \
