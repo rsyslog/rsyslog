@@ -101,6 +101,9 @@ EXTRA_DIST += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP) override_queue_disposal.c
 TESTS_QUEUE_LEASE = queue-discard-only-lease.sh queue-lease-attribution.sh
 EXTRA_DIST += $(TESTS_QUEUE_LEASE)
 
+TESTS_QUEUE_DISCARD_SEVERITY_NAME = queue-discardseverity-name.sh
+EXTRA_DIST += $(TESTS_QUEUE_DISCARD_SEVERITY_NAME)
+
 TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG = queue-benchmark-throughput-config.sh
 EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG) ../benchmarks/queue-contention/trial-multi.sh \
 	../benchmarks/queue-contention/compare.py
@@ -3126,6 +3129,7 @@ TESTS += $(TESTS_LOCAL_QUEUE_STARTUP_FAILURE)
 endif
 if ENABLE_IMPSTATS
 if ENABLE_IMDIAG
+TESTS += $(TESTS_QUEUE_DISCARD_SEVERITY_NAME)
 TESTS += $(TESTS_LOCAL_QUEUE)
 TESTS += $(TESTS_LOCAL_QUEUE_FAILURES)
 if ENABLE_INET
