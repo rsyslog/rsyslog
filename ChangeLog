@@ -1,6 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-??
 
+- 2026-10-20: msg: bound rawmsg-after-pri and regex.match offsets
+  The rawmsg-after-pri property no longer looks past the end of raw
+  messages shorter than a full PRI, so such frames always yield their
+  complete text. Template regex.match selection now works correctly when an
+  earlier match ends beyond 32 KiB in large messages.
 - 2026-10-17: queue: do not lose disk-assisted transfer worker restarts
   When the in-memory part of a disk-assisted queue refilled while its
   single transfer worker was retiring at the low watermark, the restart

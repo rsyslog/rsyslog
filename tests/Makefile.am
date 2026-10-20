@@ -484,6 +484,7 @@ TESTS_DEFAULT = \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS) \
 	template-topos-neg.sh \
 	template-topos-neg-underflow.sh \
+	template-regex-match-large-offset.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -500,6 +501,7 @@ TESTS_DEFAULT = \
 	compresssp.sh \
 	compresssp-stringtpl.sh \
 	rawmsg-after-pri.sh \
+	rawmsg-after-pri-short.sh \
 	rfc5424parser.sh \
 	pmrfc3164-msgFirstSpace.sh \
 	pmrfc3164-AtSignsInHostname.sh \
