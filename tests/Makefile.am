@@ -14,6 +14,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_DISK_QUEUE_SERIALIZER = diskqueue-serializer-abi.sh
+EXTRA_DIST += $(TESTS_DISK_QUEUE_SERIALIZER)
+
 TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-hup.sh
 TESTS_LOCAL_OMFILE_ACTIVATION = local-queue-omfile-activation.sh
 TESTS_LOCAL_OMFILE_YAML = yaml-local-queue-omfile-activation.sh
@@ -3003,6 +3006,13 @@ runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
+
+if ENABLE_TESTBENCH
+if ENABLE_IMDIAG
+# Keep callback ABI coverage in reduced macOS builds without default tests.
+TESTS += $(TESTS_DISK_QUEUE_SERIALIZER)
+endif
+endif
 
 if ENABLE_TESTBENCH
 if ENABLE_IMTCP_TESTS
