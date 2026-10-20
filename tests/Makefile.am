@@ -1934,7 +1934,6 @@ TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-json-nested.sh \
 	mmnormalize-turbo-hup-tsan.sh \
 	mmnormalize-turbo-msgdup-share.sh \
-	mmnormalize-turbo-msgdup-concurrent-tsan.sh \
 	mmnormalize-turbo-shared-getter-tsan.sh \
 	mmnormalize-turbo-shared-set-tsan.sh \
 	mmnormalize-turbo-exists.sh \
@@ -1946,6 +1945,10 @@ TESTS_MMNORMALIZE_TURBO = \
 
 TESTS_MMNORMALIZE_TURBO_IMPSTATS = \
 	mmnormalize-turbo-truncated-stat.sh
+
+# needs omruleset in addition to the turbo prerequisites
+TESTS_MMNORMALIZE_TURBO_OMRULESET = \
+	mmnormalize-turbo-msgdup-concurrent-tsan.sh
 
 TESTS_MMNORMALIZE_TURBO_YAML = \
 	yaml-mmnormalize-turbo.sh
@@ -2769,6 +2772,7 @@ EXTRA_DIST += $(TESTS_MMNORMALIZE_DEBUG)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_IMPSTATS)
+EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_OMRULESET)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_VALGRIND)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_IMPTCP)
@@ -3998,6 +4002,9 @@ if LOGNORM_TURBO_TRUNCATION_SUPPORTED
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_MMNORMALIZE_TURBO_IMPSTATS)
 endif
+endif
+if ENABLE_OMRULESET
+TESTS += $(TESTS_MMNORMALIZE_TURBO_OMRULESET)
 endif
 if HAVE_LIBYAML
 TESTS += $(TESTS_MMNORMALIZE_TURBO_YAML)

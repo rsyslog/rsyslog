@@ -133,8 +133,10 @@ struct msg {
         unsigned *turbo_result_refs;
         /* Set under pMsg->mut once turbo fields have been merged into
          * pMsg->json. Materialize is idempotent and does not clear the
-         * turbo callbacks, so the snapshot stays readable via get_str
-         * until something else writes pMsg->json. */
+         * turbo callbacks. Once materialized, pMsg->json serves reads; a
+         * later-attached snapshot is merged into the tree on the next
+         * access (msgMaterializeTurboJSON). get_str is only consulted
+         * while pMsg->json is NULL. */
         sbool turbo_json_ready;
     #endif
         /* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
@@ -293,6 +295,8 @@ rsRetVal MsgGetSeverity(smsg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(smsg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
 rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
+/* returns a newly allocated string the caller must free, or NULL on
+ * out of memory (including a failed turbo $! materialization) */
 const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
 /**

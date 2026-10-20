@@ -630,6 +630,9 @@ static rsRetVal callExtProg(instanceData *__restrict__ const pData,
         bFreeInputstr = 0;
     } else {
         inputstr = msgGetJSONMESG(pMsg);
+        if (inputstr == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
         lenWrite = strlen((const char *)inputstr);
     }
 

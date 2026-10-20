@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /*
+ * Copyright 2026 Jérémie Jourdin.
+ *
  * Turbo snapshot lifetime and sharing checks on smsg_t.
  *
  * Built only when LOGNORM_TURBO_SUPPORTED. liblognorm itself is not needed:

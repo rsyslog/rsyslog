@@ -2379,7 +2379,13 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
      * mutate the tree at any time. */
     MsgLock(pMsg);
 #ifdef HAVE_LOGNORM_TURBO
-    msgMaterializeTurboJSON(pMsg);
+    /* do not hand out a JSONMESG that silently lacks the normalized $!
+     * subtree; NULL tells the caller the result is unusable (OOM) */
+    if (!msgMaterializeTurboJSON(pMsg)) {
+        MsgUnlock(pMsg);
+        json_object_put(json);
+        return NULL;
+    }
 #endif
     json_object_object_add(json, "$!", json_object_get(pMsg->json));
     pRes = (uchar *)strdup(jsonToString(json));
@@ -3098,8 +3104,8 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC) {
  * Called when template/property access needs pMsg->json but mmnormalize
  * stored a turbo snapshot instead. Idempotent: turbo_json_ready is set
  * after a successful projection so we never double-merge. The turbo
- * callbacks stay live; get_str keeps reading the snapshot until some
- * other writer sets pMsg->json (later-writer-wins, see getJSONPropVal).
+ * callbacks stay live, but once pMsg->json is set it serves all reads;
+ * get_str is only consulted while pMsg->json is NULL.
  * When pMsg->json is already non-NULL (imfile metadata, enrichment, ...),
  * snapshot fields are merged in using msgAddJSON() semantics: later
  * normalization fields replace colliding top-level keys.
@@ -4046,6 +4052,9 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             break;
         case PROP_JSONMESG:
             pRes = (uchar *)msgGetJSONMESG(pMsg);
+            if (pRes == NULL) {
+                RET_OUT_OF_MEMORY;
+            }
             *pbMustBeFreed = 1;
             break;
 #ifdef USE_LIBUUID
@@ -5532,7 +5541,8 @@ struct json_object *jsonDeepCopy(struct json_object *src) {
             dst = json_object_new_int64(json_object_get_int64(src));
             break;
         case json_type_string:
-            dst = json_object_new_string(jsonToString(src));
+            /* keep the length: strings may carry embedded NUL bytes */
+            dst = json_object_new_string_len(json_object_get_string(src), json_object_get_string_len(src));
             break;
         case json_type_object:
             dst = json_object_new_object();

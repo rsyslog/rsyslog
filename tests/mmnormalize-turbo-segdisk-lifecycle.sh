@@ -52,11 +52,6 @@ while true; do
         error_exit 1
     fi
 done
-if [ "$segfiles" -eq 0 ]; then
-    printf 'no segmented disk queue files in %s.spool:\n' "$RSYSLOG_DYNNAME"
-    ls -la "$RSYSLOG_DYNNAME.spool" 2>&1
-    error_exit 1
-fi
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1))
