@@ -63,6 +63,8 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "atomic.h"
+#include "reload-candidate.h"
+#include "reload-validate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -71,9 +73,12 @@ extern int yylineno;
 
 PRAGMA_IGNORE_Wswitch_enum
 
-    DEFobjCurrIf(obj) DEFobjCurrIf(regexp) DEFobjCurrIf(datetime)
+    /* Every expression subtype is inspected through the common node tag. */
+    RS_STATIC_ASSERT(offsetof(struct cnffunc, nodetype) == 0, "function AST tag must remain first");
 
-        struct cnfexpr *cnfexprOptimize(struct cnfexpr *expr);
+DEFobjCurrIf(obj) DEFobjCurrIf(regexp) DEFobjCurrIf(datetime)
+
+    struct cnfexpr *cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
 struct cnffunc *cnffuncNew_prifilt(int fac);
@@ -347,6 +352,9 @@ const char *cnfobjType2str(const enum cnfobjType ot) {
         case CNFOBJ_PERCTILE_STATS:
             return "perctile_stats";
             break;
+        case CNFOBJ_RATELIMIT:
+            return "ratelimit";
+            break;
         default:
             return "error: invalid cnfobjType";
     }
@@ -522,7 +530,7 @@ static void prifiltCombine(struct funcData_prifilt *__restrict__ const prifilt,
 }
 
 
-void readConfFile(FILE *const fp, es_str_t **str) {
+static void readConfFileStartup(FILE *const fp, es_str_t **str) {
     char ln[10240];
     char buf[512];
     int lenBuf;
@@ -568,6 +576,66 @@ void readConfFile(FILE *const fp, es_str_t **str) {
     /* indicate end of buffer to flex */
     es_addChar(str, '\0');
     es_addChar(str, '\0');
+}
+
+rsRetVal readConfFile(FILE *const fp, es_str_t **str) {
+    if (!rsReloadCandidateCaptureActive()) {
+        readConfFileStartup(fp, str);
+        return RS_RET_OK;
+    }
+    char ln[10240];
+    char buf[512];
+    int lenBuf;
+    int bWriteLineno = 0;
+    int len, i;
+    int start; /* start index of to be submitted text */
+    int bContLine = 0;
+    int lineno = 0;
+
+    DEFiRet;
+
+    *str = es_newStr(4096);
+    if (*str == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+    while (fgets(ln, sizeof(ln), fp) != NULL) {
+        ++lineno;
+        if (bWriteLineno) {
+            bWriteLineno = 0;
+            lenBuf = snprintf(buf, sizeof(buf), "PreprocFileLineNumber(%d)\n", lineno);
+            if (es_addBuf(str, buf, lenBuf) != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        len = strlen(ln);
+        /* if we are continuation line, we need to drop leading WS */
+        if (bContLine) {
+            for (start = 0; start < len && isspace(ln[start]); ++start) /* JUST SCAN */
+                ;
+        } else {
+            start = 0;
+        }
+        for (i = len - 1; i >= start && isspace(ln[i]); --i) /* JUST SCAN */
+            ;
+        if (i >= 0) {
+            if (ln[i] == '\\') {
+                --i;
+                bContLine = 1;
+            } else {
+                if (bContLine) /* write line number if we had cont line */
+                    bWriteLineno = 1;
+                bContLine = 0;
+            }
+            /* add relevant data to buffer */
+            if (es_addBuf(str, ln + start, i + 1 - start) != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        if (!bContLine && es_addChar(str, '\n') != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    if (ferror(fp)) ABORT_FINALIZE(RS_RET_IO_ERROR);
+    /* indicate end of buffer to flex */
+    if (es_addChar(str, '\0') != 0 || es_addChar(str, '\0') != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+finalize_it:
+    if (iRet != RS_RET_OK) es_deleteStr(*str);
+    if (iRet != RS_RET_OK) *str = NULL;
+    RETiRet;
 }
 
 /* comparison function for qsort() and bsearch() string array compare */
@@ -652,6 +720,15 @@ struct nvlst *ATTR_NONNULL(1) nvlstNewStrBackticks(es_str_t *const value) {
     es_str_t *val = NULL;
     const char *realval;
 
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("backtick expansion is not reloadable");
+        val = es_newStr(1);
+        es_deleteStr(value);
+        goto done;
+    }
+
+    rsReloadValidateObserveOther();
+    rsReloadCandidateSourceNoteError();
     char *const param = es_str2cstr(value, NULL);
     if (param == NULL) goto done;
 
@@ -766,6 +843,10 @@ int nvlstChkDisabled(struct nvlst *lst) {
 
     if ((valnode = nvlstFindNameCStr(lst, "config.enabled")) != NULL) {
         valnode->bUsed = 1;
+        if (rsReloadCandidateCaptureActive() && (valnode->val.datatype != 'S' || valnode->val.d.estr == NULL)) {
+            parser_errmsg("config.enabled must be a string in private candidate syntax");
+            return 1;
+        }
         if (es_strbufcmp(valnode->val.d.estr, (unsigned char *)"on", 2)) {
             return 1;
         }
@@ -1404,6 +1485,13 @@ void cnfobjDestruct(struct cnfobj *o) {
         objlstDestruct(o->subobjs);
         free(o);
     }
+}
+
+void cnfobjDestructAll(struct cnfobj *const o) {
+    if (o == NULL) return;
+    cnfstmtDestructLst(o->script);
+    o->script = NULL;
+    cnfobjDestruct(o);
 }
 
 void cnfobjPrint(struct cnfobj *o) {
@@ -4750,12 +4838,15 @@ static void cnffuncDestruct(struct cnffunc *func) {
         cnfexprDestruct(func->expr[i]);
     }
 
-    /* some functions require special destruction */
-    char *cstr = es_str2cstr(func->fname, NULL);
-    struct scriptFunct *foundFunc = searchModList(cstr);
-    free(cstr);
-    if (foundFunc && foundFunc->destruct != NULL) {
-        foundFunc->destruct(func);
+    /* Capture-only functions were never initialized and must not call module
+     * destructors while a rejected candidate is released. */
+    if (!func->reloadSyntaxOnly) {
+        char *cstr = es_str2cstr(func->fname, NULL);
+        struct scriptFunct *foundFunc = searchModList(cstr);
+        free(cstr);
+        if (foundFunc && foundFunc->destruct != NULL) {
+            foundFunc->destruct(func);
+        }
     }
 
     if (func->destructable_funcdata) {
@@ -5262,8 +5353,6 @@ static void cnfstmtDisable(struct cnfstmt *cnfstmt) {
     cnfstmt->nodetype = S_NOP;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr);
-
 /* delete a single stmt */
 static void cnfstmtDestruct(struct cnfstmt *stmt) {
     switch (stmt->nodetype) {
@@ -5278,6 +5367,9 @@ static void cnfstmtDestruct(struct cnfstmt *stmt) {
             break;
         case S_ACT:
             actionDestruct(stmt->d.act);
+            break;
+        case S_RELOAD_ACT:
+            nvlstDestruct(stmt->d.reload_action);
             break;
         case S_IF:
             cnfexprDestruct(stmt->d.s_if.expr);
@@ -5303,10 +5395,16 @@ static void cnfstmtDestruct(struct cnfstmt *stmt) {
             cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
             cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
             break;
+        case S_RELOAD_PRIFILT:
+            cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
+            break;
         case S_PROPFILT:
             msgPropDescrDestruct(&stmt->d.s_propfilt.prop);
             if (stmt->d.s_propfilt.regex_cache != NULL) rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
             if (stmt->d.s_propfilt.pCSCompValue != NULL) cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+            cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
+            break;
+        case S_RELOAD_PROPFILT:
             cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
             break;
         case S_RELOAD_LOOKUP_TABLE:
@@ -5344,10 +5442,26 @@ struct cnfitr *cnfNewIterator(char *var, struct cnfexpr *collection) {
     return itr;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr) {
+void cnfIteratorDestruct(struct cnfitr *itr) {
+    if (itr == NULL) return;
     free(itr->var);
     if (itr->collection != NULL) cnfexprDestruct(itr->collection);
     free(itr);
+}
+
+void cnfarrayDestruct(struct cnfarray *const ar) {
+    if (ar == NULL) return;
+    cnfarrayContentDestruct(ar);
+    free(ar);
+}
+
+void cnffparamlstDestruct(struct cnffparamlst *params) {
+    while (params != NULL) {
+        struct cnffparamlst *const next = params->next;
+        cnfexprDestruct(params->expr);
+        free(params);
+        params = next;
+    }
 }
 
 struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset) {
@@ -5362,6 +5476,7 @@ struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset) 
         } else {
             parser_errmsg("invalid variable '%s' in set statement.", var);
             free(var);
+            if (rsReloadCandidateCaptureActive()) cnfexprDestruct(expr);
             cnfstmtDisable(cnfstmt);
         }
     }
@@ -5481,6 +5596,10 @@ struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {
         cnfstmt->printable = (uchar *)prifilt;
         cnfstmt->d.s_prifilt.t_then = t_then;
         cnfstmt->d.s_prifilt.t_else = NULL;
+        if (rsReloadCandidateCaptureActive()) {
+            cnfstmt->nodetype = S_RELOAD_PRIFILT;
+            return cnfstmt;
+        }
         if (glblPermitSyslogdConfigFilter(loadConf, prifilt)) {
             DecodePRIFilter((uchar *)prifilt, cnfstmt->d.s_prifilt.pmask);
         } else {
@@ -5501,6 +5620,10 @@ struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
         cnfstmt->d.s_propfilt.t_then = t_then;
         cnfstmt->d.s_propfilt.regex_cache = NULL;
         cnfstmt->d.s_propfilt.pCSCompValue = NULL;
+        if (rsReloadCandidateCaptureActive()) {
+            cnfstmt->nodetype = S_RELOAD_PROPFILT;
+            return cnfstmt;
+        }
         if (!glblPermitPropertyConfigFilter(loadConf, propfilt)) {
             free(cnfstmt->printable);
             cnfstmt->printable = NULL;
@@ -5533,6 +5656,12 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         cnfstmtDisable(cnfstmt);
         goto done;
     }
+    if (rsReloadCandidateCaptureActive()) {
+        cnfstmt->nodetype = S_RELOAD_ACT;
+        cnfstmt->d.reload_action = lst;
+        lst = NULL;
+        goto done;
+    }
     qqueue_note_local_config_intent(lst);
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
@@ -5558,7 +5687,15 @@ done:
 
 struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
     struct cnfstmt *cnfstmt;
+    char *const ownedActline = actline;
     rsRetVal localRet;
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("legacy actions are not reloadable");
+        free(actline);
+        return cnfstmtNew(S_NOP);
+    }
+    rsReloadValidateObserveOther();
+    rsReloadCandidateSourceNoteError();
     if ((cnfstmt = cnfstmtNew(S_ACT)) == NULL) goto done;
     cnfstmt->printable = (uchar *)strdup((char *)actline);
     localRet = cflineDoAction(loadConf, (uchar **)&actline, &cnfstmt->d.act);
@@ -5571,6 +5708,7 @@ struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
         }
     }
 done:
+    free(ownedActline);
     return cnfstmt;
 }
 
@@ -6392,6 +6530,7 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst) {
     unsigned short i;
     unsigned short nParams;
     char *cstr;
+    const int reloadSyntaxOnly = rsReloadCandidateCaptureActive();
 
     /* we first need to find out how many params we have */
     nParams = 0;
@@ -6400,13 +6539,16 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst) {
         func->nodetype = 'F';
         func->fname = fname;
         func->nParams = nParams;
+        func->reloadSyntaxOnly = reloadSyntaxOnly;
         func->funcdata = NULL;
         func->destructable_funcdata = 1;
-        cstr = es_str2cstr(fname, NULL);
-        func->fPtr = funcName2Ptr(cstr, nParams);
+        /* Private functions have no binding or module initialization. Avoid
+         * even allocating a binding name in the capture-only path. */
+        cstr = reloadSyntaxOnly ? NULL : es_str2cstr(fname, NULL);
+        func->fPtr = reloadSyntaxOnly ? NULL : funcName2Ptr(cstr, nParams);
 
         /* parse error if we have an unknown function */
-        if (func->fPtr == NULL) {
+        if (!reloadSyntaxOnly && func->fPtr == NULL) {
             parser_errmsg("Invalid function %s", cstr);
         }
 
@@ -6419,7 +6561,7 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst) {
             free(toDel);
         }
         /* some functions require special initialization */
-        struct scriptFunct *foundFunc = searchModList(cstr);
+        struct scriptFunct *foundFunc = reloadSyntaxOnly ? NULL : searchModList(cstr);
         if (foundFunc && foundFunc->initFunc != NULL) {
             foundFunc->initFunc(func);
         }
@@ -6446,6 +6588,7 @@ struct cnffunc *cnffuncNew_prifilt(int fac) {
         func->nodetype = 'F';
         func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt") - 1);
         func->nParams = 0;
+        func->reloadSyntaxOnly = 0;
         func->fPtr = doFunct_Prifilt;
         func->destructable_funcdata = 1;
         ((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
@@ -6468,11 +6611,33 @@ struct cnffuncexists *ATTR_NONNULL() cnffuncexistsNew(const char *const varname)
     return f_exists;
 }
 
+static rsRetVal fatalParseError = RS_RET_OK;
+
+void cnfNoteFatalParseError(const rsRetVal error) {
+    if (fatalParseError != RS_RET_OUT_OF_MEMORY || error == RS_RET_OUT_OF_MEMORY) fatalParseError = error;
+    rsReloadCandidateNoteError(error);
+}
+
+static void setFatalIncludeError(const int includeRet) {
+    const rsRetVal error = includeRet == 3 ? RS_RET_OUT_OF_MEMORY : RS_RET_IO_ERROR;
+    if (fatalParseError != RS_RET_OUT_OF_MEMORY || error == RS_RET_OUT_OF_MEMORY) fatalParseError = error;
+    rsReloadCandidateNoteError(error);
+}
+
+static void mergeIncludeResult(int *const current, const int next) {
+    if (next == 0) return;
+    if (*current == 3 || next == 3)
+        *current = 3;
+    else if (*current == 4 || next == 4)
+        *current = 4;
+    else if (*current == 0)
+        *current = next;
+}
 
 /* returns 0 if everything is OK and config parsing shall continue,
  * and 1 if things are so wrong that config parsing shall be aborted.
  */
-int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
+static int ATTR_NONNULL() cnfDoIncludeStartup(const char *const name, const int optional) {
     char *cfgFile;
     const char *finalName;
     int i;
@@ -6596,8 +6761,192 @@ done:
 }
 
 
-/* Process include() objects */
-void includeProcessCnf(struct nvlst *const lst) {
+static int ATTR_NONNULL() cnfDoIncludePrivate(const char *const name, const int optional) {
+    char *cfgFile;
+    const char *finalName;
+    int i;
+    int result;
+    glob_t cfgFiles = {0};
+    int ret = 0;
+    struct stat fileInfo;
+    struct stat linkInfo;
+    char errStr[1024];
+    char nameBuf[MAXFNAME + 1];
+    char cwdBuf[MAXFNAME + 1];
+
+    DBGPRINTF("cnfDoInclude: file: '%s', optional: %d\n", name, optional);
+    finalName = name;
+    if (stat(name, &fileInfo) == 0) {
+        /* stat usually fails if we have a wildcard - so this does NOT indicate error! */
+        if (S_ISDIR(fileInfo.st_mode)) {
+            /* if we have a directory, we need to add "*" to get its files */
+            snprintf(nameBuf, sizeof(nameBuf), "%s*", name);
+            finalName = nameBuf;
+        }
+    }
+
+/* Use GLOB_MARK to append a trailing slash for directories. */
+/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
+#ifdef HAVE_GLOB_NOMAGIC
+    result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC | GLOB_ERR, NULL, &cfgFiles);
+    if (result == GLOB_NOMATCH) {
+#else
+    result = glob(finalName, GLOB_MARK | GLOB_ERR, NULL, &cfgFiles);
+    if (result == GLOB_NOMATCH && containsGlobWildcard((char *)finalName)) {
+#endif /* HAVE_GLOB_NOMAGIC */
+        goto done;
+    }
+
+    if (result == GLOB_NOSPACE || result == GLOB_ABORTED) {
+        rs_strerror_r(errno, errStr, sizeof(errStr));
+        if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
+        parser_errmsg(
+            "error accessing config file or directory '%s' "
+            "[cwd:%s]: %s",
+            finalName, cwdBuf, errStr);
+        ret = result == GLOB_NOSPACE ? 3 : 4;
+        setFatalIncludeError(ret);
+        goto done;
+    }
+
+    /* note: bison "stacks" the files, so we need to submit them
+     * in reverse order to the *stack* in order to get the proper
+     * parsing order. Also see
+     * http://bugzilla.adiscon.com/show_bug.cgi?id=411
+     */
+    for (i = cfgFiles.gl_pathc - 1; i >= 0; i--) {
+        cfgFile = cfgFiles.gl_pathv[i];
+        if (lstat(cfgFile, &linkInfo) != 0) {
+            const int includeErrno = errno;
+            if (optional == 0 || (includeErrno != ENOENT && includeErrno != ENOTDIR)) {
+                rs_strerror_r(includeErrno, errStr, sizeof(errStr));
+                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
+                parser_errmsg(
+                    "error accessing config file or directory '%s' "
+                    "[cwd: %s]: %s",
+                    cfgFile, cwdBuf, errStr);
+                ret = includeErrno == ENOENT || includeErrno == ENOTDIR ? 1 : 4;
+                if (ret == 4) setFatalIncludeError(ret);
+                goto done;
+            }
+            continue;
+        }
+
+        if (S_ISLNK(linkInfo.st_mode)) {
+            if (stat(cfgFile, &fileInfo) != 0) {
+                const int includeErrno = errno;
+                if (optional == 0 || (includeErrno != ENOENT && includeErrno != ENOTDIR)) {
+                    rs_strerror_r(includeErrno, errStr, sizeof(errStr));
+                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
+                    parser_errmsg(
+                        "error accessing config file or directory '%s' "
+                        "[cwd: %s]: %s",
+                        cfgFile, cwdBuf, errStr);
+                    ret = includeErrno == ENOENT || includeErrno == ENOTDIR ? 1 : 4;
+                    if (ret == 4) setFatalIncludeError(ret);
+                    goto done;
+                }
+                continue;
+            }
+        } else {
+            fileInfo = linkInfo;
+        }
+
+        if (S_ISREG(fileInfo.st_mode)) { /* config file */
+            DBGPRINTF("requested to include config file '%s'\n", cfgFile);
+            /* Route .yaml / .yml files to the YAML loader */
+            const char *ext = strrchr(cfgFile, '.');
+            int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+#ifdef HAVE_LIBYAML
+            if (is_yaml) {
+                const rsRetVal yamlRet = yamlconf_load(cfgFile);
+                if (yamlRet != RS_RET_OK) {
+                    rsReloadCandidateNoteError(yamlRet);
+                    const int includeRet =
+                        yamlRet == RS_RET_OUT_OF_MEMORY
+                            ? 3
+                            : (yamlRet == RS_RET_IO_ERROR || yamlRet == RS_RET_FILE_OPEN_ERROR ? 4 : 1);
+                    if (includeRet == 3 || includeRet == 4) setFatalIncludeError(includeRet);
+                    mergeIncludeResult(&ret, includeRet);
+                }
+            } else {
+                const int lexRet = cnfSetLexFile(cfgFile);
+                if (lexRet != 0) {
+                    int includeRet = lexRet;
+                    if (lexRet == 2) {
+                        const rsRetVal openRet =
+                            errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+                        rsReloadCandidateNoteError(openRet);
+                        if (openRet == RS_RET_FILE_OPEN_ERROR) includeRet = 4;
+                    }
+                    if (includeRet == 3 || includeRet == 4) setFatalIncludeError(includeRet);
+                    mergeIncludeResult(&ret, includeRet);
+                }
+            }
+#else
+            if (is_yaml) {
+                parser_errmsg("YAML include file '%s' requested but rsyslog was built without libyaml support",
+                              cfgFile);
+                ret = 1; /* treat as hard failure — config is incomplete */
+            } else {
+                const int lexRet = cnfSetLexFile(cfgFile);
+                if (lexRet != 0) {
+                    int includeRet = lexRet;
+                    if (lexRet == 2) {
+                        const rsRetVal openRet =
+                            errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+                        rsReloadCandidateNoteError(openRet);
+                        if (openRet == RS_RET_FILE_OPEN_ERROR) includeRet = 4;
+                    }
+                    if (includeRet == 3 || includeRet == 4) setFatalIncludeError(includeRet);
+                    mergeIncludeResult(&ret, includeRet);
+                }
+            }
+#endif
+        } else if (S_ISDIR(fileInfo.st_mode)) { /* config directory */
+            DBGPRINTF("requested to include directory '%s'\n", cfgFile);
+            const int includeRet = cnfDoInclude(cfgFile, optional);
+            mergeIncludeResult(&ret, includeRet);
+        } else {
+            DBGPRINTF("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
+        }
+    }
+
+done:
+    globfree(&cfgFiles);
+    return ret;
+}
+
+
+int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
+    if (!rsReloadCandidateCaptureActive()) {
+        rsReloadValidateObserveOther();
+        return cnfDoIncludeStartup(name, optional);
+    }
+    char *path = rsReloadValidateResolvePath(name);
+    if (path == NULL) {
+        rsReloadCandidateNoteError(RS_RET_OUT_OF_MEMORY);
+        return 3;
+    }
+    const int ret = cnfDoIncludePrivate(path, optional);
+    free(path);
+    return ret;
+}
+
+
+void cnfClearFatalParseError(void) {
+    fatalParseError = RS_RET_OK;
+}
+
+rsRetVal cnfTakeFatalParseError(void) {
+    const rsRetVal ret = fatalParseError;
+    fatalParseError = RS_RET_OK;
+    return ret;
+}
+
+/* Process include() objects. A missing abort-if-missing include is returned to
+ * yyparse() and the load caller; parser code must never terminate the process. */
+static void includeProcessCnfStartup(struct nvlst *const lst) {
     struct cnfparamvals *pvals = NULL;
     const char *inc_file = NULL;
     const char *text = NULL;
@@ -6687,6 +7036,135 @@ done:
     nvlstDestruct(lst);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &incpblk);
     return;
+}
+
+int includeProcessCnf(struct nvlst *const lst) {
+    if (!rsReloadCandidateCaptureActive()) {
+        rsReloadValidateObserveOther();
+        includeProcessCnfStartup(lst);
+        return 0;
+    }
+    struct cnfparamvals *pvals = NULL;
+    const char *inc_file = NULL;
+    const char *text = NULL;
+    int optional = 0;
+    int abort_if_missing = 0;
+    int i;
+    rsRetVal ret = RS_RET_OK;
+
+    if (lst == NULL) {
+        parser_errmsg(
+            "include() must have either 'file' or 'text' "
+            "parameter - ignored");
+        goto done;
+    }
+
+    if (nvlstChkDisabled(lst)) {
+        DBGPRINTF("include statement disabled\n");
+        goto done;
+    }
+
+    pvals = nvlstGetParams(lst, &incpblk, NULL);
+    if (pvals == NULL) {
+        goto done;
+    }
+    DBGPRINTF("include param blk after includeProcessCnf:\n");
+    cnfparamsPrint(&incpblk, pvals);
+    for (i = 0; i < incpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) {
+            continue;
+        }
+
+        if (!strcmp(incpblk.descr[i].name, "file")) {
+            inc_file = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (inc_file == NULL) {
+                setFatalIncludeError(3);
+                ret = RS_RET_OUT_OF_MEMORY;
+                goto done;
+            }
+        } else if (!strcmp(incpblk.descr[i].name, "text")) {
+            text = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (text == NULL) {
+                setFatalIncludeError(3);
+                ret = RS_RET_OUT_OF_MEMORY;
+                goto done;
+            }
+        } else if (!strcmp(incpblk.descr[i].name, "mode")) {
+            char *const md = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (md == NULL) {
+                setFatalIncludeError(3);
+                ret = RS_RET_OUT_OF_MEMORY;
+                goto done;
+            }
+            if (!strcmp(md, "abort-if-missing")) {
+                optional = 0;
+                abort_if_missing = 1;
+            } else if (!strcmp(md, "required")) {
+                optional = 0;
+            } else if (!strcmp(md, "optional")) {
+                optional = 1;
+            } else {
+                parser_errmsg("invalid 'mode' parameter: '%s' - ignored", md);
+            }
+            free((void *)md);
+        } else {
+            LogError(0, RS_RET_INTERNAL_ERROR,
+                     "rainerscript/include: program error, non-handled inclpblk "
+                     "param '%s' in includeProcessCnf()",
+                     incpblk.descr[i].name);
+        }
+    }
+
+    if (text != NULL && inc_file != NULL) {
+        parser_errmsg(
+            "include() must have either 'file' or 'text' "
+            "parameter, but both are set - ignored");
+        goto done;
+    }
+
+    if (inc_file != NULL) {
+        const int includeRet = cnfDoInclude(inc_file, optional);
+        if ((includeRet == 3 || includeRet == 4) || (includeRet != 0 && abort_if_missing)) {
+            fatalParseError = includeRet == 3 ? RS_RET_OUT_OF_MEMORY
+                                              : (includeRet == 4 ? RS_RET_IO_ERROR : RS_RET_CONF_FILE_NOT_FOUND);
+            if (includeRet == 3)
+                parser_errmsg("could not allocate state while including file '%s'", inc_file);
+            else if (includeRet == 4)
+                parser_errmsg("I/O error while including file '%s'", inc_file);
+            else
+                parser_errmsg("include file '%s' is missing and mode is abort-if-missing", inc_file);
+            rsReloadCandidateNoteError(fatalParseError);
+            ret = fatalParseError;
+            goto done;
+        }
+    } else if (text != NULL) {
+        es_str_t *estr = es_newStrFromCStr((char *)text, strlen(text));
+        /* lex needs 2 \0 bytes as terminator indication (wtf ;-)) */
+        if (estr == NULL || es_addChar(&estr, '\0') != 0 || es_addChar(&estr, '\0') != 0) {
+            es_deleteStr(estr);
+            parser_errmsg("could not allocate parser buffer for include text");
+            fatalParseError = RS_RET_OUT_OF_MEMORY;
+            rsReloadCandidateNoteError(fatalParseError);
+            ret = RS_RET_OUT_OF_MEMORY;
+        } else if (cnfAddConfigBuffer(estr, "text") != 0) {
+            parser_errmsg("could not allocate scanner state for include text");
+            fatalParseError = RS_RET_OUT_OF_MEMORY;
+            rsReloadCandidateNoteError(fatalParseError);
+            ret = fatalParseError;
+        }
+    } else {
+        parser_errmsg(
+            "include must have either 'file' or 'text' "
+            "parameter - ignored");
+        goto done;
+    }
+
+done:
+    free((void *)text);
+    free((void *)inc_file);
+    nvlstDestruct(lst);
+    if (pvals != NULL) cnfparamvalsDestruct(pvals, &incpblk);
+    return ret;
 }
 
 

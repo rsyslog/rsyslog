@@ -74,6 +74,8 @@
 #include "timezones.h"
 #include "ratelimit.h"
 #include "translate.h"
+#include "reload-candidate.h"
+#include "reload-validate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -751,6 +753,8 @@ void parser_errmsg(const char *fmt, ...) {
     va_list ap;
     char errBuf[1024];
 
+    rsReloadCandidateNoteParseError();
+    rsReloadCandidateSourceNoteError();
     va_start(ap, fmt);
     if (vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf)) errBuf[sizeof(errBuf) - 1] = '\0';
     if (cnfcurrfn == NULL) {
@@ -764,7 +768,14 @@ void parser_errmsg(const char *fmt, ...) {
 
 int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int yyerror(const char *s) {
-    parser_errmsg("%s on token '%s'", s, yytext);
+    /* At final EOF flex may already have released the backing buffer. The
+     * candidate path therefore must not dereference yytext while reporting a
+     * rejected parse. */
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("%s", s);
+    } else {
+        parser_errmsg("%s on token '%s'", s, yytext);
+    }
     return 0;
 }
 void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
@@ -780,8 +791,22 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
      */
     if (nvlstChkDisabled(o->nvlst)) {
         dbgprintf("object disabled by configuration\n");
+        if (rsReloadCandidateCaptureActive()) cnfobjDestructAll(o);
         return;
     }
+    if (rsReloadCandidateCaptureActive()) {
+        rsReloadValidateCandidateObject(o);
+        const rsRetVal captureRet = rsReloadCandidateTakeObject(o);
+        if (captureRet != RS_RET_OK) {
+            rsReloadCandidateNoteError(captureRet);
+            cnfobjDestructAll(o);
+        }
+        return;
+    }
+
+
+    rsReloadValidateObserveObject(o);
+    rsReloadCandidateSourceCaptureObject(o);
 
     if (rsconfTranslateEnabled()) {
         rsconfTranslateCaptureObj(o, cnfcurrfn, yylineno);
@@ -845,6 +870,17 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
 }
 
 void cnfDoScript(struct cnfstmt *script) {
+    if (rsReloadCandidateCaptureActive()) {
+        const rsRetVal captureRet = rsReloadCandidateTakeDefaultScript(script);
+        if (captureRet != RS_RET_OK) {
+            rsReloadCandidateNoteError(captureRet);
+            rsReloadCandidateNoteParseError();
+            cnfstmtDestructLst(script);
+        }
+        return;
+    }
+    if (script != NULL) rsReloadValidateObserveOther();
+    rsReloadCandidateSourceCaptureDefaultScript(script);
     if (rsconfTranslateEnabled()) {
         rsconfTranslateCaptureScript(script, cnfcurrfn, yylineno);
     }
@@ -853,6 +889,13 @@ void cnfDoScript(struct cnfstmt *script) {
 }
 
 void cnfDoCfsysline(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("legacy configuration directives are not reloadable");
+        free(ln);
+        return;
+    }
+    rsReloadValidateObserveOther();
+    rsReloadCandidateSourceNoteError();
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno, "legacy $-directive '%s' is not supported by the translator",
                                       ln);
@@ -868,6 +911,13 @@ void cnfDoCfsysline(char *ln) {
 }
 
 void cnfDoBSDTag(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style tag blocks are not reloadable");
+        free(ln);
+        return;
+    }
+    rsReloadValidateObserveOther();
+    rsReloadCandidateSourceNoteError();
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style tag block '%s' is not supported by the translator", ln);
@@ -882,6 +932,14 @@ void cnfDoBSDTag(char *ln) {
 }
 
 void cnfDoBSDHost(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style host blocks are not reloadable");
+        free(ln);
+        return;
+    }
+
+    rsReloadValidateObserveOther();
+    rsReloadCandidateSourceNoteError();
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style host block '%s' is not supported by the translator", ln);

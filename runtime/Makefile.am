@@ -6,6 +6,8 @@ pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
 
 librsyslog_la_SOURCES = \
+	reload-validate.c \
+	reload-validate.h \
 	rsyslog.c \
 	rsyslog.h \
 	typedefs.h \
@@ -57,6 +59,10 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
+	reload-candidate.c \
+	reload-candidate.h \
+	reload-normalized-graph.c \
+	reload-normalized-graph.h \
 	statsobj.c \
 	statsobj.h \
 	compat_queue.h \
