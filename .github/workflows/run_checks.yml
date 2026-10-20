@@ -1646,6 +1646,7 @@ jobs:
           file: devtools/ci/Dockerfile.arm
           platforms: linux/arm64
           tags: rsyslog-cross-dev:arm64
+          build-args: LLVM_VERSION=19
           load: true
           cache-from: type=gha,scope=cross-dev-arm64
           cache-to: type=gha,mode=max,scope=cross-dev-arm64
@@ -1675,11 +1676,11 @@ jobs:
               export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
               export LDFLAGS="-fsanitize=address"
               export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
-              # clang/compiler-rt ASan instead of gcc-13 + libasan8: the
-              # GCC libsanitizer intermittently aborts in its own thread
-              # registry at worker start on aarch64
-              # (sanitizer_thread_registry.cpp:316, no rsyslog frames).
-              export CC=clang
+              # LLVM 19 includes the thread-context allocator race fix absent
+              # from LLVM 18 and GCC libasan8 (llvm/llvm-project#88177).
+              # Keep the compiler and ASan runtime on the same major version.
+              export CC=clang-19
+              export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-19
               export TEST_MAX_RUNTIME=1200
               time_phase() {
                 phase="$1"
