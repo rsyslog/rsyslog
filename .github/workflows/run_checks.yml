@@ -854,7 +854,7 @@ jobs:
 
       - name: Upload RPM artifacts
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rpms-${{ matrix.mock_config }}
           path: build-result/
@@ -1382,7 +1382,7 @@ jobs:
       - name: Upload clang static analyzer report
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
         id: upload-report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clang-static-analyzer-report
           path: scan-build-report
