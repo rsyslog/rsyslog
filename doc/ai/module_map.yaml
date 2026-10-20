@@ -182,6 +182,7 @@ runtime_stream:
     - strm_t.mut, notFull, notEmpty and isEmpty exist only when bAsyncWrite is set; omfile is the only caller that enables async streams and it serializes writes behind its own pData.mutWrite.
     - The async writer thread is created once in strmConstructFinalize(); no other code path recreates it, so any caller that stops it must be done with the stream.
     - strmCloseFile() stops the async writer and, as a documented side effect, leaves pThis->mut unlocked on return; callers must either hold no expectation of the lock or use the non-stopping variant.
+    - In async mode the writer thread owns fd and iCurrOffs while it writes, so it checks the size limit itself under mut and sets bSizeLimitReached; strmWrite() acts only on that flag and drains the writer before rotating.
     - Size-limit rotation uses the non-stopping close: the writer thread survives, pending buffers are drained with strmWaitAsyncWriterDone() before the fd is closed, and the caller's mutex stays held across the rotation command.
 
 mmnormalize:

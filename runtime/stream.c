@@ -1686,6 +1686,8 @@ static void *asyncWriterThread(void *pPtr) {
         doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf, bFlush);
         // TODO: error check????? 2009-07-06
         d_pthread_mutex_lock(&pThis->mut);
+        if (pThis->iSizeLimit != 0 && pThis->fd != -1 && pThis->iCurrOffs >= pThis->iSizeLimit)
+            pThis->bSizeLimitReached = 1;
 
         --pThis->iCnt;
         if (pThis->iCnt < STREAM_ASYNC_NUMBUFS) {
@@ -2068,8 +2070,19 @@ static rsRetVal ATTR_NONNULL(1, 2)
     if (pThis->iBufPtr == pThis->sIOBufSize) {
         CHKiRet(strmFlushInternal(pThis, 0)); /* get a new buffer for rest of data */
     }
-    if (pThis->fd != -1 && pThis->iSizeLimit != 0) { /* Only check if fd already set */
-        CHKiRet(doSizeLimitProcessing(pThis));
+    if (pThis->iSizeLimit != 0) {
+        if (pThis->bAsyncWrite) {
+            /* fd and iCurrOffs belong to the writer thread while it writes;
+             * it flags the limit under mut, and we drain it before rotating.
+             */
+            if (pThis->bSizeLimitReached) {
+                pThis->bSizeLimitReached = 0;
+                strmWaitAsyncWriterDone(pThis);
+                if (pThis->fd != -1) CHKiRet(doSizeLimitProcessing(pThis));
+            }
+        } else if (pThis->fd != -1) { /* Only check if fd already set */
+            CHKiRet(doSizeLimitProcessing(pThis));
+        }
     }
 
 
