@@ -1,8 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Exercise real queue admission after publishing the one-way input termination
-# flag. The imdiag fixture gates dedicated/FE callbacks, fills the real backend,
-# and acknowledges an input capacity wait before the real graph wake. Input
+# flag. The imdiag fixture gates the FE singleton before filling the real
+# backend, so its FE worker cannot borrow BE work in place of the singleton.
+# It gates the dedicated callback and acknowledges an input capacity wait
+# before the real graph wake. Input
 # FORCE_TERM must complete while callbacks still hold all capacity. A real WTI
 # then hands an accepted lease to the full destination and succeeds after gate
 # release. Observer refs and local accounting prove conservation; elapsed time

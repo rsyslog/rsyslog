@@ -1031,7 +1031,7 @@ static pthread_once_t inputTermFixtureCondOnce = PTHREAD_ONCE_INIT;
 static int inputTermFixtureCondReady;
 static clockid_t inputTermFixtureCondClock = CLOCK_REALTIME;
 static qqueue_t *inputTermFixtureDestination, *inputTermFixtureSource;
-static unsigned inputTermFixtureEntered, inputTermFixtureRelease, inputTermFixtureDone;
+static unsigned inputTermFixtureEntered, inputTermFixtureRelease, inputTermFixtureDone, inputTermFixtureBackendReady;
 static rsRetVal inputTermFixtureHandoff, inputTermFixtureInput;
 static smsg_t *inputTermFixtureRefs[64];
 static size_t inputTermFixtureCount;
@@ -1121,12 +1121,12 @@ static void *inputTermFixtureProducer(void *unused) {
     rsRetVal ret = RS_RET_OK;
     qqueueLocalProducerEnter();
     if (inputTermFixtureDestination->local != NULL) {
-        /* The BE is held full. The one trusted producer establishes an active
-         * FE singleton and then fills all four ring slots, forcing no-fit BE
-         * fallback for the following two-message submission. */
+        /* Establish the FE callback before the BE has work to borrow. Once
+         * the controller fills the BE, fill all four ring slots so the
+         * following two-message submission must use no-fit BE fallback. */
         ret = inputTermFixtureMessages(messages, 1);
         if (ret == RS_RET_OK) ret = qqueueEnqMsg(inputTermFixtureDestination, eFLOWCTL_NO_DELAY, messages[0]);
-        if (ret == RS_RET_OK && !inputTermFixtureAwait(&inputTermFixtureEntered, 2)) ret = RS_RET_TIMED_OUT;
+        if (ret == RS_RET_OK && !inputTermFixtureAwait(&inputTermFixtureBackendReady, 1)) ret = RS_RET_TIMED_OUT;
         if (ret == RS_RET_OK) ret = inputTermFixtureMessages(messages, 4);
         multi_submit_t fill = {.ppMsgs = messages, .nElem = 4};
         if (ret == RS_RET_OK) ret = inputTermFixtureDestination->MultiEnq(inputTermFixtureDestination, &fill);
@@ -1212,7 +1212,7 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
          (destination->local_frontend_size != 4 || destination->local_max_frontends != 1)))
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     inputTermFixtureDestination = destination;
-    inputTermFixtureEntered = inputTermFixtureRelease = inputTermFixtureDone = 0;
+    inputTermFixtureEntered = inputTermFixtureRelease = inputTermFixtureDone = inputTermFixtureBackendReady = 0;
     inputTermFixtureCount = 0;
     inputTermFixtureHandoff = inputTermFixtureInput = RS_RET_ERR;
     pthread_mutex_lock(destination->mut);
@@ -1222,13 +1222,30 @@ static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
     if (!empty) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     CHKiRet(inputTermFixtureQueue(&inputTermFixtureSource, "input-term-source", 1));
     CHKiRet(inputTermFixtureQueue(&global, "input-term-global", 0));
+    /* Register the trusted FE while the BE is empty, then wait until its
+     * singleton callback is gated. Otherwise that FE worker can borrow BE
+     * work and acknowledge the generic callback gate before its singleton
+     * leaves the ring, making the four-slot fill itself fall back to BE. */
+    if (destination->local != NULL) {
+        if (pthread_create(&producer, NULL, inputTermFixtureProducer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+        started = 1;
+        if (!inputTermFixtureAwait(&inputTermFixtureEntered, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    }
     CHKiRet(inputTermFixtureMessages(messages, 16));
     /* Untrusted caller fills the real BE and holds its dedicated callback. */
     for (size_t i = 0; i < 16; ++i) CHKiRet(qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[i]));
-    if (!inputTermFixtureAwait(&inputTermFixtureEntered, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    if (!inputTermFixtureAwait(&inputTermFixtureEntered, destination->local != NULL ? 2 : 1))
+        ABORT_FINALIZE(RS_RET_TIMED_OUT);
     const uint64_t fullBefore = PREFER_LOAD_uint64(&destination->ctrFull);
-    if (pthread_create(&producer, NULL, inputTermFixtureProducer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
-    started = 1;
+    if (destination->local != NULL) {
+        pthread_mutex_lock(&inputTermFixtureMut);
+        inputTermFixtureBackendReady = 1;
+        pthread_cond_broadcast(&inputTermFixtureCond);
+        pthread_mutex_unlock(&inputTermFixtureMut);
+    } else {
+        if (pthread_create(&producer, NULL, inputTermFixtureProducer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+        started = 1;
+    }
     if (!inputTermFixtureWaitFull(destination, fullBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
     /* Real shutdown ordering: publish flag, wake admissions, then join input.
      * Downstream callbacks are still gated and cannot make capacity available. */
@@ -1289,7 +1306,7 @@ finalize_it:
         ruleset_wake_local_graph_inputs(runConf);
     }
     pthread_mutex_lock(&inputTermFixtureMut);
-    inputTermFixtureRelease = 1;
+    inputTermFixtureRelease = inputTermFixtureBackendReady = 1;
     pthread_cond_broadcast(&inputTermFixtureCond);
     pthread_mutex_unlock(&inputTermFixtureMut);
     if (started) {
