@@ -26,6 +26,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
