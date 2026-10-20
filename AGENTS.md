@@ -21,6 +21,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 | [`rsyslog_pr_babysitting`](.agent/skills/rsyslog_pr_babysitting/SKILL.md) | Post-push PR monitoring, including CI failures, reruns, and unresolved review-thread checks. |
 | [`rsyslog_changelog`](.agent/skills/rsyslog_changelog/SKILL.md) | Selective ChangeLog maintenance that follows release-note style and avoids low-signal churn. |
 | [`rsyslog_v8stable_patch_flow`](.agent/skills/rsyslog_v8stable_patch_flow/SKILL.md) | Post-.0 v8-stable patch updates, patch-release ChangeLog sections, and clean stable-to-main merges. |
+| [`rsyslog-release`](.agent/skills/rsyslog-release/SKILL.md) | Scheduled-stable release preparation, publication, stable-to-main handoff, and next-cycle milestone rotation. |
 | [`rsyslog_doc`](.agent/skills/rsyslog_doc/SKILL.md) | Structured, RAG-optimized documentation and metadata. |
 | [`rsyslog_doc_dist`](.agent/skills/rsyslog_doc_dist/SKILL.md) | Syncing documentation files in `doc/Makefile.am`. |
 | [`rsyslog_module`](.agent/skills/rsyslog_module/SKILL.md) | Technical patterns for concurrency and module authoring. |
