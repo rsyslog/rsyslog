@@ -5,13 +5,16 @@
 # The server publishes its bound port before rsyslog starts; the captured
 # request is the success oracle after synchronized shutdown. Readiness allows
 # 20 seconds (200 100-ms polls) because broad CI can heavily load the runner.
+# The mock skips HTTPServer's reverse DNS lookup so a slow resolver cannot
+# delay the port file; its stderr is kept for the readiness failure report.
 . ${srcdir:=.}/diag.sh init
 require_plugin omkinesis
 command -v python3 >/dev/null 2>&1 || exit 77
 
 port_file="${RSYSLOG_DYNNAME}.kinesis.port"
 capture_file="${RSYSLOG_DYNNAME}.kinesis.capture"
-python3 "${srcdir}/omkinesis-mock-server.py" "$port_file" "$capture_file" &
+python3 "${srcdir}/omkinesis-mock-server.py" "$port_file" "$capture_file" \
+    2>"${RSYSLOG_DYNNAME}.mock.stderr" &
 mock_pid=$!
 trap 'kill "$mock_pid" 2>/dev/null || true' EXIT
 wait_file_exists_for_process "$port_file" "$mock_pid" 200 "Kinesis mock" "${RSYSLOG_DYNNAME}.mock.stderr"
