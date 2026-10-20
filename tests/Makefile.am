@@ -75,6 +75,10 @@ EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
+TESTS_IMUDP_BUFFER_SIZING = imudp-batchsize-range.sh imudp-batchsize-runtime.sh
+TESTS_IMUDP_BUFFER_SIZING_LIBYAML = yaml-imudp-batchsize-range.sh
+EXTRA_DIST += $(TESTS_IMUDP_BUFFER_SIZING) $(TESTS_IMUDP_BUFFER_SIZING_LIBYAML)
+
 TESTS_RSCRIPT_REPLACE_LIMIT = rscript-replace-result-limit.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_LIMIT)
 
@@ -2848,10 +2852,10 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
@@ -2891,6 +2895,9 @@ runtime_unit_omazuredce_utils_SOURCES = \
 
 runtime_unit_wtp_wakeup_SOURCES = \
 	unit/wtp_wakeup_test.c
+
+runtime_unit_imudp_buffer_SOURCES = \
+	unit/imudp_buffer_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -2986,6 +2993,9 @@ runtime_unit_queue_spsc_CPPFLAGS = \
 runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	$(WNO_INLINE_CFLAGS)
+runtime_unit_imudp_buffer_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-I$(top_srcdir)/plugins/imudp
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3037,6 +3047,7 @@ liblocal_queue_omfile_cancel_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif
 endif
+TESTS += $(TESTS_IMUDP_BUFFER_SIZING)
 check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
@@ -3302,6 +3313,7 @@ endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 if HAVE_LIBYAML
 TESTS += $(TESTS_LIBYAML)
+TESTS += $(TESTS_IMUDP_BUFFER_SIZING_LIBYAML)
 if ENABLE_INOTIFY
 TESTS += $(TESTS_RATELIMIT_WATCH)
 endif # ENABLE_INOTIFY
