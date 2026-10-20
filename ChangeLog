@@ -1,6 +1,17 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-21
 
+- 2026-10-20: nsd_ossl: stop using a broken TLS socket
+  A detected broken forwarding connection now aborts its TLS session,
+  preventing later shutdown writes through a file descriptor another
+  module may have reused.
+  See https://github.com/rsyslog/rsyslog/issues/7660
+- 2026-10-20: queue: honor named discard severity in global queues
+  queue.discardSeverity now accepts syslog severity names such as
+  "warning" for global queues, matching numeric values and local queues.
+- 2026-10-20: queue: fix classic disk serialization on Darwin ARM64
+  Disk queues now pass message and stream arguments through the expected
+  fixed calling convention, preventing a possible serialization crash.
 - 2026-10-20: msg: bound rawmsg-after-pri and regex.match offsets
   The rawmsg-after-pri property no longer looks past the end of raw
   messages shorter than a full PRI, so such frames always yield their
@@ -24,6 +35,13 @@ Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-21
   request could be dropped. Producers then waited for the full enqueue
   timeout and discarded a message. The retiring worker now takes over such
   a request and resumes work instead.
+- 2026-10-15: queue: add experimental producer-local queue scope
+  queue.scope="local" places bounded producer-specific front queues ahead
+  of a shared FixedArray or LinkedList backend, including disk assistance.
+  New sizing controls and impstats describe the local topology. This opt-in
+  mode requires lock-free 64-bit atomics and monotonic condition variables;
+  global scope remains the default. Consult the local-queue documentation
+  for ordering, persistence, and support restrictions.
 - 2026-10-14: imtcp: defer framing regex checks until a line boundary
   Avoid repeatedly scanning an incomplete first line when receiving
   regex-framed TCP input in small fragments.
@@ -33,10 +51,11 @@ Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-21
   best-effort policy retains existing behavior. This replaces the temporary
   module-specific bind-failure options with one global policy.
 - 2026-10-10: RainerScript: bound replace and template substring results
-  Correct overlapping replace() sizing and reject results that exceed the
-  supported string size. Negative template substring endpoints that precede
-  the start now produce an empty substring instead of crashing.
-  Thanks to hanjinpeng for the negative position.to fix.
+  Correct overlapping replace() sizing, preserve bounded shrinking
+  results, and reject results that exceed the supported string size.
+  Negative template substring endpoints that precede the start now produce
+  an empty substring instead of crashing.
+  Thanks to hanjinpeng for the negative position fix.
 - 2026-10-07: mmnormalize: preserve complete TurboVM normalization results
   When supported by liblognorm, truncated TurboVM results fall back to the
   standard parser and increment turbo.truncated in impstats. Turbo JSON
@@ -76,13 +95,6 @@ Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-21
   failures from retry conditions without relying on stale errno values.
   Thanks to Andreas Hasenack for the OpenSSL compatibility fixes.
   Fixes https://github.com/rsyslog/rsyslog/issues/7553
-- 2026-09-16: queue: add experimental producer-local queue scope
-  queue.scope="local" places bounded producer-specific front queues ahead
-  of a shared FixedArray or LinkedList backend, including disk assistance.
-  New sizing controls and impstats describe the local topology. This opt-in
-  mode requires lock-free 64-bit atomics and monotonic condition variables;
-  global scope remains the default. Consult the local-queue documentation
-  for ordering, persistence, and support restrictions.
 - 2026-09-09: queue: reduce shared queue lock and wakeup overhead
   Retire FixedArray batches in constant time, dispose completed messages
   outside the queue mutex, and target wakeups at waiting workers. Preserve
