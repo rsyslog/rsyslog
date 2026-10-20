@@ -1620,13 +1620,18 @@ void getRawMsgAfterPRI(smsg_t *const pM, uchar **pBuf, int *piLen) {
              * covers some of that. As a work-around, we caluculate
              * the value ourselfes here. -- rgerhards, 2015-10-09
              */
-            size_t offAfterPRI = 0;
-            if (pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
-                if (pM->pszRawMsg[2] == '>')
+            /* Only probe bytes inside the raw message: short messages live in
+             * the non-zeroed szRawMsg buffer, so bytes past the terminating
+             * NUL are stale and may hold '>', which made *piLen negative.
+             */
+            const int lenRaw = pM->iLenRawMsg;
+            int offAfterPRI = 0;
+            if (lenRaw > 0 && pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
+                if (lenRaw > 2 && pM->pszRawMsg[2] == '>')
                     offAfterPRI = 3;
-                else if (pM->pszRawMsg[3] == '>')
+                else if (lenRaw > 3 && pM->pszRawMsg[3] == '>')
                     offAfterPRI = 4;
-                else if (pM->pszRawMsg[4] == '>')
+                else if (lenRaw > 4 && pM->pszRawMsg[4] == '>')
                     offAfterPRI = 5;
             }
             *pBuf = pM->pszRawMsg + offAfterPRI;
@@ -3852,7 +3857,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
     uchar *pBufStart;
     uchar *pBuf;
     int iLen;
-    short iOffs;
+    int iOffs; /* must hold any offset into a maxMessageSize string; short wrapped at 32K */
     enum tplFormatTypes datefmt;
     int bDateInUTC;
 
