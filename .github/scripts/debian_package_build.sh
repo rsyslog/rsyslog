@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+UPSTREAM_PATCH_DETECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/devtools/release/upstream_patch_detect.py"
+
 append_finding() {
   local findings_dir="$1"
   local section="$2"
@@ -420,6 +422,18 @@ resolve_patch_policy() {
       return 1
     fi
     failed_patch_name="${failed_patch##*/}"
+
+    # A distribution backport of a commit that the packaged upstream already
+    # contains cannot apply and is not needed; skip it and report it.
+    local evidence
+    if ! grep -Fxq "$failed_patch" "$allowed_tmp" && \
+       ! grep -Fxq "$failed_patch_name" "$allowed_tmp" && \
+       [ -n "${RSYSLOG_UPSTREAM_COMMIT_INDEX:-}" ] && \
+       evidence="$(python3 "$UPSTREAM_PATCH_DETECT" "$RSYSLOG_UPSTREAM_COMMIT_INDEX" \
+         "$QUILT_PATCHES/$failed_patch_name")"; then
+      echo "::warning title=Debian patch already upstream::skipped $failed_patch_name: $evidence; add it to allowed_patch_skips after review"
+      printf '%s\n' "$failed_patch_name" >> "$allowed_tmp"
+    fi
 
     if ! grep -Fxq "$failed_patch" "$allowed_tmp" && \
        ! grep -Fxq "$failed_patch_name" "$allowed_tmp"; then

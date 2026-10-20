@@ -53,6 +53,7 @@ struct wtp_s {
         wtpState_t wtpState;
         int iNumWorkerThreads; /* number of worker threads to use */
         int iCurNumWrkThrd; /* current number of active worker threads */
+        sbool workers_ready; /* all worker slots finalized; immutable before any worker starts */
         struct wti_s **pWrkr; /* array with control structure for the worker thread(s) associated with this wtp */
         int toWrkShutdown; /* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
         int toFirstWrkShutdown; /* slot-zero override, -2 means use toWrkShutdown */
@@ -61,6 +62,7 @@ struct wtp_s {
         pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
         pthread_cond_t condThrdInitDone; /* signalled when a new thread is ready for work */
         pthread_cond_t condThrdTrm; /* signalled when threads terminate */
+        sbool monotonicTermination; /* local queue family waits use CLOCK_MONOTONIC */
         /* end sync variables */
         /* user objects */
         void *pUsr; /* pointer to user object (in this case, the queue the wtp belongs to) */
@@ -103,6 +105,13 @@ rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
 rsRetVal wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout);
+/* Select before workers are constructed/started. Existing global pools retain
+ * their realtime condition. A local family requests every pool before waiting. */
+rsRetVal wtpUseMonotonicTermination(wtp_t *pThis);
+rsRetVal wtpRequestShutdown(wtp_t *pThis, wtpState_t command);
+/* Local-only cancellation request: no delay or join; family waits afterwards. */
+rsRetVal wtpRequestCancelAll(wtp_t *pThis);
+rsRetVal wtpWaitShutdownUntil(wtp_t *pThis, const struct timespec *monotonicDeadline);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEObjClassExit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal (*pVal)(void *, int));

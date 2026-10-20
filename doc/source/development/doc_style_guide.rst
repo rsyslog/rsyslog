@@ -108,7 +108,7 @@ Licensing & Legal
 
 - Keep licensing information in `licensing.rst`.
 - Use:
-  ``For license details, see :doc:`licensing`.``
+  ``For license details, see :doc:`/licensing`.``
 
 Examples and Code
 -----------------

@@ -84,6 +84,10 @@ for ((i = 1; i <= HUP_COUNT; ++i)); do
 done
 
 wait_tcpflood_async "$TCPFLOOD_PID" "$TCPFLOOD_MARKER"
+# tcpflood can finish sending while bytes still wait in the TCP receive buffers.
+# The main queue may be empty at that point, so wait for the output before
+# shutting down the input. seq_check below still catches gaps or duplicates.
+wait_file_lines "$RSYSLOG_OUT_LOG" "$NUMMESSAGES" 600
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1))

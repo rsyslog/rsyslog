@@ -108,6 +108,7 @@ struct instanceConf_s {
     uchar *pszBindAddr; /* Listening IP Address */
     uchar *pszBindPort; /* Port to bind socket to */
     uchar *pszLstnPortFileName; /* file receiving port selected by bind(0) */
+    sbool port_file_written;
     int timeout; /* Default timeout for DTLS Sessions */
     /* Common properties */
     uchar *pszBindRuleset; /* name of ruleset to bind to */
@@ -120,6 +121,7 @@ struct instanceConf_s {
     /* OpenSSL properties */
     uchar *tlscfgcmd; /* OpenSSL Config Command used to override any OpenSSL Settings */
     permittedPeers_t *pPermPeersRoot; /* permitted peers */
+    rsRetVal permitted_peers_result;
     int CertVerifyDepth; /* Verify Depth for certificate chains */
     /* Instance Variables */
     char *pszRcvBuf;
@@ -138,6 +140,7 @@ struct instanceConf_s {
     int id; /* Thread ID */
     thrdInfo_t *pThrd; /* Thread Instance Info */
     pthread_t tid; /* the instances thread ID */
+    int workerStarted;
 
     struct instanceConf_s *next;
     struct instanceConf_s *prev;
@@ -192,15 +195,18 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszBindAddr = NULL;
     inst->pszBindPort = NULL;
     inst->pszLstnPortFileName = NULL;
+    inst->port_file_written = 0;
     inst->timeout = 1800;
     inst->pszBindRuleset = loadModConf->pszBindRuleset;
     inst->pszInputName = NULL;
     inst->pInputName = NULL;
     inst->pBindRuleset = NULL;
     inst->bEnableLstn = 0;
+    inst->workerStarted = 0;
 
     inst->tlscfgcmd = NULL;
     inst->pPermPeersRoot = NULL;
+    inst->permitted_peers_result = RS_RET_OK;
     inst->CertVerifyDepth = 2;
     inst->pszRcvBuf = NULL;
     inst->lenRcvBuf = -1;
@@ -281,6 +287,7 @@ static rsRetVal writeListenPortFile(instanceConf_t *const inst) {
         LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to open file");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
+    inst->port_file_written = 1;
     for (int off = 0; off < len;) {
         wr = write(fd, portBuf + off, (size_t)(len - off));
         if (wr < 0) {
@@ -357,9 +364,9 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
     if (bind(inst->sockfd, (struct sockaddr *)&inst->server_addr, sizeof(struct sockaddr_in)) < 0) {
         LogError(0, NO_ERRCODE,
                  "imdtls: Unable to create DTLS listener,"
-                 " unable to bind, "
-                 " ignoring port %d bind-address %s.",
-                 inst->port, inst->pszBindAddr);
+                 " unable to bind, %s port %d bind-address %s.",
+                 runConf->globals.bRequireAllInputs ? "failing startup for" : "ignoring", inst->port,
+                 inst->pszBindAddr);
         ABORT_FINALIZE(RS_RET_ERR);
     }
     CHKiRet(writeListenPortFile(inst));
@@ -435,6 +442,12 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     if (!inst->bEnableLstn) {
         DBGPRINTF("imdtls: DTLS Listener not started because it is disabled by config error\n");
         FINALIZE;
+    }
+
+    if (runConf->globals.bRequireAllInputs && inst->permitted_peers_result != RS_RET_OK) {
+        LogError(0, inst->permitted_peers_result,
+                 "imdtls: tls.permittedpeer is not supported by the configured authentication mode; input rejected");
+        ABORT_FINALIZE(inst->permitted_peers_result);
     }
 
     inst->pszInputName = ustrdup((inst->pszInputName == NULL) ? UCHAR_CONSTANT("imdtls") : inst->pszInputName);
@@ -889,8 +902,7 @@ static rsRetVal SetPermPeers(instanceConf_t *inst, permittedPeers_t *pPermPeers)
 
     if (inst->pNetOssl->authMode != OSSL_AUTH_CERTFINGERPRINT && inst->pNetOssl->authMode != OSSL_AUTH_CERTNAME) {
         LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE,
-                 "authentication not supported by "
-                 "imdtls in the configured authentication mode - ignored");
+                 "authentication not supported by imdtls in the configured authentication mode");
         ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
     }
     inst->pNetOssl->pPermPeers = pPermPeers;
@@ -995,7 +1007,7 @@ BEGINnewInpInst
     }
 
     // Assign Loaded Peers to Netossl
-    SetPermPeers(inst, inst->pPermPeersRoot);
+    inst->permitted_peers_result = SetPermPeers(inst, inst->pPermPeersRoot);
 
     /* all ok, ready to start up */
     inst->bEnableLstn = -1;
@@ -1086,6 +1098,12 @@ BEGINcheckCnf
     instanceConf_t *inst;
     CODESTARTcheckCnf;
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
+        if (pModConf->pConf->globals.bRequireAllInputs && inst->permitted_peers_result != RS_RET_OK) {
+            LogError(
+                0, inst->permitted_peers_result,
+                "imdtls: tls.permittedpeer is not supported by the configured authentication mode; input rejected");
+            ABORT_FINALIZE(inst->permitted_peers_result);
+        }
         if (inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
             CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
         }
@@ -1101,7 +1119,18 @@ BEGINactivateCnfPrePrivDrop
     runModConf = pModConf;
     DBGPRINTF("imdtls: activate addListners for dtls\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(pModConf, inst);
+        const rsRetVal local_ret = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && local_ret != RS_RET_OK) ABORT_FINALIZE(local_ret);
+    }
+finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) {
+        for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+            if (inst->port_file_written) {
+                unlink((const char *)inst->pszLstnPortFileName);
+                inst->port_file_written = 0;
+            }
+            DTLSCloseSocket(inst);
+        }
     }
 ENDactivateCnfPrePrivDrop
 
@@ -1169,7 +1198,13 @@ BEGINrunInput
     DBGPRINTF("imdtls: create dtls handling threads\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->bEnableLstn) {
-            pthread_create(&inst->tid, &wrkrThrdAttr, startDtlsHandler, inst);
+            const int err = pthread_create(&inst->tid, &wrkrThrdAttr, startDtlsHandler, inst);
+            if (err == 0) {
+                inst->workerStarted = 1;
+            } else {
+                LogError(err, RS_RET_SYS_ERR, "imdtls: failed to start listener thread on port %d", inst->port);
+                thrd_report_fatal_input_failure();
+            }
         }
     }
     pthread_attr_destroy(&wrkrThrdAttr);
@@ -1181,7 +1216,7 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: received close signal, signaling instance threads...\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bEnableLstn) {
+        if (inst->workerStarted) {
             pthread_kill(inst->tid, SIGTTIN);
             if (inst->sockfd >= 0) {
                 shutdown(inst->sockfd, SHUT_RDWR);
@@ -1191,10 +1226,11 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: threads signaled, waiting for join...");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bEnableLstn) {
+        if (inst->workerStarted) {
             pthread_join(inst->tid, NULL);
-            DTLSCloseSocket(inst);
+            inst->workerStarted = 0;
         }
+        DTLSCloseSocket(inst);
     }
 
     DBGPRINTF("imdtls: finished threads, stopping\n");

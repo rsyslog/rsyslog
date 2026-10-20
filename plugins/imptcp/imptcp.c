@@ -46,6 +46,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -356,6 +357,7 @@ static struct wrkrInfo_s {
     int wrkrIdx; /* index for this worker - shortcut for thread name */
 } *wrkrInfo;
 static int wrkrRunning;
+static int wrkrStarted;
 
 
 /* type of object stored in epoll descriptor */
@@ -524,6 +526,93 @@ finalize_it:
     RETiRet;
 }
 
+/* Bind failures are rare; inspect procfs only to explain a failed port. A port
+ * may have several listeners, so a visible owner is a clue, not proof that it
+ * caused this bind failure. */
+static unsigned long listener_inode_for_port(const char *path, unsigned port) {
+    FILE *fp = fopen(path, "r");
+    char line[512];
+    unsigned localPort, state;
+    unsigned long inode;
+
+    if (fp == NULL) return 0;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (sscanf(line, " %*u: %*32[0-9A-Fa-f]:%x %*s %x %*s %*s %*s %*s %*s %lu", &localPort, &state, &inode) == 3 &&
+            localPort == port && state == 0x0a) {
+            fclose(fp);
+            return inode;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+static int describe_listener_owner(unsigned long inode, char *out, size_t outSize) {
+    DIR *procs = opendir("/proc");
+    struct dirent *proc;
+    if (procs == NULL) return 0;
+    while ((proc = readdir(procs)) != NULL) {
+        char fdDirPath[80], commPath[80], expected[64], linkPath[160], target[80], comm[80];
+        DIR *fds;
+        struct dirent *fd;
+        FILE *fp;
+        ssize_t len;
+        if (!isdigit((unsigned char)proc->d_name[0])) continue;
+        snprintf(fdDirPath, sizeof(fdDirPath), "/proc/%s/fd", proc->d_name);
+        fds = opendir(fdDirPath);
+        if (fds == NULL) continue;
+        snprintf(expected, sizeof(expected), "socket:[%lu]", inode);
+        while ((fd = readdir(fds)) != NULL) {
+            if (!isdigit((unsigned char)fd->d_name[0])) continue;
+            snprintf(linkPath, sizeof(linkPath), "%s/%s", fdDirPath, fd->d_name);
+            len = readlink(linkPath, target, sizeof(target) - 1);
+            if (len < 0) continue;
+            target[len] = '\0';
+            if (strcmp(target, expected) != 0) continue;
+            snprintf(commPath, sizeof(commPath), "/proc/%s/comm", proc->d_name);
+            fp = fopen(commPath, "r");
+            if (fp != NULL && fgets(comm, sizeof(comm), fp) != NULL) {
+                comm[strcspn(comm, "\n")] = '\0';
+                for (size_t i = 0; comm[i] != '\0'; ++i) {
+                    if ((unsigned char)comm[i] < 32 || (unsigned char)comm[i] == 127) comm[i] = '?';
+                }
+                snprintf(out, outSize, "one visible listener is PID %s (%s)", proc->d_name, comm);
+            } else {
+                snprintf(out, outSize, "one visible listener is PID %s", proc->d_name);
+            }
+            if (fp != NULL) fclose(fp);
+            closedir(fds);
+            closedir(procs);
+            return 1;
+        }
+        closedir(fds);
+    }
+    closedir(procs);
+    return 0;
+}
+
+static void log_bind_failure(const int bindErrno, const unsigned port) {
+    unsigned long inode = 0;
+    char owner[160];
+    if (bindErrno == EADDRINUSE) {
+        inode = listener_inode_for_port("/proc/net/tcp", port);
+        if (inode == 0) inode = listener_inode_for_port("/proc/net/tcp6", port);
+    }
+    if (inode != 0 && describe_listener_owner(inode, owner, sizeof(owner))) {
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u: %s", port, owner);
+    } else if (bindErrno == EADDRINUSE) {
+#ifdef __linux__
+        LogError(bindErrno, NO_ERRCODE,
+                 "imptcp: Error binding TCP port %u; listener owner unavailable (try ss -ltnp 'sport = :%u')", port,
+                 port);
+#else
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u; listener owner unavailable", port);
+#endif
+    } else {
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u", port);
+    }
+}
+
 /* Start up a server. That means all of its listeners are created.
  * Does NOT yet accept/process any incoming data (but binds ports). Hint: this
  * code is to be executed before dropping privileges.
@@ -648,7 +737,10 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
 #endif
         ) {
             /* TODO: check if *we* bound the socket - else we *have* an error! */
-            LogError(errno, NO_ERRCODE, "imptcp: Error while binding tcp socket");
+            const int bindErrno = errno;
+            savecast.sa = (struct sockaddr *)r->ai_addr;
+            const unsigned port = ntohs(r->ai_family == AF_INET6 ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port);
+            log_bind_failure(bindErrno, port);
             close(sock);
             sock = -1;
             continue;
@@ -703,6 +795,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
          * create our listener object. -- rgerhards, 2010-08-10
          */
         CHKiRet(addLstn(pSrv, sock, isIPv6));
+        sock = -1; /* listener owns the socket */
         ++numSocks;
     }
 
@@ -713,8 +806,8 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             numSocks, maxs);
     }
 
-    if (numSocks == 0) {
-        DBGPRINTF("No TCP listen sockets could successfully be initialized");
+    if (numSocks == 0 || (runConf->globals.bRequireAllInputs && numSocks != maxs)) {
+        DBGPRINTF("imptcp: TCP listener activation failed (%d of %d sockets opened)\n", numSocks, maxs);
         ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
     }
 
@@ -2044,23 +2137,32 @@ finalize_it:
 
 /* destroy worker pool structures and wait for workers to terminate
  */
-static void startWorkerPool(void) {
+static rsRetVal startWorkerPool(void) {
     int i;
+    rsRetVal result = RS_RET_OK;
     pthread_mutex_lock(&io_q.mut); /* locking to keep Coverity happy */
     wrkrRunning = 0;
+    wrkrStarted = 0;
     pthread_mutex_unlock(&io_q.mut);
     DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
     wrkrInfo = calloc(runModConf->wrkrMax, sizeof(struct wrkrInfo_s));
     if (wrkrInfo == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "imptcp: worker-info array allocation failed.");
-        return;
+        return runConf->globals.bRequireAllInputs ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
     }
     for (i = 0; i < runModConf->wrkrMax; ++i) {
         /* init worker info structure! */
         wrkrInfo[i].wrkrIdx = i;
         wrkrInfo[i].numCalled = 0;
-        pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+        const int err = pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+        if (err != 0) {
+            LogError(err, RS_RET_SYS_ERR, "imptcp: failed to start worker thread %d", i);
+            if (runConf->globals.bRequireAllInputs) result = RS_RET_SYS_ERR;
+            break;
+        }
+        ++wrkrStarted;
     }
+    return result;
 }
 
 /* destroy worker pool structures and wait for workers to terminate
@@ -2071,11 +2173,13 @@ static void stopWorkerPool(void) {
     pthread_mutex_lock(&io_q.mut);
     pthread_cond_broadcast(&io_q.wakeup_worker); /* awake wrkr if not running */
     pthread_mutex_unlock(&io_q.mut);
-    for (i = 0; i < runModConf->wrkrMax; ++i) {
+    for (i = 0; i < wrkrStarted; ++i) {
         pthread_join(wrkrInfo[i].tid, NULL);
         DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
     }
     free(wrkrInfo);
+    wrkrInfo = NULL;
+    wrkrStarted = 0;
 }
 
 
@@ -2085,6 +2189,7 @@ static void stopWorkerPool(void) {
 static rsRetVal startupServers(void) {
     DEFiRet;
     rsRetVal localRet, lastErr;
+    int any_failed = 0;
     int iOK;
     int iAll;
     ptcpsrv_t *pSrv;
@@ -2097,14 +2202,18 @@ static rsRetVal startupServers(void) {
         localRet = startupSrv(pSrv);
         if (localRet == RS_RET_OK)
             iOK++;
-        else
+        else {
             lastErr = localRet;
+            any_failed = 1;
+        }
         ++iAll;
         pSrv = pSrv->pNext;
     }
 
     DBGPRINTF("imptcp: %d out of %d servers started successfully\n", iOK, iAll);
-    if (iOK == 0) /* iff all fails, we report an error */
+    if (iOK == 0)
+        iRet = lastErr;
+    else if (runConf->globals.bRequireAllInputs && any_failed)
         iRet = lastErr;
 
     RETiRet;
@@ -2677,7 +2786,8 @@ BEGINactivateCnfPrePrivDrop
 
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(pModConf, inst);
+        const rsRetVal localRet = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
     if (pSrvRoot == NULL) {
         LogError(0, RS_RET_NO_LSTN_DEFINED, "imptcp: no ptcp server defined, module can not run.");
@@ -2745,7 +2855,7 @@ BEGINrunInput
     struct epoll_event events[128];
     CODESTARTrunInput;
     initIoQ();
-    startWorkerPool();
+    CHKiRet(startWorkerPool());
     DBGPRINTF("imptcp: now beginning to process input data\n");
     while (glbl.GetGlobalInputTermState() == 0) {
         DBGPRINTF("imptcp going on epoll_wait\n");
@@ -2755,6 +2865,7 @@ BEGINrunInput
     }
     DBGPRINTF("imptcp: successfully terminated\n");
     /* we stop the worker pool in AfterRun, in case we get cancelled for some reason (old Interface) */
+finalize_it:
 ENDrunInput
 
 

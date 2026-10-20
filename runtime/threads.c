@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <assert.h>
+#include <unistd.h>
 #ifdef HAVE_SYS_PRCTL_H
     #include <sys/prctl.h>
 #endif
@@ -49,6 +50,18 @@
 
 /* linked list of currently-known threads */
 static linkedList_t llThrds;
+static int bFatalInputFailure = 0;
+
+int thrd_had_fatal_input_failure(void) {
+    return PREFER_LOAD_INT(&bFatalInputFailure);
+}
+
+void thrd_report_fatal_input_failure(void) {
+    if (runConf != NULL && runConf->globals.bRequireAllInputs && !PREFER_LOAD_INT(&bTerminateInputsSigSafe)) {
+        PREFER_STORE_1_TO_INT(&bFatalInputFailure);
+        kill(getpid(), SIGTERM);
+    }
+}
 
 /* methods */
 
@@ -249,6 +262,7 @@ static ATTR_NORETURN void *thrdStarter(void *const arg) {
                   (unsigned long)pThis->thrdID, iRet);
     } else {
         LogError(0, iRet, "main thread of %s terminated abnormally", pThis->name);
+        if (!thrdGetShallStop(pThis)) thrd_report_fatal_input_failure();
     }
 
     /* signal master control that we exit (we do the mutex lock mostly to
@@ -271,7 +285,9 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
                     sbool bNeedsCancel,
                     uchar *name) {
     DEFiRet;
-    thrdInfo_t *pThis;
+    thrdInfo_t *pThis = NULL;
+    int create_error;
+    sbool started = 0;
 #if defined(_AIX)
     pthread_attr_t aix_attr;
 #endif
@@ -283,17 +299,42 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
     pThis->pUsrThrdMain = thrdMain;
     pThis->pAfterRun = afterRun;
     pThis->bNeedsCancel = bNeedsCancel;
-    pThis->name = ustrdup(name);
+    CHKmalloc(pThis->name = ustrdup(name));
 #if defined(_AIX)
-    pthread_attr_init(&aix_attr);
+    create_error = pthread_attr_init(&aix_attr);
+    if (create_error != 0) {
+        LogError(create_error, RS_RET_ERR, "could not initialize input thread attributes for %s", name);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     pthread_attr_setstacksize(&aix_attr, 4096 * 512);
-    pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+    create_error = pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+    pthread_attr_destroy(&aix_attr);
 #else
-    pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
+    create_error = pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 #endif
+    if (create_error != 0) {
+        LogError(create_error, RS_RET_ERR, "could not create input thread %s", name);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    started = 1;
     CHKiRet(llAppend(&llThrds, NULL, pThis));
+    pThis = NULL;
 
 finalize_it:
+    if (pThis != NULL) {
+        if (started) {
+            /* The worker may already be in runInput; use its normal bounded
+             * shutdown path before calling afterRun. */
+            thrdDestruct(pThis);
+        } else {
+            /* afterRun is unsafe before runInput initialized module state. */
+            pthread_mutex_destroy(&pThis->mutThrd);
+            pthread_cond_destroy(&pThis->condThrdTerm);
+            DESTROY_ATOMIC_HELPER_MUT(pThis->mutShallStop);
+            free(pThis->name);
+            free(pThis);
+        }
+    }
     RETiRet;
 }
 

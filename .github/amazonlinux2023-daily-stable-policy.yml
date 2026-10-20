@@ -9,6 +9,24 @@
       "name": "rsyslog-8.2204.0-rhbz2082302-CVE-heap-based-buffer-overflow.patch",
       "sha256": "3ab3c768b0dd8d500f0541ca290ca7858046908175117f0e8ffd62a4e05631e2",
       "reason": "Current upstream contains the CVE-2022-24903 fix and later parser development."
+    },
+    {
+      "name": "CVE-2026-19654.patch",
+      "sha256": "512e3e66ea1ea7a726f87d5d140df1c1c15c36c50a9c65642739431b55660e09",
+      "upstream_commit": "07b3c40a5a78c79ed9109251f842ca7e955dd586",
+      "reason": "The Amazon Linux 2023 imptcp regex framing fix is already present in the daily-stable source."
+    },
+    {
+      "name": "CVE-2026-78002.patch",
+      "sha256": "97c427df6ad20fac3e246fdc2d60512bf375176cf23259f65e15a33d56b930ea",
+      "upstream_commit": "667e3f61aec5ee02c5c2ee6f0f8accf6fe4301a9",
+      "reason": "The Amazon Linux 2023 RainerScript replace() sizing fix is already present in the daily-stable source."
+    },
+    {
+      "name": "do-not-decrease-fds-on-error.patch",
+      "sha256": "64b38d69f6e201724b5b975ea672fe2dd6f30ac47e613dadb5614749a888ab01",
+      "upstream_commit": "6ffc14fd450b90872272871130d29ab3ecf85f6f",
+      "reason": "The Amazon Linux 2023 tcpsrv fd accounting fix is already present in the daily-stable source."
     }
   ],
   "drop_stale_html_docs": true,
@@ -54,6 +72,12 @@
       "path": "%{_mandir}/man1/rsyslog-segqueue.1.gz",
       "anchor": "%{_mandir}/man5/rsyslog.conf.5.gz",
       "reason": "Current upstream installs the segmented queue maintenance utility manual page in the base package."
+    }
+  ],
+  "disabled_optional_modules": [
+    {
+      "module": "omkinesis",
+      "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Amazon Linux 2023 spec has no package for this optional module."
     }
   ]
 }

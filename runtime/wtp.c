@@ -130,10 +130,21 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
     /* alloc and construct workers - this can only be done in finalizer as we previously do
      * not know the max number of workers
      */
-    CHKmalloc(pThis->pWrkr = malloc(sizeof(wti_t *) * pThis->iNumWorkerThreads));
+    CHKmalloc(pThis->pWrkr = calloc((size_t)pThis->iNumWorkerThreads, sizeof(wti_t *)));
 
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
         CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
+#ifdef ENABLE_TESTBENCH
+        /* Fail after one complete slot and one constructed slot, or inside
+         * a one-slot frontend pool after an earlier FE completed. Matching the
+         * named pool keeps unrelated earlier graph nodes fully initialized. */
+        const char *const fault = getenv("RSYSLOG_LOCAL_QUEUE_TEST_STARTUP_POOL");
+        if ((i == 1 || (i == 0 && pThis->iNumWorkerThreads == 1)) && fault != NULL &&
+            !strcmp(fault, (const char *)wtpGetDbgHdr(pThis))) {
+            fprintf(stderr, "local queue test fault: startup-pool %s\n", fault);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+#endif
         pWti = pThis->pWrkr[i];
         lenBuf = snprintf((char *)pszBuf, sizeof(pszBuf), "%.*s/w%d",
                           (int)(sizeof(pszBuf) - 6), /* leave 6 chars for \0, "/w" and number: */
@@ -152,8 +163,18 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
         CHKiRet(wtiConstructFinalize(pWti));
     }
 
+    pThis->workers_ready = 1;
 
 finalize_it:
+    if (iRet != RS_RET_OK && pThis->pWrkr != NULL) {
+        /* No worker can run before finalization succeeds. Dispose both fully
+         * finalized slots and the current partially constructed WTI exactly
+         * once; shutdown helpers must not inspect this incomplete array. */
+        for (i = 0; i < pThis->iNumWorkerThreads; ++i)
+            if (pThis->pWrkr[i] != NULL) wtiDestruct(&pThis->pWrkr[i]);
+        free(pThis->pWrkr);
+        pThis->pWrkr = NULL;
+    }
     RETiRet;
 }
 
@@ -166,7 +187,11 @@ BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODE
     assert(pThis->iCurNumWrkThrd == 0);
 
     /* destruct workers */
-    for (i = 0; i < pThis->iNumWorkerThreads; ++i) wtiDestruct(&pThis->pWrkr[i]);
+    if (pThis->pWrkr != NULL) {
+        for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
+            if (pThis->pWrkr[i] != NULL) wtiDestruct(&pThis->pWrkr[i]);
+        }
+    }
 
     free(pThis->pWrkr);
     pThis->pWrkr = NULL;
@@ -262,6 +287,7 @@ PRAGMA_IGNORE_Wempty_body
     int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
+    if (!pThis->workers_ready) return RS_RET_OK;
 
     /* lock mutex to prevent races (may otherwise happen during idle processing and such...) */
     d_pthread_mutex_lock(pThis->pmutUsr);
@@ -318,6 +344,7 @@ rsRetVal ATTR_NONNULL() wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj)
     int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
+    if (!pThis->workers_ready) return RS_RET_OK;
 
     /* go through all workers and cancel those that are active */
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
@@ -327,13 +354,90 @@ rsRetVal ATTR_NONNULL() wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj)
     RETiRet;
 }
 
+/* Local families never pass monotonic timestamps to the legacy realtime
+ * condition. Selection happens before publication of the pool to any thread. */
+rsRetVal wtpUseMonotonicTermination(wtp_t *const pThis) {
+#if defined(_POSIX_CLOCK_SELECTION) && _POSIX_CLOCK_SELECTION >= 0
+    pthread_condattr_t attr;
+    int ret;
+    if (pThis->pWrkr != NULL || pThis->iCurNumWrkThrd != 0) return RS_RET_PARAM_ERROR;
+    if (pthread_condattr_init(&attr) != 0) return RS_RET_ERR;
+    ret = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    if (ret == 0) {
+        ret = pthread_cond_destroy(&pThis->condThrdTrm);
+        if (ret == 0) {
+            ret = pthread_cond_init(&pThis->condThrdTrm, &attr);
+            if (ret != 0) pthread_cond_init(&pThis->condThrdTrm, NULL);
+        }
+    }
+    pthread_condattr_destroy(&attr);
+    if (ret != 0) return RS_RET_ERR;
+    pThis->monotonicTermination = 1;
+    return RS_RET_OK;
+#else
+    (void)pThis;
+    return RS_RET_NOT_IMPLEMENTED;
+#endif
+}
+
+rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
+    if (!pThis->workers_ready) return RS_RET_OK;
+    d_pthread_mutex_lock(pThis->pmutUsr);
+    wtpSetState(pThis, command);
+    wtpWakeupAllWrkr(pThis);
+    for (int i = 0; i < pThis->iNumWorkerThreads; ++i) wtiWakeupThrd(pThis->pWrkr[i]);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
+    return RS_RET_OK;
+}
+
+/* The local family has already exhausted its shared cooperative phase.
+ * Request every cancellation before joining any worker: the legacy helper
+ * waits and joins each slot and would serialize another grace period per FE.
+ * mutWtp keeps each pthread ID owned until its request is issued; startup and
+ * terminal WAIT_JOIN publication use the same mutex. No logging, sleep or join
+ * may reenter a queue or wait for worker cleanup while holding this mutex. */
+rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
+    if (!pThis->workers_ready) return RS_RET_OK;
+    rsRetVal result = RS_RET_OK;
+    if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
+    for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {
+        wti_t *const worker = pThis->pWrkr[i];
+        const int state = wtiGetState(worker);
+        if (state == WRKTHRD_RUNNING || state == WRKTHRD_INITIALIZING) {
+            const int cancelResult = pthread_cancel(worker->thrdID);
+            const int signalResult = pthread_kill(worker->thrdID, SIGTTIN);
+            if ((cancelResult != 0 && cancelResult != ESRCH) || (signalResult != 0 && signalResult != ESRCH))
+                result = RS_RET_ERR;
+        }
+    }
+    d_pthread_mutex_unlock(&pThis->mutWtp);
+    return result;
+}
+
+/* NULL deadline is reserved for joining after cancellation: resource lifetime
+ * cannot be bounded by a policy deadline while a callback still executes. */
+rsRetVal wtpWaitShutdownUntil(wtp_t *const pThis, const struct timespec *const deadline) {
+    if (!pThis->workers_ready) return RS_RET_OK;
+    int ret = 0;
+    if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
+    while (ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) != 0 && ret == 0) {
+        ret = deadline == NULL ? pthread_cond_wait(&pThis->condThrdTrm, &pThis->mutWtp)
+                               : pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, deadline);
+    }
+    wtpJoinTerminatedWrkr(pThis);
+    d_pthread_mutex_unlock(&pThis->mutWtp);
+    return ret == 0 ? RS_RET_OK : ret == ETIMEDOUT ? RS_RET_TIMED_OUT : RS_RET_ERR;
+}
+
 
 /* this function contains shared code for both regular worker shutdown as
  * well as shutdown via cancellation. We can not simply use pthread_cleanup_pop(1)
  * as this introduces a race in the debug system (RETiRet system).
  * rgerhards, 2009-10-26
  */
-static void wtpWrkrExecCleanup(wti_t *pWti) {
+static int wtpWrkrPublishTerminated(wti_t *pWti) {
     wtp_t *pThis;
 
     ISOBJ_TYPE_assert(pWti, wti);
@@ -352,15 +456,53 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
      * hard to get it 100% accurate (as curently done, it is not).
      */
     const int numWorkersNow = ATOMIC_LOAD_32BIT_RELAXED(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
-    DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtpGetDbgHdr(pThis), (unsigned long)pWti,
+    /* Name the worker in the message text: the debug-line thread prefix is
+     * not reliable under concurrency, and tests key on this line.
+     */
+    DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtiGetDbgHdr(pWti), (unsigned long)pWti,
               numWorkersNow);
-    if (numWorkersNow > 0) {
+    return numWorkersNow;
+}
+
+static void wtpWrkrLogTerminated(wti_t *pWti, const int numWorkersNow) {
+    wtp_t *const pThis = pWti->pWtp;
+
+    /* Local terminal publication must remain under mutWtp until broadcast.
+     * Emitting a queue message here could recurse into that local BE/pool.
+     * Debug output and the explicit local lifetime counters remain available. */
+    if (numWorkersNow > 0 && !pThis->monotonicTermination) {
         // TODO: did the thread ID experiment (pthread_self) work out? rgerhards, 2024-07-25
         LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
                "%s: worker thread %lx (%" PRIuPTR ") terminated, now %d active worker threads", wtpGetDbgHdr(pThis),
                (unsigned long)pWti, (uintptr_t)pthread_self(), numWorkersNow);
     }
 }
+
+static void wtpWrkrExecCleanup(wti_t *pWti) {
+    wtpWrkrLogTerminated(pWti, wtpWrkrPublishTerminated(pWti));
+}
+
+#ifdef ENABLE_TESTBENCH
+/* Widen the window between a worker leaving its queue loop and publishing
+ * WAIT_JOIN, so tests can deterministically hit worker-start advice while the
+ * only slot of a pool is exiting. The pool is selected by a substring of its
+ * debug header, e.g. ":DAwpool" for disk-assisted transfer pools. The delay
+ * ends early once the pool leaves the RUNNING state.
+ */
+static void wtpTestDelayWorkerExit(wtp_t *const pThis) {
+    const char *const pool = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL");
+    if (pool == NULL || *pool == '\0' || strstr((const char *)wtpGetDbgHdr(pThis), pool) == NULL) return;
+    const char *const delay = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS");
+    long ms = delay == NULL ? 500 : strtol(delay, NULL, 10);
+    if (ms > 60000) ms = 60000;
+    /* Only widen the runtime window: stop delaying once shutdown begins so
+     * the hook does not also stretch worker termination past queue timeouts. */
+    for (; ms > 0; ms -= 10) {
+        if (ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState) != wtpState_RUNNING) break;
+        srSleep(0, 10000);
+    }
+}
+#endif
 
 
 /* cancellation cleanup handler for executing worker decrements the worker counter.
@@ -378,9 +520,12 @@ static void wtpWrkrExecCancelCleanup(void *arg) {
     d_pthread_mutex_lock(pThis->pmutUsr);
     wtiMarkExiting(pWti);
     d_pthread_mutex_unlock(pThis->pmutUsr);
+    /* Local monotonic waiters test the active count under mutWtp. Pair the
+     * cancellation transition with that mutex to prevent a lost final wake. */
+    if (pThis->monotonicTermination) d_pthread_mutex_lock(&pThis->mutWtp);
     wtpWrkrExecCleanup(pWti);
-
-    pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+    pthread_cond_broadcast(&pThis->condThrdTrm);
+    if (pThis->monotonicTermination) d_pthread_mutex_unlock(&pThis->mutWtp);
 }
 
 
@@ -441,14 +586,36 @@ PRAGMA_IGNORE_Wempty_body static void *wtpWorker(
     pthread_cond_broadcast(&pThis->condThrdInitDone);
     d_pthread_mutex_unlock(&pThis->mutWtp);
 
-    wtiWorker(pWti);
+    /* wtiWorker() returns with this slot marked exiting and pmutUsr released.
+     * Until WAIT_JOIN is published the slot can be neither started nor
+     * signalled, so wtpAdviseMaxWorkers() hands any start it needs to this
+     * thread as a restart request. Check for it under pmutUsr and keep that
+     * mutex until WAIT_JOIN is visible: advice then either sees the request
+     * consumed here or a joinable slot it can start. No start is lost.
+     */
+    while (1) {
+        wtiWorker(pWti);
+#ifdef ENABLE_TESTBENCH
+        wtpTestDelayWorkerExit(pThis);
+#endif
+        d_pthread_mutex_lock(pThis->pmutUsr);
+        if (!wtiConsumeRestartRequest(pWti)) break;
+        d_pthread_mutex_unlock(pThis->pmutUsr);
+        DBGPRINTF("%s: worker %p resumes on start advice received while exiting\n", wtpGetDbgHdr(pThis), (void *)pWti);
+    }
     pthread_cleanup_pop(0);
+    /* Lock order pmutUsr -> mutWtp matches wtpStartWrkr(). */
+    int numWorkersNow;
     d_pthread_mutex_lock(&pThis->mutWtp);
     pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
-    wtpWrkrExecCleanup(pWti);
+    numWorkersNow = wtpWrkrPublishTerminated(pWti);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
 
     pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
     pthread_cleanup_pop(1); /* unlock mutex */
+    /* Log only after both mutexes are released, as before WAIT_JOIN became
+     * guarded by pmutUsr: keep the exit path free of logging under locks. */
+    wtpWrkrLogTerminated(pWti, numWorkersNow);
     if (dbgTimeoutToStderr) {
         fprintf(stderr, "rsyslog debug: %p: worker exiting\n", pWti);
     }
@@ -599,6 +766,22 @@ rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, co
             const rsRetVal startRet = wtpStartWrkr(pThis, permit_during_shutdown);
             if (startRet != RS_RET_OK && iRet == RS_RET_OK) iRet = startRet;
         }
+        /* A slot that has left its queue loop but not yet reached WAIT_JOIN
+         * is not startable, and as an exiting worker it is not wakeable
+         * either. If it is the only slot (e.g. the single DA transfer worker
+         * retiring at low water), dropping the advice here stalls producers
+         * until their enqueue timeout. Hand the remaining starts to such
+         * slots instead; wtpWorker() resumes them before publishing WAIT_JOIN.
+         */
+        int nRestart = nMissing - nStartable;
+        const wtpState_t wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
+        if (wtpState != wtpState_RUNNING && !permit_during_shutdown) nRestart = 0;
+        for (i = 0; i < pThis->iNumWorkerThreads && nRestart > 0; ++i) {
+            if (wtiRequestRestart(pThis->pWrkr[i])) {
+                DBGPRINTF("%s: start advice handed to exiting worker %d\n", wtpGetDbgHdr(pThis), i);
+                --nRestart;
+            }
+        }
     }
 
     /* The queue mutex is held by qqueueAdviseMaxWorkers(). Re-evaluate after
@@ -620,6 +803,7 @@ finalize_it:
 
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
     if (pThis == NULL) return RS_RET_PARAM_ERROR;
+    if (!pThis->workers_ready) return RS_RET_OK;
     /* The caller holds pmutUsr, which is the mutex associated with pcondBusy.
      * Do not use mutWtp here: it cannot serialize condition predicates. */
     for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {

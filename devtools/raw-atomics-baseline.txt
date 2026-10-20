@@ -1,0 +1,36 @@
+# Accepted pre-existing raw GCC atomic builtin uses outside a
+# HAVE_ATOMIC_BUILTINS guard, read by devtools/check-raw-atomics.py.
+# Format: <path>: <exact source line, stripped>
+# Entries match by source text, not line number. Do not add new entries:
+# guard new code or use runtime/atomic.h helpers instead. Remove entries
+# once fixed; the checker warns about stale ones.
+#
+# Local queue fixtures and the queue.c pqDA store: fixed by
+# https://github.com/rsyslog/rsyslog/pull/7713 (Solaris build break,
+# https://github.com/rsyslog/rsyslog/issues/7711).
+plugins/imdiag/imdiag.c: const int full = __atomic_load_n(&queue->ctrFull, __ATOMIC_RELAXED) > before;
+plugins/imdiag/imdiag.c: if (__atomic_load_n(&inputTermFixtureRefs[i]->iRefCount, __ATOMIC_RELAXED) != 1) conserved = 0;
+plugins/imdiag/imdiag.c: const uint64_t fullBefore = __atomic_load_n(&destination->ctrFull, __ATOMIC_RELAXED);
+plugins/imdiag/imdiag.c: const uint64_t handoffBefore = __atomic_load_n(&destination->ctrFull, __ATOMIC_RELAXED);
+plugins/omtesting/omtesting.c: ordinal = __atomic_add_fetch(&pData->barrier_cancel_cleanup_count, 1u, __ATOMIC_RELAXED);
+runtime/action.c: !__atomic_exchange_n(&localTestCommit.fired, 1, __ATOMIC_RELAXED)) {
+runtime/queue.c: __atomic_store_n(&pThis->pqParent->pqDA, NULL, __ATOMIC_RELEASE);
+runtime/queue.c: !__atomic_exchange_n(&test_detach_fired, 1, __ATOMIC_RELAXED)) {
+runtime/queue_local_stats.c: const qqueue_local_stats_test_pre_read_hook_t hook = __atomic_load_n(&stats->test_pre_read_hook, __ATOMIC_ACQUIRE);
+runtime/queue_local_stats.c: if (hook != NULL) hook(__atomic_load_n(&stats->test_pre_read_context, __ATOMIC_RELAXED));
+runtime/queue_local_stats.c: previous = __atomic_exchange_n(&stats->test_pre_read_hook, NULL, __ATOMIC_ACQ_REL);
+runtime/queue_local_stats.c: __atomic_store_n(&stats->test_pre_read_context, context, __ATOMIC_RELAXED);
+runtime/queue_local_stats.c: __atomic_store_n(&stats->test_pre_read_hook, hook, __ATOMIC_RELEASE);
+runtime/queue_local_stats.c: if (__atomic_load_n(&owner->local_stats->test_pre_read_hook, __ATOMIC_ACQUIRE) != NULL ||
+runtime/queue_local_stats.c: __atomic_load_n(&owner->local_stats->test_pre_read_context, __ATOMIC_RELAXED) != NULL) {
+tests/local-queue-omfile-cancel-preload.c: if (__atomic_load_n(&output_lock, __ATOMIC_ACQUIRE) == mutex) {
+tests/local-queue-omfile-cancel-preload.c: __atomic_store_n(&cancelled, 1, __ATOMIC_RELEASE);
+tests/local-queue-omfile-cancel-preload.c: if (__atomic_exchange_n(&claimed, 1, __ATOMIC_RELAXED) == 0) {
+tests/local-queue-omfile-cancel-preload.c: __atomic_store_n(&output_lock, last_lock, __ATOMIC_RELEASE);
+tests/local-queue-omfile-cancel-preload.c: if (!__atomic_load_n(&cancelled, __ATOMIC_ACQUIRE) || len != sizeof(" sibling-after-cancel\n") - 1 ||
+#
+# mmnormalize turbo result refcount: built only with liblognorm TurboVM
+# (HAVE_LOGNORM_TURBO), but not tied to HAVE_ATOMIC_BUILTINS. Needs an
+# atomic.h helper or an explicit guard.
+runtime/msg.c: } else if (__atomic_sub_fetch(pMsg->turbo_result_refs, 1, __ATOMIC_ACQ_REL) == 0) {
+runtime/msg.c: __atomic_add_fetch(pOld->turbo_result_refs, 1, __ATOMIC_RELAXED);

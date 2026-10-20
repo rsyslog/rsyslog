@@ -4,6 +4,7 @@
 """One-request mock Kinesis PutRecord endpoint for the config parity tests."""
 import http.server
 import json
+import socketserver
 import sys
 
 
@@ -22,7 +23,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+class Server(http.server.HTTPServer):
+    def server_bind(self):
+        # HTTPServer.server_bind() calls socket.getfqdn(), a reverse DNS
+        # lookup that can stall for tens of seconds when the resolver is
+        # slow, delaying the port file past the readiness timeout. The mock
+        # only needs the bound address, so skip the lookup.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
+server = Server(("127.0.0.1", 0), Handler)
 with open(sys.argv[1], "w", encoding="ascii") as port_file:
     port_file.write(str(server.server_address[1]))
 server.handle_request()

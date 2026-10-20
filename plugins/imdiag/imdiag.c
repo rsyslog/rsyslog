@@ -63,6 +63,13 @@
 #include "datetime.h"
 #include "ratelimit.h"
 #include "queue.h"
+#include "queue_local_stats.h"
+#ifdef ENABLE_TESTBENCH
+    #include "queue_local.h"
+    #include "ruleset.h"
+    #include "glbl.h"
+    #include "wti.h"
+#endif
 #include "rsconf.h"
 #include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
@@ -74,8 +81,11 @@ MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imdiag")
 /* static data */
 DEF_IMOD_STATIC_DATA;
-DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(datetime)
-    DEFobjCurrIf(prop) DEFobjCurrIf(statsobj)
+#ifdef ENABLE_TESTBENCH
+DEFobjCurrIf(glbl)
+#endif
+    DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(datetime)
+        DEFobjCurrIf(prop) DEFobjCurrIf(statsobj)
 
     /* Module static data */
     static tcpsrv_t *pOurTcpsrv = NULL; /* our TCP server(listener) TODO: change for multiple instances */
@@ -98,6 +108,9 @@ STATSCOUNTER_DEF(delayInvocationCount, mutDelayInvocationCount)
 static pthread_mutex_t stats_reporting_blocker_mut;
 static pthread_cond_t stats_reporting_blocker_cond;
 static int stats_reporting_blocked = 0;
+/* Protected by stats_reporting_blocker_mut; true only while the read callback
+ * is parked at the reporting gate, before subsequent objects are collected. */
+static int stats_reporting_waiting = 0;
 static long long statsReportingBlockStartTimeMs = 0;
 static int allowOnlyOnce = 0;
 DEF_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
@@ -507,7 +520,11 @@ static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const i
         return;
     }
     while (stats_reporting_blocked) {
-        if (pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut) != 0) {
+        stats_reporting_waiting = 1;
+        pthread_cond_broadcast(&stats_reporting_blocker_cond);
+        const int waitResult = pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut);
+        stats_reporting_waiting = 0;
+        if (waitResult != 0) {
             pthread_mutex_unlock(&stats_reporting_blocker_mut);
             return;
         }
@@ -551,6 +568,27 @@ finalize_it:
         LogError(0, iRet, "imdiag: block-stats-reporting wasn't successful");
         CHKiRet(sendResponse(pSess, "imdiag::error something went wrong\n"));
     }
+    RETiRet;
+}
+
+/* A block request alone does not prove that an in-flight collection has
+ * finished. Tests can await the next callback parked before dynstats reads.
+ * The ordinary imdiag timeout guard bounds a missing reporting cycle. */
+static rsRetVal awaitStatsReportingBlocked(tcps_sess_t *pSess) {
+    int lockHeld = 0;
+    DEFiRet;
+
+    CHKiConcCtrl(pthread_mutex_lock(&stats_reporting_blocker_mut));
+    lockHeld = 1;
+    while (!stats_reporting_waiting) {
+        CHKiConcCtrl(pthread_cond_wait(&stats_reporting_blocker_cond, &stats_reporting_blocker_mut));
+    }
+    CHKiConcCtrl(pthread_mutex_unlock(&stats_reporting_blocker_mut));
+    lockHeld = 0;
+    CHKiRet(sendResponse(pSess, "stats reporting is blocked\n"));
+
+finalize_it:
+    if (lockHeld) pthread_mutex_unlock(&stats_reporting_blocker_mut);
     RETiRet;
 }
 
@@ -669,6 +707,629 @@ finalize_it:
     RETiRet;
 }
 
+#ifdef ENABLE_TESTBENCH
+/* Run the queue-layer source-attribution fixture from an initialized daemon.
+ * The reply is the oracle; the fixture itself uses isolated queues and leaves
+ * the configured main queue untouched. */
+static rsRetVal queue_lease_test(tcps_sess_t *pSess) {
+    DEFiRet;
+
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        FINALIZE;
+    }
+    iRet = qqueue_test_lease_completion_paths(runConf->pMsgQueue);
+    if (iRet == RS_RET_OK) {
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    } else {
+        CHKiRet(sendResponse(pSess, "ERROR: queue lease fixture failed: %d\n", iRet));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/* Exercise the real local-queue stats adapter after daemon initialization.
+ * The runtime fixture creates a blocked native reader and concurrent adapter
+ * destruction, then confirms list unlinking before this command replies. */
+static rsRetVal local_queue_stats_lifetime_test(tcps_sess_t *pSess) {
+    DEFiRet;
+
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+    } else {
+        iRet = qqueue_local_stats_test_lifetime(runConf->pMsgQueue);
+        if (iRet == RS_RET_OK) {
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        } else {
+            CHKiRet(sendResponse(pSess, "ERROR: local queue stats lifetime fixture failed: %d\n", iRet));
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/* Arm the one-shot post-stop invariant check before local shutdown unlinks its
+ * stats adapter. The marker is test-owned and must be absolute so the daemon
+ * never writes outside the harness work directory by relative resolution. */
+static rsRetVal local_queue_stop_check(uchar *const command, tcps_sess_t *pSess) {
+    uchar marker[PATH_MAX] = {0};
+    uchar *cursor = command;
+    DEFiRet;
+
+    getFirstWord(&cursor, marker, sizeof(marker), 0);
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n') ++cursor;
+    if (marker[0] != '/' || *cursor != '\0') {
+        CHKiRet(sendResponse(pSess, "ERROR: local queue stop-check requires one absolute marker path\n"));
+        FINALIZE;
+    }
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        FINALIZE;
+    }
+    iRet = qqueueLocalTestArmShutdownCheck(runConf->pMsgQueue, (const char *)marker);
+    if (iRet == RS_RET_OK) {
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    } else {
+        CHKiRet(sendResponse(pSess, "ERROR: local queue stop-check arm failed: %d\n", iRet));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/* Submit deliberately sized arrays through the live local-queue wrapper.  This
+ * is not an imdiag ingress shortcut: qqueueLocalSubmit() owns the actual
+ * message references and selects the configured FE or BE.  The shell fixture
+ * holds message zero in the FE callback before it sends the later arrays, so
+ * the four-message array fills F=4 and the two-message array must take the
+ * whole-batch no-fit path. */
+enum localQueueSubmitFixtureStage { LOCAL_QUEUE_SUBMIT_IDLE, LOCAL_QUEUE_SUBMIT_PRIMED, LOCAL_QUEUE_SUBMIT_BATCHED };
+static enum localQueueSubmitFixtureStage localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_IDLE;
+static unsigned localQueueSubmitFixtureNextId;
+enum { LOCAL_QUEUE_REDIRECT_GATE_TIMEOUT_MS = 5000 };
+static qqueueLocalSnapshot_t localQueueSubmitFixtureBaseline;
+static int localQueueSubmitFixtureBaselineValid;
+
+static uint64_t localQueueSubmitFixtureDelta(const uint64_t current, const uint64_t baseline) {
+    return current >= baseline ? current - baseline : 0;
+}
+
+/* The initialized daemon may have already sent internal messages through BE.
+ * The array fixture captures its baseline after the blocked singleton proves
+ * FE startup is complete. Replies then describe only submitted references,
+ * while impstats still exposes the complete lifetime totals. */
+static void localQueueSubmitFixtureSubtractBaseline(qqueueLocalSnapshot_t *const snapshot,
+                                                    const qqueueLocalSnapshot_t *const baseline) {
+    snapshot->attempts = localQueueSubmitFixtureDelta(snapshot->attempts, baseline->attempts);
+    snapshot->admitted = localQueueSubmitFixtureDelta(snapshot->admitted, baseline->admitted);
+    snapshot->preadmission_rejected =
+        localQueueSubmitFixtureDelta(snapshot->preadmission_rejected, baseline->preadmission_rejected);
+    snapshot->terminal = localQueueSubmitFixtureDelta(snapshot->terminal, baseline->terminal);
+    snapshot->route_fe_messages =
+        localQueueSubmitFixtureDelta(snapshot->route_fe_messages, baseline->route_fe_messages);
+    snapshot->route_be_messages =
+        localQueueSubmitFixtureDelta(snapshot->route_be_messages, baseline->route_be_messages);
+    snapshot->be_nofit = localQueueSubmitFixtureDelta(snapshot->be_nofit, baseline->be_nofit);
+    snapshot->be_oversized = localQueueSubmitFixtureDelta(snapshot->be_oversized, baseline->be_oversized);
+    snapshot->be_shutdown_redirect =
+        localQueueSubmitFixtureDelta(snapshot->be_shutdown_redirect, baseline->be_shutdown_redirect);
+    snapshot->outstanding = snapshot->admitted >= snapshot->terminal ? snapshot->admitted - snapshot->terminal : 0;
+}
+
+static rsRetVal localQueueSubmitFixtureCreate(smsg_t **const messages, const size_t count) {
+    struct syslogTime stTime;
+    time_t ttGenTime;
+    size_t i;
+    size_t constructed = 0;
+    size_t j;
+    DEFiRet;
+
+    datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
+    for (i = 0; i < count; ++i) {
+        char raw[128];
+
+        CHKiRet(msgConstructWithTime(&messages[i], &stTime, ttGenTime));
+        ++constructed;
+        snprintf(raw, sizeof(raw), "<167>Mar  1 01:00:00 192.0.2.8 tag msgnum:%8.8u:", localQueueSubmitFixtureNextId++);
+        MsgSetRawMsg(messages[i], raw, strlen(raw));
+        MsgSetInputName(messages[i], pInputName);
+        MsgSetFlowControlType(messages[i], eFLOWCTL_NO_DELAY);
+        messages[i]->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
+        MsgSetRcvFrom(messages[i], pRcvDummy);
+        CHKiRet(MsgSetRcvFromIP(messages[i], pRcvIPDummy));
+    }
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        for (j = 0; j < constructed; ++j) {
+            if (messages[j] != NULL) msgDestruct(&messages[j]);
+        }
+    }
+    RETiRet;
+}
+
+static rsRetVal localQueueSubmitFixtureSubmit(smsg_t *const *const messages, const size_t count) {
+    rsRetVal ret;
+
+    qqueueLocalProducerEnter();
+    ret = qqueueLocalSubmit(runConf->pMsgQueue, messages, count, 0);
+    qqueueLocalProducerLeave();
+    return ret;
+}
+
+static rsRetVal localQueueSubmitFixtureBatch(const size_t count) {
+    smsg_t *messages[5] = {0};
+    size_t i;
+    int submitted = 0;
+    rsRetVal ret;
+    DEFiRet;
+
+    if (count > sizeof(messages) / sizeof(messages[0])) return RS_RET_PARAM_ERROR;
+    if (count == 0) return localQueueSubmitFixtureSubmit(NULL, 0);
+    CHKiRet(localQueueSubmitFixtureCreate(messages, count));
+    ret = localQueueSubmitFixtureSubmit(messages, count);
+    submitted = 1;
+    if (ret != RS_RET_OK) ABORT_FINALIZE(ret);
+    /* qqueueLocalSubmit() accepted ownership of every nonempty supplied
+     * array, including its BE fallback path. */
+    return RS_RET_OK;
+
+finalize_it:
+    if (!submitted) {
+        for (i = 0; i < count; ++i) {
+            if (messages[i] != NULL) msgDestruct(&messages[i]);
+        }
+    }
+    RETiRet;
+}
+
+static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
+    qqueueLocalSnapshot_t before;
+    qqueueLocalSnapshot_t snapshot;
+    uchar mode[32] = {0};
+    int response_attempted = 0;
+    DEFiRet;
+
+    getFirstWord(&argument, mode, sizeof(mode), TO_LOWERCASE);
+    if (runConf->pMsgQueue == NULL || runConf->pMsgQueue->local == NULL) {
+        response_attempted = 1;
+        CHKiRet(sendResponse(pSess, "ERROR: local main queue is not initialized\n"));
+        FINALIZE;
+    }
+    if (!ustrcmp(mode, UCHAR_CONSTANT("prime"))) {
+        if (localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_IDLE) {
+            response_attempted = 1;
+            CHKiRet(sendResponse(pSess, "ERROR: fixture is already primed\n"));
+            FINALIZE;
+        }
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &before);
+        CHKiRet(localQueueSubmitFixtureBatch(0));
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+        if (memcmp(&before, &snapshot, sizeof(snapshot)) != 0) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        CHKiRet(localQueueSubmitFixtureBatch(1));
+        localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_PRIMED;
+        response_attempted = 1;
+        CHKiRet(sendResponse(pSess, "OK expected.messages=12\n"));
+    } else if (!ustrcmp(mode, UCHAR_CONSTANT("batches"))) {
+        if (localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_PRIMED) {
+            response_attempted = 1;
+            CHKiRet(sendResponse(pSess, "ERROR: fixture needs prime\n"));
+            FINALIZE;
+        }
+        /* The caller has observed the blocked singleton's callback. That
+         * establishes FE startup before we exclude prior internal traffic. */
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &localQueueSubmitFixtureBaseline);
+        localQueueSubmitFixtureBaselineValid = 1;
+        CHKiRet(localQueueSubmitFixtureBatch(4));
+        CHKiRet(localQueueSubmitFixtureBatch(2));
+        CHKiRet(localQueueSubmitFixtureBatch(5));
+        localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_BATCHED;
+        response_attempted = 1;
+        CHKiRet(sendResponse(pSess, "OK expected.messages=12 fe.messages=5 be.messages=7\n"));
+    } else if (!ustrcmp(mode, UCHAR_CONSTANT("snapshot"))) {
+        if (!localQueueSubmitFixtureBaselineValid) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+        localQueueSubmitFixtureSubtractBaseline(&snapshot, &localQueueSubmitFixtureBaseline);
+        /* The singleton was published before the baseline but its blocked
+         * callback cannot become terminal until after it. */
+        ++snapshot.attempts;
+        ++snapshot.admitted;
+        ++snapshot.route_fe_messages;
+        snapshot.outstanding = snapshot.admitted >= snapshot.terminal ? snapshot.admitted - snapshot.terminal : 0;
+        response_attempted = 1;
+        CHKiRet(sendResponse(pSess,
+                             "OK attempts=%" PRIu64 " admitted=%" PRIu64 " terminal=%" PRIu64 " outstanding=%" PRIu64
+                             " fe=%" PRIu64 " be=%" PRIu64 " be_nofit=%" PRIu64 " be_oversized=%" PRIu64 "\n",
+                             snapshot.attempts, snapshot.admitted, snapshot.terminal, snapshot.outstanding,
+                             snapshot.route_fe_messages, snapshot.route_be_messages, snapshot.be_nofit,
+                             snapshot.be_oversized));
+    } else {
+        response_attempted = 1;
+        CHKiRet(sendResponse(pSess, "ERROR: expected prime, batches, or snapshot\n"));
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK && !response_attempted)
+        (void)sendResponse(pSess, "ERROR: local queue submit fixture failed: %d\n", iRet);
+    RETiRet;
+}
+
+typedef struct localQueueRedirectSubmitResult_s {
+    smsg_t *message;
+    rsRetVal result;
+} localQueueRedirectSubmitResult_t;
+
+static void *localQueueRedirectSubmit(void *const context) {
+    localQueueRedirectSubmitResult_t *const result = context;
+
+    result->result = localQueueSubmitFixtureSubmit(&result->message, 1);
+    return NULL;
+}
+
+/* Force the only relevant interleave: the producer has set publishing but has
+ * not performed the RUNNING recheck when local shutdown changes the family to
+ * REDIRECT. qqueueLocalShutdown() releases the testbench gate before waiting
+ * for publishing to clear, so the same real wrapper must route this reference
+ * to BE. The backend may close before that submission acquires its mutex; the
+ * result is then one classified pre-admission rejection instead of a terminal
+ * BE delivery. Both outcomes consumed the supplied reference exactly once. */
+static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
+    localQueueRedirectSubmitResult_t submit_result = {.result = RS_RET_ERR};
+    qqueueLocalSnapshot_t baseline;
+    qqueueLocalSnapshot_t snapshot;
+    pthread_t producer;
+    rsRetVal shutdown_result;
+    const char *outcome;
+    int producer_created = 0;
+    DEFiRet;
+
+    if (runConf->pMsgQueue == NULL || runConf->pMsgQueue->local == NULL ||
+        localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_IDLE) {
+        CHKiRet(sendResponse(pSess, "ERROR: redirect fixture requires a fresh local main queue\n"));
+        FINALIZE;
+    }
+    qqueueLocalGetSnapshot(runConf->pMsgQueue, &baseline);
+    CHKiRet(localQueueSubmitFixtureCreate(&submit_result.message, 1));
+    qqueueLocalTestRedirectArm();
+    if (pthread_create(&producer, NULL, localQueueRedirectSubmit, &submit_result) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    producer_created = 1;
+    /* The blocked-state acknowledgement proves the handoff. This deadline is
+     * only a watchdog for a broken fixture or runtime regression; it never
+     * establishes success through elapsed time. */
+    if (!qqueueLocalTestRedirectWaitPublisher(LOCAL_QUEUE_REDIRECT_GATE_TIMEOUT_MS)) {
+        qqueueLocalTestRedirectRelease();
+        if (pthread_join(producer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+    shutdown_result = qqueueLocalShutdown(runConf->pMsgQueue);
+    qqueueLocalTestRedirectRelease();
+    if (pthread_join(producer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    CHKiRet(shutdown_result);
+    qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+    localQueueSubmitFixtureSubtractBaseline(&snapshot, &baseline);
+    if ((submit_result.result != RS_RET_OK && submit_result.result != RS_RET_FORCE_TERM) || snapshot.attempts != 1 ||
+        snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected ||
+        snapshot.admitted != snapshot.terminal || snapshot.outstanding != 0 || snapshot.route_fe_messages != 0 ||
+        snapshot.route_be_messages != 1 || snapshot.be_shutdown_redirect != 1 ||
+        (snapshot.terminal != 1 && snapshot.preadmission_rejected != 1))
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    outcome = snapshot.terminal == 1 ? "terminal" : "preadmission-rejected";
+    CHKiRet(sendResponse(pSess, "OK redirect.messages=1 outcome=%s\n", outcome));
+
+finalize_it:
+    if (!producer_created && submit_result.message != NULL) msgDestruct(&submit_result.message);
+    if (iRet != RS_RET_OK) (void)sendResponse(pSess, "ERROR: local queue redirect fixture failed: %d\n", iRet);
+    RETiRet;
+}
+
+/* Full-queue input shutdown fixture. All gates describe actual callback or
+ * enqueue state; the five-second deadline is only a failure watchdog. Every
+ * message retains an observer ref so accepted and rejected ownership can be
+ * checked after the real queue workers have disposed their references. */
+static pthread_mutex_t inputTermFixtureMut = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t inputTermFixtureCond;
+static pthread_once_t inputTermFixtureCondOnce = PTHREAD_ONCE_INIT;
+static int inputTermFixtureCondReady;
+static clockid_t inputTermFixtureCondClock = CLOCK_REALTIME;
+static qqueue_t *inputTermFixtureDestination, *inputTermFixtureSource;
+static unsigned inputTermFixtureEntered, inputTermFixtureRelease, inputTermFixtureDone;
+static rsRetVal inputTermFixtureHandoff, inputTermFixtureInput;
+static smsg_t *inputTermFixtureRefs[64];
+static size_t inputTermFixtureCount;
+
+static void inputTermFixtureInitCond(void) {
+    #if defined(_POSIX_CLOCK_SELECTION) && _POSIX_CLOCK_SELECTION >= 0
+    pthread_condattr_t attr;
+    if (pthread_condattr_init(&attr) == 0) {
+        if (pthread_condattr_setclock(&attr, CLOCK_MONOTONIC) == 0 &&
+            pthread_cond_init(&inputTermFixtureCond, &attr) == 0) {
+            inputTermFixtureCondClock = CLOCK_MONOTONIC;
+            inputTermFixtureCondReady = 1;
+        }
+        pthread_condattr_destroy(&attr);
+    }
+    #endif
+    if (!inputTermFixtureCondReady && pthread_cond_init(&inputTermFixtureCond, NULL) == 0)
+        inputTermFixtureCondReady = 1;
+}
+
+static int inputTermFixtureAwait(unsigned *const value, const unsigned expected) {
+    struct timespec deadline;
+    clock_gettime(inputTermFixtureCondClock, &deadline);
+    deadline.tv_sec += 5;
+    pthread_mutex_lock(&inputTermFixtureMut);
+    int ret = 0;
+    while (*value < expected && ret == 0)
+        ret = pthread_cond_timedwait(&inputTermFixtureCond, &inputTermFixtureMut, &deadline);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    return ret == 0;
+}
+
+static rsRetVal inputTermFixtureConsumer(void *unused, batch_t *const batch, wti_t *const worker) {
+    (void)unused;
+    rsRetVal result = RS_RET_OK;
+    if (worker->logical_owner == inputTermFixtureSource) {
+        /* This is a real WTI callback, so worker execution must preserve the
+         * accepted source obligation even after the global input flag is set. */
+        smsg_t *handoff = MsgAddRef(batch->pElem[0].pMsg);
+        result = qqueueEnqMsg(inputTermFixtureDestination, eFLOWCTL_NO_DELAY, handoff);
+        if (result != RS_RET_OK && result != RS_RET_QUEUE_FULL && inputTermFixtureDestination->local == NULL)
+            msgDestruct(&handoff);
+        pthread_mutex_lock(&inputTermFixtureMut);
+        inputTermFixtureHandoff = result;
+        pthread_cond_broadcast(&inputTermFixtureCond);
+        pthread_mutex_unlock(&inputTermFixtureMut);
+    } else {
+        pthread_mutex_lock(&inputTermFixtureMut);
+        ++inputTermFixtureEntered;
+        pthread_cond_broadcast(&inputTermFixtureCond);
+        while (!inputTermFixtureRelease) pthread_cond_wait(&inputTermFixtureCond, &inputTermFixtureMut);
+        pthread_mutex_unlock(&inputTermFixtureMut);
+    }
+    for (int i = 0; i < batch->nElem; ++i) batch->eltState[i] = BATCH_STATE_COMM;
+    return result;
+}
+
+static rsRetVal inputTermFixtureMessages(smsg_t **const messages, const size_t count) {
+    if (inputTermFixtureCount + count > sizeof(inputTermFixtureRefs) / sizeof(inputTermFixtureRefs[0]))
+        return RS_RET_PARAM_ERROR;
+    const rsRetVal ret = localQueueSubmitFixtureCreate(messages, count);
+    if (ret != RS_RET_OK) return ret;
+    for (size_t i = 0; i < count; ++i) inputTermFixtureRefs[inputTermFixtureCount++] = MsgAddRef(messages[i]);
+    return RS_RET_OK;
+}
+
+/* Observing ctrFull under the queue mutex after it increases proves the
+ * producer has reached the capacity wait and released that same mutex. */
+static int inputTermFixtureWaitFull(qqueue_t *const queue, const uint64_t before) {
+    struct timespec deadline, now;
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
+    deadline.tv_sec += 5;
+    do {
+        pthread_mutex_lock(queue->mut);
+        const int full = PREFER_LOAD_uint64(&queue->ctrFull) > before;
+        pthread_mutex_unlock(queue->mut);
+        if (full) return 1;
+        srSleep(0, 1000);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+    } while (now.tv_sec < deadline.tv_sec || (now.tv_sec == deadline.tv_sec && now.tv_nsec < deadline.tv_nsec));
+    return 0;
+}
+
+static void *inputTermFixtureProducer(void *unused) {
+    (void)unused;
+    smsg_t *messages[4] = {0};
+    rsRetVal ret = RS_RET_OK;
+    qqueueLocalProducerEnter();
+    if (inputTermFixtureDestination->local != NULL) {
+        /* The BE is held full. The one trusted producer establishes an active
+         * FE singleton and then fills all four ring slots, forcing no-fit BE
+         * fallback for the following two-message submission. */
+        ret = inputTermFixtureMessages(messages, 1);
+        if (ret == RS_RET_OK) ret = qqueueEnqMsg(inputTermFixtureDestination, eFLOWCTL_NO_DELAY, messages[0]);
+        if (ret == RS_RET_OK && !inputTermFixtureAwait(&inputTermFixtureEntered, 2)) ret = RS_RET_TIMED_OUT;
+        if (ret == RS_RET_OK) ret = inputTermFixtureMessages(messages, 4);
+        multi_submit_t fill = {.ppMsgs = messages, .nElem = 4};
+        if (ret == RS_RET_OK) ret = inputTermFixtureDestination->MultiEnq(inputTermFixtureDestination, &fill);
+    }
+    if (ret == RS_RET_OK) ret = inputTermFixtureMessages(messages, 2);
+    multi_submit_t rejected = {.ppMsgs = messages, .nElem = 2};
+    if (ret == RS_RET_OK) ret = inputTermFixtureDestination->MultiEnq(inputTermFixtureDestination, &rejected);
+    /* Legacy global admission retains the current and unprocessed suffix on
+     * FORCE_TERM. Local FE/BE admission consumes that entire supplied array. */
+    if (ret == RS_RET_FORCE_TERM && inputTermFixtureDestination->local == NULL) {
+        for (size_t i = 0; i < 2; ++i) {
+            if (messages[i]->iRefCount != 2)
+                ret = RS_RET_INTERNAL_ERROR;
+            else
+                msgDestruct(&messages[i]);
+        }
+    }
+    qqueueLocalProducerLeave();
+    qqueueLocalProducerExit(NULL);
+    pthread_mutex_lock(&inputTermFixtureMut);
+    inputTermFixtureInput = ret;
+    inputTermFixtureDone = 1;
+    pthread_cond_broadcast(&inputTermFixtureCond);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    return NULL;
+}
+
+static rsRetVal inputTermFixtureQueue(qqueue_t **const queue, const char *const name, const int graph) {
+    rsRetVal ret = qqueueConstruct(queue, QUEUETYPE_FIXED_ARRAY, 1, 1, inputTermFixtureConsumer);
+    if (ret != RS_RET_OK) return ret;
+    qqueueSetDefaultsRulesetQueue(*queue);
+    (*queue)->iMaxQueueSize = (*queue)->iDeqBatchSize = (*queue)->iMinMsgsPerWrkr = 1;
+    (*queue)->toEnq = 60000;
+    (*queue)->toQShutdown = (*queue)->toActShutdown = 5000;
+    if (graph) (*queue)->local_graph_conf = runConf;
+    (*queue)->local_graph_ready = 1;
+    ret = obj.SetName((obj_t *)*queue, (uchar *)name);
+    return ret == RS_RET_OK ? qqueueStart(runConf, *queue) : ret;
+}
+
+static int inputTermFixtureConserved(void) {
+    struct timespec deadline, now;
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
+    deadline.tv_sec += 5;
+    do {
+        int conserved = 1;
+        for (size_t i = 0; i < inputTermFixtureCount; ++i)
+            if (PREFER_LOAD_INT(&inputTermFixtureRefs[i]->iRefCount) != 1) conserved = 0;
+        if (conserved) return 1;
+        srSleep(0, 1000);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+    } while (now.tv_sec < deadline.tv_sec || (now.tv_sec == deadline.tv_sec && now.tv_nsec < deadline.tv_nsec));
+    return 0;
+}
+
+    /* Records which oracle of local_queue_input_term_test() rejected the run in
+     * its local failDetail buffer, then fails with RS_RET_INTERNAL_ERROR. */
+    #define INPUT_TERM_FAIL(...)                                   \
+        do {                                                       \
+            snprintf(failDetail, sizeof(failDetail), __VA_ARGS__); \
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);                 \
+        } while (0)
+
+/* This command is terminal for the input server: it publishes the real one-way
+ * global termination flag. The shell subsequently uses signal-based shutdown
+ * and the daemon's proper-termination file, without another imdiag command. */
+static rsRetVal local_queue_input_term_test(tcps_sess_t *const session) {
+    qqueue_t *const destination = runConf->pMsgQueue;
+    qqueue_t *global = NULL;
+    smsg_t *messages[16] = {0};
+    pthread_t producer;
+    int started = 0;
+    rsRetVal (*consumer)(void *, batch_t *, wti_t *) = destination->pConsumer;
+    qqueueLocalSnapshot_t snapshot;
+    /* Names the oracle that rejected the run; RS_RET_INTERNAL_ERROR alone
+     * does not say which of the checks below failed in an intermittent CI run. */
+    char failDetail[256] = "";
+    DEFiRet;
+    if (pthread_once(&inputTermFixtureCondOnce, inputTermFixtureInitCond) != 0 || !inputTermFixtureCondReady)
+        return RS_RET_ERR;
+    if (destination->local_graph_conf == NULL || destination->iMaxQueueSize != 16 || destination->iDeqBatchSize != 1 ||
+        (destination->local != NULL &&
+         (destination->local_frontend_size != 4 || destination->local_max_frontends != 1)))
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    inputTermFixtureDestination = destination;
+    inputTermFixtureEntered = inputTermFixtureRelease = inputTermFixtureDone = 0;
+    inputTermFixtureCount = 0;
+    inputTermFixtureHandoff = inputTermFixtureInput = RS_RET_ERR;
+    pthread_mutex_lock(destination->mut);
+    const int empty = destination->iQueueSize == 0 && destination->nLogDeq == 0;
+    if (empty) destination->pConsumer = inputTermFixtureConsumer;
+    pthread_mutex_unlock(destination->mut);
+    if (!empty) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    CHKiRet(inputTermFixtureQueue(&inputTermFixtureSource, "input-term-source", 1));
+    CHKiRet(inputTermFixtureQueue(&global, "input-term-global", 0));
+    CHKiRet(inputTermFixtureMessages(messages, 16));
+    /* Untrusted caller fills the real BE and holds its dedicated callback. */
+    for (size_t i = 0; i < 16; ++i) CHKiRet(qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[i]));
+    if (!inputTermFixtureAwait(&inputTermFixtureEntered, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    const uint64_t fullBefore = PREFER_LOAD_uint64(&destination->ctrFull);
+    if (pthread_create(&producer, NULL, inputTermFixtureProducer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    started = 1;
+    if (!inputTermFixtureWaitFull(destination, fullBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    /* Real shutdown ordering: publish flag, wake admissions, then join input.
+     * Downstream callbacks are still gated and cannot make capacity available. */
+    glbl.SetGlobalInputTermination();
+    ruleset_wake_local_graph_inputs(runConf);
+    if (!inputTermFixtureAwait(&inputTermFixtureDone, 1)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    pthread_join(producer, NULL);
+    started = 0;
+    if (inputTermFixtureInput != RS_RET_FORCE_TERM) INPUT_TERM_FAIL("input=%d", inputTermFixtureInput);
+    /* Test direct BE single-message fallback with the same full destination. */
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    const rsRetVal backend = qqueueEnqMsg(destination, eFLOWCTL_NO_DELAY, messages[0]);
+    if (backend == RS_RET_FORCE_TERM && destination->local == NULL) {
+        if (messages[0]->iRefCount != 2) INPUT_TERM_FAIL("backend-refs=%d", messages[0]->iRefCount);
+        msgDestruct(&messages[0]);
+    }
+    if (backend != RS_RET_FORCE_TERM) INPUT_TERM_FAIL("backend=%d", backend);
+    /* Non-graph global queues preserve the legacy retained-ref outcome. */
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    CHKiRet(qqueueEnqMsg(global, eFLOWCTL_NO_DELAY, messages[0]));
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    const rsRetVal legacy = qqueueEnqMsg(global, eFLOWCTL_NO_DELAY, messages[0]);
+    if (legacy != RS_RET_FORCE_TERM || messages[0]->iRefCount != 2)
+        INPUT_TERM_FAIL("legacy=%d legacy-refs=%d", legacy, messages[0]->iRefCount);
+    msgDestruct(&messages[0]);
+    /* A real graph worker must wait, and later successfully hand off its lease. */
+    const uint64_t handoffBefore = PREFER_LOAD_uint64(&destination->ctrFull);
+    CHKiRet(inputTermFixtureMessages(messages, 1));
+    CHKiRet(qqueueEnqMsg(inputTermFixtureSource, eFLOWCTL_NO_DELAY, messages[0]));
+    if (!inputTermFixtureWaitFull(destination, handoffBefore)) ABORT_FINALIZE(RS_RET_TIMED_OUT);
+    pthread_mutex_lock(&inputTermFixtureMut);
+    const int stillWaiting = inputTermFixtureHandoff == RS_RET_ERR;
+    inputTermFixtureRelease = 1;
+    pthread_cond_broadcast(&inputTermFixtureCond);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    const int conserved = inputTermFixtureConserved();
+    pthread_mutex_lock(&inputTermFixtureMut);
+    const rsRetVal handoff = inputTermFixtureHandoff;
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    if (!stillWaiting || !conserved || handoff != RS_RET_OK)
+        INPUT_TERM_FAIL("handoff stillWaiting=%d conserved=%d handoff=%d", stillWaiting, conserved, handoff);
+    if (destination->local != NULL) {
+        qqueueLocalGetSnapshot(destination, &snapshot);
+        if (snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected || snapshot.outstanding != 0 ||
+            snapshot.preadmission_rejected != 3 || snapshot.be_nofit != 2 || snapshot.be_capacity_exhausted != 1)
+            INPUT_TERM_FAIL(
+                "snapshot attempts=%llu terminal=%llu preadmission_rejected=%llu outstanding=%llu "
+                "be_nofit=%llu be_capacity_exhausted=%llu",
+                (unsigned long long)snapshot.attempts, (unsigned long long)snapshot.terminal,
+                (unsigned long long)snapshot.preadmission_rejected, (unsigned long long)snapshot.outstanding,
+                (unsigned long long)snapshot.be_nofit, (unsigned long long)snapshot.be_capacity_exhausted);
+    }
+finalize_it:
+    /* An early failed gate must not strand the input's 60-second capacity
+     * wait. Publish termination and wake it before releasing held consumers. */
+    if (started) {
+        glbl.SetGlobalInputTermination();
+        ruleset_wake_local_graph_inputs(runConf);
+    }
+    pthread_mutex_lock(&inputTermFixtureMut);
+    inputTermFixtureRelease = 1;
+    pthread_cond_broadcast(&inputTermFixtureCond);
+    pthread_mutex_unlock(&inputTermFixtureMut);
+    if (started) {
+        pthread_mutex_lock(destination->mut);
+        pthread_cond_broadcast(&destination->notFull);
+        pthread_mutex_unlock(destination->mut);
+        pthread_join(producer, NULL);
+    }
+    if (inputTermFixtureSource != NULL) {
+        inputTermFixtureSource->local_graph_conf = NULL;
+        qqueueDestruct(&inputTermFixtureSource);
+    }
+    if (global != NULL) qqueueDestruct(&global);
+    const int cleanupConserved = inputTermFixtureConserved();
+    if (!cleanupConserved && iRet == RS_RET_OK) {
+        iRet = RS_RET_INTERNAL_ERROR;
+        snprintf(failDetail, sizeof(failDetail), "cleanup refs not conserved");
+    }
+    pthread_mutex_lock(destination->mut);
+    destination->pConsumer = consumer;
+    pthread_mutex_unlock(destination->mut);
+    /* On a failed conservation oracle, retain observers until process exit;
+     * destination work may still own a reference. Never free test ownership
+     * while reporting an unresolved queue/reference lifetime failure. */
+    if (cleanupConserved) {
+        for (size_t i = 0; i < inputTermFixtureCount; ++i) msgDestruct(&inputTermFixtureRefs[i]);
+    }
+    if (iRet == RS_RET_OK)
+        iRet = sendResponse(session,
+                            "OK input=FORCE_TERM backend=FORCE_TERM global=FORCE_TERM handoff=OK refs=conserved\n");
+    else
+        sendResponse(session, "ERROR: input termination fixture failed: %d%s%s\n", iRet, failDetail[0] ? " " : "",
+                     failDetail);
+    RETiRet;
+}
+
+#endif
+
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
@@ -705,6 +1366,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(injectMsg(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("blockstatsreporting"))) {
         CHKiRet(blockStatsReporting(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreportingblocked"))) {
+        CHKiRet(awaitStatsReportingBlocked(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
@@ -715,6 +1378,20 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(set_seg_disk_fault(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("clearsegdiskfault"))) {
         CHKiRet(clear_seg_disk_fault(pSess));
+#ifdef ENABLE_TESTBENCH
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("queueleasetest"))) {
+        CHKiRet(queue_lease_test(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuestatslifetimetest"))) {
+        CHKiRet(local_queue_stats_lifetime_test(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuestopcheck"))) {
+        CHKiRet(local_queue_stop_check(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuesubmittest"))) {
+        CHKiRet(local_queue_submit_test(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueueinputtermtest"))) {
+        CHKiRet(local_queue_input_term_test(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueueredirecttest"))) {
+        CHKiRet(local_queue_redirect_test(pSess));
+#endif
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;
         if (!parsePosLong(pszMsg, &val)) {
@@ -1248,6 +1925,9 @@ BEGINmodExit
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
     objRelease(statsobj, CORE_COMPONENT);
+#ifdef ENABLE_TESTBENCH
+    objRelease(glbl, CORE_COMPONENT);
+#endif
 ENDmodExit
 
 
@@ -1296,6 +1976,9 @@ BEGINmodInit()
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+#ifdef ENABLE_TESTBENCH
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+#endif
 
     const char *ci_max_empty_checks = getenv("CI_SHUTDOWN_QUEUE_EMPTY_CHECKS");
     if (ci_max_empty_checks != NULL) {
@@ -1344,6 +2027,7 @@ BEGINmodInit()
     CHKiConcCtrl(pthread_mutex_init(&stats_reporting_blocker_mut, NULL));
     CHKiConcCtrl(pthread_cond_init(&stats_reporting_blocker_cond, NULL));
     stats_reporting_blocked = 0;
+    stats_reporting_waiting = 0;
     INIT_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
     CHKiConcCtrl(pthread_mutex_init(&mutStatsReporterWatch, NULL));
     CHKiConcCtrl(pthread_cond_init(&statsReporterWatch, NULL));

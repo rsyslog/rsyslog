@@ -139,6 +139,7 @@ tests/runtime_unit_mmaitag_gemini_response
 tests/runtime_unit_msg_replace
 tests/runtime_unit_ommongodb_date
 tests/runtime_unit_parser_pri
+tests/runtime_unit_queue_lease
 tests/runtime_unit_stringbuf
 
 # Python cache artifacts
@@ -153,3 +154,6 @@ AGENTS.local.md
 
 # Local Codex security review packages and receipts
 .codex/security-review/
+
+# Reviewed container outcome and source/log identity audit
+.codex/container_validation.json

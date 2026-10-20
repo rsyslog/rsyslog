@@ -1532,6 +1532,14 @@ static int *create_udp_socket(uchar *hostname,
             "- this may or may not be an error indication.\n",
             *socks, maxs);
 
+    if (bIsServer && runConf->globals.bRequireAllInputs && *socks != maxs) {
+        LogError(0, RS_RET_COULD_NOT_BIND,
+                 "UDP listener startup requires all resolved addresses, but only %d of %d sockets were created", *socks,
+                 maxs);
+        closeUDPListenSockets(socks);
+        return NULL;
+    }
+
     if (*socks == 0) {
         LogError(0, NO_ERRCODE,
                  "No UDP socket could successfully be initialized, "

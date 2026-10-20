@@ -23,6 +23,10 @@
     {
       "patch": "CVE-2026-61548.patch",
       "reason": "Ubuntu 26.04 backports custom structured-data container handling already present in current main."
+    },
+    {
+      "patch": "CVE-2026-78002.patch",
+      "reason": "Ubuntu 26.04 backports upstream commit 667e3f61 (RainerScript replace() sizing fix), which is already part of current main."
     }
   ],
   "supplemental_build_deps": [],
@@ -34,5 +38,10 @@
     }
   ],
   "install_manifest_additions": [],
-  "not_installed_paths": []
+  "not_installed_paths": [
+    {
+      "path": "usr/lib/*/rsyslog/omkinesis.so",
+      "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Ubuntu 26.04 packaging has no package for this optional module."
+    }
+  ]
 }

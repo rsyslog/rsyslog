@@ -13,7 +13,10 @@ def main() -> None:
 
     args.destination.mkdir(parents=True, exist_ok=True)
     for source in sorted(args.source.glob("*.hex")):
-        encoded = "".join(source.read_text(encoding="ascii").split())
+        encoded = "".join(
+            "".join(line.split("#", 1)[0].split())
+            for line in source.read_text(encoding="ascii").splitlines()
+        )
         (args.destination / source.stem).write_bytes(bytes.fromhex(encoded))
 
 

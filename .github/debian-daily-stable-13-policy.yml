@@ -7,6 +7,22 @@
     {
       "patch": "Revert-queue-emit-better-warning-messages-on-queue-param-.patch",
       "reason": "Debian 13 carries the queue warning revert that current upstream already includes, followed by later queue changes."
+    },
+    {
+      "patch": "imptcp-guard-regex-framing-match-at-line-start.patch",
+      "reason": "Debian 13 cherry-picks upstream commit 07b3c40a (imptcp regex framing guard), which is already part of current main."
+    },
+    {
+      "patch": "mmpstrucdata-Fix-stack-buffer-overflow-with-oversized-RFC.patch",
+      "reason": "Debian 13 partially backports upstream commit bcda60a3 (custom structured-data container handling), which is already part of current main."
+    },
+    {
+      "patch": "omfwd-regression-fix-avoid-false-active-target-change-log.patch",
+      "reason": "Debian 13 cherry-picks upstream commit d6d340aa (omfwd active target change log fix), which is already part of current main."
+    },
+    {
+      "patch": "rainerscript-align-replace-sizing-rewind.patch",
+      "reason": "Debian 13 cherry-picks upstream commit 667e3f61 (RainerScript replace() sizing fix), which is already part of current main."
     }
   ],
   "supplemental_build_deps": [],
@@ -24,5 +40,10 @@
       "reason": "Current upstream adds mmleefparse after Debian 13's rsyslog install manifest; it belongs in the core package with the other message-modification modules."
     }
   ],
-  "not_installed_paths": []
+  "not_installed_paths": [
+    {
+      "path": "usr/lib/*/rsyslog/omkinesis.so",
+      "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Debian 13 packaging has no package for this optional module."
+    }
+  ]
 }

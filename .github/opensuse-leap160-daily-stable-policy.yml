@@ -17,6 +17,12 @@
       "reason": "Current upstream impstats push support uses Snappy compression."
     }
   ],
+  "disabled_optional_modules": [
+    {
+      "module": "omkinesis",
+      "reason": "Current upstream auto-enables omkinesis with libcurl, but the native Leap spec has no package for this optional module."
+    }
+  ],
   "supplemental_core_files": [
     "%{rsyslog_module_dir_nodeps}/mmleefparse.so"
   ],
@@ -48,6 +54,12 @@
       "name": "0001-gtls-guard-early-debug-level-lookup.patch",
       "sha256": "4eeeb6fa3b26a0b319119724c0f8f8b5c232ed26385cdb9b4d8f8b6e8f3218fb",
       "reason": "Already present in current main's early GnuTLS initialization guard."
+    },
+    {
+      "name": "0001-imdtls-fix-permitted-peer-authorization-bypass.patch",
+      "sha256": "8c6bf3d45b20b2e9d92be25a50049a101977006e5aab68a1724eccf6e205efd4",
+      "upstream_commit": "ef9f77d709640ceb3d5e78118081a291f9e373c5",
+      "reason": "Already present in current main: DTLSAcceptSession cleans up the session when peer verification fails."
     }
   ]
 }

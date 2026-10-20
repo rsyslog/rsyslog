@@ -42,6 +42,7 @@
 #ifndef QUEUE_H_INCLUDED
 #define QUEUE_H_INCLUDED
 
+#include <stdint.h>
 #include <pthread.h>
 #include "obj.h"
 #include "wtp.h"
@@ -96,12 +97,36 @@ struct queue_s {
     BEGINobjInstance
         ;
         queueType_t qType;
+        struct qqueueLocal_s *local; /* logical family; NULL for global queues */
+        struct qqueue_local_stats_s *local_stats; /* unlink before any local worker pool is destroyed */
+        struct qqueueLocalFrontend_s *local_source; /* private FE source, never a DA parent */
+        /* Experimental local configuration; immutable after the shared activation gate. */
+        sbool local_scope;
+        struct queue_s *local_retired_da; /* emergency-detached child, retained through graph join */
+        rsconf_t *local_graph_conf; /* graph owner; NULL outside qualified local configurations */
+        sbool local_graph_ready; /* queue mutex: all graph destinations initialized */
+        sbool local_da_active; /* BE mutex: DA transfer has priority over optional FE helpers */
+        sbool local_da_saving; /* joined callback pools; existing persistence phase */
+        sbool local_graph_stopped; /* shutdown-owner only, before object destruction */
+        sbool local_graph_closed; /* admission predicate, protected by queue mutex */
+        sbool local_graph_draining; /* deadline published under queue mutex */
+        struct timespec local_graph_action_deadline;
+        int local_frontend_size;
+        int local_max_frontends;
+        sbool local_frontend_stats;
+        sbool local_helper_batch_size_set;
+        int local_helper_batch_size; /* unset inherits min(frontend size, dequeue batch size); explicit 0 disables */
+        sbool local_config_validated;
+        sbool local_config_error;
+        uint64_t local_explicit_params;
         int nLogDeq; /* number of elements currently logically dequeued */
         int bShutdownImmediate; /* should all workers cease processing messages? */
         DEF_ATOMIC_HELPER_MUT(mutShutdownImmediate);
         sbool bEnqOnly; /* does queue run in enqueue-only mode (1) or not (0)? */
         sbool bSaveOnShutdown; /* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
-        sbool bQueueStarted; /* has queueStart() been called on this queue? 1-yes, 0-no */
+        sbool bQueueStarted; /* storage and regular pool are usable; workers may exist */
+        sbool queue_constructed; /* type-specific storage constructor succeeded */
+        sbool queue_sync_initialized; /* queueStart mutex and conditions exist */
         sbool takeFlowCtlFromMsg; /* override enq flow ctl by message property? */
         int iQueueSize; /* Current number of elements in the queue */
         int iMaxQueueSize; /* how large can the queue grow? */
@@ -284,17 +309,22 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
 rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal qqueue_validate_local_config(qqueue_t *pThis);
 rsRetVal qqueueConstruct(qqueue_t **ppThis,
                          queueType_t qType,
                          int iWorkerThreads,
                          int iMaxQueueSize,
                          rsRetVal (*pConsumer)(void *, batch_t *, wti_t *));
+void qqueue_note_local_config_intent(struct nvlst *lst);
 int queueCnfParamsSet(struct nvlst *lst);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst);
 void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
+void qqueue_activate_graph_node(qqueue_t *queue);
+rsRetVal qqueue_finalize_graph_node(qqueue_t *queue, uint64_t *global_memory_residual);
+rsRetVal qqueue_shutdown_graph_node(qqueue_t *queue, const struct timespec *graceful, const struct timespec *action);
 void qqueueDoneLoadCnf(void);
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
 void qqueueCorrectParams(qqueue_t *pThis);
@@ -328,6 +358,11 @@ PROTOTYPEpropSetMeth(qqueue, iSmpInterval, int);
 extern unsigned int iOverallQueueSize;
 rsRetVal qqueueSetSegDiskTestFault(qqueue_t *pThis, const char *point, unsigned int hit_count);
 rsRetVal qqueueClearSegDiskTestFault(qqueue_t *pThis);
+#endif
+
+#ifdef ENABLE_TESTBENCH
+/* Testbench-only source-attribution and fresh-local-BE-idle fixtures. */
+rsRetVal qqueue_test_lease_completion_paths(qqueue_t *owner);
 #endif
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

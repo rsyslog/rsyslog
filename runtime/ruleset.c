@@ -42,21 +42,25 @@
 #include "msg.h"
 #include "ruleset.h"
 #include "errmsg.h"
+#include "parserif.h"
 #include "parser.h"
 #include "batch.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
 #include "action.h"
+#include "template.h"
 #include "rainerscript.h"
 #include "srUtils.h"
 #include "modules.h"
 #include "wti.h"
 #include "dirty.h" /* for main ruleset queue creation */
+#include "glbl.h"
+#include "queue_local.h"
 
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(parser)
+DEFobjCurrIf(parser) DEFobjCurrIf(glbl)
 
     /* tables for interfacing with the v6 config system (as far as we need to) */
     static struct cnfparamdescr rspdescr[] = {{"name", eCmdHdlrString, CNFPARAM_REQUIRED},
@@ -159,13 +163,16 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues) {
     DEFiRet;
     ruleset_t *pThis = (ruleset_t *)pData;
     dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n", pThis->pQueue, pThis->pszName);
-    if (pThis->pQueue != NULL) startMainQueue(runConf, pThis->pQueue);
+    if (pThis->pQueue != NULL) {
+        const rsRetVal ret = startMainQueue(runConf, pThis->pQueue);
+        if (pThis->pQueue->local_graph_conf != NULL || pThis->pQueue->local_scope) CHKiRet(ret);
+    }
+finalize_it:
     RETiRet;
 }
 /* activate all ruleset queues */
 rsRetVal activateRulesetQueues(void) {
-    llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
-    return RS_RET_OK;
+    return llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
 }
 
 
@@ -923,6 +930,413 @@ rsRetVal rulesetOptimizeAll(rsconf_t *conf) {
 }
 
 
+/* Queue graph storage is owned by the loaded configuration. It remains alive
+ * until every queue worker has joined; queue/action objects are destroyed only
+ * afterwards by the ordinary destructors. Nodes include global memory queues,
+ * which deliberately merge upstream producers but can produce downstream FEs. */
+typedef struct local_queue_node_s local_queue_node_t;
+typedef struct local_queue_edge_s {
+    local_queue_node_t *target;
+    struct local_queue_edge_s *next;
+} local_queue_edge_t;
+struct local_queue_node_s {
+    qqueue_t *queue;
+    local_queue_edge_t *edges;
+    local_queue_node_t *next;
+    unsigned indegree;
+    unsigned emitted;
+};
+struct local_queue_graph_s {
+    local_queue_node_t *nodes;
+    qqueue_t **order;
+    size_t count;
+    int stopping;
+    int stopped;
+#ifdef ENABLE_TESTBENCH
+    char *shutdownMarker;
+#endif
+};
+
+/* Recovery callbacks must not precede initialization of any destination.
+ * Input execution is still held by rsconf.activate at this release point. */
+void ruleset_activate_local_graph(rsconf_t *const conf) {
+    struct local_queue_graph_s *const graph = conf->local_queue_graph;
+    if (graph == NULL) return;
+    for (size_t i = graph->count; i > 0; --i) qqueue_activate_graph_node(graph->order[i - 1]);
+}
+
+void ruleset_free_local_graph(rsconf_t *const conf) {
+    struct local_queue_graph_s *const graph = conf->local_queue_graph;
+    if (graph == NULL) return;
+    while (graph->nodes != NULL) {
+        local_queue_node_t *const node = graph->nodes;
+        graph->nodes = node->next;
+        while (node->edges != NULL) {
+            local_queue_edge_t *const edge = node->edges;
+            node->edges = edge->next;
+            free(edge);
+        }
+        free(node);
+    }
+    free(graph->order);
+#ifdef ENABLE_TESTBENCH
+    free(graph->shutdownMarker);
+#endif
+    free(graph);
+    conf->local_queue_graph = NULL;
+}
+
+static local_queue_node_t *local_graph_node(rsconf_t *const conf, qqueue_t *const queue) {
+    struct local_queue_graph_s *const graph = conf->local_queue_graph;
+    for (local_queue_node_t *node = graph->nodes; node != NULL; node = node->next)
+        if (node->queue == queue) return node;
+    /* DA children belong to their logical node; pure disk boundaries use the
+     * same callback deadlines and retain their existing on-disk store. */
+    if (queue == NULL ||
+        (queue->qType != QUEUETYPE_DIRECT && queue->qType != QUEUETYPE_FIXED_ARRAY &&
+         queue->qType != QUEUETYPE_LINKEDLIST && queue->qType != QUEUETYPE_DISK &&
+         queue->qType != QUEUETYPE_SEGMENTED_DISK) ||
+        queue->toQShutdown < 0 || queue->toActShutdown < 0 || qqueue_validate_local_config(queue) != RS_RET_OK)
+        return NULL;
+    local_queue_node_t *const node = calloc(1, sizeof(*node));
+    if (node == NULL) return NULL;
+    node->queue = queue;
+    node->next = graph->nodes;
+    graph->nodes = node;
+    ++graph->count;
+    return node;
+}
+
+static rsRetVal local_graph_edge(rsconf_t *const conf, qqueue_t *const source, qqueue_t *const target) {
+    local_queue_node_t *const from = local_graph_node(conf, source);
+    local_queue_node_t *const to = local_graph_node(conf, target);
+    if (from == NULL || to == NULL) return RS_RET_LOCAL_QUEUE_CONFIG;
+    for (local_queue_edge_t *edge = from->edges; edge != NULL; edge = edge->next)
+        if (edge->target == to) return RS_RET_OK;
+    local_queue_edge_t *const edge = calloc(1, sizeof(*edge));
+    if (edge == NULL) return RS_RET_OUT_OF_MEMORY;
+    edge->target = to;
+    edge->next = from->edges;
+    from->edges = edge;
+    ++to->indegree;
+    return RS_RET_OK;
+}
+
+static rsRetVal local_graph_order(rsconf_t *const conf) {
+    struct local_queue_graph_s *const graph = conf->local_queue_graph;
+    graph->order = calloc(graph->count, sizeof(*graph->order));
+    if (graph->order == NULL) return RS_RET_OUT_OF_MEMORY;
+    for (size_t i = 0; i < graph->count; ++i) {
+        local_queue_node_t *node;
+        for (node = graph->nodes; node != NULL; node = node->next)
+            if (!node->emitted && node->indegree == 0) break;
+        if (node == NULL) {
+            parser_errmsg("local queue: cyclic queue dependency graph is not supported");
+            return RS_RET_LOCAL_QUEUE_CONFIG;
+        }
+        graph->order[i] = node->queue;
+        node->emitted = 1;
+        for (local_queue_edge_t *edge = node->edges; edge != NULL; edge = edge->next) --edge->target->indegree;
+    }
+    for (size_t i = 0; i < graph->count; ++i) {
+        /* Graph membership covers global boundaries too. Producer role comes
+         * from execution context, never from a queue's scope or graph position. */
+        graph->order[i]->local_graph_conf = conf;
+        if (graph->order[i]->local_scope) graph->order[i]->local_config_validated = 1;
+    }
+    return RS_RET_OK;
+}
+
+static struct timespec local_graph_add_ms(struct timespec deadline, const unsigned milliseconds) {
+    deadline.tv_sec += milliseconds / 1000;
+    deadline.tv_nsec += (long)(milliseconds % 1000) * 1000000L;
+    if (deadline.tv_nsec >= 1000000000L) {
+        ++deadline.tv_sec;
+        deadline.tv_nsec -= 1000000000L;
+    }
+    return deadline;
+}
+
+/* Input termination is published before this wake and before input joins.
+ * A queue mutex serializes the admission predicate and condvar wait with the
+ * broadcast, so an already-blocked input cannot miss the termination wake.
+ * Keep worker handoff admission open: drain deadlines begin only after inputs
+ * join, and upstream accepted obligations still need downstream consumers. */
+void ruleset_wake_local_graph_inputs(rsconf_t *const conf) {
+    struct local_queue_graph_s *const graph = conf->local_queue_graph;
+    if (graph == NULL) return;
+    for (size_t i = 0; i < graph->count; ++i) {
+        qqueue_t *const queue = graph->order[i];
+        if (!queue->bQueueStarted || queue->qType == QUEUETYPE_DIRECT || queue->mut == NULL) continue;
+        pthread_mutex_lock(queue->mut);
+        pthread_cond_broadcast(&queue->notFull);
+        pthread_cond_broadcast(&queue->belowFullDlyWtrMrk);
+        pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
+        pthread_mutex_unlock(queue->mut);
+    }
+}
+
+rsRetVal ruleset_shutdown_local_graph(rsconf_t *const conf) {
+    struct local_queue_graph_s *const graph = conf->local_queue_graph;
+    if (graph == NULL || graph->stopped || graph->stopping) return RS_RET_OK;
+    graph->stopping = 1;
+    DBGPRINTF("local queue graph shutdown begins: upstream before downstream\n");
+    unsigned gracefulMs = 0, actionMs = 0;
+    for (size_t i = 0; i < graph->count; ++i) {
+        const qqueue_t *const queue = graph->order[i];
+        if ((unsigned)queue->toQShutdown > gracefulMs) gracefulMs = (unsigned)queue->toQShutdown;
+        if ((unsigned)queue->toActShutdown > actionMs) actionMs = (unsigned)queue->toActShutdown;
+    }
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    const struct timespec graceful = local_graph_add_ms(now, gracefulMs);
+    const struct timespec action = local_graph_add_ms(graceful, actionMs);
+    /* Wake producers already blocked before input termination. Their queue
+     * waits must use this common deadline rather than a renewed enqueue budget.
+     * No downstream admission is closed until its upstream workers have joined. */
+    for (size_t i = 0; i < graph->count; ++i) {
+        qqueue_t *const queue = graph->order[i];
+        if (!queue->bQueueStarted || queue->qType == QUEUETYPE_DIRECT || queue->mut == NULL) continue;
+        pthread_mutex_lock(queue->mut);
+        queue->local_graph_action_deadline = action;
+        queue->local_graph_draining = 1;
+        pthread_cond_broadcast(&queue->notFull);
+        pthread_cond_broadcast(&queue->belowFullDlyWtrMrk);
+        pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
+        pthread_mutex_unlock(queue->mut);
+    }
+#ifdef ENABLE_TESTBENCH
+    if (graph->shutdownMarker != NULL) {
+        FILE *const marker = fopen(graph->shutdownMarker, "w");
+        if (marker != NULL) {
+            fputs("graph_shutdown=1\n", marker);
+            fclose(marker);
+        }
+    }
+#endif
+    rsRetVal result = RS_RET_OK;
+    for (size_t i = 0; i < graph->count; ++i) {
+        const rsRetVal ret = qqueue_shutdown_graph_node(graph->order[i], &graceful, &action);
+        if (result == RS_RET_OK && ret != RS_RET_OK) result = ret;
+    }
+    /* Existing DA save may outlive callback deadlines. Only enter it after
+     * every graph execution source has joined; all queue objects remain live. */
+    uint64_t global_memory_residual = 0;
+    for (size_t i = 0; i < graph->count; ++i) {
+        uint64_t queue_residual = 0;
+        const rsRetVal ret = qqueue_finalize_graph_node(graph->order[i], &queue_residual);
+        global_memory_residual += queue_residual;
+        if (result == RS_RET_OK && ret != RS_RET_OK) result = ret;
+    }
+    uint64_t local_shutdown_discarded = 0;
+    for (size_t i = 0; i < graph->count; ++i) {
+        const qqueue_t *const queue = graph->order[i];
+        if (queue->local == NULL) continue;
+        qqueueLocalSnapshot_t snapshot;
+        qqueueLocalGetSnapshot(queue, &snapshot);
+        local_shutdown_discarded += snapshot.shutdown_discarded;
+    }
+    graph->stopped = 1;
+    graph->stopping = 0;
+    if (glbl.GetGlobalInputTermState() == 1 && (local_shutdown_discarded > 0 || global_memory_residual > 0)) {
+        /* Emit only during process termination: before global input
+         * termination, LogMsg can re-enter the live graph. Startup unwind has
+         * no accepted graph traffic to report. All finalizers have completed,
+         * so this report cannot become another shutdown queue obligation. */
+        LogMsg(0, NO_ERRCODE, LOG_ERR,
+               "shutdown queue loss: local.shutdown_discarded=%llu global.memory_queue_residual=%llu",
+               (unsigned long long)local_shutdown_discarded, (unsigned long long)global_memory_residual);
+    }
+    return result;
+}
+
+/* Experimental local mode permits only the closed, audited S2 graph. All
+ * objects are immutable and no input/queue workers have started during this
+ * validation. Do not use the action iterator here: it intentionally skips calls
+ * and does not propagate callback failures. */
+static int localQueueModuleNamed(const modInfo_t *const mod, const char *const name) {
+    return mod != NULL && mod->cnfName != NULL && !strcmp((const char *)mod->cnfName, name);
+}
+
+static rsRetVal local_queue_check_action(rsconf_t *const conf, qqueue_t *const source, const action_t *const act) {
+    rsRetVal (*check)(void *) = NULL;
+    if (act == NULL || act->local_queue_numeric_error || act->pQueue == NULL || act->pQueue->local_config_error ||
+        act->ratelimiter != NULL || act->pszRatelimitName != NULL || act->iExecEveryNthOccur > 1 ||
+        act->iExecEveryNthOccurTO != 0 || act->iSecsExecOnceInterval != 0 || act->pszErrFile != NULL ||
+        act->pszExternalStateFile != NULL || act->bRepMsgHasMsg || act->bUsesMsgPassingMode)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    if (!localQueueModuleNamed(act->pMod, "omfile") && !localQueueModuleNamed(act->pMod, "omtesting") &&
+        !localQueueModuleNamed(act->pMod, "omfwd") && !localQueueModuleNamed(act->pMod, "omelasticsearch"))
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    /* Generated/plugin templates and subtree rendering are outside the first
+     * ordinary property/string-template qualification. */
+    for (int i = 0; i < act->iNumTpls; ++i) {
+        const struct template *const tpl = act->ppTpl[i];
+        if (tpl == NULL || tpl->pStrgen != NULL || tpl->bHaveSubtree) return RS_RET_LOCAL_QUEUE_CONFIG;
+        for (const struct templateEntry *e = tpl->pEntryRoot; e != NULL; e = e->pNext) {
+            if (e->eEntryType != CONSTANT && e->eEntryType != FIELD) return RS_RET_LOCAL_QUEUE_CONFIG;
+            if (e->eEntryType == FIELD) {
+                if (e->data.field.msgProp.id == PROP_GLOBAL_VAR) return RS_RET_LOCAL_QUEUE_CONFIG;
+#ifdef FEATURE_REGEXP
+                if (e->data.field.has_regex) return RS_RET_LOCAL_QUEUE_CONFIG;
+#endif
+            }
+        }
+    }
+    if (act->pMod->modQueryEtryPt((uchar *)"localQueueCheckAction", (rsRetVal(**)()) & check) != RS_RET_OK ||
+        check == NULL)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    if (check(act->pModData) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+    qqueue_t *execution = source;
+    if (act->pQueue->qType != QUEUETYPE_DIRECT) {
+        if (local_graph_edge(conf, source, act->pQueue) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+        execution = act->pQueue;
+    }
+    rsRetVal (*retryTarget)(void *, ruleset_t **) = NULL;
+    if (act->pMod->modQueryEtryPt((uchar *)"localQueueGetRetryRuleset", (rsRetVal(**)()) & retryTarget) == RS_RET_OK &&
+        retryTarget != NULL) {
+        ruleset_t *target = NULL;
+        const rsRetVal ret = retryTarget(act->pModData, &target);
+        if (ret == RS_RET_OK) {
+            qqueue_t *const targetQueue = target != NULL && target->pQueue != NULL ? target->pQueue : conf->pMsgQueue;
+            return local_graph_edge(conf, execution, targetQueue);
+        }
+        if (ret != RS_RET_NOT_FOUND) return RS_RET_LOCAL_QUEUE_CONFIG;
+    }
+    return RS_RET_OK;
+}
+
+static rsRetVal localQueueCheckScript(rsconf_t *const conf,
+                                      qqueue_t *const source,
+                                      const struct cnfstmt *stmt,
+                                      const unsigned depth) {
+    if (depth > 256) return RS_RET_LOCAL_QUEUE_CONFIG;
+    for (; stmt != NULL; stmt = stmt->next) {
+        switch (stmt->nodetype) {
+            case S_NOP:
+            case S_STOP:
+                break;
+            case S_ACT:
+                if (local_queue_check_action(conf, source, stmt->d.act) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_CALL: {
+                uchar *const name = (uchar *)es_str2cstr(stmt->d.s_call.name, NULL);
+                ruleset_t *target = NULL;
+                if (name == NULL) return RS_RET_OUT_OF_MEMORY;
+                const rsRetVal ret = rulesetGetRuleset(conf, &target, name);
+                free(name);
+                if (ret != RS_RET_OK || target == NULL) return RS_RET_LOCAL_QUEUE_CONFIG;
+                if (target->pQueue != NULL) {
+                    if (local_graph_edge(conf, source, target->pQueue) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+                } else if (localQueueCheckScript(conf, source, target->root, depth + 1) != RS_RET_OK) {
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                }
+                break;
+            }
+            case S_SET:
+                if (!cnfvarIsLocalQueueSafe(stmt->d.s_set.varname) || !cnfexprIsLocalQueueSafe(stmt->d.s_set.expr))
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_UNSET:
+                if (!cnfvarIsLocalQueueSafe(stmt->d.s_unset.varname)) return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_IF:
+                if (!cnfexprIsLocalQueueSafe(stmt->d.s_if.expr) ||
+                    localQueueCheckScript(conf, source, stmt->d.s_if.t_then, depth + 1) != RS_RET_OK ||
+                    localQueueCheckScript(conf, source, stmt->d.s_if.t_else, depth + 1) != RS_RET_OK)
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_PRIFILT:
+                if (localQueueCheckScript(conf, source, stmt->d.s_prifilt.t_then, depth + 1) != RS_RET_OK ||
+                    localQueueCheckScript(conf, source, stmt->d.s_prifilt.t_else, depth + 1) != RS_RET_OK)
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_PROPFILT:
+                if ((stmt->d.s_propfilt.operation != FIOP_CONTAINS && stmt->d.s_propfilt.operation != FIOP_ISEQUAL &&
+                     stmt->d.s_propfilt.operation != FIOP_STARTSWITH && stmt->d.s_propfilt.operation != FIOP_ENDSWITH &&
+                     stmt->d.s_propfilt.operation != FIOP_ISEMPTY) ||
+                    localQueueCheckScript(conf, source, stmt->d.s_propfilt.t_then, depth + 1) != RS_RET_OK ||
+                    localQueueCheckScript(conf, source, stmt->d.s_propfilt.t_else, depth + 1) != RS_RET_OK)
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            default:
+                return RS_RET_LOCAL_QUEUE_CONFIG;
+        }
+    }
+    return RS_RET_OK;
+}
+
+DEFFUNC_llExecFunc(localQueueCheckRuleset) {
+    ruleset_t *const rs = pData;
+    if (rs->pQueue != NULL && qqueue_validate_local_config(rs->pQueue) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+    rsconf_t *const conf = pParam;
+    qqueue_t *const source = rs->pQueue != NULL ? rs->pQueue : conf->pMsgQueue;
+    if (local_graph_node(conf, source) == NULL) return RS_RET_LOCAL_QUEUE_CONFIG;
+    const rsRetVal ret = localQueueCheckScript(conf, source, rs->root, 0);
+    if (ret != RS_RET_OK)
+        parser_errmsg("experimental local queue: ruleset '%s' contains an unsupported statement, expression or action",
+                      rs->pszName);
+    return ret;
+}
+
+rsRetVal rulesetValidateLocalQueues(rsconf_t *const conf) {
+    if (!conf->local_config_requested && !conf->local_config_error) return RS_RET_OK;
+    if (conf->local_custom_parser) {
+        parser_errmsg("experimental local queue: explicit parser instances are not supported");
+        goto invalid;
+    }
+    if (conf->local_config_error || conf->local_legacy_numeric_error || conf->globals.shutdownQueueDoubleSize ||
+        conf->pMsgQueue == NULL || runConf != NULL || qqueue_validate_local_config(conf->pMsgQueue) != RS_RET_OK)
+        goto invalid;
+    /* Conservative whole-config input whitelist prevents hidden producers and
+     * cross-ruleset graph escapes. Optional checks inspect resolved module state;
+     * an arbitrary module cannot attest itself into this named whitelist. */
+    for (cfgmodules_etry_t *node = conf->modules.root; node != NULL; node = node->next) {
+        if (node->pMod->eType != eMOD_IN) continue;
+        if (!node->canActivate) goto invalid;
+        if (localQueueModuleNamed(node->pMod, "imtcp")) continue;
+#ifdef ENABLE_IMDIAG
+        if (localQueueModuleNamed(node->pMod, "imdiag")) continue;
+#endif
+        if (localQueueModuleNamed(node->pMod, "impstats")) {
+            rsRetVal (*check)(void *) = NULL;
+            if (node->pMod->modQueryEtryPt((uchar *)"localQueueCheckInput", (rsRetVal(**)()) & check) == RS_RET_OK &&
+                check != NULL && check(node->modCnf) == RS_RET_OK)
+                continue;
+        }
+        parser_errmsg("experimental local queue: input module '%s' is not supported", node->pMod->pszName);
+        goto invalid;
+    }
+    /* Parsing runs inside the queue callback too. A custom parser has not been
+     * qualified merely because its input and ruleset statements are supported. */
+    for (const parserList_t *entry = conf->parsers.pParsLstRoot; entry != NULL; entry = entry->pNext) {
+        const modInfo_t *const mod = entry->pParser->pModule;
+        if (mod == NULL || mod->pszName == NULL ||
+            (strcmp((const char *)mod->pszName, "builtin:pmrfc3164") &&
+             strcmp((const char *)mod->pszName, "builtin:pmrfc5424"))) {
+            parser_errmsg("experimental local queue: custom parser '%s' is not supported", entry->pParser->pName);
+            goto invalid;
+        }
+    }
+    conf->local_queue_graph = calloc(1, sizeof(*conf->local_queue_graph));
+#ifdef ENABLE_TESTBENCH
+    const char *const marker = getenv("RSYSLOG_LOCAL_QUEUE_TEST_GRAPH_SHUTDOWN_FILE");
+    if (conf->local_queue_graph != NULL && marker != NULL) {
+        if (marker[0] != '/' || (conf->local_queue_graph->shutdownMarker = strdup(marker)) == NULL) goto invalid;
+    }
+#endif
+    if (conf->local_queue_graph == NULL || local_graph_node(conf, conf->pMsgQueue) == NULL ||
+        llExecFunc(&conf->rulesets.llRulesets, localQueueCheckRuleset, conf) != RS_RET_OK ||
+        local_graph_order(conf) != RS_RET_OK)
+        goto invalid;
+    return RS_RET_OK;
+invalid:
+    ruleset_free_local_graph(conf);
+    conf->local_config_error = 1;
+    parser_errmsg("experimental local queue configuration rejected before activation");
+    return RS_RET_LOCAL_QUEUE_CONFIG;
+}
+
 /* Create a ruleset-specific "main" queue for this ruleset. If one is already
  * defined, an error message is emitted but nothing else is done.
  * Note: we use the main message queue parameters for queue creation and access
@@ -1117,6 +1531,7 @@ ENDobjQueryInterface(ruleset)
  */
 BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
     objRelease(parser, CORE_COMPONENT);
+    objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
 
@@ -1126,6 +1541,7 @@ ENDObjClassExit(ruleset)
  */
 BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
     /* request objects we use */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);

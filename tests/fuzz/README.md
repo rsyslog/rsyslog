@@ -78,7 +78,9 @@ bits are ignored.
 
 All remaining bytes are passed to imtcp as exact wire data. The checked-in
 corpus is hexadecimal so binary zlib and zstd streams remain reviewable and
-portable through distribution archives. Decode it before a local campaign:
+portable through distribution archives. Lines beginning with `#` carry SPDX
+or testcase provenance comments and are ignored by the decoder. Decode it
+before a local campaign:
 
 ```sh
 python3 tests/fuzz/prepare-imtcp-session-corpus.py \

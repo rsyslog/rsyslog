@@ -62,6 +62,7 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "atomic.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -1803,6 +1804,23 @@ static void doFunc_exec_template(struct cnffunc *__restrict__ const func,
     return;
 }
 
+static int resultSizeWarningSent;
+#ifndef HAVE_ATOMIC_BUILTINS
+static DEF_ATOMIC_HELPER_MUT(resultSizeWarningMut) = PTHREAD_MUTEX_INITIALIZER;
+    #define RESULT_SIZE_WARNING_MUT &resultSizeWarningMut
+#else
+    #define RESULT_SIZE_WARNING_MUT NULL
+#endif
+
+static void warnResultSizeLimit(const int limit) {
+    if (ATOMIC_CAS(&resultSizeWarningSent, 0, 1, RESULT_SIZE_WARNING_MUT)) {
+        LogMsg(0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING,
+               "RainerScript replace()/wrap() result exceeds maxMessageSize (%d bytes); returning an empty string "
+               "(further warnings suppressed)",
+               limit);
+    }
+}
+
 static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
                                struct svar *__restrict__ const findVal,
                                struct svar *__restrict__ const replaceWithVal) {
@@ -1815,11 +1833,15 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
     uint lfind = es_strlen(findStr);
     uint lReplaceWith = es_strlen(replaceWithStr);
     uint lSrc = es_strlen(str);
-    uint lDst = 0;
+    size_t lDst = 0;
+    const size_t maxResult = (size_t)glblGetMaxLine(runConf);
+    es_str_t *res;
     uchar *src_buff = es_getBufAddr(str);
     uint i, j;
     for (i = j = 0; i <= lSrc; i++, lDst++) {
+        if (lDst > maxResult) goto oversize;
         if (j == lfind) {
+            if (lReplaceWith > maxResult - (lDst - lfind)) goto oversize;
             lDst = lDst - lfind + lReplaceWith;
             j = 0;
             if (lfind == 0) break;
@@ -1833,7 +1855,8 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
             j = 0;
         }
     }
-    es_str_t *res = es_newStr(lDst);
+    res = es_newStr((es_size_t)lDst);
+    if (res == NULL) goto done;
     unsigned char *dest = es_getBufAddr(res);
     uint k, s;
     for (i = j = s = 0; i <= lSrc; i++, s++) {
@@ -1858,7 +1881,14 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
     if (j > 0) {
         for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
     }
-    res->lenStr = lDst;
+    res->lenStr = (es_size_t)lDst;
+    goto done;
+
+oversize:
+    warnResultSizeLimit((int)maxResult);
+    res = NULL;
+
+done:
     if (freeOperand) es_deleteStr(str);
     if (freeFind) es_deleteStr(findStr);
     if (freeReplacement) es_deleteStr(replaceWithStr);
@@ -2492,6 +2522,7 @@ static void ATTR_NONNULL() doFunct_Replace(struct cnffunc *__restrict__ const fu
     cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
     cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
     ret->d.estr = doFuncReplace(&srcVal[0], &srcVal[1], &srcVal[2]);
+    if (ret->d.estr == NULL) ret->d.estr = es_newStr(0);
     ret->datatype = 'S';
     varFreeMembers(&srcVal[0]);
     varFreeMembers(&srcVal[1]);
@@ -2505,8 +2536,10 @@ static void ATTR_NONNULL() doFunct_Wrap(struct cnffunc *__restrict__ const func,
     struct svar sourceVal;
     struct svar wrapperVal;
     struct svar escaperVal;
-    int freeSource, freeWrapper;
+    int freeSource, freeWrapper = 0;
     es_str_t *sourceStr;
+    es_str_t *wrapperStr = NULL;
+    es_str_t *res;
 
     cnfexprEval(func->expr[0], &sourceVal, usrptr, pWti);
     cnfexprEval(func->expr[1], &wrapperVal, usrptr, pWti);
@@ -2514,26 +2547,39 @@ static void ATTR_NONNULL() doFunct_Wrap(struct cnffunc *__restrict__ const func,
         cnfexprEval(func->expr[2], &escaperVal, usrptr, pWti);
         sourceStr = doFuncReplace(&sourceVal, &wrapperVal, &escaperVal);
         freeSource = 1;
+        if (sourceStr == NULL) {
+            res = es_newStr(0);
+            goto done;
+        }
 
     } else {
         sourceStr = var2String(&sourceVal, &freeSource);
     }
-    es_str_t *wrapperStr = var2String(&wrapperVal, &freeWrapper);
+    wrapperStr = var2String(&wrapperVal, &freeWrapper);
     uchar *src = es_getBufAddr(sourceStr);
     uchar *wrapper = es_getBufAddr(wrapperStr);
     uint lWrapper = es_strlen(wrapperStr);
     uint lSrc = es_strlen(sourceStr);
-    uint totalLen = lSrc + 2 * lWrapper;
-    es_str_t *res = es_newStr(totalLen);
-    uchar *resBuf = es_getBufAddr(res);
-    memcpy(resBuf, wrapper, lWrapper);
-    memcpy(resBuf + lWrapper, src, lSrc);
-    memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
-    res->lenStr = totalLen;
-    if (freeSource) {
+    const uint maxResult = (uint)glblGetMaxLine(runConf);
+    if (lWrapper > maxResult / 2 || lSrc > maxResult - 2 * lWrapper) {
+        warnResultSizeLimit((int)maxResult);
+        res = es_newStr(0);
+    } else {
+        const uint totalLen = lSrc + 2 * lWrapper;
+        res = es_newStr(totalLen);
+        if (res == NULL) goto done;
+        uchar *resBuf = es_getBufAddr(res);
+        memcpy(resBuf, wrapper, lWrapper);
+        memcpy(resBuf + lWrapper, src, lSrc);
+        memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
+        res->lenStr = totalLen;
+    }
+done:
+    if (res == NULL) res = es_newStr(0);
+    if (freeSource && sourceStr != NULL) {
         es_deleteStr(sourceStr);
     }
-    if (freeWrapper) {
+    if (freeWrapper && wrapperStr != NULL) {
         es_deleteStr(wrapperStr);
     }
 
@@ -4515,6 +4561,90 @@ struct modListNode {
 static struct modListNode *modListRoot = NULL;
 static struct modListNode *modListLast = NULL;
 
+/* Cold-path S2 whitelist. Restrict paths to literal nonempty components so
+ * encoded separators, indirect names and global variables cannot slip through
+ * the ordinary prefix-based property classification. */
+int cnfvarIsLocalQueueSafe(const uchar *name) {
+    propid_t id;
+    if (name == NULL || propNameToID((uchar *)name, &id) != RS_RET_OK || (id != PROP_CEE && id != PROP_LOCAL_VAR))
+        return 0;
+    const uchar *p = name + (name[0] == '$');
+    if (*p != '!' && *p != '.') return 0;
+    ++p;
+    int haveComponent = 0;
+    for (; *p != '\0'; ++p) {
+        if (*p == '!') {
+            if (!haveComponent) return 0;
+            haveComponent = 0;
+        } else if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_') {
+            haveComponent = 1;
+        } else {
+            return 0;
+        }
+    }
+    return haveComponent;
+}
+
+static int cnfexprLocalQueueSafeDepth(const struct cnfexpr *const expr, const unsigned depth) {
+    if (expr == NULL || depth > 256) return 0;
+    switch (expr->nodetype) {
+        case 'N':
+        case 'S':
+            return 1;
+        case 'V':
+            return ((const struct cnfvar *)expr)->prop.id != PROP_GLOBAL_VAR;
+        case CMP_NE:
+        case CMP_EQ:
+        case CMP_LE:
+        case CMP_GE:
+        case CMP_LT:
+        case CMP_GT:
+        case CMP_STARTSWITH:
+        case CMP_ENDSWITH:
+        case CMP_STARTSWITHI:
+        case CMP_CONTAINS:
+        case CMP_CONTAINSI:
+        case OR:
+        case AND:
+        case '&':
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        case '%':
+            return cnfexprLocalQueueSafeDepth(expr->l, depth + 1) && cnfexprLocalQueueSafeDepth(expr->r, depth + 1);
+        case NOT:
+        case 'M':
+            return cnfexprLocalQueueSafeDepth(expr->r, depth + 1);
+        case 'F': {
+            const struct cnffunc *const f = (const struct cnffunc *)expr;
+            if (f->fPtr != doFunc_parse_json || f->nParams != 2 || f->expr[0]->nodetype != 'S' ||
+                f->expr[1]->nodetype != 'S')
+                return 0;
+            es_str_t *const dest = ((const struct cnfstringval *)f->expr[1])->estr;
+            es_str_t *const json = ((const struct cnfstringval *)f->expr[0])->estr;
+            /* es strings can contain embedded NUL; runtime conversion must not
+             * make the audited value differ from the value actually evaluated. */
+            const size_t len = es_strlen(dest);
+            const uchar *const bytes = es_getBufAddr(dest);
+            if (len < 3 || bytes[0] != '$' || bytes[1] != '!' || memchr(bytes, 0, len) != NULL ||
+                memchr(es_getBufAddr(json), 0, es_strlen(json)) != NULL)
+                return 0;
+            char *const name = es_str2cstr(dest, NULL);
+            if (name == NULL) return 0;
+            const int safe = cnfvarIsLocalQueueSafe((uchar *)name);
+            free(name);
+            return safe;
+        }
+        default:
+            return 0;
+    }
+}
+
+int cnfexprIsLocalQueueSafe(const struct cnfexpr *const expr) {
+    return cnfexprLocalQueueSafeDepth(expr, 0);
+}
+
 static struct scriptFunct functions[] = {
     {"strlen", 1, 1, doFunct_StrLen, NULL, NULL},
     {"getenv", 1, 1, doFunct_Getenv, NULL, NULL},
@@ -5403,6 +5533,7 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         cnfstmtDisable(cnfstmt);
         goto done;
     }
+    qqueue_note_local_config_intent(lst);
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
         parser_errmsg("warnings occurred in file '%s' around line %d", cnfcurrfn, yylineno);

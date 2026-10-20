@@ -178,6 +178,7 @@ struct strm_s {
         sbool bNoFollowFinal; /* if set, do not follow final path component on open */
         int ignoringMsg;
         strm_compressionDriver_t compressionDriver;
+        sbool localOutput; /* preopened local-queue output: workers never reopen/close */
 };
 
 
@@ -244,6 +245,10 @@ ENDinterface(strm)
     /* V17, 2026-06-23: added bNoFollowFinal stream property setter */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
+
+/* Private built-in omfile support; callers serialize all access. */
+rsRetVal strmPrepareLocalOutput(strm_t *pThis);
+void strmDiscardLocalOutput(strm_t *pThis);
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);

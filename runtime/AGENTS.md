@@ -25,7 +25,7 @@ collection, and process orchestration).
 - `timezones.c`, `datetime.c`: time conversion helpers.
 - `yamlconf.c` / `yamlconf.h`: YAML configuration frontend — parses `.yaml`/`.yml`
   files and produces the same `cnfobj`+`nvlst` trees that the RainerScript grammar
-  produces, then feeds them into the shared `cnfDoObj()` backend in `conf.c`.
+  produces, then feeds them into the shared `cnfDoObj()` backend in `rsconf.c`.
   **Any change to config objects, statement types, template modifiers, or global
   parameters must be reflected here as well as in `grammar/`.** See the
   `rsyslog_config` skill for parity rules.
@@ -37,7 +37,20 @@ collection, and process orchestration).
   - Directly invoke the most relevant shell test under `tests/` (e.g. `./tests/queue-persist.sh`).
   - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
+- Local-graph full-queue input termination and accepted worker handoff have
+  deterministic coverage in `tests/local-queue-input-force-term.sh` and
+  `tests/local-queue-global-input-force-term.sh` (imdiag and impstats required).
+- Known-success FE/BE callback retirement through cooperative immediate stop
+  and cancellation has deterministic post-return gates in
+  `tests/local-queue-known-success.sh`; existing force-term action tests retain
+  interrupted transaction replay coverage.
+- Partial local-graph startup failure, worker-pool rollback, DA child unwind,
+  and legacy disabled-action cleanup are covered by
+  `tests/local-queue-startup-failure.sh` (imtcp and imdiag required).
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
+
+- Classic disk-queue serializer callback ABI and message round-trip coverage is
+  in `tests/diskqueue-serializer-abi.sh`, including reduced macOS builds.
 
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in
@@ -45,6 +58,10 @@ collection, and process orchestration).
 - Keep worker/thread behavior aligned with `MODULE_AUTHOR_CHECKLIST.md` rules:
   per-worker state stays in `wrkrInstanceData_t`, shared state is guarded in
   per-action data structures.
+- Use `atomic.h` helpers instead of raw `__atomic_*` / `__sync_*` builtins.
+  Raw builtins must sit inside an `HAVE_ATOMIC_BUILTINS` (or
+  `HAVE_ATOMIC_BUILTINS64`) branch so builds without them still compile;
+  `devtools/check-raw-atomics.py` enforces this in CI.
 - Update `doc/ai/module_map.yaml` when locking guarantees, queue semantics, or
   exported helper APIs change so module authors know what to depend on.
 - Update or create unit helpers (e.g. under `tests/` or `runtime/hashtable/`)
