@@ -128,3 +128,10 @@ A release handoff is complete only when the report includes:
 - stable-to-main merge commit and remote refs;
 - signed next-cycle main commit and active milestone status;
 - any skipped container or hosted validation gates.
+
+## Open TODO
+
+After the required manual package-build and package-publication actions have
+completed, rebuild the release container images using the package-backed
+release flow. Confirm package readiness first; release-tagged containers must
+not bypass the Adiscon PPA readiness check.
