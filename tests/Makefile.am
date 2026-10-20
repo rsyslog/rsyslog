@@ -17,6 +17,10 @@ EXTRA_DIST = \
 TESTS_DISK_QUEUE_SERIALIZER = diskqueue-serializer-abi.sh
 EXTRA_DIST += $(TESTS_DISK_QUEUE_SERIALIZER)
 
+TESTS_RELOAD_VALIDATE = reload-validate-only.sh reload-validate-modes.sh reload-off-regression.sh
+TESTS_RELOAD_VALIDATE_YAML = yaml-reload-validate-only.sh yaml-reload-validate-modes.sh
+EXTRA_DIST += $(TESTS_RELOAD_VALIDATE) $(TESTS_RELOAD_VALIDATE_YAML)
+
 TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-hup.sh
 TESTS_LOCAL_OMFILE_ACTIVATION = local-queue-omfile-activation.sh
 TESTS_LOCAL_OMFILE_YAML = yaml-local-queue-omfile-activation.sh
@@ -3017,6 +3021,8 @@ endif
 if ENABLE_TESTBENCH
 if ENABLE_IMTCP_TESTS
 if ENABLE_IMDIAG
+# imtcp is an unconditional core module; gate its fixtures with the test option.
+TESTS += $(TESTS_RELOAD_VALIDATE)
 TESTS += $(TESTS_LOCAL_OMFILE_CANCEL)
 check_LTLIBRARIES += liblocal_queue_omfile_cancel_preload.la
 liblocal_queue_omfile_cancel_preload_la_SOURCES = local-queue-omfile-cancel-preload.c
@@ -3312,6 +3318,9 @@ endif # ENABLE_MMJSONPARSE
 endif # ENABLE_IMPTCP
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_LIBYAML_IMTCP)
+if ENABLE_IMDIAG
+TESTS += $(TESTS_RELOAD_VALIDATE_YAML)
+endif # ENABLE_IMDIAG
 if ENABLE_OSSL
 TESTS += $(TESTS_LIBYAML_IMTCP_OSSL)
 endif # ENABLE_OSSL
