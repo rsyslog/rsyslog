@@ -840,15 +840,32 @@ jobs:
         run: |
           chmod -R go+rw .
           echo "== Selected mock target: $MOCK_CONFIG =="
+          # Refresh stale mirror metadata between bounded setup retries. Never
+          # retry the package build: compiler/spec failures must remain visible.
+          dnf_retry() {
+            for attempt in 1 2 3; do
+              if dnf "$@"; then
+                return 0
+              else
+                status=$?
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                return "$status"
+              fi
+              echo "::warning::dnf setup failed (attempt $attempt/3); refreshing metadata before retry"
+              dnf clean metadata || true
+              sleep "$((attempt * 10))"
+            done
+          }
           echo "== Install EPEL and mock =="
-          dnf install -y epel-release
-          dnf install -y mock dnf-utils
+          dnf_retry install -y epel-release
+          dnf_retry install -y mock dnf-utils
           # On private runners, mock's PAM helper cannot read shadow while
           # it has mode 0000. Permit only root to read it for the build.
           chmod 0400 /etc/shadow
           mock --version
           echo "== Install build tools for autoreconf/configure/make dist =="
-          dnf install -y autoconf autoconf-archive automake libtool gcc make flex bison
+          dnf_retry install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
           curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
           {
@@ -859,9 +876,9 @@ jobs:
             echo 'gpgcheck=1'
             echo 'gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon'
           } > /etc/yum.repos.d/adiscon.repo
-          dnf install -y dnf-plugins-core
+          dnf_retry install -y dnf-plugins-core
           dnf config-manager --set-enabled crb
-          dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel libyaml-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
+          dnf_retry install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel libyaml-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
           echo "== Copy mock configs =="
           # Replace symlink targets with regular files so custom configs do not
           # overwrite shared mock-core-configs aliases like centos-stream+epel-*.
