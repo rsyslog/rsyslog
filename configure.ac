@@ -2761,6 +2761,8 @@ if test "x$enable_omjournal" = "xyes"; then
 	AC_CHECK_FUNCS(sd_journal_stream_fd_with_namespace,,)
 	LIBS=$save_libs
 fi
+AM_CONDITIONAL(HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE,
+	test "x$enable_omjournal" = xyes -a "x$ac_cv_func_sd_journal_stream_fd_with_namespace" = xyes)
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
 # capability to enable journal testbench tests. They have very special requirements,
