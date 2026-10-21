@@ -128,8 +128,8 @@ statuses separate when manual package actions are still pending.
    additions/removals, and preserve explicit maintainer overrides. Skip versions
    OBS does not genuinely support; a project name alone is insufficient if its
    download configuration still points at a different release. Test approved
-   coverage changes in staging first; changing official coverage is a separate
-   promotion decision.
+   coverage changes in staging first. Source submit requests do not transfer
+   project `_meta` or `_config`; promote those settings separately with approval.
 2. Use `home:rainergerhards:branches:home:rgerhards` as the reusable staging
    project and `home:rgerhards` as the official destination. Read local guidance
    for separate OSC credential profiles and verify the authenticated identity
@@ -154,9 +154,12 @@ statuses separate when manual package actions are still pending.
    `<sourceupdate>update</sourceupdate>`, not `cleanup`. Never delete the staging
    fork on acceptance: it is reused for subsequent changes. Record the request
    URL and verify its source, destination, and revision through the API.
-6. Accept only with maintainer authorization, then check official builds and
-   publication. Reconcile staging with accepted official sources while keeping
-   unpromoted staging changes. Verify public repository signatures and install
+6. Before acceptance, every enabled official target must be covered by the
+   tested staging matrix or an approved build-disable change. Retain published
+   repositories when retiring builds. Accept only with maintainer authorization,
+   then check official builds and publication. Reconcile staging with accepted
+   official sources while keeping unpromoted staging changes. Verify public
+   repository signatures and install
    and smoke-test the exact published version on matching targets before calling
    those packages operational. Follow the package archive program's validation
    rules; a green build alone does not establish publication or installability.
