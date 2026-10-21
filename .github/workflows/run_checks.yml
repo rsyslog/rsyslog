@@ -821,6 +821,10 @@ jobs:
           echo "== Install EPEL and mock =="
           dnf install -y epel-release
           dnf install -y mock dnf-utils
+          # On private runners, mock's PAM helper cannot read shadow while
+          # it has mode 0000. Permit only root to read it for the build.
+          chmod 0400 /etc/shadow
+          mock --version
           echo "== Install build tools for autoreconf/configure/make dist =="
           dnf install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
