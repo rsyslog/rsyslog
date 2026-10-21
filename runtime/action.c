@@ -2318,7 +2318,15 @@ static rsRetVal ATTR_NONNULL() doSubmitToActionQ(action_t *const pAction, wti_t 
     } else { /* in this case, we do single submits to the queue.
               * TODO: optimize this, we may do at least a multi-submit!
               */
-        iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
+        smsg_t *const pEnq = pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg);
+        if (pEnq == NULL) {
+            /* MsgDup() could not allocate the copy. A NULL message must not
+             * reach the queue; count the loss so impstats shows it. */
+            STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
+            iRet = RS_RET_OUT_OF_MEMORY;
+        } else {
+            iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, pEnq);
+        }
     }
     pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 
