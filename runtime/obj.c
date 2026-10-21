@@ -778,9 +778,13 @@ static void varResetState(var_t *pVar) {
 
 /* De-serialize the properties of an object. This includes processing
  * of the trailer. Header must already have been processed.
+ * objSetProperty is a SETPROPERTY method, called with a fixed (object, var)
+ * pair. The method table stores it with a variadic type; calling it through
+ * that type passes the var on the stack on Darwin ARM64, where the method
+ * expects it in a register.
  * rgerhards, 2008-01-11
  */
-static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(void *, ...), strm_t *pStrm) {
+static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(void *, var_t *), strm_t *pStrm) {
     DEFiRet;
     var_t *pVar = NULL;
 
@@ -850,8 +854,8 @@ static rsRetVal Deserialize(
     CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCT](&pObj));
 
     /* we got the object, now we need to fill the properties */
-    CHKiRet(
-        objDeserializeProperties(pObj, (rsRetVal(*)(void *, ...))pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
+    CHKiRet(objDeserializeProperties(pObj, (rsRetVal(*)(void *, var_t *))pObjInfo->objMethods[objMethod_SETPROPERTY],
+                                     pStrm));
 
     /* check if we need to call a fixup function that modifies the object
      * before it is finalized. -- rgerhards, 2008-01-13
@@ -987,8 +991,8 @@ static rsRetVal DeserializePropBag(obj_t *pObj, strm_t *pStrm) {
     CHKiRet(FindObjInfo((char *)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
 
     /* we got the object, now we need to fill the properties */
-    CHKiRet(
-        objDeserializeProperties(pObj, (rsRetVal(*)(void *, ...))pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
+    CHKiRet(objDeserializeProperties(pObj, (rsRetVal(*)(void *, var_t *))pObjInfo->objMethods[objMethod_SETPROPERTY],
+                                     pStrm));
 
 finalize_it:
     if (pstrID != NULL) rsCStrDestruct(&pstrID);
