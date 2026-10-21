@@ -140,8 +140,13 @@ printf 'container_uid: %s\n' "$container_uid_args"
 printf 'container cmd: %s\n' "$*"
 # DOCKER_RUN_EXTRA_OPTS and DOCKER_RUN_EXTRA_FLAGS intentionally support
 # multiple docker-run arguments.
+# Git must trust the host-owned checkout when the container user has a
+# different UID. Limit that trust to this bind mount.
 # shellcheck disable=SC2086
 docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
+	-e GIT_CONFIG_COUNT=1 \
+	-e GIT_CONFIG_KEY_0=safe.directory \
+	-e GIT_CONFIG_VALUE_0=/rsyslog \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
 	-e RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE \
 	-e CC \
