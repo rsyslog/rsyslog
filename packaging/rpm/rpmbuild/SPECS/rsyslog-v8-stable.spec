@@ -62,6 +62,8 @@ BuildRequires: python3-docutils
 # but doc/source/conf.py needs_sphinx = '4.5.0'. System packages cannot satisfy
 # this; see doc/BUILDS_README.md "RPM builds".
 BuildRequires: python3-pip
+# sphinxcontrib namespace packages require pkg_resources during doc builds.
+BuildRequires: python3-setuptools
 # Pillow (rst2pdf/doc deps) build requirements
 BuildRequires: libjpeg-turbo-devel
 # it depens on rhbz#1419228
