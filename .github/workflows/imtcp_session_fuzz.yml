@@ -17,8 +17,14 @@ name: imtcp session fuzzing
       - 'devtools/devcontainer.sh'
       - 'devtools/run-configure.sh'
       - 'plugins/imtcp/**'
-      - 'runtime/**'
-      - 'tests/Makefile.am'
+      # This harness feeds tcps_sess directly; unrelated runtime and test
+      # inventory changes are covered by the scheduled fuzz campaign.
+      - 'runtime/tcps_sess.c'
+      - 'runtime/tcps_sess.h'
+      - 'runtime/tcpsrv.c'
+      - 'runtime/tcpsrv.h'
+      - 'runtime/msg.c'
+      - 'runtime/msg.h'
       - 'tests/fuzz-imtcp-session-smoke.sh'
       - 'tests/fuzz/prepare-imtcp-session-corpus.py'
       - 'tests/fuzz/corpus/imtcp-session/**'
