@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - name: Checkout repository

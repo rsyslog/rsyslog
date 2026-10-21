@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: >-
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   build_docs:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     outputs:
       docs_changed: ${{steps.doc_changes.outputs.any_changed}}
     steps:
@@ -34,6 +35,7 @@ jobs:
         id: doc_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
             doc/**/*.rst
             doc/source/conf.py
@@ -184,7 +186,8 @@ jobs:
 
       - name: Upload documentation sample coverage to Codecov
         if: >-
-          ${{ (github.event_name != 'pull_request' ||
+          ${{ !github.event.repository.private &&
+          (github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true') &&
           (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -197,7 +200,8 @@ jobs:
 
       - name: Upload fork documentation sample coverage to Codecov
         if: >-
-          ${{ github.event_name == 'pull_request' &&
+          ${{ !github.event.repository.private &&
+          github.event_name == 'pull_request' &&
           steps.doc_changes.outputs.any_changed == 'true' &&
           github.event.pull_request.head.repo.full_name != github.repository }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
@@ -252,12 +256,13 @@ jobs:
   publish_pr_preview:
     name: Publish PR preview comment
     needs: build_docs
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     if: >-
       ${{ github.event_name=='pull_request'&&
       github.event.action!='closed'&&
       needs.build_docs.outputs.docs_changed=='true'&&
       github.event.pull_request.head.repo.full_name==github.repository&&
+      !github.event.repository.private&&
       !startsWith(github.event.pull_request.head.ref, 'ai-findings-autofix/')}}
     permissions:
       contents: read

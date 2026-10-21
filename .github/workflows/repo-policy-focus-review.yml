@@ -28,7 +28,7 @@ concurrency:
 jobs:
   repo-policy-focus-review:
     name: repo policy focus review
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
