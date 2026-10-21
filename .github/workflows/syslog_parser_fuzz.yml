@@ -22,8 +22,16 @@ name: syslog parser fuzzing
       - 'configure.ac'
       - 'devtools/devcontainer.sh'
       - 'devtools/run-configure.sh'
-      - 'runtime/**'
-      - 'tests/Makefile.am'
+      # This harness calls the PRI and RFC parsers on constructed messages;
+      # unrelated runtime and test inventory changes get daily coverage.
+      - 'runtime/parser.c'
+      - 'runtime/parser.h'
+      - 'runtime/msg.c'
+      - 'runtime/msg.h'
+      - 'runtime/datetime.c'
+      - 'runtime/datetime.h'
+      - 'runtime/prop.c'
+      - 'runtime/prop.h'
       - 'tests/fuzz-syslog-message-smoke.sh'
       - 'tests/fuzz/**'
       - 'tools/Makefile.am'
