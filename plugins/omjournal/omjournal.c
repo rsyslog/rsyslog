@@ -252,8 +252,8 @@ static rsRetVal send_non_template_message_with_namespace(uchar *namespace, smsg_
     MsgGetSeverity(pMsg, &sev);
 
 #ifdef HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE
-    fd = sd_journal_stream_fd_with_namespace((char *)namespace, (const char *)getMSG(pMsg),
-                                             (pMsg->iFacility << 3) | sev, 1);
+    /* The stream API expects a syslog severity (LOG_*), not encoded PRI. */
+    fd = sd_journal_stream_fd_with_namespace((char *)namespace, (const char *)getMSG(pMsg), sev, 1);
 #else
     LogError(0, RS_RET_SYSTEMD_VERSION_ERR,
              "omjournal: "
@@ -299,8 +299,9 @@ static void send_non_template_message(smsg_t *const __restrict__ pMsg) {
     /* we can use more properties here, but let's see if there
      * is some real user interest. We can always add later...
      */
-    sd_journal_send("MESSAGE=%s", getMSG(pMsg), "PRIORITY=%d", (pMsg->iFacility * 8) | sev, "SYSLOG_FACILITY=%d",
-                    pMsg->iFacility, "SYSLOG_IDENTIFIER=%s", tag, NULL);
+    /* Journald stores severity and facility in separate fields. */
+    sd_journal_send("MESSAGE=%s", getMSG(pMsg), "PRIORITY=%d", sev, "SYSLOG_FACILITY=%d", pMsg->iFacility,
+                    "SYSLOG_IDENTIFIER=%s", tag, NULL);
 }
 
 static void send_template_message(struct json_object *const __restrict__ json) {
