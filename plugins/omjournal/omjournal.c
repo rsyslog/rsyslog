@@ -246,14 +246,30 @@ static rsRetVal send_non_template_message_with_namespace(uchar *namespace, smsg_
     DEFiRet;
     int fd;
     FILE *log;
+    uchar *tagCopy = NULL;
 
     int sev;
+#ifdef HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE
+    uchar *tag;
+    int lenTag;
+#endif
 
     MsgGetSeverity(pMsg, &sev);
 
 #ifdef HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE
+    /* The stream identifier must be the message tag, not its body. Copy it
+     * while holding the message lock because getTAG() returns message-owned
+     * storage after releasing the lock. Keep this copy alive until the stream
+     * is closed so the API never depends on message-owned storage.
+     */
+    MsgLock(pMsg);
+    getTAG(pMsg, &tag, &lenTag, MUTEX_ALREADY_LOCKED);
+    tagCopy = ustrdup(tag);
+    MsgUnlock(pMsg);
+    if (tagCopy == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
     /* The stream API expects a syslog severity (LOG_*), not encoded PRI. */
-    fd = sd_journal_stream_fd_with_namespace((char *)namespace, (const char *)getMSG(pMsg), sev, 1);
+    fd = sd_journal_stream_fd_with_namespace((char *)namespace, (const char *)tagCopy, sev, 1);
 #else
     LogError(0, RS_RET_SYSTEMD_VERSION_ERR,
              "omjournal: "
@@ -286,6 +302,7 @@ static rsRetVal send_non_template_message_with_namespace(uchar *namespace, smsg_
     fclose(log);
 
 finalize_it:
+    free(tagCopy);
     RETiRet;
 }
 

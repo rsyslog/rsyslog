@@ -33,10 +33,16 @@ Description
 -----------
 Template to use when submitting messages.
 
-Without a template, rsyslog uses the incoming ``$msg`` property as the
-``MESSAGE`` field and also includes ``SYSLOG_IDENTIFIER`` (from the tag),
-``SYSLOG_FACILITY``, and ``PRIORITY``. ``PRIORITY`` contains the severity alone
-(0 through 7); the facility is provided separately in ``SYSLOG_FACILITY``.
+Without a template and without a journal namespace, rsyslog uses the incoming
+``$msg`` property as the ``MESSAGE`` field and also includes
+``SYSLOG_IDENTIFIER`` (from the tag), ``SYSLOG_FACILITY``, and ``PRIORITY``.
+``PRIORITY`` contains the severity alone (0 through 7); the facility is
+provided separately in ``SYSLOG_FACILITY``.
+
+When a namespace is selected, the stream API sets ``SYSLOG_IDENTIFIER`` from
+the tag and ``PRIORITY`` from the severity. That API does not let omjournal
+provide the input facility as ``SYSLOG_FACILITY``, so namespace entries do not
+preserve that field. See :doc:`omjournal-namespace` for details.
 
 When a template is specified, only the fields produced by that template are
 sent. Use a template to control the message formatting and include custom

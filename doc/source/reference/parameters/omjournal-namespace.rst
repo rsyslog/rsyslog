@@ -40,6 +40,10 @@ However, this feature has important limitations:
   under ``/var/log/journal/``. For more information, see the
   `systemd-journald.service(8) <https://www.freedesktop.org/software/systemd/man/latest/systemd-journald.service.html>`_
   man page.
+* The namespace stream API writes ``SYSLOG_IDENTIFIER`` from the message tag
+  and ``PRIORITY`` from its severity (0 through 7). It does not provide a way
+  for omjournal to set the input facility as ``SYSLOG_FACILITY``; that field
+  is not preserved for namespace entries.
 
 Input usage
 -----------
