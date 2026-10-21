@@ -9,8 +9,10 @@ inputs:
 runs:
   using: composite
   steps:
+    # Private CI keeps failure details in job logs without retaining artifacts.
     - name: Prepare versioned evidence
       id: prepare
+      if: ${{ !github.event.repository.private }}
       shell: bash
       env:
         RSYSLOG_FLAKE_JOB_NAME: ${{ inputs.job-name }}
@@ -29,7 +31,7 @@ runs:
         cat flake-evidence.outputs >> "$GITHUB_OUTPUT"
 
     - name: Upload versioned evidence
-      if: steps.prepare.outputs.eligible == 'true'
+      if: ${{ !github.event.repository.private && steps.prepare.outputs.eligible == 'true' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.prepare.outputs.artifact_name }}
