@@ -92,17 +92,26 @@ Failure and retry behavior
 ``ommysql`` treats MariaDB/MySQL client and connection failures differently
 from SQL data errors returned by the server.
 
-Connection-level failures, such as an unavailable server or a broken
-connection, suspend the action. In that state, the usual action retry settings,
-including ``action.resumeInterval`` and ``action.resumeRetryCount``, control
-when rsyslog tries to resume delivery.
+Client-side connection failures, such as an unavailable server or a broken
+connection, cause ``ommysql`` to reconnect and retry the failed statement once.
+If reconnecting or retrying fails, the action is suspended. In that state, the
+usual action retry settings, including ``action.resumeInterval`` and
+``action.resumeRetryCount``, control when rsyslog tries to resume delivery.
 
 Server-side SQL errors, such as a rejected ``INSERT`` or stored procedure call,
 are treated as permanent data failures for the affected messages. rsyslog logs
 the MySQL error and the failed SQL statement, then handles the failed message
 through the action error-file path. These failures are not retried (and thus not
 throttled by ``action.resumeInterval``) because retrying the same malformed
-statement later would normally fail in the same way.
+statement later would normally fail in the same way. MySQL 8.0.24 and later has
+one connection-related exception at the start of a transaction: error 4031
+(``ER_CLIENT_INTERACTION_TIMEOUT``) reports that the server disconnected an
+idle client due to ``wait_timeout`` or ``interactive_timeout``. When this error
+is returned by ``START TRANSACTION``, ``ommysql`` reconnects and retries that
+operation once, before any message SQL in that transaction has run. It does not
+retry error 4031 for later SQL statements: reconnecting then could discard
+earlier statements from the same transaction. MariaDB uses error 4031 for a
+different SQL error, which remains a permanent data failure.
 
 For production setups, configure ``action.errorfile`` on the ``ommysql`` action
 when failed messages must be retained for inspection or replay. Without an error

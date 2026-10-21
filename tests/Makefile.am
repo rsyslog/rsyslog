@@ -1283,6 +1283,7 @@ TESTS_MYSQL = \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
+	mysql-reconnect-timeout.sh \
 	mysql-unavailable-transaction.sh \
 	action-tx-single-processing.sh \
 	action-tx-errfile-maxsize.sh \
@@ -3589,6 +3590,10 @@ TESTS += $(TESTS_LIBDBI_VALGRIND)
 MYSQL_PARALLEL_LOGS += $(TESTS_LIBDBI_VALGRIND:.sh=.log)
 endif
 endif
+
+# This test changes the MySQL server's global wait_timeout; run it only after
+# all other MySQL-backed tests have completed.
+mysql-reconnect-timeout.log: $(filter-out mysql-reconnect-timeout.log, $(MYSQL_PARALLEL_LOGS))
 
 # MySQL tests use one shared server but each test creates its own database.
 # Start the server once, run independent database tests in parallel, then stop
