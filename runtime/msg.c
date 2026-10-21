@@ -5268,10 +5268,20 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
     }
 
     if (name[1] == '\0') { /* full tree? */
-        if (*jroot == NULL)
+        if (*jroot == NULL) {
             *jroot = json;
-        else
+        } else if (json_object_get_type(*jroot) != json_type_object) {
+            /* nothing to merge into: a non-object root is replaced */
+            json_object_put(*jroot);
+            *jroot = json;
+        } else if (json_object_get_type(json) == json_type_object) {
             CHKiRet(jsonMerge(*jroot, json));
+        } else {
+            /* same rule as for a leaf: a container is not overwritten by a value */
+            DBGPRINTF("msgAddJSON: trying to update the root container with a leaf, name is %s - forbidden\n", name);
+            json_object_put(json);
+            ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+        }
     } else {
         if (*jroot == NULL) {
             /* now we need a root obj */
