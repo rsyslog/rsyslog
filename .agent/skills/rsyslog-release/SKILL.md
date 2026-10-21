@@ -1,6 +1,6 @@
 ---
 name: rsyslog-release
-description: Prepare and publish scheduled-stable rsyslog releases, then hand main off to the next release cycle. Use for release metadata, docs and source artifacts, signed tags, GitHub release announcements, stable-to-main merges, and active milestone rotation.
+description: Prepare and publish scheduled-stable rsyslog releases, then hand main off to the next release cycle. Use for release metadata, docs and source artifacts, signed tags, GitHub release announcements, stable-to-main merges, active milestone rotation, and OBS release packaging.
 ---
 
 # Rsyslog Release
@@ -117,6 +117,53 @@ rule. If no such rule exists, treat the GitHub milestone as operational state:
 - report any missing default-assignment automation instead of inventing a new
   one during release publication.
 
+## 6. Stage and promote OBS release packages
+
+Start after the GitHub release assets are available; this can run alongside
+the main-branch handoff. Keep the source release and package-publication
+statuses separate when manual package actions are still pending.
+
+1. Always review distro/version and architecture coverage for the release.
+   Compare vendor support status with the actual OBS native baselines, propose
+   additions/removals, and preserve explicit maintainer overrides. Skip versions
+   OBS does not genuinely support; a project name alone is insufficient if its
+   download configuration still points at a different release. Test approved
+   coverage changes in staging first; changing official coverage is a separate
+   promotion decision.
+2. Use `home:rainergerhards:branches:home:rgerhards` as the reusable staging
+   project and `home:rgerhards` as the official destination. Read local guidance
+   for separate OSC credential profiles and verify the authenticated identity
+   before mutations. Never print credentials or replace one account's profile
+   with the other account's settings.
+3. Download the published GitHub source tarball and its checksum asset; verify
+   the checksum and embedded release version. Update staging RPM specs and
+   changelogs plus the active Debian `.dsc` files and packaging archives.
+   Keep `.dsc` build dependencies consistent with `debian/control`, increment
+   packaging revisions when changing already-published packages, and regenerate
+   archive filenames, sizes, and checksums. Preserve the upstream release asset.
+4. Commit to staging and babysit the complete enabled repository/architecture
+   matrix, including the dependency libraries, not just one RPM and one DEB.
+   Inspect actual logs before fixing failures; resolve native dependency names
+   before dropping a supported feature. Record intentional feature omissions
+   and test skips. Follow dependency waits, native-baseline-triggered rebuilds,
+   signing, and result processing through to their final states. Do not require
+   the maintainer to report routine failures before investigating them.
+5. Submit the tested source revision to the official project when authorized.
+   Always use `osc submitrequest --no-cleanup --revision "$SRCMD5"` with the
+   tested source checksum and verify the request XML has
+   `<sourceupdate>update</sourceupdate>`, not `cleanup`. Never delete the staging
+   fork on acceptance: it is reused for subsequent changes. Record the request
+   URL and verify its source, destination, and revision through the API.
+6. Accept only with maintainer authorization, then check official builds and
+   publication. Reconcile staging with accepted official sources while keeping
+   unpromoted staging changes. Verify public repository signatures and install
+   and smoke-test the exact published version on matching targets before calling
+   those packages operational. Follow the package archive program's validation
+   rules; a green build alone does not establish publication or installability.
+
+Keep this release step focused on delivering the release. Unrelated OBS
+cleanup, account repair, and packaging enhancements are separate work.
+
 ## Completion evidence
 
 A release handoff is complete only when the report includes:
@@ -127,6 +174,9 @@ A release handoff is complete only when the report includes:
 - announcement Discussion URL;
 - stable-to-main merge commit and remote refs;
 - signed next-cycle main commit and active milestone status;
+- OBS coverage review, staging build matrix, submit-request URL/revision,
+  fork-preservation check, and official publication/install verification, or
+  the explicit outstanding manual package handoff;
 - any skipped container or hosted validation gates.
 
 ## Open TODO
