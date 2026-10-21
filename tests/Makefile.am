@@ -2361,6 +2361,8 @@ TESTS_IMFILE = \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
+	imfile-truncate-state-past-eof.sh \
+	imfile-truncate-state-past-eof-off.sh \
 	imfile-truncate-multiple.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
@@ -2522,7 +2524,8 @@ TESTS_IMFILE_MMNORMALIZE = \
 	imfile-endmsg.regex-with-example.sh
 
 TESTS_IMFILE_IMPSTATS = \
-	imfile-statistics.sh
+	imfile-statistics.sh \
+	imfile-truncate-empty-buffer.sh
 
 TESTS_IMFILE_VALGRIND = \
 	imfile-basic-vg.sh \
