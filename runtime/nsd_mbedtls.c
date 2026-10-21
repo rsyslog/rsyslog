@@ -38,6 +38,9 @@
 #include <mbedtls/error.h>
 #include <mbedtls/oid.h>
 #include <mbedtls/version.h>
+#if MBEDTLS_VERSION_MAJOR >= 4
+    #include <psa/crypto.h>
+#endif
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -107,7 +110,9 @@ static rsRetVal mbedtlsInitCred(nsd_mbedtls_t *const pThis) {
     if (keyFile != NULL) {
         mbedtls_pk_free(&(pThis->pkey));
         mbedtls_pk_init(&(pThis->pkey));
-#if MBEDTLS_VERSION_MAJOR >= 3
+#if MBEDTLS_VERSION_MAJOR >= 4
+        if ((r = mbedtls_pk_parse_keyfile(&(pThis->pkey), (const char *)keyFile, NULL)) != 0) {
+#elif MBEDTLS_VERSION_MAJOR >= 3
         if ((r = mbedtls_pk_parse_keyfile(&(pThis->pkey), (const char *)keyFile, NULL, mbedtls_ctr_drbg_random,
                                           &(pThis->ctr_drbg))) != 0) {
 #else
@@ -164,11 +169,23 @@ finalize_it:
 static rsRetVal mbedtlsGlblInit(void) {
     DEFiRet;
 
+#if MBEDTLS_VERSION_MAJOR >= 4
+    const psa_status_t psaStatus = psa_crypto_init();
+    if (psaStatus != PSA_SUCCESS) {
+        LogError(0, RS_RET_ERR, "nsd mbedtls: psa_crypto_init failed with status %d", psaStatus);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+#endif
+
     dbgprintf("mbedtlsGlblInit: Running Version: '%#010x'\n", MBEDTLS_VERSION_NUMBER);
 
+#if MBEDTLS_VERSION_MAJOR >= 4
+finalize_it:
+#endif
     RETiRet;
 }
 
+#if MBEDTLS_VERSION_MAJOR < 4
 static rsRetVal get_custom_string(char **out) {
     DEFiRet;
     struct timeval tv;
@@ -187,8 +204,13 @@ static rsRetVal get_custom_string(char **out) {
 finalize_it:
     RETiRet;
 }
+#endif
 
 static rsRetVal mbedtlsInitSession(nsd_mbedtls_t *pThis) {
+#if MBEDTLS_VERSION_MAJOR >= 4
+    (void)pThis;
+    return RS_RET_OK;
+#else
     DEFiRet;
     char *cust = NULL;
 
@@ -203,6 +225,7 @@ finalize_it:
     free(cust);
 
     RETiRet;
+#endif
 }
 
 /* globally de-initialize Mbed TLS */
@@ -252,8 +275,10 @@ BEGINobjConstruct(nsd_mbedtls) /* be sure to specify the object type also in END
     mbedtls_x509_crl_init(&(pThis->crl));
     mbedtls_pk_init(&(pThis->pkey));
     mbedtls_x509_crt_init(&(pThis->srvcert));
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_ctr_drbg_init(&(pThis->ctr_drbg));
     mbedtls_entropy_init(&(pThis->entropy));
+#endif
     pThis->bReportAuthErr = 1;
 
 #if MBEDTLS_DEBUG_LEVEL > 0
@@ -279,8 +304,10 @@ BEGINobjDestruct(nsd_mbedtls) /* be sure to specify the object type also in END 
     free((void *)pThis->anzCipherSuites);
     free((void *)pThis->pszConnectHost);
 
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_entropy_free(&(pThis->entropy));
     mbedtls_ctr_drbg_free(&(pThis->ctr_drbg));
+#endif
     mbedtls_x509_crt_free(&(pThis->srvcert));
     mbedtls_pk_free(&(pThis->pkey));
     mbedtls_x509_crl_free(&(pThis->crl));
@@ -1209,7 +1236,9 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
                                         MBEDTLS_SSL_PRESET_DEFAULT));
     mbedtlsApplyTlsVersionWorkaround(pNew, &(pNew->conf));
 
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_ssl_conf_rng(&(pNew->conf), mbedtls_ctr_drbg_random, &(pNew->ctr_drbg));
+#endif
     mbedtls_ssl_conf_authmode(&(pNew->conf), mbedtlsAuthMode(pNew));
     mbedtls_ssl_conf_ca_chain(&(pNew->conf), pNew->bHaveCaCert ? &(pNew->cacert) : NULL,
                               pNew->bHaveCrl ? &(pNew->crl) : NULL);
@@ -1365,7 +1394,9 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
                                         MBEDTLS_SSL_PRESET_DEFAULT));
     mbedtlsApplyTlsVersionWorkaround(pThis, &(pThis->conf));
 
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_ssl_conf_rng(&(pThis->conf), mbedtls_ctr_drbg_random, &(pThis->ctr_drbg));
+#endif
     mbedtls_ssl_conf_authmode(&(pThis->conf), mbedtlsAuthMode(pThis));
     mbedtls_ssl_conf_ca_chain(&(pThis->conf), pThis->bHaveCaCert ? &(pThis->cacert) : NULL,
                               pThis->bHaveCrl ? &(pThis->crl) : NULL);
