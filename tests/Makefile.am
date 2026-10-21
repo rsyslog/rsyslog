@@ -2783,6 +2783,8 @@ EXTRA_DIST += $(TESTS_MBEDTLS)
 EXTRA_DIST += $(TESTS_MBEDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_OSSL)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL)
+EXTRA_DIST += override_ossl_shared_curve.c
+EXTRA_DIST += openssl_shared_curve_probe.c
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL_VALGRIND)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL_SNI)
 EXTRA_DIST += $(TESTS_OSSL_WOLFSSL)
@@ -3087,6 +3089,19 @@ liboverride_recv_imptcp_la_SOURCES = override_recv_imptcp.c
 liboverride_recv_imptcp_la_CFLAGS =
 liboverride_recv_imptcp_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_recv_imptcp_la_LIBADD = $(DL_LIBS)
+endif
+
+if ENABLE_OPENSSL
+check_LTLIBRARIES += liboverride_ossl_shared_curve.la
+liboverride_ossl_shared_curve_la_SOURCES = override_ossl_shared_curve.c
+liboverride_ossl_shared_curve_la_CPPFLAGS = $(OPENSSL_CFLAGS)
+liboverride_ossl_shared_curve_la_CFLAGS =
+liboverride_ossl_shared_curve_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_ossl_shared_curve_la_LIBADD = $(OPENSSL_LIBS) $(DL_LIBS) $(PTHREADS_LIBS)
+check_PROGRAMS += openssl_shared_curve_probe
+openssl_shared_curve_probe_SOURCES = openssl_shared_curve_probe.c
+openssl_shared_curve_probe_CPPFLAGS = $(OPENSSL_CFLAGS)
+openssl_shared_curve_probe_LDADD = $(OPENSSL_LIBS)
 endif
 
 if ENABLE_OMUDPSPOOF
