@@ -508,6 +508,27 @@ jobs:
             cfgcache-ci-${{ matrix.config }}
             -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/apply-service-relevance.sh','devtools/run-configure.sh','devtools/run-ci.sh') }}
 
+      # The dev containers need not include Node. Execute both trust-boundary
+      # regressions on the host, without the optional-tool skip wrappers.
+      - name: Set up pinned Node for coverage contracts
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.22.1'
+          package-manager-cache: false
+
+      - name: Verify coverage contract interpreters
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          test "$(node --version)" = v24.22.1
+          python3 --version
+
+      - name: Test coverage trust boundaries on the host
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          devtools/ci-flake-phase.sh run pr-coverage-source custom -- node tests/pr-coverage-source.cjs
+          devtools/ci-flake-phase.sh run pr-coverage-artifact custom -- python3 tests/pr-coverage-artifact.py
+
       - name: run container CI pipeline
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
@@ -570,6 +591,11 @@ jobs:
               export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp"
               ;;
           'ubuntu_24')
+              # Reuse this representative runtime lane for PR coverage. No token
+              # enters PR execution; the trusted workflow_run job uploads later.
+              export CFLAGS='-g --coverage'
+              export LDFLAGS='--coverage'
+              export DOCKER_RUN_EXTRA_OPTS='-e LDFLAGS'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               # TODO: enable disabled components when the issues are fixed
@@ -671,6 +697,31 @@ jobs:
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: Capture representative PR coverage
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+        run: |
+          # Expand the report-size command inside the container.
+          # shellcheck disable=SC2016
+          devtools/devcontainer.sh --rm bash -euc '
+            lcov --capture --directory . --output-file coverage.raw.info \
+              --gcov-tool gcov --ignore-errors mismatch,negative --filter range
+            lcov --remove coverage.raw.info "/usr/*" "*/tests/*" -o coverage.info
+            rm coverage.raw.info
+            test -s coverage.info
+            test "$(wc -c < coverage.info)" -le 33554432
+          '
+
+      - name: Preserve coverage for the trusted uploader
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-ubuntu-24-pr-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage.info
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload test failure evidence
         if: >-

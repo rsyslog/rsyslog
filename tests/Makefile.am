@@ -59,6 +59,11 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-nil
 EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
 
+# Trusted coverage upload boundaries are pure helper tests, not daemon tests.
+TESTS_PR_COVERAGE = pr-coverage-artifact.sh pr-coverage-source.sh
+EXTRA_DIST += $(TESTS_PR_COVERAGE) pr-coverage-artifact.py pr-coverage-source.cjs \
+	../devtools/validate-pr-coverage.py ../devtools/pr-coverage-source.cjs
+
 TESTS_MERMAID_OFFLINE = mermaid-offline.sh
 EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
 
@@ -2874,6 +2879,8 @@ TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri r
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
+
+TESTS += $(TESTS_PR_COVERAGE)
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)

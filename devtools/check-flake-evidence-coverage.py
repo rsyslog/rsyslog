@@ -39,7 +39,10 @@ EXPECTED_UPLOADS = {
     "ubuntu_daily_stable.yml": 2,
     "el10_daily_stable.yml": 2,
 }
-TEST_COMMAND_RE = re.compile(r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh")
+TEST_COMMAND_RE = re.compile(
+    r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh"
+    r"|tests/pr-coverage-(?:source\.cjs|artifact\.py)"
+)
 UPLOAD_RE = re.compile(
     r"^(?:      - |        )uses:\s+"
     r"(?:\./|\$/)\.github/actions/upload-flake-evidence\s*(?:#.*)?$",

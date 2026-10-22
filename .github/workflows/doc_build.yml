@@ -183,29 +183,29 @@ jobs:
           rm -f coverage.raw.info
           lcov --list coverage.info | sed -n '1,60p' || true
           [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+          test "$(wc -c < coverage.info)" -le 33554432
 
-      - name: Upload documentation sample coverage to Codecov
-        if: >-
-          ${{ !github.event.repository.private &&
-          (github.event_name != 'pull_request' ||
-          steps.doc_changes.outputs.any_changed == 'true') &&
-          (github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: doc-builder/coverage.info
-          flags: docs-samples
-          fail_ci_if_error: true
-
-      - name: Upload fork documentation sample coverage to Codecov
+      # All PR reports cross the same unprivileged-artifact/trusted-upload
+      # boundary. Main/push coverage retains its existing authenticated route.
+      - name: Preserve documentation sample coverage for the trusted uploader
         if: >-
           ${{ !github.event.repository.private &&
           github.event_name == 'pull_request' &&
-          steps.doc_changes.outputs.any_changed == 'true' &&
-          github.event.pull_request.head.repo.full_name != github.repository }}
+          steps.doc_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-docs-samples-pr-${{ github.run_id }}-${{ github.run_attempt }}
+          path: doc-builder/coverage.info
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload upstream documentation sample coverage to Codecov
+        if: >-
+          ${{ !github.event.repository.private &&
+          github.event_name != 'pull_request' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: doc-builder/coverage.info
           flags: docs-samples
           fail_ci_if_error: true

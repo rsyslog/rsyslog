@@ -1,0 +1,131 @@
+# SPDX-License-Identifier: Apache-2.0
+name: upload PR coverage
+
+'on':
+  # The consumer must be present on main before this trigger can run.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: [check, documentation build]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: pr-coverage-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.repository == 'rsyslog/rsyslog' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      checks: write
+    steps:
+      # Checkout is always the trusted default-branch workflow revision. Never
+      # checkout the source run's SHA, restore its caches, or execute its files.
+      - name: Checkout trusted artifact validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate source run and resolve PR head
+        id: source
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await require('./devtools/pr-coverage-source.cjs')({github, context, core});
+
+      - name: Create upload check on the PR head
+        if: steps.source.outputs.artifact != ''
+        id: check
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_HEAD_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_URL: ${{ steps.source.outputs.url }}
+          CHECK_NAME: ${{ steps.source.outputs.check }}
+        with:
+          script: |
+            const {data: check} = await github.rest.checks.create({
+              ...context.repo, name: process.env.CHECK_NAME, head_sha: process.env.PR_HEAD_SHA,
+              status: 'in_progress', details_url: process.env.SOURCE_URL,
+              output: {title: 'Uploading PR coverage',
+                summary: 'The source coverage job and generation steps passed. Report validation/upload is a separate check.'}
+            });
+            core.setOutput('id', check.id);
+
+      - name: Download bounded report archive
+        if: steps.source.outputs.artifact != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          ARTIFACT_ID: ${{ steps.source.outputs.artifact }}
+        with:
+          script: |
+            const {data} = await github.rest.actions.downloadArtifact({
+              ...context.repo, artifact_id: Number(process.env.ARTIFACT_ID), archive_format: 'zip'
+            });
+            const buffer = Buffer.from(data);
+            if (buffer.length > 10485760) throw new Error('Coverage archive exceeds download limit');
+            require('fs').writeFileSync(`${process.env.RUNNER_TEMP}/pr-coverage.zip`, buffer, {flag: 'wx'});
+
+      - name: Validate report as data without extracting archive paths
+        if: steps.source.outputs.artifact != ''
+        env:
+          COVERAGE_KIND: ${{ steps.source.outputs.kind }}
+        run: |
+          case "$COVERAGE_KIND" in
+            runtime) source_root=/rsyslog ;;
+            docs) source_root="$GITHUB_WORKSPACE/doc-builder" ;;
+            *) echo "Unexpected coverage profile" >&2; exit 1 ;;
+          esac
+          python3 devtools/validate-pr-coverage.py "$RUNNER_TEMP/pr-coverage.zip" coverage.info \
+            --source-root "$source_root"
+
+      - name: Require token authentication
+        if: steps.source.outputs.artifact != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -z "$CODECOV_TOKEN" ]; then
+            echo "CODECOV_TOKEN is unavailable; refusing tokenless upload" >&2
+            exit 1
+          fi
+
+      - name: Upload coverage with the trusted repository token
+        if: steps.source.outputs.artifact != ''
+        id: upload
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: rsyslog/rsyslog
+          files: coverage.info
+          disable_search: true
+          disable_file_fixes: true
+          plugins: noop
+          override_commit: ${{ steps.source.outputs.sha }}
+          override_pr: ${{ steps.source.outputs.pr }}
+          override_branch: ${{ steps.source.outputs.branch }}
+          override_build_url: ${{ steps.source.outputs.url }}
+          flags: ${{ steps.source.outputs.flag }}
+          name: ${{ steps.source.outputs.flag }}-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          fail_ci_if_error: true
+
+      - name: Report upload outcome on the PR head
+        if: always() && steps.check.outputs.id != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CHECK_ID: ${{ steps.check.outputs.id }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        with:
+          script: |
+            const passed = process.env.UPLOAD_OUTCOME === 'success';
+            await github.rest.checks.update({
+              ...context.repo, check_run_id: Number(process.env.CHECK_ID), status: 'completed',
+              conclusion: passed ? 'success' : 'failure',
+              output: {title: passed ? 'Coverage uploaded' : 'Coverage validation/upload failed',
+                summary: 'Source tests and coverage upload are separate signals. ' +
+                  `See ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}.`}
+            });
