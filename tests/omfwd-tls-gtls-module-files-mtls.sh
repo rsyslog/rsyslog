@@ -80,7 +80,8 @@ openssl x509 -req -in "$workdir/client.csr" -CA "$workdir/ca.pem" -CAkey "$workd
 ./openssl_mtls_server 0 "$workdir/server.pem" "$workdir/server.key" "$workdir/ca.pem" \
 	"$port_file" "$server_capture" 2>"$server_stderr" &
 server_pid=$!
-wait_file_exists_for_process "$port_file" "$server_pid" 10 "OpenSSL MTLS helper" "$server_stderr"
+# The helper counts 100 ms polls; allow the standard 20-second startup budget.
+wait_file_exists_for_process "$port_file" "$server_pid" 200 "OpenSSL MTLS helper" "$server_stderr"
 server_port=$(cat "$port_file")
 
 generate_conf
