@@ -2591,8 +2591,9 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
     interval = ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut);
     threshold = ratelimitSharedLoadSeverity(&ratelimit->pShared->severity, &ratelimit->pShared->mut);
 
-    if (runConf->globals.bReduceRepeatMsgs || threshold > 0) {
-        /* consider early parsing only if really needed */
+    if (runConf->globals.bReduceRepeatMsgs || threshold > 0 || interval > 0) {
+        /* The rate-limit key needs parsed hostname and APP-NAME even
+         * when the default severity threshold is zero. */
         if ((pMsg->msgFlags & NEEDS_PARSING) != 0) {
             if ((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK) {
                 DBGPRINTF("Message discarded, parsing error %d\n", localRet);
