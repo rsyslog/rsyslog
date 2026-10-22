@@ -483,24 +483,48 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
 }
 
 #ifdef ENABLE_TESTBENCH
+static void wtpTestRemoveWorkerExitMarker(void *const marker) {
+    if (marker != NULL) unlink((const char *)marker);
+}
+
 /* Widen the window between a worker leaving its queue loop and publishing
  * WAIT_JOIN, so tests can deterministically hit worker-start advice while the
  * only slot of a pool is exiting. The pool is selected by a substring of its
  * debug header, e.g. ":DAwpool" for disk-assisted transfer pools. The delay
- * ends early once the pool leaves the RUNNING state.
+ * ends early once the pool leaves the RUNNING state. An opt-in marker and
+ * wait-for-shutdown mode let shutdown tests hold an exiting DA transfer
+ * worker until the queue is stopped; marker I/O cannot block worker exit.
  */
 static void wtpTestDelayWorkerExit(wtp_t *const pThis) {
     const char *const pool = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL");
     if (pool == NULL || *pool == '\0' || strstr((const char *)wtpGetDbgHdr(pThis), pool) == NULL) return;
-    const char *const delay = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS");
-    long ms = delay == NULL ? 500 : strtol(delay, NULL, 10);
-    if (ms > 60000) ms = 60000;
-    /* Only widen the runtime window: stop delaying once shutdown begins so
-     * the hook does not also stretch worker termination past queue timeouts. */
-    for (; ms > 0; ms -= 10) {
-        if (ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState) != wtpState_RUNNING) break;
-        srSleep(0, 10000);
+    const char *volatile marker = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_ACTIVE_FILE");
+    int markerFd = -1;
+    if (marker != NULL && *marker != '\0') {
+        markerFd = open(marker, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+        if (markerFd >= 0 && write(markerFd, "active\n", sizeof("active\n") - 1) != sizeof("active\n") - 1) {
+            unlink(marker);
+        }
+        if (markerFd >= 0) close(markerFd);
     }
+    const char *const waitForShutdown = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_WAIT_FOR_SHUTDOWN");
+    pthread_cleanup_push(wtpTestRemoveWorkerExitMarker, markerFd >= 0 ? (void *)marker : NULL);
+    if (waitForShutdown != NULL && *waitForShutdown != '\0') {
+        while (ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState) == wtpState_RUNNING) {
+            srSleep(0, 10000);
+        }
+    } else {
+        const char *const delay = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS");
+        long ms = delay == NULL ? 500 : strtol(delay, NULL, 10);
+        if (ms > 60000) ms = 60000;
+        /* Only widen the runtime window: stop delaying once shutdown begins so
+         * the hook does not also stretch worker termination past queue timeouts. */
+        for (; ms > 0; ms -= 10) {
+            if (ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState) != wtpState_RUNNING) break;
+            srSleep(0, 10000);
+        }
+    }
+    pthread_cleanup_pop(1);
 }
 #endif
 

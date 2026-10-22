@@ -40,6 +40,9 @@ collection, and process orchestration).
 - Local-graph full-queue input termination and accepted worker handoff have
   deterministic coverage in `tests/local-queue-input-force-term.sh` and
   `tests/local-queue-global-input-force-term.sh` (imdiag and impstats required).
+- Classic DA action-queue shutdown persistence with a pinned worker item and
+  full primary tier is covered by `tests/queue-shutdown-save-full-inflight.sh`
+  (testbench worker-exit hook and impstats required).
 - Known-success FE/BE callback retirement through cooperative immediate stop
   and cancellation has deterministic post-return gates in
   `tests/local-queue-known-success.sh`; existing force-term action tests retain
