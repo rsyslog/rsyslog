@@ -1290,6 +1290,7 @@ TESTS_MYSQL = \
 	mysql-actq-mt-withpause.sh \
 	mysql-reconnect-timeout.sh \
 	mysql-unavailable-transaction.sh \
+	mysql-schema-range.sh \
 	action-tx-single-processing.sh \
 	action-tx-errfile-maxsize.sh \
 	action-tx-errfile.sh \
