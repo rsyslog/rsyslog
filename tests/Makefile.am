@@ -362,6 +362,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 
 TESTS_DEFAULT = \
 	record-container-validation.sh \
+	local-validation-log-preservation.sh \
 	codex-pre-push-container-gate.sh \
 	mysql-reconnect-relevance.sh \
 	backtick-cat-procfs.sh \
