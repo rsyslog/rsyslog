@@ -278,8 +278,10 @@ resume monitoring after a shutdown. The location of the rsyslog
 working directory is configurable via the ``global(workDirectory)``
 |FmtAdvancedName| format parameter.
 
-**Note**: The ``PersistStateInterval`` parameter must be set, otherwise state
-files will NOT be created.
+An unset or zero ``PersistStateInterval`` disables periodic line-count
+checkpoints. State files can still be written at other points, including when
+the monitored file is closed. See :ref:`PersistStateInterval
+<param-imfile-persiststateinterval>` for the checkpoint behavior.
 
 Rsyslog automatically generates state file names. These state file
 names will begin with the string ``imfile-state:`` and be followed
