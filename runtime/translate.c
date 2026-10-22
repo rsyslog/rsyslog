@@ -24,6 +24,7 @@
  */
 #include "config.h"
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1978,6 +1979,18 @@ rsRetVal rsconfTranslateWriteFile(const char *path) {
     }
 
 finalize_it:
-    if (fp != NULL && fp != stdout) fclose(fp);
+    if (fp != NULL) {
+        int write_failed = ferror(fp);
+        int write_errno = write_failed ? errno : 0;
+        if ((fp == stdout ? fflush(fp) : fclose(fp)) != 0) {
+            write_failed = 1;
+            write_errno = errno;
+        }
+        if (write_failed) {
+            LogError(write_errno != 0 ? write_errno : EIO, RS_RET_IO_ERROR,
+                     "config translation: could not write output '%s'", path == NULL ? "stdout" : path);
+            iRet = RS_RET_IO_ERROR;
+        }
+    }
     RETiRet;
 }
