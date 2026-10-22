@@ -1,6 +1,6 @@
 ---
 name: rsyslog-release
-description: Prepare and publish scheduled-stable rsyslog releases, then hand main off to the next release cycle. Use for release metadata, docs and source artifacts, signed tags, GitHub release announcements, stable-to-main merges, active milestone rotation, and OBS release packaging.
+description: Prepare and publish scheduled-stable rsyslog releases, then hand main off to the next release cycle. Use for release metadata, source artifacts, signed tags, announcements, stable-to-main merges, milestone rotation, OBS packaging, and package-backed Docker releases.
 ---
 
 # Rsyslog Release
@@ -167,6 +167,71 @@ statuses separate when manual package actions are still pending.
 Keep this release step focused on delivering the release. Unrelated OBS
 cleanup, account repair, and packaging enhancements are separate work.
 
+## 7. Build and publish the Docker image family
+
+Read `packaging/docker/rsyslog/README.md`, its Makefile and
+`release-images.sh` before starting. The five variants are minimal, standard
+(`rsyslog/rsyslog`), collector, dockerlogs and ETL; do not include auxiliary
+directories as release images.
+
+1. Check the stable Adiscon PPA independently of OBS. Successful OBS publication
+   does not satisfy the container prerequisite. Run:
+
+   ```sh
+   packaging/docker/rsyslog/release-images.sh check --rsyslog-version "$STABLE_VERSION"
+   ```
+
+   Stop if the expected release is unavailable; never bypass the PPA gate.
+2. Pass the release version explicitly; do not edit per-release Dockerfile or
+   Makefile defaults. `8.yymm.0` derives the image tag `20yy-mm`, passed as
+   `RSYSLOG_IMG_VERSION` to version labels. `BASE_IMAGE_TAG` identifies the
+   matching parent image; `VCS_REF` and `BUILD_DATE` supply source revision and
+   creation labels. Keep the local default `dev-local`. Packages themselves
+   come from `ppa:adiscon/v8-stable`, not from the tag or a source-tree build.
+3. Check free space on Docker's actual filesystem and inspect available builder
+   platforms. Refresh the configured Ubuntu base and build the family:
+
+   ```sh
+   packaging/docker/rsyslog/release-images.sh build --rsyslog-version "$STABLE_VERSION" --rebuild
+   ```
+
+   Retain all variants when space permits; otherwise build in dependency order
+   and coordinate retention/publication with the maintainer. Do not prune
+   unrelated images or volumes. Check existing registry manifests rather than
+   assuming ARM64 is already published. A local native build is not evidence of
+   a multi-platform release; agree on the intended platforms before publication.
+4. Verify the exact installed core and rsyslog-module package versions, image
+   architecture, version/base/source labels, and shipped entrypoint/config for
+   every variant. Use `.github/workflows/container_build.yml` for role-specific
+   smoke commands and the container-testing skill for applicable validation.
+   Exercise real collector TCP delivery as well. Record image IDs, commands,
+   results and any external Docker/Vespa integration coverage limits.
+5. Build approval is not push approval. Obtain explicit authorization before
+   pushing and distinguish version tags from optional `latest` updates.
+   `release_push`/`release_publish` rebuild and push multi-platform images;
+   do not use them merely to upload already-tested local images. For an
+   approved native-only publication, recheck PPA readiness, confirm each local
+   tag still has its validated image ID, then `docker push` those exact version
+   tags. Reject conflicting existing release tags rather than overwrite them.
+   For an approved multi-platform flow, use the release wrapper and validate
+   the published platforms. Move `latest` only when explicitly requested.
+6. Verify each remote manifest's platform and config digest against the tested
+   image for native pushes. For multi-platform releases verify each platform
+   manifest, not just the index. Record remote digests and confirm `latest`
+   remained unchanged when it was not part of the authorization.
+
+## 8. Update release availability after publication
+
+Once package and container publication is verified, update the existing GitHub
+release body with the actual availability; building alone is insufficient.
+Include package-channel links, the explicit Docker release tag and the five
+variant links, supported image architectures, and whether `latest` was moved.
+Replace obsolete pending-publication language and draft wording on a published
+release. Preserve the highlights, compatibility notes, security maintenance and
+contributor attribution. Edit the real GitHub release through the API/CLI; do
+not create a repository Markdown announcement instead. Read the body back to
+verify the update, and keep any genuinely pending channels clearly qualified.
+
 ## Completion evidence
 
 A release handoff is complete only when the report includes:
@@ -180,11 +245,8 @@ A release handoff is complete only when the report includes:
 - OBS coverage review, staging build matrix, submit-request URL/revision,
   fork-preservation check, and official publication/install verification, or
   the explicit outstanding manual package handoff;
+- PPA readiness, container tags/platforms, validated image IDs and published
+  digests (or pending push approval), plus `latest` status;
+- the GitHub release availability update after verified package/container
+  publication, or the explicit channels still pending;
 - any skipped container or hosted validation gates.
-
-## Open TODO
-
-After the required manual package-build and package-publication actions have
-completed, rebuild the release container images using the package-backed
-release flow. Confirm package readiness first; release-tagged containers must
-not bypass the Adiscon PPA readiness check.
