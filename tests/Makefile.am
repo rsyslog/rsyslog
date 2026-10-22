@@ -392,6 +392,7 @@ TESTS_DEFAULT = \
 	test_id_usage_output.sh \
 	uxsockrcvr_usage_output.sh \
 	prop-programname.sh \
+	omfile-legacy-dynafile-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
