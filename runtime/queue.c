@@ -2417,20 +2417,13 @@ static rsRetVal qAddDirect(qqueue_t *pThis, smsg_t *pMsg) {
  * queues. This is justified in spite of the gain and the need to do some
  * things truely different. -- rgerhards, 2008-02-12
  */
-static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
+/* Insert into the backend without sampling or admission. The caller holds
+ * the queue mutex; successful insertion transfers this reference to the
+ * store. A failed backend insertion leaves it with the caller. */
+static rsRetVal qqueueAddStored(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
 
     assert(pThis != NULL);
-
-    static int msgCnt = 0;
-
-    if (pThis->iSmpInterval > 0 && !pThis->local_scope && !(pThis->pqParent != NULL && pThis->pqParent->local_scope)) {
-        msgCnt = (msgCnt + 1) % (pThis->iSmpInterval);
-        if (msgCnt != 0) {
-            msgDestruct(&pMsg);
-            goto finalize_it;
-        }
-    }
 
     CHKiRet(pThis->qAdd(pThis, pMsg));
 
@@ -2456,6 +2449,22 @@ static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
 
 finalize_it:
     RETiRet;
+}
+
+static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
+    assert(pThis != NULL);
+
+    static int msgCnt = 0;
+
+    if (pThis->iSmpInterval > 0 && !pThis->local_scope && !(pThis->pqParent != NULL && pThis->pqParent->local_scope)) {
+        msgCnt = (msgCnt + 1) % (pThis->iSmpInterval);
+        if (msgCnt != 0) {
+            msgDestruct(&pMsg);
+            return RS_RET_OK;
+        }
+    }
+
+    return qqueueAddStored(pThis, pMsg);
 }
 
 
@@ -3444,8 +3453,28 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("DeleteProcessedBatch: etry %d state %d\n", i, pBatch->eltState[i]);
         if (pBatch->eltState[i] == BATCH_STATE_RDY || pBatch->eltState[i] == BATCH_STATE_SUB) {
-            localRet =
-                doEnqSingleObjContext(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg), pThis->local_graph_conf != NULL);
+            if (pThis->bEnqOnly && pThis->bSaveOnShutdown && pThis->bIsDA && pThis->pqDA != NULL &&
+                (pThis->qType == QUEUETYPE_FIXED_ARRAY || pThis->qType == QUEUETYPE_LINKEDLIST)) {
+                /* Concurrency & Locking: the queue mutex and disabled worker
+                 * cancellation protect this batch until retirement below.
+                 * iQueueSize still includes its held references, although
+                 * qDeq has freed their RAM slots. Return accepted work into
+                 * those slots without producer full/discard/sampling policy.
+                 * This move is not another inbound enqueue for stats. */
+                if (pThis->iMaxQueueSize > 0 && getLogicalQueueSize(pThis) >= pThis->iMaxQueueSize) {
+                    /* A broken count must not overwrite a FixedArray slot. */
+                    STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
+                    STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+                    localRet = RS_RET_QUEUE_FULL;
+                } else {
+                    smsg_t *retry = MsgAddRef(pMsg);
+                    localRet = qqueueAddStored(pThis, retry);
+                    if (localRet != RS_RET_OK) msgDestruct(&retry);
+                }
+            } else {
+                localRet =
+                    doEnqSingleObjContext(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg), pThis->local_graph_conf != NULL);
+            }
             ++nEnqueued;
             if (localRet != RS_RET_OK) {
                 ++diskTerminal;
