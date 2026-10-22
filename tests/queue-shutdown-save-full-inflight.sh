@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # A classic DA action queue has one item held by its suspended worker while
-# the 20-slot memory tier is full. An orderly SIGTERM switches workers to
-# immediate shutdown; saveOnShutdown must preserve the held item as well as
-# every admitted queued item. Recovery must produce the exact admitted ID set.
+# the 20-slot memory tier is full. Run both LinkedList and FixedArray memory
+# tiers: an orderly SIGTERM switches workers to immediate shutdown, and
+# saveOnShutdown must preserve the held item as well as every admitted queued
+# item. Recovery must produce the exact admitted ID set for each tier.
 #
 # The testbench hook marks the DA transfer worker after it leaves the queue
 # loop and holds it there until shutdown. Six seed messages trigger the first
@@ -13,6 +14,11 @@
 # each enqueue returns. All reference rows, a fresh full-size sample, and the
 # active marker are required before SIGTERM. The testbench timeout only guards
 # a stuck fixture; exact recovery is the pass/fail oracle.
+if [ -z "${RSYSLOG_TESTBENCH_SHUTDOWN_QUEUE_TYPE:-}" ]; then
+	RSYSLOG_TESTBENCH_SHUTDOWN_QUEUE_TYPE=LinkedList "$0" || exit $?
+	RSYSLOG_TESTBENCH_SHUTDOWN_QUEUE_TYPE=FixedArray "$0" || exit $?
+	exit 0
+fi
 . ${srcdir:=.}/diag.sh init
 require_plugin impstats
 export RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL=":DAwpool"
@@ -34,7 +40,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if $msg contains "msgnum:" then {
 	action(type="omfile" file="'"$1"'" template="outfmt"
 		createDirs="off" action.resumeRetryCount="-1"
-		queue.type="LinkedList" queue.filename="daq"
+		queue.type="'"$RSYSLOG_TESTBENCH_SHUTDOWN_QUEUE_TYPE"'" queue.filename="daq"
 		queue.diskQueueType="disk" queue.size="20"
 		queue.highWatermark="5" queue.lowWatermark="2"
 		queue.dequeueBatchSize="1" queue.timeoutEnqueue="60000"
