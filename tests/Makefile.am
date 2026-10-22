@@ -2363,6 +2363,7 @@ TESTS_IMFILE = \
 	imfile-truncate.sh \
 	imfile-truncate-state-past-eof.sh \
 	imfile-truncate-state-past-eof-off.sh \
+	imfile-truncate-state-past-eof-fstat-error.sh \
 	imfile-truncate-multiple.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
@@ -3090,6 +3091,14 @@ liboverride_recv_imptcp_la_SOURCES = override_recv_imptcp.c
 liboverride_recv_imptcp_la_CFLAGS =
 liboverride_recv_imptcp_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_recv_imptcp_la_LIBADD = $(DL_LIBS)
+endif
+
+if ENABLE_IMFILE_TESTS
+check_LTLIBRARIES += liboverride_fstat.la
+liboverride_fstat_la_SOURCES = override_fstat.c
+liboverride_fstat_la_CFLAGS =
+liboverride_fstat_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_fstat_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif
 
 if ENABLE_OMUDPSPOOF
