@@ -64,6 +64,12 @@ after formatting if you already validated the code immediately before.
   issues, hardening, and invalid findings before using security severity or CWE
   language.
 
+Maintainer background tasks can run on the separate `rsyslog-background-tasks`
+VM. Its first use is the time-gated public PR handoff for coordinated security
+disclosures. The private GHSA Desk and Adiscon infrastructure repositories own
+the case workflow, scheduling, and host details; keep case data and credentials
+out of this public repository. The VM is not a CI runner.
+
 ## Package Archive Automation
 
 For any daily-stable, scheduled-release packaging, package archive, or
