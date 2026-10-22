@@ -4,6 +4,8 @@
 ## workers are active. The oracle first observes one allowance for each of two
 ## hostname keys, then reloads to fromhost-ip and observes one shared allowance
 ## for two new hostnames arriving from the same TCP peer address.
+## The policy reload message proves the new key is published before the second
+## traffic phase; the generic HUP wait may time out without observing the HUP.
 
 . ${srcdir:=.}/diag.sh init
 
@@ -39,6 +41,7 @@ write_policy "PerSourceHostname"
 
 generate_conf
 add_conf '
+global(processInternalMessages="on" internalmsg.severity="info")
 template(name="PerSourceHostname" type="string" string="%hostname%")
 template(name="PerSourceAddress" type="string" string="%fromhost-ip%")
 ratelimit(name="key_reload" policy="'$POLICY_FILE'")
@@ -60,6 +63,7 @@ wait_file_lines "$RSYSLOG_OUT_LOG" 2 100
 
 write_policy "PerSourceAddress"
 issue_HUP
+wait_content "ratelimit: HUP reloaded policy 'key_reload' from file" "${RSYSLOG_DYNNAME}.started"
 
 send_host_messages gamma 2
 send_host_messages delta 2
