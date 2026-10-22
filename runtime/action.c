@@ -959,6 +959,12 @@ static void actionSetResumeRetryTime(action_t *const pThis, const time_t ttResum
     PREFER_STORE_time_t(&pThis->ttResumeRtry, ttResumeRtry);
 }
 
+/* A failed clock read expires the deadline, so an action remains retryable. */
+static time_t actionGetMonotonicSeconds(void) {
+    struct timespec now;
+    return clock_gettime(CLOCK_MONOTONIC, &now) == 0 ? now.tv_sec : (time_t)-1;
+}
+
 
 /* Suspend action, this involves changing the action state as well
  * as setting the next retry time.
@@ -977,15 +983,13 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
     DBGPRINTF("actionSuspend: enter\n");
     setSuspendMessageConfVars(pThis);
 
-    /* note: we can NOT use a cached timestamp, as time may have evolved
-     * since caching, and this would break logic (and it actually did so!)
-     */
-    datetime.GetTime(&ttNow);
+    /* The retry deadline must use the same monotonic clock as its check. */
+    ttNow = actionGetMonotonicSeconds();
     suspendDuration = pThis->iResumeInterval * (getActionNbrResRtry(pWti, pThis) / 10 + 1);
     if (pThis->iResumeIntervalMax > 0 && suspendDuration > pThis->iResumeIntervalMax) {
         suspendDuration = pThis->iResumeIntervalMax;
     }
-    ttResumeRtry = ttNow + suspendDuration;
+    ttResumeRtry = ttNow == (time_t)-1 ? 0 : ttNow + suspendDuration;
     actionSetResumeRetryTime(pThis, ttResumeRtry);
     actionSetState(pThis, __func__, pWti, ACT_STATE_SUSP);
     STATSCOUNTER_ADD(pThis->ctrSuspendDuration, pThis->mutCtrSuspendDuration, suspendDuration);
@@ -994,7 +998,10 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
     }
 
     if (pThis->bReportSuspensionCont || (pThis->bReportSuspension && getActionNbrResRtry(pWti, pThis) == 0)) {
-        ctime_r(&ttResumeRtry, timebuf);
+        time_t wallRetry;
+        datetime.GetTime(&wallRetry);
+        wallRetry += suspendDuration;
+        ctime_r(&wallRetry, timebuf);
         timebuf[strlen(timebuf) - 1] = '\0'; /* strip LF */
         LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                "action '%s' suspended (module '%s'), next retry is %s, retry nbr %d. "
@@ -1002,7 +1009,7 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
                pThis->pszName, pThis->pMod->pszName, timebuf, getActionNbrResRtry(pWti, pThis));
     }
     DBGPRINTF(
-        "action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
+        "action '%s' suspended, monotonic retry=%lld (now %lld), iNbrResRtry %d, "
         "duration %d\n",
         pThis->pszName, (long long)ttResumeRtry, (long long)ttNow, getActionNbrResRtry(pWti, pThis), suspendDuration);
 }
@@ -1083,10 +1090,10 @@ static rsRetVal actionDoRetryInternal(
                     FINALIZE;
                 }
                 ++iRetries;
-                datetime.GetTime(&ttTemp);
+                ttTemp = actionGetMonotonicSeconds();
                 DBGPRINTF(
                     "actionDoRetry: %s, controlled by resumeInterval, may miss the next try."
-                    "Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
+                    "Will sleep %d seconds. monotonic ResumeRtry=%lld (now %lld), iRetries %d\n",
                     pThis->pszName, pThis->iResumeInterval, (long long)actionGetResumeRetryTime(pThis),
                     (long long)ttTemp, iRetries);
                 if (slept != NULL) {
@@ -1265,15 +1272,10 @@ static rsRetVal actionTryResumeInternal(action_t *const pThis,
     }
 
     if (getActionState(pWti, pThis) == ACT_STATE_SUSP) {
-        /* if we are suspended, we need to check if the timeout expired.
-         * for this handling, we must always obtain a fresh timestamp. We used
-         * to use the action timestamp, but in this case we will never reach a
-         * point where a resumption is actually tried, because the action timestamp
-         * is always in the past. So we can not avoid doing a fresh time() call
-         * here. -- rgerhards, 2009-03-18
-         */
-        datetime.GetTime(&ttNow); /* cache "now" */
-        if (ttNow >= actionGetResumeRetryTime(pThis)) {
+        /* A fresh monotonic reading keeps wall-clock corrections from
+         * extending or shortening the configured suspension interval. */
+        ttNow = actionGetMonotonicSeconds();
+        if (ttNow == (time_t)-1 || ttNow >= actionGetResumeRetryTime(pThis)) {
             actionSetState(pThis, __func__, pWti, ACT_STATE_RTRY); /* back to retries */
         }
     }
@@ -1285,9 +1287,10 @@ static rsRetVal actionTryResumeInternal(action_t *const pThis,
 
     if (Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY || getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
         if (ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
-            datetime.GetTime(&ttNow);
-        dbgprintf("actionTryResume: action[%s] state: %s, next retry (if applicable): %u [now %u]\n", pThis->pszName,
-                  getActStateName(pThis, pWti), (unsigned)actionGetResumeRetryTime(pThis), (unsigned)ttNow);
+            ttNow = actionGetMonotonicSeconds();
+        dbgprintf("actionTryResume: action[%s] state: %s, monotonic next retry (if applicable): %lld [now %lld]\n",
+                  pThis->pszName, getActStateName(pThis, pWti), (long long)actionGetResumeRetryTime(pThis),
+                  (long long)ttNow);
     }
 
 finalize_it:
