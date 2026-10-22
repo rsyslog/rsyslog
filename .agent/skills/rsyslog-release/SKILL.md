@@ -207,18 +207,31 @@ directories as release images.
    Exercise real collector TCP delivery as well. Record image IDs, commands,
    results and any external Docker/Vespa integration coverage limits.
 5. Build approval is not push approval. Obtain explicit authorization before
-   pushing and distinguish version tags from optional `latest` updates.
+   pushing. For the newest scheduled-stable release, propose publishing both
+   version tags and `latest` together; ask for that scope up front rather than
+   silently leave `latest` pointing to the previous stable release. Older
+   release rebuilds and daily-stable publications must not move stable `latest`.
    `release_push`/`release_publish` rebuild and push multi-platform images;
    do not use them merely to upload already-tested local images. For an
    approved native-only publication, recheck PPA readiness, confirm each local
    tag still has its validated image ID, then `docker push` those exact version
    tags. Reject conflicting existing release tags rather than overwrite them.
    For an approved multi-platform flow, use the release wrapper and validate
-   the published platforms. Move `latest` only when explicitly requested.
+   the published platforms. Move `latest` only with explicit authorization.
 6. Verify each remote manifest's platform and config digest against the tested
    image for native pushes. For multi-platform releases verify each platform
    manifest, not just the index. Record remote digests and confirm `latest`
    remained unchanged when it was not part of the authorization.
+7. After all five versioned variants are verified, promote their already
+   published manifests to `latest` when approved; do not rebuild merely to
+   move tags. Check existing platform coverage first and do not drop a
+   published architecture without approval. Pin each source by its verified
+   digest. For a single-platform carbon copy, use
+   `docker buildx imagetools create --prefer-index=false --tag "$IMAGE_REPOSITORY:latest" "$IMAGE_REPOSITORY@$PUBLISHED_DIGEST"`.
+   For a multi-platform release, preserve the complete published index.
+   Record the previous `latest` digests, then verify all five new `latest`
+   digests match the intended release manifests and version tags are unchanged.
+   Update the GitHub release's `latest` statement only after this verification.
 
 ## 8. Update release availability after publication
 
