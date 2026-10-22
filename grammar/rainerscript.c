@@ -3006,6 +3006,11 @@ static int ATTR_NONNULL(1, 3, 4) doFunc_is_time(const char *__restrict__ const s
                     break;
                 }
             } else if (f == DATE_UNIX) {
+                /* Generic numeric coercion maps an empty string or sign
+                 * alone to zero; a UNIX timestamp needs a digit. */
+                if (*str == '\0' || (str[0] == '-' && str[1] == '\0')) {
+                    continue;
+                }
                 int result;
                 var2Number(r, &result);
 

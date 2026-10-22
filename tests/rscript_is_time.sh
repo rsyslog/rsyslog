@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Added 2017-12-16 by Stephen Workman, released under ASL 2.0
+# Verify accepted timestamp formats, invalid input errors, and that an empty
+# string or sign alone is not treated as UNIX epoch zero in either mode.
 
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -36,6 +38,8 @@ set $!result!date_explicit_7 = is_time("90210", "date-unix");
 set $!result!errno_date_explicit_7 = script_error();
 set $!result!date_explicit_8 = is_time("-88", "date-unix");
 set $!result!errno_date_explicit_8 = script_error();
+set $!result!date_explicit_zero_string = is_time("0", "date-unix");
+set $!result!errno_date_explicit_zero_string = script_error();
 
 # Bad dates
 set $!result!date_fail_1 = is_time("Oct 88 01:10:11");
@@ -54,6 +58,16 @@ set $!result!errno_date_fail_5 = script_error();
 # Invalid format
 set $!result!date_fail_6 = is_time("90210", "date-spoonix");
 set $!result!errno_date_fail_6 = script_error();
+set $!result!date_fail_empty_auto = is_time("");
+set $!result!errno_date_fail_empty_auto = script_error();
+set $!result!date_fail_empty_unix = is_time("", "date-unix");
+set $!result!errno_date_fail_empty_unix = script_error();
+set $!result!date_fail_sign_auto = is_time("-");
+set $!result!errno_date_fail_sign_auto = script_error();
+set $!result!date_fail_sign_unix = is_time("-", "date-unix");
+set $!result!errno_date_fail_sign_unix = script_error();
+set $!result!date_after_empty = is_time(0, "date-unix");
+set $!result!errno_date_after_empty = script_error();
 
 template(name="outfmt" type="string" string="%!result%\n")
 local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
@@ -66,7 +80,7 @@ shutdown_when_empty
 wait_shutdown
 
 # Our fixed and calculated expected results
-export EXPECTED='{ "date_auto_1": 1, "errno_date_auto_1": 0, "date_auto_2": 1, "errno_date_auto_2": 0, "date_auto_3": 1, "errno_date_auto_3": 0, "date_auto_4": 1, "errno_date_auto_4": 0, "date_explicit_1": 1, "errno_date_explicit_1": 0, "date_explicit_2": 1, "errno_date_explicit_2": 0, "date_explicit_3": 1, "errno_date_explicit_3": 0, "date_explicit_4": 1, "errno_date_explicit_4": 0, "date_explicit_5": 1, "errno_date_explicit_5": 0, "date_explicit_6": 1, "errno_date_explicit_6": 0, "date_explicit_7": 1, "errno_date_explicit_7": 0, "date_explicit_8": 1, "errno_date_explicit_8": 0, "date_fail_1": 0, "errno_date_fail_1": 1, "date_fail_2": 0, "errno_date_fail_2": 1, "date_fail_3": 0, "errno_date_fail_3": 1, "date_fail_4": 0, "errno_date_fail_4": 1, "date_fail_5": 0, "errno_date_fail_5": 1, "date_fail_6": 0, "errno_date_fail_6": 1 }'
+export EXPECTED='{ "date_auto_1": 1, "errno_date_auto_1": 0, "date_auto_2": 1, "errno_date_auto_2": 0, "date_auto_3": 1, "errno_date_auto_3": 0, "date_auto_4": 1, "errno_date_auto_4": 0, "date_explicit_1": 1, "errno_date_explicit_1": 0, "date_explicit_2": 1, "errno_date_explicit_2": 0, "date_explicit_3": 1, "errno_date_explicit_3": 0, "date_explicit_4": 1, "errno_date_explicit_4": 0, "date_explicit_5": 1, "errno_date_explicit_5": 0, "date_explicit_6": 1, "errno_date_explicit_6": 0, "date_explicit_7": 1, "errno_date_explicit_7": 0, "date_explicit_8": 1, "errno_date_explicit_8": 0, "date_explicit_zero_string": 1, "errno_date_explicit_zero_string": 0, "date_fail_1": 0, "errno_date_fail_1": 1, "date_fail_2": 0, "errno_date_fail_2": 1, "date_fail_3": 0, "errno_date_fail_3": 1, "date_fail_4": 0, "errno_date_fail_4": 1, "date_fail_5": 0, "errno_date_fail_5": 1, "date_fail_6": 0, "errno_date_fail_6": 1, "date_fail_empty_auto": 0, "errno_date_fail_empty_auto": 1, "date_fail_empty_unix": 0, "errno_date_fail_empty_unix": 1, "date_fail_sign_auto": 0, "errno_date_fail_sign_auto": 1, "date_fail_sign_unix": 0, "errno_date_fail_sign_unix": 1, "date_after_empty": 1, "errno_date_after_empty": 0 }'
 
 # FreeBSD's cmp does not support reading from STDIN
 cmp <(echo "$EXPECTED") $RSYSLOG_OUT_LOG
