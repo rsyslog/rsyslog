@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <limits.h>
+#include <fnmatch.h>
 #include <glob.h>
 #include <errno.h>
 #include <pwd.h>
@@ -207,6 +208,9 @@ static const char *tokenToString(const int token) {
             break;
         case CMP_ENDSWITH:
             tokstr = "CMP_ENDSWITH";
+            break;
+        case CMP_FNMATCH:
+            tokstr = "CMP_FNMATCH";
             break;
         case UMINUS:
             tokstr = "UMINUS";
@@ -3842,6 +3846,23 @@ static void evalVar(struct cnfvar *__restrict__ const var,
     copyCachedVar(&entry->value, ret);
 }
 
+/* POSIX fnmatch() consumes C strings. Preserve embedded NULs as the same
+ * visible "#000" escape used by var2CString() instead of silently dropping
+ * them at this API boundary. */
+static int evalStrFnmatch(es_str_t *const subject, es_str_t *const pattern) {
+    char *const c_subject = es_str2cstr(subject, "#000");
+    if (c_subject == NULL) return 0;
+    char *const c_pattern = es_str2cstr(pattern, "#000");
+    if (c_pattern == NULL) {
+        free(c_subject);
+        return 0;
+    }
+    const int matched = fnmatch(c_pattern, c_subject, 0) == 0;
+    free(c_pattern);
+    free(c_subject);
+    return matched;
+}
+
 /* perform a string comparision operation against a while array. Semantic is
  * that one one comparison is true, the whole construct is true.
  * TODO: we can obviously optimize this process. One idea is to
@@ -3874,6 +3895,9 @@ static int evalStrArrayCmp(es_str_t *const estr_l, const struct cnfarray *__rest
                     r = len_l >= len_suffix && (memcmp(es_getBufAddr(estr_l) + len_l - len_suffix,
                                                        es_getBufAddr(ar->arr[i]), len_suffix) == 0);
                 } break;
+                case CMP_FNMATCH:
+                    r = evalStrFnmatch(estr_l, ar->arr[i]);
+                    break;
                 case CMP_CONTAINS:
                     r = es_strContains(estr_l, ar->arr[i]) != -1;
                     break;
@@ -4160,6 +4184,17 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                 ret->d.n =
                     estr_l->lenStr >= estr_r->lenStr && (memcmp(es_getBufAddr(estr_l) + estr_l->lenStr - estr_r->lenStr,
                                                                 es_getBufAddr(estr_r), estr_r->lenStr) == 0);
+            }
+            FREE_TWO_STRINGS;
+            break;
+        case CMP_FNMATCH:
+            PREP_TWO_STRINGS;
+            ret->datatype = 'N';
+            if (expr->r->nodetype == 'A') {
+                ret->d.n = evalStrArrayCmp(estr_l, (struct cnfarray *)expr->r, CMP_FNMATCH);
+                bMustFree = 0;
+            } else {
+                ret->d.n = evalStrFnmatch(estr_l, estr_r);
             }
             FREE_TWO_STRINGS;
             break;
@@ -4604,6 +4639,7 @@ static int cnfexprLocalQueueSafeDepth(const struct cnfexpr *const expr, const un
         case CMP_GT:
         case CMP_STARTSWITH:
         case CMP_ENDSWITH:
+        case CMP_FNMATCH:
         case CMP_STARTSWITHI:
         case CMP_CONTAINS:
         case CMP_CONTAINSI:
@@ -4786,6 +4822,7 @@ void cnfexprDestruct(struct cnfexpr *__restrict__ const expr) {
         case CMP_GT:
         case CMP_STARTSWITH:
         case CMP_ENDSWITH:
+        case CMP_FNMATCH:
         case CMP_STARTSWITHI:
         case CMP_CONTAINS:
         case CMP_CONTAINSI:
@@ -4953,6 +4990,12 @@ void cnfexprPrint(struct cnfexpr *expr, int indent) {
             cnfexprPrint(expr->l, indent + 1);
             doIndent(indent);
             dbgprintf("ENDSWITH\n");
+            cnfexprPrint(expr->r, indent + 1);
+            break;
+        case CMP_FNMATCH:
+            cnfexprPrint(expr->l, indent + 1);
+            doIndent(indent);
+            dbgprintf("FNMATCH\n");
             cnfexprPrint(expr->r, indent + 1);
             break;
         case CMP_STARTSWITHI:
@@ -5967,6 +6010,7 @@ struct cnfexpr *cnfexprOptimize(struct cnfexpr *expr) {
         case CMP_CONTAINSI:
         case CMP_STARTSWITH:
         case CMP_ENDSWITH:
+        case CMP_FNMATCH:
         case CMP_STARTSWITHI:
             expr->l = cnfexprOptimize(expr->l);
             expr->r = cnfexprOptimize(expr->r);
@@ -6967,6 +7011,8 @@ const char *tokenval2str(const int tok) {
             return "CMP_STARTSWITHI";
         case CMP_ENDSWITH:
             return "CMP_ENDSWITH";
+        case CMP_FNMATCH:
+            return "CMP_FNMATCH";
         case UMINUS:
             return "UMINUS";
         default:
