@@ -715,7 +715,10 @@ static rsRetVal ATTR_NONNULL() checkTruncation(strm_t *const pThis) {
     DBGPRINTF("checkTruncation, file %s, iBufPtrMax %zd\n", pThis->pszCurrFName, pThis->iBufPtrMax);
     if (pThis->iBufPtrMax == 0) {
         struct stat statBuf;
-        if (fstat(pThis->fd, &statBuf) == 0 && (long long)statBuf.st_size < (long long)pThis->iCurrOffs) {
+        if (fstat(pThis->fd, &statBuf) == -1) {
+            LogError(errno, RS_RET_IO_ERROR, "file '%s': cannot fstat() for truncation check, ignored",
+                     pThis->pszCurrFName);
+        } else if ((long long)statBuf.st_size < (long long)pThis->iCurrOffs) {
             iRet = rereadTruncated(pThis, 0, "file size smaller than current offset", (long long)statBuf.st_size);
         }
         FINALIZE;
