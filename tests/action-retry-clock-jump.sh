@@ -7,6 +7,8 @@
 # work does not wake itself, so a second message after 11 real seconds drives
 # the retry. Delivery within 10 more seconds proves recovery. The 10-second
 # interval leaves time to make the jump before the old deadline expires.
+# The preflight checks that this libfaketime can move wall time without moving
+# CLOCK_MONOTONIC; older versions fake both clocks and cannot model the bug.
 # RSYSLOG_ACTION_RETRY_CLOCK_SHIFT=none is a local control of the same path.
 . ${srcdir:=.}/diag.sh init
 . $srcdir/faketime_common.sh
@@ -17,6 +19,61 @@ export FAKETIME_TIMESTAMP_FILE="$PWD/$RSYSLOG_DYNNAME.faketime"
 export FAKETIME_NO_CACHE=1
 export FAKETIME_DONT_FAKE_MONOTONIC=1
 printf '+0\n' > "$FAKETIME_TIMESTAMP_FILE"
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo 'python3 unavailable; cannot check libfaketime clock isolation'
+    exit 77
+fi
+
+# Probe the same timestamp-file update used below. A wall jump must take
+# effect, while monotonic time must not move backward. This is a capability
+# check, not the retry oracle; the delivery check below remains the oracle.
+LD_PRELOAD="$RSYSLOG_LIBFAKETIME" python3 - "$FAKETIME_TIMESTAMP_FILE" <<'PY'
+import ctypes
+import pathlib
+import sys
+import time
+
+
+class Timeval(ctypes.Structure):
+    _fields_ = [('tv_sec', ctypes.c_long), ('tv_usec', ctypes.c_long)]
+
+class Timespec(ctypes.Structure):
+    _fields_ = [('tv_sec', ctypes.c_long), ('tv_nsec', ctypes.c_long)]
+
+
+libc = ctypes.CDLL(None)
+libc.gettimeofday.argtypes = (ctypes.POINTER(Timeval), ctypes.c_void_p)
+libc.clock_gettime.argtypes = (ctypes.c_int, ctypes.POINTER(Timespec))
+
+
+def clocks():
+    wall = Timeval()
+    mono = Timespec()
+    if libc.gettimeofday(ctypes.byref(wall), None) != 0:
+        raise OSError('gettimeofday failed')
+    if libc.clock_gettime(time.CLOCK_MONOTONIC, ctypes.byref(mono)) != 0:
+        raise OSError('clock_gettime(CLOCK_MONOTONIC) failed')
+    return wall.tv_sec + wall.tv_usec / 1e6, mono.tv_sec + mono.tv_nsec / 1e9
+
+
+wall_before, mono_before = clocks()
+pathlib.Path(sys.argv[1]).write_text('-30d\n')
+wall_after, mono_after = clocks()
+if wall_after >= wall_before - 29 * 86400:
+    print('libfaketime did not apply the backward wall-clock jump')
+    sys.exit(77)
+if mono_after < mono_before:
+    print('libfaketime also moved CLOCK_MONOTONIC backward')
+    sys.exit(77)
+PY
+probe_rc=$?
+printf '+0\n' > "$FAKETIME_TIMESTAMP_FILE"
+if [ "$probe_rc" -eq 77 ]; then
+    exit 77
+elif [ "$probe_rc" -ne 0 ]; then
+    error_exit 1
+fi
 
 LISTEN_RELEASE="$RSYSLOG_DYNNAME.minitcpsrvr.listen"
 LISTEN_READY="$RSYSLOG_DYNNAME.minitcpsrvr.ready"
