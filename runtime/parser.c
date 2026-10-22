@@ -585,12 +585,89 @@ static int compute_off_after_pri(const uchar *buf, size_t len, int *pri) {
     return -1;
 }
 
+/* Return the priority encoded in an uncompressed raw message and the offset
+ * after it. This is shared by the full parser and the read-only queue discard
+ * check so malformed, absent, and out-of-range PRI values have one definition.
+ */
+static syslog_pri_t parsePRIFromRaw(const uchar *rawMsg, size_t lenRawMsg, int *pAfterPRIOffs) {
+    syslog_pri_t pri = DEFUPRI;
+    int offs = 0;
+
+    if (lenRawMsg > 0 && rawMsg[0] == '<') {
+        int parsed_pri = 0;
+        offs = compute_off_after_pri(rawMsg, lenRawMsg, &parsed_pri);
+        if (offs != -1) {
+            pri = parsed_pri;
+        } else {
+            pri = LOG_PRI_INVLD;
+            offs = 0;
+        }
+    }
+
+    if (pAfterPRIOffs != NULL) *pAfterPRIOffs = offs;
+    return pri;
+}
+
+/* Get the severity available from an ordinary uncompressed raw PRI without
+ * changing the message. This is used before the normal parser chain runs when
+ * a queue considers discarding a raw message.
+ */
+int parserGetSeverityForDiscard(smsg_t *pMsg) {
+    parserList_t *pParserList;
+    const parserList_t *pParserEntry;
+    const uchar *rawMsg;
+    size_t lenRawMsg;
+    syslog_pri_t pri;
+    int severity = pMsg->iSeverity;
+
+    if (!(pMsg->msgFlags & NEEDS_PARSING) || (pMsg->msgFlags & NO_PRI_IN_RAW) || pMsg->iLenRawMsg <= 0) {
+        return severity;
+    }
+
+    /* Only infer PRI when the first parser would do so before invoking the
+     * parser chain. The chain is checked below because a plugin can replace
+     * that PRI later, and its resulting severity cannot be predicted here.
+     */
+    pParserList = ruleset.GetParserList(runConf, pMsg);
+    if (pParserList == NULL) pParserList = runConf->parsers.pDfltParsLst;
+    if (pParserList == NULL || !pParserList->pParser->bDoSanitazion || !pParserList->pParser->bDoPRIParsing) {
+        return severity;
+    }
+    /* These feature flags only ask the core to parse PRI before invoking the
+     * parser. Other parser plugins can replace it later (for example pmnull),
+     * so only infer severity for the built-in parsers that preserve it.
+     */
+    for (pParserEntry = pParserList; pParserEntry != NULL; pParserEntry = pParserEntry->pNext) {
+        const modInfo_t *const pModule = pParserEntry->pParser->pModule;
+        if (pModule == NULL || pModule->pszName == NULL ||
+            (strcmp((const char *)pModule->pszName, "builtin:pmrfc5424") &&
+             strcmp((const char *)pModule->pszName, "builtin:pmrfc3164"))) {
+            return severity;
+        }
+    }
+
+    rawMsg = pMsg->pszRawMsg;
+    lenRawMsg = pMsg->iLenRawMsg;
+    if (lenRawMsg > 0 && rawMsg[0] == 'z' && runConf->globals.bSupportCompressionExtension &&
+        !(pMsg->msgFlags & NO_LEGACY_Z_DECOMPRESS)) {
+        /* Decompression is deliberately deferred to ParseMsg, after queue
+         * admission, so attacker-controlled zlib work never runs under the
+         * queue mutex. Keep the pre-parse severity for this compressed input.
+         */
+        return severity;
+    }
+
+    pri = parsePRIFromRaw(rawMsg, lenRawMsg, NULL);
+    return pri2sev(pri);
+}
+
 /* A standard parser to parse out the PRI. This is made available in
  * this module as it is expected that allmost all parsers will need
  * that functionality and so they do not need to implement it themsleves.
  */
 rsRetVal parserParsePRI(smsg_t *pMsg) {
     syslog_pri_t pri;
+    int afterPRIOffs;
     DEFiRet;
 
     /* pull PRI */
@@ -600,23 +677,9 @@ rsRetVal parserParsePRI(smsg_t *pMsg) {
         msgSetPRI(pMsg, pri);
         MsgSetAfterPRIOffs(pMsg, 0);
     } else {
-        if (pMsg->iLenRawMsg > 0 && pMsg->pszRawMsg[0] == '<') {
-            int parsed_pri = 0;
-            int offs = compute_off_after_pri(pMsg->pszRawMsg, pMsg->iLenRawMsg, &parsed_pri);
-            if (offs != -1) {
-                pri = parsed_pri;
-                msgSetPRI(pMsg, pri);
-                MsgSetAfterPRIOffs(pMsg, offs);
-            } else {
-                pri = LOG_PRI_INVLD;
-                msgSetPRI(pMsg, pri);
-                MsgSetAfterPRIOffs(pMsg, 0);
-            }
-        } else {
-            pri = DEFUPRI;
-            msgSetPRI(pMsg, pri);
-            MsgSetAfterPRIOffs(pMsg, 0);
-        }
+        pri = parsePRIFromRaw(pMsg->pszRawMsg, pMsg->iLenRawMsg, &afterPRIOffs);
+        msgSetPRI(pMsg, pri);
+        MsgSetAfterPRIOffs(pMsg, afterPRIOffs);
     }
     RETiRet;
 }

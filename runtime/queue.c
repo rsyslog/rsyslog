@@ -222,6 +222,7 @@
 #include "unicode-helper.h"
 #include "statsobj.h"
 #include "parserif.h"
+#include "parser.h"
 #include "rsconf.h"
 #include "ruleset.h"
 
@@ -3006,7 +3007,12 @@ static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, smsg_t *pMsg) {
 
     if (!pThis->local_scope && !(pThis->pqParent != NULL && pThis->pqParent->local_scope) && pThis->iDiscardMrk > 0 &&
         iQueueSize >= pThis->iDiscardMrk) {
-        iRetLocal = MsgGetSeverity(pMsg, &iSeverity);
+        if (pMsg->msgFlags & NEEDS_PARSING) {
+            iRetLocal = RS_RET_OK;
+            iSeverity = parserGetSeverityForDiscard(pMsg);
+        } else {
+            iRetLocal = MsgGetSeverity(pMsg, &iSeverity);
+        }
         if (iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
             DBGOPRINT((obj_t *)pThis, "queue nearly full (%d entries), discarded severity %d message\n", iQueueSize,
                       iSeverity);

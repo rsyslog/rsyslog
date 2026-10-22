@@ -76,6 +76,7 @@ void printParserList(parserList_t *pList);
 PROTOTYPEObjFull(parser);
 rsRetVal parserConstructViaModAndName(modInfo_t *pMod, uchar *const pName, void *parserInst);
 rsRetVal parserParsePRI(smsg_t *pMsg);
+int parserGetSeverityForDiscard(smsg_t *pMsg);
 
 
 #endif /* #ifndef INCLUDED_PARSER_H */
