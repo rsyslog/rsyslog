@@ -41,10 +41,13 @@ permissions:
 
 jobs:
   harvest:
+    # A failed private run must not create fallback failure artifacts either.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'failure' ||
-      github.event.workflow_run.conclusion == 'timed_out'
+      !github.event.repository.private && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event.workflow_run.conclusion == 'failure' ||
+        github.event.workflow_run.conclusion == 'timed_out'
+      )
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
     timeout-minutes: 10
     env:
