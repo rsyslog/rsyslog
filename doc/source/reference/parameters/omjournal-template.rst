@@ -3,6 +3,10 @@
 .. _param-omjournal-template:
 .. _omjournal.parameter.input.template:
 
+.. meta::
+   :description: Controls fields sent by omjournal when writing to the systemd journal.
+   :keywords: rsyslog, omjournal, template, PRIORITY, SYSLOG_FACILITY
+
 template
 ========
 
@@ -29,12 +33,20 @@ Description
 -----------
 Template to use when submitting messages.
 
-By default, rsyslog will use the incoming ``$msg`` property as the ``MESSAGE`` field
-of the journald entry. It also includes ``SYSLOG_IDENTIFIER`` (from the tag),
-``SYSLOG_FACILITY``, and ``PRIORITY`` (derived from facility and severity).
+Without a template and without a journal namespace, rsyslog uses the incoming
+``$msg`` property as the ``MESSAGE`` field and also includes
+``SYSLOG_IDENTIFIER`` (from the tag), ``SYSLOG_FACILITY``, and ``PRIORITY``.
+``PRIORITY`` contains the severity alone (0 through 7); the facility is
+provided separately in ``SYSLOG_FACILITY``.
 
-You can override the default formatting of the message, and include
-custom fields with a template.
+When a namespace is selected, the stream API sets ``SYSLOG_IDENTIFIER`` from
+the tag and ``PRIORITY`` from the severity. That API does not let omjournal
+provide the input facility as ``SYSLOG_FACILITY``, so namespace entries do not
+preserve that field. See :doc:`omjournal-namespace` for details.
+
+When a template is specified, only the fields produced by that template are
+sent. Use a template to control the message formatting and include custom
+fields, including ``PRIORITY`` or ``SYSLOG_FACILITY`` when needed.
 
 .. warning::
 
