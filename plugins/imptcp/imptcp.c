@@ -56,6 +56,7 @@
 #include "compat_queue.h"
 #include <netinet/tcp.h>
 #include <stdint.h>
+#include <limits.h>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <regex.h>
@@ -1768,7 +1769,7 @@ static rsRetVal addSess(
     DEFiRet;
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
-    int pmsg_size_factor;
+    const size_t msgBufSize = 1 + (size_t)iMaxLine * (pLstn->pSrv->inst->startRegex == NULL ? 1 : 2);
     sbool bWorkQueuedMutInit = 0;
     int sessLinked = 0;
 
@@ -1781,14 +1782,12 @@ static rsRetVal addSess(
     bWorkQueuedMutInit = 1;
     pSess->next = NULL;
     if (pLstn->pSrv->inst->startRegex == NULL) {
-        pmsg_size_factor = 1;
         pSess->pMsg_save = NULL;
     } else {
-        pmsg_size_factor = 2;
         pSess->pMsg = NULL;
-        CHKmalloc(pSess->pMsg_save = malloc(1 + iMaxLine * pmsg_size_factor));
+        CHKmalloc(pSess->pMsg_save = malloc(msgBufSize));
     }
-    CHKmalloc(pSess->pMsg = malloc(1 + iMaxLine * pmsg_size_factor));
+    CHKmalloc(pSess->pMsg = malloc(msgBufSize));
     pSess->pLstn = pLstn;
     pSess->sock = sock;
     pSess->bSuppOctetFram = pLstn->bSuppOctetFram;
@@ -2783,6 +2782,17 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     iMaxLine = glbl.GetMaxLine(runConf); /* get maximum size we currently support */
     DBGPRINTF("imptcp: config params iMaxLine %d\n", iMaxLine);
+
+    /* The regex path doubles iMaxLine in an int expression while framing. */
+    for (inst = pModConf->root; inst != NULL; inst = inst->next) {
+        if (inst->startRegex != NULL && iMaxLine > (INT_MAX - 1) / 2) {
+            LogError(
+                0, RS_RET_INVALID_PARAMS,
+                "imptcp: framing.delimiter.regex requires maxMessageSize <= %d to avoid signed framing-size overflow",
+                (INT_MAX - 1) / 2);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    }
 
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
