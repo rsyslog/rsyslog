@@ -8,8 +8,8 @@
 # surviving three seconds proves the compatibility cases stayed running.
 # The port file proves that the
 # holder has selected its port; a connection proves listen() completed.
-# Delay holder startup by 1.5 seconds to model a loaded CI runner. The port
-# file must still appear before the readiness bound expires.
+# Wait for the holder's port file before connecting; the bounded wait also
+# diagnoses a holder that exits before it becomes ready.
 # A two-second termination grace is followed by SIGKILL if a daemon hangs.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
 # are read from process output because they occur before input delivery.
@@ -29,7 +29,7 @@ module(load="imptcp")
 input(type="imptcp" address="127.0.0.1" port="0" listenPortFileName="$portfile")
 action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.holder.out")
 EOF
-(sleep 1.5; exec "$daemon" -n -iNONE -f "$holder_conf" -M "$modules") > "$holder_log" 2>&1 &
+"$daemon" -n -iNONE -f "$holder_conf" -M "$modules" > "$holder_log" 2>&1 &
 holder_pid=$!
 cleanup_holder() {
 	kill "$holder_pid" 2>/dev/null || :
@@ -48,7 +48,7 @@ trap cleanup_holder EXIT
 
 # A dead helper must fail immediately with its specific diagnostic rather than
 # consuming the readiness budget. This guards the negative path independently
-# of the delayed but healthy holder above.
+# of the healthy holder above.
 sh -c 'exit 7' &
 exited_pid=$!
 wait "$exited_pid" || :
