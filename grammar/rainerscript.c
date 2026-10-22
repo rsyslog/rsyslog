@@ -2437,6 +2437,10 @@ static void ATTR_NONNULL() doFunct_Ipv42num(struct cnffunc *__restrict__ const f
                 prevdot = 0;
                 startblank = 0;
                 DBGPRINTF("rainerscript: (ipv42num) cycle: %d\n", cyc);
+                if (num[cyc] > 25 || (num[cyc] == 25 && str[i] > '5')) {
+                    DBGPRINTF("rainerscript: (ipv42num) error: octet exceeds 255\n");
+                    goto done;
+                }
                 num[cyc] = num[cyc] * 10 + (str[i] - '0');
                 break;
             case ' ':
