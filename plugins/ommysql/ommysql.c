@@ -48,6 +48,13 @@
 #include "cfsysline.h"
 #include "parserif.h"
 
+/* MySQL 8.0.24 introduced this server error. Older client headers may not
+ * define it even when the client can receive it from a newer MySQL server.
+ */
+#ifndef ER_CLIENT_INTERACTION_TIMEOUT
+    #define ER_CLIENT_INTERACTION_TIMEOUT 4031
+#endif
+
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("ommysql")
@@ -257,7 +264,7 @@ finalize_it:
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz) {
+static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz, const bool isTransactionStart) {
     DEFiRet;
 
     /* see if we are ready to proceed */
@@ -289,13 +296,21 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
     /* try insert */
     if (mysql_query(pWrkrData->hmysql, pWrkrData->sqlBuf)) {
         const int mysql_err = mysql_errno(pWrkrData->hmysql);
+        const char *serverInfo = mysql_get_server_info(pWrkrData->hmysql);
+        const bool isMySQLWaitTimeout = isTransactionStart && mysql_err == ER_CLIENT_INTERACTION_TIMEOUT &&
+                                        mysql_get_server_version(pWrkrData->hmysql) >= 80024 && serverInfo != NULL &&
+                                        strstr(serverInfo, "MariaDB") == NULL;
         /* We assume server error codes are non-recoverable, mainly data errors.
          * This also means we need to differentiate between client and server error
          * codes. Unfortunately, the API does not provide a specified function for
          * this. Howerver, error codes 2000..2999 are currently client error codes.
-         * So we use this as guideline.
+         * So we use this as guideline. MySQL 8.0.24+ also reports a wait_timeout
+         * disconnect as server error 4031. Retry it only for START TRANSACTION:
+         * reconnecting after an earlier statement in the transaction could lose
+         * that statement when the connection is closed. MariaDB uses 4031 for a
+         * different, permanent SQL error, so exclude MariaDB servers.
          */
-        if (mysql_err < 2000 || mysql_err > 2999) {
+        if ((mysql_err < 2000 || mysql_err > 2999) && !isMySQLWaitTimeout) {
             reportDBError(pWrkrData, 0);
             LogError(0, RS_RET_DATAFAIL, "The error statement was: %s", psz);
             ABORT_FINALIZE(RS_RET_DATAFAIL);
@@ -338,10 +353,10 @@ ENDbeginTransaction
 BEGINcommitTransaction
     CODESTARTcommitTransaction;
     DBGPRINTF("ommysql: commitTransaction\n");
-    CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION"));
+    CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION", true));
 
     for (unsigned i = 0; i < nParams; ++i) {
-        iRet = writeMySQL(pWrkrData, actParam(pParams, 1, i, 0).param);
+        iRet = writeMySQL(pWrkrData, actParam(pParams, 1, i, 0).param, false);
         if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
             if (pWrkrData->hmysql == NULL) {
                 DBGPRINTF(
