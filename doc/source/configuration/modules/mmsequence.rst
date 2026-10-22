@@ -1,8 +1,18 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Deprecated mmsequence number generator and counter module.
+   :keywords: rsyslog, mmsequence, counter, sequence, random
+
 ***********************************************
 mmsequence: Number generator and counter module
 ***********************************************
+
+.. summary-start
+
+The deprecated mmsequence module generates random numbers and scoped counters.
+
+.. summary-end
 
 ====================  ========================================================
 **Module Name:**      **mmsequence**
@@ -20,7 +30,11 @@ mmsequence: Number generator and counter module
    and at some point in time this module will entirely be removed.
 
    **Do not use this module for newly crafted config files.**
-   Use global variables instead.
+   :doc:`RainerScript global variables
+   <../../rainerscript/variable_property_types>` can hold custom
+   process-wide state, but they are not a drop-in replacement for this
+   module's random generation, per-instance or named-key counters,
+   range/wrap/step behavior, or synchronized counter updates.
 
 Purpose
 =======
