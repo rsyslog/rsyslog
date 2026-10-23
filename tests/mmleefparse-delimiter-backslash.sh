@@ -43,7 +43,11 @@ rulesets:
             file: "@OUTPUT@"
             template: leefout
 YAML_EOF
-	sed -i "s|@OUTPUT@|$RSYSLOG_OUT_LOG|g" "${RSYSLOG_DYNNAME}.yaml"
+	# Stream through an owned temporary file: BSD sed requires a different -i syntax.
+	sed "s|@OUTPUT@|$RSYSLOG_OUT_LOG|g" "${RSYSLOG_DYNNAME}.yaml" > "${RSYSLOG_DYNNAME}.yaml.tmp" ||
+		error_exit 1 "cannot substitute YAML output path"
+	mv "${RSYSLOG_DYNNAME}.yaml.tmp" "${RSYSLOG_DYNNAME}.yaml" ||
+		error_exit 1 "cannot install YAML configuration"
 	add_conf 'include(file="'${RSYSLOG_DYNNAME}'.yaml")
 call leefparse'
 else
@@ -71,11 +75,14 @@ wait_file_lines "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
 shutdown_when_empty
 wait_shutdown
 
-python3 - "$RSYSLOG_OUT_LOG" <<'PY'
+$PYTHON - "$RSYSLOG_OUT_LOG" <<'PY'
+from __future__ import print_function
+
+import io
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as stream:
+with io.open(sys.argv[1], encoding="utf-8") as stream:
     records = [json.loads(line) for line in stream]
 assert len(records) == 4, records
 by_event = {record["header"]["eventID"]: record for record in records}
@@ -90,7 +97,8 @@ for event in ("pipe", "escapes", "backslash", "edges"):
     record = by_event[event]
     assert record["header"]["vendor"] == "Ven|dor", record
     assert record["fields"] == expected[event], (event, record["fields"], expected[event])
-    print(f"{event} delimiter and escaping: PASS", flush=True)
+    print("{} delimiter and escaping: PASS".format(event))
+    sys.stdout.flush()
 PY
 if [ "$?" -ne 0 ]; then
 	error_exit 1 "LEEF delimiter or escaping fields differ"
