@@ -160,12 +160,25 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
+        env:
+          # The oracle runs in the unpacked tree; the upload action runs at root.
+          RSYSLOG_FLAKE_EVIDENCE_ROOT: ${{ github.workspace }}/.ci/flake-evidence
         run: |
           cd doc-builder
-          python3 doc/tools/validate-doc-samples.py \
-            --source-dir doc/source \
-            --build-dir . \
-            --work-dir doc/build/doc-sample-validation
+          ../devtools/ci-flake-phase.sh run doc-samples custom -- \
+            python3 doc/tools/validate-doc-samples.py \
+              --source-dir doc/source \
+              --build-dir . \
+              --work-dir doc/build/doc-sample-validation
+
+      - name: Upload documentation sample failure evidence
+        if: >-
+          ${{ failure() &&
+          (github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true') }}
+        uses: $/.github/actions/upload-flake-evidence
+        with:
+          job-name: documentation samples
 
       - name: Generate documentation sample coverage
         if: >-
