@@ -77,7 +77,7 @@ struct action_s {
     sbool local_queue_numeric_error; /* raw numeric value cannot be qualified for local S2 */
     sbool bCopyMsg;
     int iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
-    time_t ttResumeRtry; /* when is it time to retry the resume? */
+    time_t ttResumeRtry; /* CLOCK_MONOTONIC seconds at which to retry */
     int iResumeInterval; /* resume interval for this action */
     int iResumeIntervalMax; /* maximum resume interval for this action --> -1: unbounded */
     int iResumeRetryCount; /* how often shall we retry a suspended action? (-1 --> eternal) */

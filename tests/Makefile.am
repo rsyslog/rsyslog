@@ -1239,6 +1239,7 @@ TESTS_CLICKHOUSE_VALGRIND = \
 	clickhouse-bulk-load-vg.sh
 
 TESTS_LIBFAKETIME = \
+	action-retry-clock-jump.sh \
 	now_family_utc.sh \
 	now-utc.sh \
 	now-utc-ymd.sh \
