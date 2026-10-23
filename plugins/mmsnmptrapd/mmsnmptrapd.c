@@ -138,6 +138,7 @@ ENDtryResume
 static int isNumeric(uchar *str) {
     int r = 1;
     if (*str == '-' || *str == '+') ++str;
+    if (*str == '\0') return 0;
     while (*str) {
         if (!isdigit(*str)) {
             r = 0;
