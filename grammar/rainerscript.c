@@ -2125,6 +2125,7 @@ static void ATTR_NONNULL() doFunct_RandomGen(struct cnffunc *__restrict__ const 
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                  "rainerscript: desired random-number range [0 - %lld] is wider than supported limit of [0 - %d)", max,
                  MAX_RANDOM_NUMBER);
+        max = MAX_RANDOM_NUMBER;
     }
 
     retVal = (x % max);
