@@ -4,11 +4,10 @@
 # including modifiers:
 #   - property: name, droplastlf, format (json/jsonf), datatype, onempty
 #   - constant: value
-#   - template-level option: option.json
+#   - template-level option: option.jsonf
 #
-# Uses a list template that extracts the message number field and wraps it
-# in a single-value JSON object using option.json (whole-template JSON, not
-# per-field jsonf), verifying the property modifiers flow through correctly.
+# A string template extracts sequence numbers, while a plain-text list template
+# verifies property modifiers and a constant newline for every injected message.
 #
 # A second YAML-defined JSON template verifies direct boolean empty/default-keep
 # and explicit keep/null/skip handling, with zero/nonzero and nonempty controls.
