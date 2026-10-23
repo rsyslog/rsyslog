@@ -612,6 +612,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
         if (c >= '0' && c <= '9' && pThis->bSuppOctetFram) {
             pThis->inputState = eInOctetCnt;
             pThis->bFrameOversize = 0;
+            pThis->bFrameOversizeReported = 0;
             pThis->iOctetsRemain = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
         } else if (c == ' ' && pThis->bSPFramingFix) {
@@ -624,6 +625,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
         } else {
             pThis->inputState = eInMsg;
             pThis->bFrameOversize = 0;
+            pThis->bFrameOversizeReported = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
         }
     }
@@ -669,6 +671,15 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 DBGPRINTF("error: message received is larger than max msg size, we %s it - c=%x\n",
                           pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split", c);
+                if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING && !pThis->bFrameOversizeReported) {
+                    pThis->bFrameOversizeReported = 1;
+                    if (glblReportOversizeMessage(runConf)) {
+                        LogError(0, RS_RET_OVERSIZE_MSG,
+                                 "imtcp %s: received oversize delimiter-framed message; max msg size is %d bytes, %s",
+                                 cnf_params->pszInputName, pThis->iMaxLine,
+                                 pThis->pSrv->discardTruncatedMsg == 1 ? "truncating" : "splitting");
+                    }
+                }
                 pThis->bFrameOversize = 1;
                 defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
                 ++(*pnMsgs);

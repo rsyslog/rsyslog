@@ -1,9 +1,12 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2020-05-14 by alorbach, released under ASL 2.0
+# Oversized LF-framed messages split into two chunks while emitting one
+# operator-visible diagnostic per original frame when reporting is enabled.
+# Exact chunk and diagnostic counts prove that split chunks do not repeat it.
 export NUMMESSAGES=10
-export TEST_BYTES_SENDSIZE=4037
-export TEST_BYTES_EXPECTED=$(((TEST_BYTES_SENDSIZE/2 - 420) * NUMMESSAGES)) # 262152
+export TEST_BYTES_SENDSIZE=5037
+export TEST_BYTES_EXPECTED=$(((TEST_BYTES_SENDSIZE/2 - 420) * NUMMESSAGES))
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
@@ -11,10 +14,12 @@ add_conf '
 global(
 	workDirectory="'$RSYSLOG_DYNNAME.spool'"
 	maxMessageSize="4k"
+	processInternalMessages="on"
+	oversizemsg.report="on"
 )
 module(	load="../plugins/imtcp/.libs/imtcp"
 	MaxSessions="10000"
-	discardTruncatedMsg="on"
+	discardTruncatedMsg="off"
 )
 input(
 	type="imtcp"
@@ -39,6 +44,7 @@ ruleset(name="print") {
 		file=`echo $RSYSLOG_OUT_LOG`
 	)
 }
+action(type="omfile" file="'$RSYSLOG2_OUT_LOG'")
 '
 startup
 tcpflood -m$NUMMESSAGES -d $TEST_BYTES_SENDSIZE
@@ -46,7 +52,12 @@ tcpflood -m$NUMMESSAGES -d $TEST_BYTES_SENDSIZE
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 
-content_count_check --regex "inputname: imtcp, strlen:" ${NUMMESSAGES}
+content_count_check --regex "inputname: imtcp, strlen:" $((NUMMESSAGES * 2))
+if [ "$(grep -c 'imtcp.*received oversize.*message' "$RSYSLOG2_OUT_LOG" || true)" -ne "$NUMMESSAGES" ]; then
+	echo "FAIL: expected one oversize diagnostic per LF-framed message"
+	cat "$RSYSLOG2_OUT_LOG"
+	error_exit 1
+fi
 
 count=$(wc -c < $RSYSLOG_OUT_LOG)
 if [ $count -lt $TEST_BYTES_EXPECTED ]; then
