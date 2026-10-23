@@ -309,7 +309,7 @@ struct ptcpsess_s {
     size_t compressionAutoDetectLen; /* bytes buffered while AUTO mode is still ambiguous */
     uchar compressionAutoDetectBuf[COMPRESS_AUTO_MAX_SNIFF_BYTES];
     int iMsg; /* index of next char to store in msg */
-    int iCurrLine; /* 2nd char of current line in regex framing mode */
+    int iCurrLine; /* start of current line in regex framing mode, 0 at frame start */
     int bAtStrtOfFram; /* are we at the very beginning of a new frame? */
     sbool bSuppOctetFram; /**< copy from listener, to speed up access */
     sbool bSPFramingFix;
@@ -1154,15 +1154,16 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(ptcpsess_t *const __
         doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
         ++(*pnMsgs);
         pThis->iMsg = 0;
-        pThis->iCurrLine = 1;
+        pThis->iCurrLine = 0;
     }
 
 
     if (c == '\n') {
         pThis->iCurrLine = pThis->iMsg;
-    } else {
+    } else if (pThis->iCurrLine > 0) {
+        /* A new frame can only start after a line boundary. */
         const int isMatch = !regexec(&inst->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
-        if (pThis->iCurrLine > 0 && isMatch) {
+        if (isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
             memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, ustrlen(pThis->pMsg + pThis->iCurrLine) + 1);
             pThis->iMsg = pThis->iCurrLine - 1;
@@ -1172,7 +1173,7 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(ptcpsess_t *const __
 
             memmove(pThis->pMsg, pThis->pMsg_save, ustrlen(pThis->pMsg_save) + 1);
             pThis->iMsg = ustrlen(pThis->pMsg_save);
-            pThis->iCurrLine = 1;
+            pThis->iCurrLine = 0;
         }
     }
 
@@ -1795,7 +1796,7 @@ static rsRetVal addSess(
     pSess->bSPFramingFix = pLstn->bSPFramingFix;
     pSess->inputState = eAtStrtFram;
     pSess->iMsg = 0;
-    pSess->iCurrLine = 1;
+    pSess->iCurrLine = 0;
     pSess->bzInitDone = 0;
     pSess->bZipStreamEnd = 0;
     pSess->bAtStrtOfFram = 1;

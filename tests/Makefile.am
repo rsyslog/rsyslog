@@ -1750,6 +1750,7 @@ TESTS_IMPTCP = \
 	imptcp-epoll-add-failure.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
+	imptcp_framing_regex-first-char.sh \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
@@ -4414,6 +4415,7 @@ EXTRA_DIST += \
 	testsuites/imptcp_framing_regex.testdata \
 	testsuites/imtcp-multiline.testdata \
 	testsuites/imptcp_framing_regex-oversize.testdata \
+	testsuites/imptcp_framing_regex-first-char.testdata \
 	testsuites/imptcp_multi_line.testdata \
 	testsuites/no_octet_counted.testdata \
 	testsuites/spframingfix.testdata \
