@@ -7,7 +7,9 @@
 # missing ruleset that would otherwise route messages to the default ruleset.
 # A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
-# holder is listening before each conflicting rsyslogd starts.
+# holder is listening before each conflicting rsyslogd starts. For the
+# missing-ruleset fallback, wait for its own listener before starting the
+# three-second survival window; that window must not include startup time.
 # A two-second termination grace is followed by SIGKILL if a daemon hangs.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
 # are read from process output because activation fails before input delivery.
@@ -35,15 +37,43 @@ cleanup_holder() {
 }
 trap cleanup_holder EXIT
 
+# Own and reap a bounded child even if it fails its readiness predicate.
+stop_bounded_child() {
+	local pid=$1 elapsed
+	kill "$pid" 2>/dev/null || :
+	for ((elapsed = 0; elapsed < 2; elapsed++)); do
+		if ! kill -0 "$pid" 2>/dev/null; then
+			break
+		fi
+		sleep 1
+	done
+	if kill -0 "$pid" 2>/dev/null; then
+		kill -KILL "$pid" 2>/dev/null || :
+	fi
+	wait "$pid" 2>/dev/null || :
+}
+
 # Keep the startup bound portable to macOS, where GNU timeout is unavailable.
-# Return 124 when rsyslogd is still running at the deadline, after stopping it.
+# Return 124 after the survival deadline, or 125 if requested readiness fails.
+# Both paths stop and reap the owned child before returning.
 run_bounded() {
 	local seconds=$1
 	local config=$2
 	local log=$3
+	local ready_file=${4:-}
 	local pid elapsed status
 	"$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1 &
 	pid=$!
+	if [ -n "$ready_file" ]; then
+		# The shared helper counts 100 ms polls. Keep startup separate from
+		# the intentional post-readiness survival interval below.
+		if ! (error_exit() { exit "$1"; }; wait_file_exists_for_process \
+			"$ready_file" "$pid" "$TB_TIMEOUT_STARTSTOP" \
+			"imtcp missing-ruleset fallback" "$log"); then
+			stop_bounded_child "$pid"
+			return 125
+		fi
+	fi
 	for ((elapsed = 0; elapsed < seconds; elapsed++)); do
 		if ! kill -0 "$pid" 2>/dev/null; then
 			wait "$pid"
@@ -52,17 +82,7 @@ run_bounded() {
 		sleep 1
 	done
 	if kill -0 "$pid" 2>/dev/null; then
-		kill "$pid" 2>/dev/null || :
-		for ((elapsed = 0; elapsed < 2; elapsed++)); do
-			if ! kill -0 "$pid" 2>/dev/null; then
-				break
-			fi
-			sleep 1
-		done
-		if kill -0 "$pid" 2>/dev/null; then
-			kill -KILL "$pid" 2>/dev/null || :
-		fi
-		wait "$pid" 2>/dev/null || :
+		stop_bounded_child "$pid"
 		return 124
 	fi
 	wait "$pid"
@@ -71,6 +91,20 @@ run_bounded() {
 }
 
 wait_file_exists_for_process "$portfile" "$holder_pid" 10 "imtcp holder" "$holder_log"
+# A live process that never publishes the requested file must time out rather
+# than being mistaken for ready. Zero allows one 100 ms poll; this deliberately
+# absent file tests the timeout branch, not daemon startup speed. The holder
+# stays alive and remains owned by cleanup_holder.
+never_ready_log="$testdir/$RSYSLOG_DYNNAME.never-ready.log"
+if (error_exit() { exit "$1"; }; wait_file_exists_for_process \
+	"$testdir/$RSYSLOG_DYNNAME.never.port" "$holder_pid" 0 \
+	"never-ready helper" "") > "$never_ready_log" 2>&1; then
+	error_exit 1 "readiness wait accepted a live helper without its file"
+fi
+grep -Fq 'Timeout waiting for never-ready helper readiness file' "$never_ready_log" ||
+	error_exit 1 "readiness wait did not diagnose the live never-ready helper"
+kill -0 "$holder_pid" 2>/dev/null || error_exit 1 "readiness timeout stopped the holder"
+
 port=$(cat "$portfile")
 case "$port" in
 	''|*[!0-9]*) error_exit 1 "invalid holder port: $port" ;;
@@ -206,7 +240,7 @@ EOF
 		fi
 		grep -Fq "input-bound ruleset 'missing' not found" "$log" || error_exit 1 "missing strict ruleset diagnostic"
 	else
-		run_bounded 3 "$config" "$log"
+		run_bounded 3 "$config" "$log" "$portfile"
 		status=$?
 		if [ "$status" -ne 124 ] || [ ! -s "$portfile" ]; then
 			cat "$log"
