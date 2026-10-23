@@ -45,11 +45,14 @@ startup
 injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
-python3 - "$RSYSLOG_OUT_LOG" <<'PYJSON'
+"$PYTHON" - "$RSYSLOG_OUT_LOG" <<'PYJSON'
+from __future__ import print_function, unicode_literals
+
+import io
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as output:
+with io.open(sys.argv[1], encoding="utf-8") as output:
     records = [json.loads(line) for line in output]
 expected = {
     "number_0": 0, "bool_0": False, "empty": "", "empty_null": None,

@@ -114,11 +114,14 @@ if [ "$MATCH" -ne "$NUMMESSAGES" ]; then
     head -5 "${RSYSLOG_DYNNAME}.list"
     exit 1
 fi
-python3 - "${RSYSLOG_DYNNAME}.bool" "$NUMMESSAGES" <<'PYJSON'
+"$PYTHON" - "${RSYSLOG_DYNNAME}.bool" "$NUMMESSAGES" <<'PYJSON'
+from __future__ import print_function, unicode_literals
+
+import io
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as output:
+with io.open(sys.argv[1], encoding="utf-8") as output:
     records = [json.loads(line) for line in output]
 expected = {
     "empty_bool": False, "empty_keep": False, "empty_null": None,
