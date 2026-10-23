@@ -128,3 +128,11 @@ and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
 severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
+
+### immark interval validation
+
+`tests/immark-interval-validation.sh` uses configuration-validation mode only
+(`-N1`) to check positive/default periods, zero rejection, and negative-period
+rejection through modern and legacy syntax. The YAML companion
+`tests/yaml-immark-interval-validation.sh` checks the module parameter through
+that frontend. Neither regression starts a negative-period input thread.
