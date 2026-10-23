@@ -12,6 +12,8 @@
 # margin to reap the idle session, while avoiding expiry during the first write.
 . ${srcdir:=.}/diag.sh init
 require_plugin ommysql
+# Match mysqld-start before the version probe accesses the shared service.
+ensure_module_needs_testing mysql
 
 MYSQL_SERVER_VERSION="$($SUDO mysql --user=root --batch --skip-column-names --execute='SELECT VERSION()')" \
     || error_exit "could not query MySQL server version"
