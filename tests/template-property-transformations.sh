@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # This focused template/property test covers deterministic MsgGetProp
 # transformations without network timing: field extraction, substring bounds,
-# regex match/no-match handling, control-character modes, string modifiers,
+# regex match/no-match handling (including absent optional subgroups in every
+# nomatch mode), control-character modes, string modifiers,
 # timestamp formatting, secure-path sanitizing, CSV/JSON formatting, and the
 # equivalent legacy string-template parser. One configuration renders all
 # cases from fixed messages. The sorted omfile output is the oracle:
@@ -49,6 +50,12 @@ template(name="outfmt" type="list") {
 	constant(value="\nregex_optional_blank=<")
 	property(name="$!optional" regex.expression="([a-z]+)(-([0-9]+))?" regex.type="ERE" regex.submatch="3" regex.nomatchmode="BLANK")
 	constant(value=">")
+	constant(value="\nregex_optional_default=")
+	property(name="$!optional" regex.expression="([a-z]+)(-([0-9]+))?" regex.type="ERE" regex.submatch="3" regex.nomatchmode="DFLT")
+	constant(value="\nregex_optional_zero=")
+	property(name="$!optional" regex.expression="([a-z]+)(-([0-9]+))?" regex.type="ERE" regex.submatch="3" regex.nomatchmode="ZERO")
+	constant(value="\nregex_optional_field=")
+	property(name="$!optional" regex.expression="([a-z]+)(-([0-9]+))?" regex.type="ERE" regex.submatch="3" regex.nomatchmode="FIELD")
 	constant(value="\nregex_default=")
 	property(name="$!word" regex.expression="ZZZ" regex.type="ERE" regex.nomatchmode="DFLT")
 	constant(value="\nregex_blank=<")
@@ -266,7 +273,7 @@ injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 host/name app proc ms
 injectmsg_literal '<167>Aug 24 05:14:15 legacyhost legacyprog[42]: shape3164'
 injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 nilhost - - - - shape5424nil'
 injectmsg_literal '<167>Aug 24 05:14:15 oddhost shape3164notag'
-wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 115
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 118
 shutdown_when_empty
 wait_shutdown
 
@@ -285,6 +292,9 @@ fixed=xy   |
 regex_second=456
 regex_third=789
 regex_optional_blank=<>
+regex_optional_default=**NO MATCH**
+regex_optional_zero=0
+regex_optional_field=abc
 regex_default=**NO MATCH**
 regex_blank=<>
 regex_field=alphabet
