@@ -1897,7 +1897,7 @@ TESTS_LIBYAML_OSSL = \
 	yaml-omfwd-tls-ossl-pkcs11-module-defaults.sh
 
 TESTS_LIBYAML_IMHIREDIS = \
-	yaml-imhiredis-default-server-port.sh
+	yaml-imhiredis-default-server-port-yamlonly.sh
 
 TESTS_LIBYAML_IMHTTP = \
 	yaml-imhttp-apikeyfile.sh \

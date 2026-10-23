@@ -16,5 +16,14 @@ AI agents working in `contrib/` MUST follow the standardized skills in `.agent/s
 - Changes SHOULD preserve backward compatibility.
 - Use `MODULE_METADATA.yaml` to document third-party dependencies and manual setup.
 
+## imhiredis regression coverage
+
+- `tests/imhiredis-queue-lpop.sh` and
+  `tests/yaml-imhiredis-default-server-port-yamlonly.sh` verify that omitting
+  `server` preserves an explicit Redis port, using exactly three ordered
+  queue records. The YAML test uses the pure-YAML configuration frontend.
+- `tests/imhiredis-queue.sh` covers an explicit host and port as a
+  connection/control path. These tests use the standard isolated Redis helper.
+
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](../CONTRIBUTING.md).*
