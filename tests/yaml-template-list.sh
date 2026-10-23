@@ -2,13 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Tests YAML list template support with property and constant elements,
 # including modifiers:
-#   - property: name, droplastlf, format (json), onempty
+#   - property: name, droplastlf, format (json/jsonf), datatype, onempty
 #   - constant: value
 #   - template-level option: option.json
 #
 # Uses a list template that extracts the message number field and wraps it
 # in a single-value JSON object using option.json (whole-template JSON, not
 # per-field jsonf), verifying the property modifiers flow through correctly.
+#
+# A second YAML-defined JSON template verifies direct boolean empty/default-keep
+# and explicit keep/null/skip handling, with zero/nonzero and nonempty controls.
+# After synchronized shutdown, every injected message must yield one parsed JSON
+# object with exactly the expected values and types; no cbool() normalizes inputs.
 #
 # Added 2025, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -47,11 +52,33 @@ templates:
       - constant:
           value: "\n"
 
+
+  - name: boolfmt
+    type: list
+    option.jsonf: "on"
+    elements:
+      - property: {name: "$!empty", outname: empty_bool, datatype: bool, format: jsonf}
+      - property: {name: "$!empty", outname: empty_keep, datatype: bool, format: jsonf, onempty: keep}
+      - property: {name: "$!empty", outname: empty_null, datatype: bool, format: jsonf, onempty: null}
+      - property: {name: "$!empty", outname: empty_skip, datatype: bool, format: jsonf, onempty: skip}
+      - property: {name: "$!zero", outname: zero, datatype: bool, format: jsonf}
+      - property: {name: "$!nonzero", outname: nonzero, datatype: bool, format: jsonf}
+      - property: {name: "$!false_string", outname: false_string, datatype: bool, format: jsonf}
+      - property: {name: "$!double_zero", outname: double_zero, datatype: bool, format: jsonf}
+
 rulesets:
   - name: main
     statements:
       - if: '$msg contains "msgnum:"'
         then:
+          - set: {var: "$!empty", expr: '""'}
+          - set: {var: "$!zero", expr: "0"}
+          - set: {var: "$!nonzero", expr: "42"}
+          - set: {var: "$!false_string", expr: '"false"'}
+          - set: {var: "$!double_zero", expr: '"00"'}
+          - type: omfile
+            template: boolfmt
+            file: "${RSYSLOG_DYNNAME}.bool"
           - type: omfile
             template: seqfmt
             file: "${RSYSLOG_OUT_LOG}"
@@ -88,4 +115,24 @@ if [ "$MATCH" -ne "$NUMMESSAGES" ]; then
     head -5 "${RSYSLOG_DYNNAME}.list"
     exit 1
 fi
+python3 - "${RSYSLOG_DYNNAME}.bool" "$NUMMESSAGES" <<'PYJSON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as output:
+    records = [json.loads(line) for line in output]
+expected = {
+    "empty_bool": False, "empty_keep": False, "empty_null": None,
+    "zero": False, "nonzero": True, "false_string": True, "double_zero": True,
+}
+if len(records) != int(sys.argv[2]):
+    raise SystemExit("unexpected JSON record count: " + str(len(records)))
+for record in records:
+    if record != expected:
+        raise SystemExit("unexpected JSON values: {!r}; expected {!r}".format(record, expected))
+    for field, value in expected.items():
+        if type(record[field]) is not type(value):
+            raise SystemExit("unexpected JSON type for " + field)
+PYJSON
+[ "$?" -eq 0 ] || error_exit 1 "YAML JSON value/type oracle failed"
 exit_test
