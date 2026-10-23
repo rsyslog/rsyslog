@@ -36,7 +36,8 @@ def repo_file(value, label):
         part not in ("", ".", "..") for part in value.split("/")),
             f"{label}: unsafe path {value!r}")
     resolved = (ROOT / relative).resolve(strict=True)
-    require(resolved.is_relative_to(ROOT) and resolved.is_file(),
+    # Keep this helper usable by the older Python in legacy test lanes.
+    require(ROOT in resolved.parents and resolved.is_file(),
             f"{label}: path escapes repository or is not a file: {value!r}")
     return relative
 

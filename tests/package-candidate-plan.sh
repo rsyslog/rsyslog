@@ -58,7 +58,8 @@ with tempfile.TemporaryDirectory(prefix="rsyslog-candidate-plan-") as temporary:
         command = [sys.executable, str(planner)]
         if source is not None:
             command += ["--catalog", str(source)]
-        return subprocess.run(command + list(args), capture_output=True, text=True)
+        return subprocess.run(command + list(args), stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, universal_newlines=True)
 
     def succeeds(*args, source=None):
         result = run(*args, source=source)
