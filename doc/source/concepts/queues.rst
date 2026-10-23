@@ -536,13 +536,31 @@ Rate Limiting
 Rate limiting provides a way to prevent rsyslogd from processing things
 too fast. It can, for example, prevent overrunning a receiver system.
 
-Currently, there are only limited rate-limiting features available. The
-``queue.dequeueSlowDown`` directive allows to specify how long (in
-microseconds) dequeueing should be delayed. While simple, it still is
-powerful. For example, using a ``queue.dequeueSlowDown="1000"`` delay on
-a UDP send action ensures that no more than roughly 1,000 messages can
-be sent within a second (there is also some time needed for the
-processing itself).
+``queue.dequeueSlowDown`` adds a delay, in microseconds, after a queue worker
+processes a dequeued batch. It does not insert a delay between individual
+messages within that batch, so a batch can be sent in a burst.
+The actual batch size, processing time, and number of active workers all
+affect the resulting message rate.
+
+For example, with one worker and ``queue.dequeueBatchSize="1"``, a UDP send
+action using ``queue.dequeueSlowDown="1000"`` processes roughly 1000 messages
+per second before accounting for processing time. With full batches of 100
+messages, the same delay instead permits roughly 100000 messages per second
+before processing time. Multiple workers can process batches independently.
+Use this setting for approximate throttling, not a precise message-rate
+guarantee. Reducing the batch size to one can reduce throughput. See
+:doc:`../rainerscript/queue_parameters` for the parameter details.
+
+For per-message output limits, prefer ``action.ratelimit.name`` with a named
+:doc:`ratelimit output policy <../rainerscript/configuration_objects/ratelimit>`.
+Set ``scope: output`` and ``mode: pace`` to preserve messages while the action
+queue worker waits for the next permitted rate-limit window. This requires a
+non-direct action queue, such as ``queue.type="linkedlist"``. The policy sets
+``interval`` and ``burst`` limits per window, so delivery can still be bursty.
+The alternative ``mode: drop`` discards excess messages before the output
+module is called. Each action has its own quota, even when actions reference
+the same named policy. Pacing can grow the action-queue backlog; normal queue
+capacity, backpressure, and discard settings still apply.
 
 Processing Timeframes
 ~~~~~~~~~~~~~~~~~~~~~

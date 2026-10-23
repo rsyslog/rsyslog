@@ -788,11 +788,35 @@ queue.dequeueSlowDown
 
    "integer", "0", "no", "``$ActionQueueDequeueSlowDown``"
 
-Regulates how long dequeueing should be delayed. This value must be specified
-in microseconds (1000000us is 1sec). It can be used to slow down rsyslog so
-it won't send things to fast.
-For example if this parameter is set to 10000 on a UDP send action, the action
-won't be able to put out more than 100 messages per second.
+Adds a delay after a queue worker processes a dequeued batch.
+The value is specified in microseconds (1000000 microseconds is one second);
+``0`` disables the delay. The delay applies once per batch, not once per
+message, so messages within a batch can be sent in a burst.
+
+The resulting message rate depends on the actual batch size, processing time,
+and number of active workers. ``queue.dequeueBatchSize`` limits the number of
+messages in each batch; a larger batch can send more messages between delays.
+For example, with one worker, full batches of 100 messages, and
+``queue.dequeueSlowDown="10000"``, the delay alone permits roughly 10000
+messages per second, rather than 100. Processing time reduces that rate.
+
+With ``queue.dequeueBatchSize="1"`` and one worker, the same delay is applied
+after each processed message, giving roughly 100 messages per second before
+accounting for processing time. This is approximate throttling,
+not a precise message-rate guarantee; multiple workers can process batches
+independently. Reducing the batch size to one can reduce throughput.
+
+For per-message output rate limiting, prefer ``action.ratelimit.name`` with a
+named :doc:`ratelimit output policy <configuration_objects/ratelimit>`.
+Use ``scope: output`` and ``mode: pace`` to preserve messages while the action
+queue worker waits for the next permitted rate-limit window. Pacing requires
+a non-direct action queue, such as ``queue.type="linkedlist"``. The policy's
+``interval`` and ``burst`` control messages per window; delivery can still be
+bursty. Each action has its own quota, even when actions reference the same
+named policy. Pacing can grow the action-queue backlog; normal queue capacity,
+backpressure, and discard settings still apply. Use ``mode: drop`` only when
+discarding excess messages is acceptable.
+
 
 
 queue.dequeueTimeBegin
