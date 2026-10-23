@@ -2868,12 +2868,15 @@ CLEANFILES+= \
 
 check_LTLIBRARIES =
 
+# This service-independent shell regression still needs the testbench helpers.
+if ENABLE_TESTBENCH
 if ENABLE_OMJOURNAL
 check_LTLIBRARIES += libomjournal_send_errors_preload.la
 libomjournal_send_errors_preload_la_SOURCES = omjournal-send-errors-preload.c
 libomjournal_send_errors_preload_la_CFLAGS =
 libomjournal_send_errors_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 TESTS_OMJOURNAL_INDEPENDENT = $(TESTS_OMJOURNAL_SEND_ERRORS)
+endif
 endif
 
 # TODO: reenable TESTRUNS = rt_init rscript
