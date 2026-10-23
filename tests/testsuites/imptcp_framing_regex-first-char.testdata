@@ -1,0 +1,6 @@
+2026-10-23 10:00:01 host app: java.lang.IllegalStateException: boom
+	at com.example.Foo.bar(Foo.java:10)
+	at com.example.Foo.main(Foo.java:5)
+2026-10-23 10:00:02 host app: second record
+2026-10-23 10:00:03 host app: third record
+2026-10-23 10:00:04 host app: end
