@@ -75,9 +75,10 @@ EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
-TESTS_OMFWD_UDP_SOURCE_FAMILY = omfwd-udp-source-address.sh omfwd-udp-source-family.sh omfwd-udp-source-family-sendall.sh omfwd-udp-source-family-dual-local.sh
-TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML = yaml-omfwd-udp-source-family.sh yaml-omfwd-udp-source-family-sendall.sh
-EXTRA_DIST += $(TESTS_OMFWD_UDP_SOURCE_FAMILY) $(TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML)
+TESTS_OMFWD_UDP_SOURCE_FAMILY = omfwd-udp-source-socket-failure.sh omfwd-udp-source-address.sh omfwd-udp-source-family.sh omfwd-udp-source-family-sendall.sh omfwd-udp-source-family-dual-local.sh
+TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML = yaml-omfwd-udp-source-socket-failure.sh yaml-omfwd-udp-source-family.sh yaml-omfwd-udp-source-family-sendall.sh
+TESTS_OMFWD_UDP_SOURCE_FAMILY_VG = omfwd-udp-source-socket-failure-vg.sh
+EXTRA_DIST += $(TESTS_OMFWD_UDP_SOURCE_FAMILY) $(TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML) $(TESTS_OMFWD_UDP_SOURCE_FAMILY_VG)
 
 TESTS_IMUDP_BUFFER_SIZING = imudp-batchsize-range.sh imudp-batchsize-runtime.sh
 TESTS_IMUDP_BUFFER_SIZING_LIBYAML = yaml-imudp-batchsize-range.sh
@@ -3081,6 +3082,9 @@ liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif
 endif
 TESTS += $(TESTS_IMUDP_BUFFER_SIZING) $(TESTS_OMFWD_UDP_SOURCE_FAMILY)
+if HAVE_VALGRIND
+TESTS += $(TESTS_OMFWD_UDP_SOURCE_FAMILY_VG)
+endif
 check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =

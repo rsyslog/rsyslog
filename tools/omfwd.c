@@ -1822,6 +1822,7 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
             CHKiRet(returnToOriginalNs(pData));
             bNeedReturnNs = 0;
         }
+        if (pData->address != NULL && pTarget->pSockArray == NULL) ABORT_FINALIZE(RS_RET_SUSPENDED);
         if (pTarget->pSockArray != NULL) {
             if (pData->address != NULL) {
                 int compatible = 0;
