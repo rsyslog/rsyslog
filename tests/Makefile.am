@@ -15,6 +15,10 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_IMMARK_INTERVAL = immark-interval-validation.sh
+TESTS_IMMARK_INTERVAL_YAML = yaml-immark-interval-validation.sh
+EXTRA_DIST += $(TESTS_IMMARK_INTERVAL) $(TESTS_IMMARK_INTERVAL_YAML)
+
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
 	diskqueue-qi-reload-abi.sh
@@ -364,7 +368,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh
 
-TESTS_DEFAULT = \
+TESTS_DEFAULT = $(TESTS_IMMARK_INTERVAL) \
 	imtcp-bind-failure-window.sh \
 	record-container-validation.sh \
 	codex-pre-push-container-gate.sh \
@@ -3156,6 +3160,7 @@ endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG)
 TESTS += $(TESTS_LOCAL_OMFILE_ACTIVATION)
 if HAVE_LIBYAML
+TESTS += $(TESTS_IMMARK_INTERVAL_YAML)
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 endif
