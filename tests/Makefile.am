@@ -144,6 +144,10 @@ TESTS_OMUDPSPOOF_MODULE_TEMPLATE_YAML = yaml-omudpspoof-module-template-default.
 EXTRA_DIST += $(TESTS_OMUDPSPOOF_MODULE_TEMPLATE) $(TESTS_OMUDPSPOOF_MODULE_TEMPLATE_YAML) \
 	testsuites/yaml-omudpspoof-module-template-default.yaml
 
+TESTS_IMMARK_INTERVAL = immark-interval-validation.sh
+TESTS_IMMARK_INTERVAL_YAML = yaml-immark-interval-validation.sh
+EXTRA_DIST += $(TESTS_IMMARK_INTERVAL) $(TESTS_IMMARK_INTERVAL_YAML)
+
 TESTS_RSCRIPT_REPLACE_LIMIT = rscript-replace-result-limit.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_LIMIT)
 
@@ -427,7 +431,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh
 
-TESTS_DEFAULT = \
+TESTS_DEFAULT = $(TESTS_IMMARK_INTERVAL) \
 	imtcp-bind-failure-window.sh \
 	kafka-dependency-download-cache.sh \
 	record-container-validation.sh \
@@ -3517,6 +3521,7 @@ endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_STATSLOG_PERCENT) $(TESTS_JSONF_AUTO)
 TESTS += $(TESTS_LOCAL_OMFILE_ACTIVATION)
 if HAVE_LIBYAML
+TESTS += $(TESTS_IMMARK_INTERVAL_YAML)
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 TESTS += $(TESTS_JSONF_AUTO_YAML)
