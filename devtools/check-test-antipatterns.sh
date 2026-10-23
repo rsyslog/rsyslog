@@ -91,9 +91,11 @@ if print_matches "Fixed sleeps as synchronization" \
 	findings=$((findings + 1))
 fi
 
+# Keep bare-colon matches at four or five digits: shorter values also occur
+# in JSON, IPv6, slices, and message data without identifying a port.
 if print_matches "Fixed TCP/UDP port literals" \
-	'(port|PORT)[_[:alnum:]]*="?[1-9][0-9]{3,4}"?|:[1-9][0-9]{3,4}' \
-	'Fixed port literals can collide with concurrently running tests or host services. Prefer dynamic listener port allocation with a port file. Review matches manually; some are input data, expected messages, or legacy constants.'; then
+	'((^|[^[:alnum:]])(port|PORT)[_[:alnum:]]*="?[1-9][0-9]{2}|((port|PORT)[_[:alnum:]]*="?|:)[1-9][0-9]{3,4})([^[:alnum:]_.$]|$)' \
+	'This heuristic recognizes common port assignments and four/five-digit colon endpoints. Fixed port literals can collide with concurrently running tests or host services. Prefer dynamic listener port allocation with a port file. Review matches manually; some are input data, expected messages, or legacy constants.'; then
 	findings=$((findings + 1))
 fi
 

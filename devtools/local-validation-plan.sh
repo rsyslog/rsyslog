@@ -206,7 +206,7 @@ if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\
 fi
 
 validation_tooling_only=0
-if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/|^doc/ai/|^doc/security/|^doc/README\.md$|^doc/AGENTS\.md$|^doc/BUILDS_README\.md$|^doc/STRATEGY\.md$|^doc/IMPLEMENTATION_PLAN\.md$|^devtools/(local-validation-plan\.sh|check-test-antipatterns\.sh|format-code\.sh|format-python\.sh|list-git-changed-c-h-files\.sh|check-raw-atomics\.py|raw-atomics-baseline\.txt)$'; then
+if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/|^doc/ai/|^doc/security/|^doc/README\.md$|^doc/AGENTS\.md$|^doc/BUILDS_README\.md$|^doc/STRATEGY\.md$|^doc/IMPLEMENTATION_PLAN\.md$|^devtools/(local-validation-plan\.sh|check-test-antipatterns\.sh|format-code\.sh|format-python\.sh|list-git-changed-c-h-files\.sh|check-raw-atomics\.py|raw-atomics-baseline\.txt|tests/test_test_antipatterns\.py)$'; then
 	validation_tooling_only=1
 fi
 
@@ -267,6 +267,9 @@ print_plan() {
 	local-validation-tooling)
 		echo "  - Shell/Python style checks for changed tooling."
 		echo "  - Dry-run this helper against representative diffs where practical."
+		if matches_any '^devtools/(check-test-antipatterns\.sh|tests/test_test_antipatterns\.py)$'; then
+			echo "  - python3 -m unittest discover -s devtools/tests -p test_test_antipatterns.py"
+		fi
 		echo "  - No runtime container CI unless the tooling change affects CI/container execution."
 		;;
 	rendered-docs)
@@ -390,7 +393,7 @@ run_raw_alloc_scan() {
 }
 
 run_raw_atomics_check() {
-	if [ ! -s "$tmp_c" ] && ! grep -qE '^devtools/(check-raw-atomics\.py|raw-atomics-baseline\.txt)$' "$tmp_changed"; then
+	if [ ! -s "$tmp_c" ] && ! grep -qE '^devtools/(check-raw-atomics\.py|raw-atomics-baseline\.txt|tests/test_test_antipatterns\.py)$' "$tmp_changed"; then
 		return 0
 	fi
 	# Whole-tree scan so the baseline of known findings applies; this is
@@ -630,6 +633,9 @@ run_format_code_check
 run_raw_alloc_scan
 run_raw_atomics_check
 run_test_antipattern_scan
+if matches_any '^devtools/(check-test-antipatterns\.sh|tests/test_test_antipatterns\.py)$'; then
+	python3 -m unittest discover -s devtools/tests -p test_test_antipatterns.py
+fi
 git diff --check "$base_ref"...HEAD
 git diff --cached --check
 git diff --check
