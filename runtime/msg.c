@@ -4393,21 +4393,22 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                                 pRes = UCHAR_CONSTANT("");
                             }
                         }
-                    }
-                    /* OK, we have a usable match - we now need to malloc pB */
-                    int iLenBuf;
+                    } else {
+                        /* OK, we have a usable match - we now need to malloc pB */
+                        int iLenBuf;
 
-                    iLenBuf =
-                        pmatch[pTpe->data.field.iSubMatchToUse].rm_eo - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
+                        iLenBuf = pmatch[pTpe->data.field.iSubMatchToUse].rm_eo -
+                                  pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
 
-                    if (msgPropStrGen(&pRes, pbMustBeFreed, &bufLen,
-                                      pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
-                                      iLenBuf) != RS_RET_OK) {
-                        if (*pbMustBeFreed == 1) {
-                            free(pRes);
-                            *pbMustBeFreed = 0;
+                        if (msgPropStrGen(&pRes, pbMustBeFreed, &bufLen,
+                                          pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
+                                          iLenBuf) != RS_RET_OK) {
+                            if (*pbMustBeFreed == 1) {
+                                free(pRes);
+                                *pbMustBeFreed = 0;
+                            }
+                            RET_OUT_OF_MEMORY;
                         }
-                        RET_OUT_OF_MEMORY;
                     }
                 }
             } else {
