@@ -1006,6 +1006,7 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 	yaml-statements-complex.sh
 
 TESTS_IMTCP = \
+	smtradfile-final-lf.sh \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
 	fromhost-port-async-ruleset.sh \
@@ -1122,6 +1123,7 @@ TESTS_IMTCP_YAML = \
 	ratelimit-policy-persource-mixed-invalid.sh
 
 TESTS_IMTCP_VALGRIND = \
+	smtradfile-final-lf-vg.sh \
 	imtcp-octet-framing-too-long-vg.sh \
 	omfwd-rebind-tcp-vg.sh
 
