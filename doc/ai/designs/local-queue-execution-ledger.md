@@ -14,6 +14,11 @@ establish acceptance. Its checkpoint statements describe their recorded dates,
 not the current PR head or current validation state.
 <!-- .. summary-end -->
 
+Current work follows the [security review policy](../../../AGENTS.md#security-review-policy)
+in `AGENTS.md`: security review belongs in the PR and local AI review is optional.
+The local model/receipt gates recorded below are historical acceptance rules,
+not prerequisites for current commits, pushes, validation, or local completion.
+
 ## Authority and immutable baselines
 
 - [Design](local-queue-frontends.md), [plan](local-queue-implementation-plan.md),
