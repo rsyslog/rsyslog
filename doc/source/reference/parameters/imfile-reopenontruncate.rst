@@ -30,7 +30,10 @@ Description
 -----------
 When activated, tells rsyslog to reopen the input file if it was truncated
 (the inode is unchanged but the file size on disk is smaller than the
-current offset in memory). This feature is experimental.
+current offset in memory). The offset restored from the state file is
+included. After a restart, a saved offset past the end of the file makes
+reading start again at byte 0, so the lines that remain are read again.
+This feature is experimental. The default is off.
 
 Input usage
 -----------

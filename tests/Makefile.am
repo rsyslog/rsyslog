@@ -2374,6 +2374,9 @@ TESTS_IMFILE = \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
+	imfile-truncate-state-past-eof.sh \
+	imfile-truncate-state-past-eof-off.sh \
+	imfile-truncate-state-past-eof-fstat-error.sh \
 	imfile-truncate-multiple.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
@@ -2535,7 +2538,8 @@ TESTS_IMFILE_MMNORMALIZE = \
 	imfile-endmsg.regex-with-example.sh
 
 TESTS_IMFILE_IMPSTATS = \
-	imfile-statistics.sh
+	imfile-statistics.sh \
+	imfile-truncate-empty-buffer.sh
 
 TESTS_IMFILE_VALGRIND = \
 	imfile-basic-vg.sh \
@@ -3113,6 +3117,16 @@ liboverride_recv_imptcp_la_CFLAGS =
 liboverride_recv_imptcp_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_recv_imptcp_la_LIBADD = $(DL_LIBS)
 endif
+
+if ENABLE_IMFILE_TESTS
+if OS_LINUX
+check_LTLIBRARIES += liboverride_fstat.la
+liboverride_fstat_la_SOURCES = override_fstat.c
+liboverride_fstat_la_CFLAGS =
+liboverride_fstat_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_fstat_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
+endif # if OS_LINUX
+endif # if ENABLE_IMFILE_TESTS
 
 if ENABLE_OMUDPSPOOF
 check_LTLIBRARIES += liboverride_libnet_write_fail.la

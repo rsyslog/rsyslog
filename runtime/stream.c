@@ -698,10 +698,12 @@ finalize_it:
  * to begin of file. To detect truncation, we try to re-read the last block.
  * If that does not succeed or different data than from the original read is
  * returned, truncation is assumed.
- * NOTE: this function must be called only if truncation is enabled AND
- * when the previous read buffer still is valid (aka "before the next read").
- * It is ok to call with a 0-size buffer, which we than assume as begin of
- * reading. In that case, no truncation will be detected.
+ * NOTE: call this only when truncation is enabled, before the next read.
+ * A previous buffer is re-read and compared. A 0-size buffer means this
+ * stream has not completed a read yet, including one whose offset was
+ * restored from the state file. The file size is then compared with the
+ * current offset. A smaller file restarts reading at byte 0. An equal or
+ * larger size is left untouched.
  * rgerhards, 2018-09-20
  */
 static rsRetVal ATTR_NONNULL() checkTruncation(strm_t *const pThis) {
@@ -712,6 +714,13 @@ static rsRetVal ATTR_NONNULL() checkTruncation(strm_t *const pThis) {
 
     DBGPRINTF("checkTruncation, file %s, iBufPtrMax %zd\n", pThis->pszCurrFName, pThis->iBufPtrMax);
     if (pThis->iBufPtrMax == 0) {
+        struct stat statBuf;
+        if (fstat(pThis->fd, &statBuf) == -1) {
+            LogError(errno, RS_RET_IO_ERROR, "file '%s': cannot fstat() for truncation check, ignored",
+                     pThis->pszCurrFName);
+        } else if ((long long)statBuf.st_size < (long long)pThis->iCurrOffs) {
+            iRet = rereadTruncated(pThis, 0, "file size smaller than current offset", (long long)statBuf.st_size);
+        }
         FINALIZE;
     }
 
