@@ -26,6 +26,10 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/usr \
          -DBUILD_RUBY=OFF \
          -DBUILD_GO=OFF
 
+# Qpid 0.40.0 shared/static targets can generate the same files concurrently.
+# Complete all generated outputs before starting parallel consumers.
+cmake --build . --target generated_c_files --parallel 1
+
 # Honor DEB_BUILD_OPTIONS=parallel=N from package builder, else use nproc
 MAKE_JOBS="-j$(echo "${DEB_BUILD_OPTIONS:-}" | sed -n 's/.*parallel=\([0-9]*\).*/\1/p')"
 if [ -z "${MAKE_JOBS#-j}" ]; then
