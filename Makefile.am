@@ -4,6 +4,7 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
+	sidecar/rsyslog_exporter.py \
 	devtools/record-container-validation.py \
 	README.md \
 	platform/README \
