@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omgssapi GssForwardServiceName legacy directive.
+   :keywords: rsyslog, omgssapi, GssForwardServiceName, legacy configuration
+
 .. _param-omgssapi-gssforwardservicename:
 .. _omgssapi.parameter.module.gssforwardservicename:
 
@@ -38,18 +42,22 @@ Module usage
 .. _param-omgssapi-module-gssforwardservicename:
 .. _omgssapi.parameter.module.gssforwardservicename-usage:
 
-.. code-block:: rsyslog
+This module supports legacy directives and selector actions. Load it before
+setting the directive, then configure the forwarding action.
 
-   module(load="omgssapi" gssForwardServiceName="rsyslog")
-   action(type="omgssapi" target="receiver.mydomain.com")
+.. code-block:: none
+
+   module(load="omgssapi")
+   $GssForwardServiceName rsyslog
+   *.* :omgssapi:receiver.mydomain.com
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
+The following directive is the supported configuration interface for omgssapi.
 
 .. _omgssapi.parameter.legacy.gssforwardservicename:
 
-- $GssForwardServiceName — maps to GssForwardServiceName (status: legacy)
+- ``$GssForwardServiceName`` — sets GssForwardServiceName for subsequent forwarding actions.
 
 .. index::
    single: omgssapi; $GssForwardServiceName
