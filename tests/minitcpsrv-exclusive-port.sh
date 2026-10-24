@@ -1,10 +1,12 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# An offline reservation must refuse connections and prevent a competing
+# An offline reservation must remain unavailable and prevent a competing
 # SO_REUSEADDR socket from becoming a listener. The helper's port file proves
 # bind completed; the unreleased gate keeps it offline without timing guesses.
 # Invalid exclusive-mode combinations are rejected; default -w still transitions
-# to a working listener when released.
+# to a working listener when released. A one-second connect deadline bounds
+# the negative probe: Linux refuses immediately, while macOS may time out.
+# Exclusivity is independently proved first by the competing-listener check.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
@@ -48,17 +50,6 @@ import socket
 import sys
 
 address = ('127.0.0.1', int(sys.argv[1]))
-probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-try:
-    probe.connect(address)
-except socket.error as error:
-    if error.errno != errno.ECONNREFUSED:
-        raise
-else:
-    raise SystemExit('offline holder unexpectedly accepted a connection')
-finally:
-    probe.close()
-
 competitor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 competitor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 try:
@@ -72,6 +63,21 @@ else:
     raise SystemExit('FAIL: competing SO_REUSEADDR socket became a listener')
 finally:
     competitor.close()
+
+probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+probe.settimeout(1)
+try:
+    probe.connect(address)
+except socket.timeout:
+    pass
+except socket.error as error:
+    if error.errno not in (errno.ECONNREFUSED, errno.ETIMEDOUT):
+        raise
+else:
+    raise SystemExit('offline holder unexpectedly accepted a connection')
+finally:
+    probe.close()
+
 PY
 [ "$?" -eq 0 ] || error_exit 1
 exit_test
