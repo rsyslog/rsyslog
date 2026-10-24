@@ -361,6 +361,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	kafka-dependency-download-cache.sh \
 	record-container-validation.sh \
 	codex-pre-push-container-gate.sh \
 	mysql-reconnect-relevance.sh \
