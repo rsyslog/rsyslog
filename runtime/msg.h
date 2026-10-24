@@ -115,10 +115,13 @@ struct msg {
         struct json_object *json;
         struct json_object *localvars;
     #ifdef HAVE_LOGNORM_TURBO
-        /* Opaque turbo result slot — set by mmnormalize turbo path.
+        /* Opaque turbo result slot, set by the mmnormalize turbo path.
          * Enables zero-JSON data flow: template resolution reads fields
          * directly from the snapshot without building a json-c tree.
-         * No liblognorm dependency: uses void* + function pointer callbacks. */
+         * No liblognorm dependency: uses void* + function pointer callbacks.
+         * Attach, overwrite, release, and every read from a message that
+         * another thread holds happen under mut (see msg.c, Concurrency &
+         * Locking). */
         void *turbo_result;
         void (*turbo_result_free)(void *);
         void (*turbo_result_to_json)(void *, struct json_object **);
@@ -128,6 +131,12 @@ struct msg {
          * no allocation, no atomics); lazily allocated on the first dup.
          * The last owner (counter reaches 0) frees the snapshot. */
         unsigned *turbo_result_refs;
+        /* Set under pMsg->mut once turbo fields have been merged into
+         * pMsg->json, which then serves every $! read: get_str is only
+         * consulted while pMsg->json is NULL. Materialize is idempotent and
+         * keeps the turbo callbacks; a snapshot attached later is merged
+         * into the tree on the next access. */
+        sbool turbo_json_ready;
     #endif
         /* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
         uchar szRawMsg[CONF_RAWMSG_BUFSIZE];
@@ -200,13 +209,27 @@ smsg_t *MsgDup(smsg_t *pOld);
  *
  * The snapshot can be shared across MsgDup() copies. This function decrements
  * the shared ownership count, frees the snapshot for the last owner, and
- * clears the message's snapshot pointer and all associated callbacks. Callers
- * must hold @p pMsg's mutex or otherwise have exclusive access to the message.
+ * clears the message's snapshot pointer, callbacks, and turbo_json_ready
+ * flag. Callers must hold @p pMsg's mutex or otherwise have exclusive access
+ * to the message (msgDestruct of the last iRefCount owner qualifies).
  * Never invoke turbo_result_free directly.
  *
  * @param pMsg Message whose turbo snapshot reference is released.
  */
 void MsgReleaseTurboResult(smsg_t *pMsg);
+/**
+ * @brief Project the turbo snapshot into pMsg->json.
+ *
+ * For callers that persist the JSON tree (queue codecs): the snapshot is an
+ * opaque module-owned blob and cannot cross a queue file. Idempotent.
+ *
+ * This function acquires and releases @p pMsg's mutex itself, unlike
+ * MsgReleaseTurboResult() above, which requires the caller to hold it. The
+ * mutex is not recursive, so a caller already holding it must not call this.
+ *
+ * @return RS_RET_OK, or RS_RET_OUT_OF_MEMORY when the tree could not be built.
+ */
+rsRetVal MsgTurboMaterialize(smsg_t *pMsg);
     #endif
 smsg_t *MsgAddRef(smsg_t *pM);
 void setProtocolVersion(smsg_t *pM, int iNewVersion);
@@ -271,6 +294,8 @@ rsRetVal MsgGetSeverity(smsg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(smsg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
 rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
+/* returns a newly allocated string the caller must free, or NULL on
+ * out of memory (including a failed turbo $! materialization) */
 const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
 /**

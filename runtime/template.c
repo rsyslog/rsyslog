@@ -885,7 +885,9 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
          * not worth the effort, as this passing mode is not expected
          * in subtree mode and so most probably only used for debug & test.
          */
-        getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
+        if (getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed) == RS_RET_OUT_OF_MEMORY) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
         if (iLenVal < 0) {
             ABORT_FINALIZE(RS_RET_ERR);
         }
@@ -1031,17 +1033,20 @@ rsRetVal tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjs
     rs_size_t propLen;
     unsigned short bMustBeFreed;
     uchar *pVal;
-    struct json_object *json, *jsonf;
+    struct json_object *json = NULL, *jsonf;
     rsRetVal localRet;
     DEFiRet;
 
     if (pTpl->bHaveSubtree) {
-        if (jsonFind(pMsg, &pTpl->subtree, pjson) != RS_RET_OK) *pjson = NULL;
+        /* owned deep copy, taken under the message mutex: the live tree may
+         * be mutated by another holder of the message at any time, and a
+         * turbo-only message has no tree until it is materialized */
+        localRet = msgGetJSONPropJSON(pMsg, &pTpl->subtree, pjson);
+        if (localRet == RS_RET_OUT_OF_MEMORY) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (localRet != RS_RET_OK) *pjson = NULL;
         if (*pjson == NULL) {
             /* we need to have a root object! */
             *pjson = json_object_new_object();
-        } else {
-            json_object_get(*pjson); /* inc refcount */
         }
         FINALIZE;
     }
@@ -1057,7 +1062,10 @@ rsRetVal tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjs
                 pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR) {
                 localRet = msgGetJSONPropJSON(pMsg, &pTpe->data.field.msgProp, &jsonf);
                 if (localRet == RS_RET_OK) {
-                    json_object_object_add(json, (char *)pTpe->fieldName, json_object_get(jsonf));
+                    /* jsonf is an owned deep copy; the object takes that reference */
+                    json_object_object_add(json, (char *)pTpe->fieldName, jsonf);
+                } else if (localRet == RS_RET_OUT_OF_MEMORY) {
+                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                 } else {
                     DBGPRINTF("tplToJSON: error %d looking up property %s\n", localRet, pTpe->fieldName);
                     if (pTpe->data.field.options.bMandatory) {
@@ -1081,8 +1089,10 @@ rsRetVal tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjs
     }
     assert(iRet == RS_RET_OK);
     *pjson = json;
+    json = NULL;
 
 finalize_it:
+    if (json != NULL) json_object_put(json);
     RETiRet;
 }
 
