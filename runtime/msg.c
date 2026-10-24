@@ -3846,7 +3846,13 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
                     break;
                 }
             }
-            if (!is_numeric) {
+            if (is_numeric) {
+                /* JSON numbers cannot have leading zeros. Keep one for zero. */
+                while (buflen > 1 && *pSrc == '0') {
+                    ++pSrc;
+                    --buflen;
+                }
+            } else {
                 es_addChar(&dst, '"');
             }
             CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
