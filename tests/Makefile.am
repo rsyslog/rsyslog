@@ -390,6 +390,7 @@ TESTS_DEFAULT = \
 	minitcpsrv-reconnect.sh \
 	diagtalker-retry.sh \
 	test_id_usage_output.sh \
+	inputfilegen-size-limit.sh \
 	uxsockrcvr_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
