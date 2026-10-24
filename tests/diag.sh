@@ -3902,6 +3902,7 @@ download_kafka() {
 			if ! wget -q $dep_zk_url -O $dep_zk_cached_file; then
 				echo error during wget, retry:
 				if ! wget $dep_zk_url -O $dep_zk_cached_file; then
+					rm -f -- "$dep_zk_cached_file" # wget may leave an empty or partial archive
 					echo "Skipping test - unable to download zookeeper"
 					error_exit 77
 				fi
