@@ -2753,6 +2753,7 @@ TESTS_IMFILE_MMNORMALIZE_VALGRIND = \
 
 TESTS_IMBATCHREPORT = \
 	imbatchreport-newline-state.sh \
+	imbatchreport-multiple-inputs.sh \
 	imbatchreport_errmsg_no_params.sh \
 	imbatchreport_errmsg_glob_not_regular.sh \
 	imbatchreport_errmsg_glob_dir_fake.sh \
@@ -2773,6 +2774,7 @@ TESTS_IMBATCHREPORT = \
 	imbatchreport_rename_toolarge.sh
 
 TESTS_IMBATCHREPORT_LIBYAML = yaml-imbatchreport-newline-state-yamlonly.sh
+TESTS_IMBATCHREPORT_MULTI_LIBYAML = yaml-imbatchreport-multiple-inputs-yamlonly.sh
 
 TESTS_IMBATCHREPORT_VALGRIND = \
 	imbatchreport_errmsg_no_params-vg.sh
@@ -3051,6 +3053,7 @@ EXTRA_DIST += $(TESTS_IMFILE_HELGRIND)
 EXTRA_DIST += $(TESTS_IMFILE_MMNORMALIZE_VALGRIND)
 EXTRA_DIST += $(TESTS_IMBATCHREPORT)
 EXTRA_DIST += $(TESTS_IMBATCHREPORT_LIBYAML)
+EXTRA_DIST += $(TESTS_IMBATCHREPORT_MULTI_LIBYAML)
 EXTRA_DIST += $(TESTS_IMBATCHREPORT_VALGRIND)
 EXTRA_DIST += $(TESTS_OMTCL)
 EXTRA_DIST += $(TESTS_MMTAGHOSTNAME)
@@ -4637,6 +4640,7 @@ if ENABLE_IMBATCHREPORT
 TESTS += $(TESTS_IMBATCHREPORT)
 if HAVE_LIBYAML
 TESTS += $(TESTS_IMBATCHREPORT_LIBYAML)
+TESTS += $(TESTS_IMBATCHREPORT_MULTI_LIBYAML)
 endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMBATCHREPORT_VALGRIND)
