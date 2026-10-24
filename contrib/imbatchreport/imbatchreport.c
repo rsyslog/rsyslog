@@ -470,12 +470,11 @@ finalize_it:
 }
 
 static void addInstance(instanceConf_t *inst) {
-    if (fixedModConf.root == NULL) {
-        fixedModConf.root = inst;
-    } else {
-        fixedModConf.root->next = inst;
-        fixedModConf.root = inst;
+    instanceConf_t **tail = &fixedModConf.root;
+    while (*tail != NULL) {
+        tail = &(*tail)->next;
     }
+    *tail = inst;
 }
 
 /* create input instance, set default parameters, and
