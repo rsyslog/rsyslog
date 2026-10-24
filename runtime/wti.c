@@ -530,7 +530,11 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
         if (terminateRet == RS_RET_TERMINATE_NOW) {
         terminate_now:
-            /* we now need to free the old batch */
+            /* Terminal batch disposal may release pmutUsr to destroy deferred
+             * messages. Publish retirement first, as cancellation cleanup does:
+             * a producer entering that window must hand start advice to this
+             * exiting slot instead of counting it as consuming queue work. */
+            wtiMarkExiting(pThis);
             localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
             DBGOPRINT((obj_t *)pThis,
                       "terminating worker because of "
