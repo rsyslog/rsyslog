@@ -337,6 +337,7 @@ static rsRetVal readAndSendFile(instanceConf_t *pInst, char *filename, char *fpa
                 case '\n':
                     /* this is for trailing spaces */
                     if (last_is_space) msg_len--;
+                    last_is_space = 0;
                     fixedModConf.msg_buffer[msg_len++] = '\\';
                     /* risk of overflow is managed by making buffer one char longer
                      * than fixedModConf.max_msg_size */
