@@ -8,6 +8,7 @@
 # A ten-second bound detects a strict-mode hang; surviving three seconds
 # proves the compatibility cases stayed running. The port file proves that the
 # holder is listening before each conflicting rsyslogd starts. For the
+# missing-module control, wait for its expected diagnostic; for the
 # missing-ruleset fallback, wait for its own listener before starting the
 # three-second survival window; that window must not include startup time.
 # A two-second termination grace is followed by SIGKILL if a daemon hangs.
@@ -37,58 +38,7 @@ cleanup_holder() {
 }
 trap cleanup_holder EXIT
 
-# Own and reap a bounded child even if it fails its readiness predicate.
-stop_bounded_child() {
-	local pid=$1 elapsed
-	kill "$pid" 2>/dev/null || :
-	for ((elapsed = 0; elapsed < 2; elapsed++)); do
-		if ! kill -0 "$pid" 2>/dev/null; then
-			break
-		fi
-		sleep 1
-	done
-	if kill -0 "$pid" 2>/dev/null; then
-		kill -KILL "$pid" 2>/dev/null || :
-	fi
-	wait "$pid" 2>/dev/null || :
-}
-
-# Keep the startup bound portable to macOS, where GNU timeout is unavailable.
-# Return 124 after the survival deadline, or 125 if requested readiness fails.
-# Both paths stop and reap the owned child before returning.
-run_bounded() {
-	local seconds=$1
-	local config=$2
-	local log=$3
-	local ready_file=${4:-}
-	local pid elapsed status
-	"$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1 &
-	pid=$!
-	if [ -n "$ready_file" ]; then
-		# The shared helper counts 100 ms polls. Keep startup separate from
-		# the intentional post-readiness survival interval below.
-		if ! (error_exit() { exit "$1"; }; wait_file_exists_for_process \
-			"$ready_file" "$pid" "$TB_TIMEOUT_STARTSTOP" \
-			"imtcp missing-ruleset fallback" "$log"); then
-			stop_bounded_child "$pid"
-			return 125
-		fi
-	fi
-	for ((elapsed = 0; elapsed < seconds; elapsed++)); do
-		if ! kill -0 "$pid" 2>/dev/null; then
-			wait "$pid"
-			return $?
-		fi
-		sleep 1
-	done
-	if kill -0 "$pid" 2>/dev/null; then
-		stop_bounded_child "$pid"
-		return 124
-	fi
-	wait "$pid"
-	status=$?
-	return "$status"
-}
+. ${srcdir:=.}/testsuites/imtcp-bind-failure-common.sh
 
 wait_file_exists_for_process "$portfile" "$holder_pid" 10 "imtcp holder" "$holder_log"
 # A live process that never publishes the requested file must time out rather
@@ -174,7 +124,8 @@ EOF
 done
 
 # A missing input module must also be fatal under the global policy. The
-# best-effort control must remain alive for the three-second observation bound.
+# best-effort control must report the missing module before its three-second
+# survival window begins; startup time is not evidence of continued operation.
 for policy in best-effort require-all; do
 	config="$testdir/$RSYSLOG_DYNNAME.missing-$policy.conf"
 	log="$testdir/$RSYSLOG_DYNNAME.missing-$policy.log"
@@ -192,7 +143,7 @@ EOF
 			error_exit 1 "missing input module did not fail strict startup (status $status)"
 		fi
 	else
-		run_bounded 3 "$config" "$log"
+		run_bounded 3 "$config" "$log" "" "input module name 'imtcp-startup-policy-missing' is unknown"
 		status=$?
 		if [ "$status" -ne 124 ]; then
 			cat "$log"

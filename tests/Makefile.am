@@ -1,5 +1,6 @@
 TEST_EXTENSIONS=.sh
 EXTRA_DIST = \
+	testsuites/imtcp-bind-failure-common.sh \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
@@ -364,6 +365,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	imtcp-bind-failure-window.sh \
 	record-container-validation.sh \
 	codex-pre-push-container-gate.sh \
 	mysql-reconnect-relevance.sh \
