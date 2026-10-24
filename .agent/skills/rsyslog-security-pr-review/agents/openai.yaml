@@ -1,4 +1,4 @@
 interface:
   display_name: "rsyslog Security PR Review"
   short_description: "Review rsyslog PR diffs against security boundaries"
-  default_prompt: "Use $rsyslog-security-pr-review to perform the local security delta review for the current rsyslog PR candidate."
+  default_prompt: "Use $rsyslog-security-pr-review to review the current rsyslog PR delta for security findings and follow up in the PR; local AI review is optional and nonblocking."
