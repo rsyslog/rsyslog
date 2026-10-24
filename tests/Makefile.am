@@ -76,6 +76,10 @@ EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYA
 TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 
+TESTS_RANDOM_PLATFORM_LIMIT = rscript-random-platform-limit.sh
+TESTS_RANDOM_PLATFORM_LIMIT_YAML = yaml-random-platform-limit-yamlonly.sh
+EXTRA_DIST += $(TESTS_RANDOM_PLATFORM_LIMIT) $(TESTS_RANDOM_PLATFORM_LIMIT_YAML)
+
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
@@ -3043,6 +3047,26 @@ runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
+
+if OS_LINUX
+if ENABLE_TESTBENCH
+if ENABLE_IMDIAG
+TESTS += $(TESTS_RANDOM_PLATFORM_LIMIT)
+if HAVE_LIBYAML
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_RANDOM_PLATFORM_LIMIT_YAML)
+endif
+endif
+check_PROGRAMS += random-range-values
+random_range_values_SOURCES = random-range-values.c
+check_LTLIBRARIES += librandom_range_read_preload.la
+librandom_range_read_preload_la_SOURCES = random-range-read-preload.c
+librandom_range_read_preload_la_CFLAGS =
+librandom_range_read_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+librandom_range_read_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
+endif
+endif
+endif
 
 if ENABLE_TESTBENCH
 if ENABLE_OMJOURNAL
