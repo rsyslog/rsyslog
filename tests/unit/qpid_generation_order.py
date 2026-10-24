@@ -17,7 +17,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUTS = ["c/src/protocol.h", "c/src/encodings.h", "include/proton/version.h",
+OUTPUTS = ["c/src/protocol.h", "c/src/encodings.h", "c/include/proton/version.h",
            "c/src/core/frame_generators.c", "c/src/core/frame_generators.h",
            "c/src/core/frame_consumers.c", "c/src/core/frame_consumers.h"]
 ADAPTER = r'''#!/usr/bin/env python3
