@@ -1152,7 +1152,11 @@ TESTS_IMTCP_IMPSTATS = \
 	queue-mutex-contention-impstats.sh
 
 TESTS_SNMP_MINIMAL = \
+	omsnmp-traptype-range.sh \
 	omsnmp_errmsg_no_params.sh
+
+TESTS_SNMP_YAML = \
+	yaml-omsnmp-traptype-range.sh
 
 TESTS_SNMP_FULL = \
 	sndrcv_omsnmpv1_udp.sh \
@@ -2674,6 +2678,7 @@ EXTRA_DIST += $(TESTS_RATELIMIT_YAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_IMPTCP_YAML)
 EXTRA_DIST += $(TESTS_IMPTCP_FROMHOST_PORT)
 EXTRA_DIST += ratelimit-persource-port-keys-common.sh
+EXTRA_DIST += $(TESTS_SNMP_YAML)
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
@@ -3479,6 +3484,9 @@ endif # ENABLE_IMTCP_TESTS
 
 if ENABLE_SNMP
 TESTS += $(TESTS_SNMP_MINIMAL)
+if HAVE_LIBYAML
+TESTS += $(TESTS_SNMP_YAML)
+endif
 if ENABLE_SNMP_TESTS
 TESTS += $(TESTS_SNMP_FULL)
 endif # if ENABLE_SNMP_TESTS
@@ -4329,6 +4337,7 @@ EXTRA_DIST += \
 	rscript_parse_time_get-ts.py \
 	queue-persist-drvr.sh \
 	daqueue-persist-drvr.sh \
+	omsnmp-traptype-receiver.py \
 	snmptrapreceiverv2.py \
 	validate_json_shell.sh \
 	tls-check-for-certificate.sh \

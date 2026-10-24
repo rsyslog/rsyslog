@@ -450,6 +450,7 @@ BEGINfreeWrkrInstance
 ENDfreeWrkrInstance
 
 static void setInstParamDefaults(instanceData *pData) {
+    pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
     pData->tplName = NULL;
     pData->szTransport = NULL;
     pData->szCommunity = NULL;
@@ -494,7 +495,7 @@ BEGINnewActInst
             CHKmalloc(pData->szSnmpV1Source = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "traptype")) {
             pData->iTrapType = pvals[i].val.d.n;
-            if (cs.iTrapType < 0 || cs.iTrapType > 6) {
+            if (pData->iTrapType < 0 || pData->iTrapType > 6) {
                 parser_errmsg("omsnmp: traptype invalid, setting to ENTERPRISESPECIFIC");
                 pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
             }
