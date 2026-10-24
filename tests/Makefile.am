@@ -1532,6 +1532,10 @@ TESTS_OMKINESIS = \
 TESTS_OMKINESIS_YAML = \
 	yaml-omkinesis-mock.sh
 
+TESTS_IMDOCKER_MOCK = imdocker-defaultfacility.sh
+TESTS_IMDOCKER_MOCK_YAML = yaml-imdocker-defaultfacility.sh
+EXTRA_DIST += $(TESTS_IMDOCKER_MOCK) $(TESTS_IMDOCKER_MOCK_YAML) imdocker-facility-server.py
+
 TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
@@ -3802,6 +3806,11 @@ endif
 
 
 if ENABLE_IMDOCKER
+# The mocked API regression needs the module, not an external Docker daemon.
+TESTS += $(TESTS_IMDOCKER_MOCK)
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMDOCKER_MOCK_YAML)
+endif
 if ENABLE_IMDOCKER_TESTS
 TESTS += $(TESTS_IMDOCKER)
 if HAVE_VALGRIND
