@@ -34,3 +34,15 @@ core but are compiled directly into the rsyslog binary:
   change defaults or add features.
 - Cross-reference changes in `doc/ai/module_map.yaml` if the concurrency or
   locking guidance shifts.
+
+## omfwd UDP source-address coverage
+
+- `tests/omfwd-udp-source-family.sh` and its YAML/send-to-all wrappers check
+  exact compatible-family delivery with controlled DNS ordering.
+- `tests/omfwd-udp-source-family-dual-local.sh` checks both actual local socket
+  families against an IPv4 destination.
+- `tests/omfwd-udp-source-address.sh` exercises numeric-source socket lifecycle
+  without a preload, including sanitizer builds.
+- `tests/omfwd-udp-source-socket-failure.sh` and its YAML companion check the
+  valid-source control and suspended fallback when socket creation fails.
+  The `-vg` wrapper checks target-resolution cleanup across failed retries.
