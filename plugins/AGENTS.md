@@ -107,6 +107,14 @@ support expectations change.
   document setup steps in the module metadata and reference any helper scripts
   placed under `tests/`.
 
+### mmaudit audit identifiers
+
+`tests/mmaudit-auditid.sh` verifies complete audit IDs, numeric types, body
+fields, parse status, original messages, leading whitespace, and non-audit
+records. `tests/yaml-mmaudit-auditid.sh` runs the same oracle through a YAML
+ruleset. These tests use mmaudit's supported legacy action syntax; they do not
+exercise the separately documented quoted-value limitation.
+
 ## Documentation touchpoints
 - Mention significant behavior or dependency changes in `doc/` (for example,
   module reference guides or changelog entries).
