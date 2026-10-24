@@ -1,5 +1,11 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Read completed batch reports with the imbatchreport input module and configure whitespace normalization.
+   :keywords: rsyslog, imbatchreport, batch reports, DeduplicateSpace
+
+.. _ref-imbatchreport:
+
 ****************************************
 imbatchreport: Batch report input module
 ****************************************
@@ -13,7 +19,11 @@ imbatchreport: Batch report input module
 Purpose
 =======
 
+.. summary-start
+
 This module allows rsyslog to manage batch reports.
+
+.. summary-end
 
 Batch are programs launched successively to process a large amount of 
 information. These programs are organized in stages with passing conditions. 
@@ -117,8 +127,8 @@ The syslog severity to be assigned to lines read. Can be specified
 in textual   form (e.g. ``info``, ``warning``, ...) or as numbers (e.g. 6
 for ``info``). Textual form is suggested.
 
-DeduplicateSpaces
-^^^^^^^^^^^^^^^^^
+DeduplicateSpace
+^^^^^^^^^^^^^^^^
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
@@ -129,7 +139,23 @@ DeduplicateSpaces
 
 The parameter modify the way consecutive spaces like chars are managed.
 When it is set to "on", consecutive spaces like chars are reduced to a single one
-and trailing space like chars are suppressed. 
+and trailing space like chars are suppressed.
+
+The supported input parameter name is ``DeduplicateSpace`` (singular).
+Parameter names are case-insensitive.
+
+For example, normalize completed reports in the current directory and rename
+them after processing:
+
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: imbatchreport
+
+.. code-block:: rsyslog
+
+   module(load="imbatchreport")
+   input(type="imbatchreport" reports="./*.done" tag="batch:"
+         rename=".done$ .sent .rejected" DeduplicateSpace="on")
+   action(type="omfile" file="./batch-report.log")
 
 Delete
 ^^^^^^
