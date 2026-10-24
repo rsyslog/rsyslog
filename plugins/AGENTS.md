@@ -112,3 +112,10 @@ support expectations change.
   module reference guides or changelog entries).
 - Cross-link any new documentation from the appropriate `index.rst` so users
   can discover it easily.
+
+## Module regression coverage
+
+- `tests/mmjsonparse-find-json-scan-stats.sh` and its pure-YAML companion
+  verify that `scan.truncated` counts byte-window cutoffs rather than completed
+  unsuccessful searches. They also assert exact message bytes, parse outcomes,
+  and lengths for final-brace, boundary, ordinary-miss, and valid-object cases.
