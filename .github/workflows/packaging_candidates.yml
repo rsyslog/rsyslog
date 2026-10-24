@@ -1,0 +1,129 @@
+# SPDX-License-Identifier: Apache-2.0
+name: packaging candidates
+run-name: Package candidates for ${{ inputs.source_ref }} (${{ inputs.targets }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: Comma-separated catalog target IDs, or existing for all current archive builders
+        required: true
+        default: debian-13,el-10
+        type: string
+      source_ref:
+        description: Public rsyslog source ref (resolved once to an exact commit)
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: github.repository == 'rsyslog/rsyslog' && !github.event.repository.private
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      source_sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select existing builders from the target catalog
+        id: plan
+        env:
+          TARGETS: ${{ inputs.targets }}
+        run: |
+          set -euo pipefail
+          python3 devtools/release/package-candidate-plan.py --targets="$TARGETS" > candidate-plan.json
+          printf 'matrix=%s\n' "$(cat candidate-plan.json)" >> "$GITHUB_OUTPUT"
+          python3 devtools/release/package-candidate-plan.py --list > candidate-coverage.json
+      - name: Resolve the public source revision once
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          encoded_ref=$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SOURCE_REF"], safe=""))')
+          gh api --method GET "repos/$REPOSITORY/commits/$encoded_ref" > candidate-source.json
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+          sha = json.loads(Path('candidate-source.json').read_text())['sha']
+          if not re.fullmatch(r'[0-9a-f]{40}', sha):
+              raise SystemExit('expected a public full source commit SHA')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'sha={sha}\n')
+          PY
+      - name: Record the candidate request
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          AUTOMATION_REF: ${{ github.ref_name }}
+          AUTOMATION_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          request = {
+              'source_sha': os.environ['SOURCE_SHA'],
+              'automation_ref': os.environ['AUTOMATION_REF'],
+              'request_automation_sha': os.environ['AUTOMATION_SHA'],
+              'publish_to_archive': False,
+              'plan': json.loads(Path('candidate-plan.json').read_text()),
+              'coverage': json.loads(Path('candidate-coverage.json').read_text()),
+          }
+          Path('candidate-request.json').write_text(json.dumps(request, indent=2) + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('Candidate build requests only; dispatch success is not build or install success.\n\n')
+              summary.write('Source: `' + request['source_sha'] + '`\n\n')
+              summary.write('Automation ref: `' + request['automation_ref'] + '`; requesting commit: `'
+                            + request['request_automation_sha'] + '`\n\n')
+              summary.write('Catalog candidates select native architectures; child workflows share production concurrency groups.\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packaging-candidate-request
+          path: candidate-request.json
+          retention-days: 14
+          if-no-files-found: error
+
+  dispatch:
+    name: Request ${{ matrix.target }} candidate
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Dispatch the existing builder with publication disabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ matrix.workflow }}
+          TARGET: ${{ matrix.target }}
+          SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+          AUTOMATION_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > request.json
+          import json
+          import os
+          print(json.dumps({'ref': os.environ['AUTOMATION_REF'], 'inputs': {
+              'source_ref': os.environ['SOURCE_SHA'], 'candidate_target': os.environ['TARGET'],
+              'publish_to_archive': False}}))
+          PY
+          gh api --method POST "repos/$REPOSITORY/actions/workflows/$WORKFLOW/dispatches" --input request.json
+          printf 'Requested %s at source %s; publication is disabled.\n\n' "$TARGET" "$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Follow the child build: https://github.com/%s/actions/workflows/%s\n' "$REPOSITORY" "$WORKFLOW" >> "$GITHUB_STEP_SUMMARY"

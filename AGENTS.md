@@ -72,6 +72,9 @@ out of this public repository. The VM is not a CI runner.
 
 ## Package Archive Automation
 
+For consolidation work, read the [packaging foundation](.github/PACKAGING_FOUNDATION.md).
+Keep existing package systems live until a qualified beta and explicit cutover decision.
+
 For any daily-stable, scheduled-release packaging, package archive, or
 distribution-extension work, first read the
 [`Daily Stable Package Archive Program`](.github/DAILY_STABLE_PACKAGE_ARCHIVE.md).

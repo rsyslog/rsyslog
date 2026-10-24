@@ -19,6 +19,8 @@ EXTRA_DIST = \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem \
 	scripts/generate_distro_component_map.py \
+	devtools/release/package-candidate-plan.py \
+	.github/packaging-targets.json \
 	devtools/release/validate-rpm-baseline-patches.py \
 	devtools/release/upstream_patch_detect.py \
 	devtools/release/rpm-disable-optional-modules.py \

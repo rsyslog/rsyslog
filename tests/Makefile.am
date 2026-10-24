@@ -26,6 +26,7 @@ TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
 TESTS_RELEASE_PACKAGING = \
+	package-candidate-plan.sh \
 	rpm-baseline-patch-policy.sh \
 	daily-stable-package-drift.sh \
 	daily-stable-failure-report.sh

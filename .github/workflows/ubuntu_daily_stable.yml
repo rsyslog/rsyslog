@@ -25,6 +25,11 @@ name: ubuntu daily stable
         required: true
         default: main
         type: string
+      candidate_target:
+        description: Catalog target for candidate-only build inputs; leave empty for normal runs
+        required: false
+        default: ''
+        type: string
       publish_to_archive:
         description: Publish to the configured DigitalOcean Spaces archive
         required: false
@@ -63,6 +68,8 @@ jobs:
       should_run: ${{ steps.decision.outputs.should_run }}
       should_publish: ${{ steps.decision.outputs.should_publish }}
       source_ref: ${{ steps.decision.outputs.source_ref }}
+      build_matrix: ${{ steps.candidate.outputs.matrix || steps.decision.outputs.native_matrix }}
+      candidate_policy: ${{ steps.candidate.outputs.policy }}
     steps:
       - name: Decide whether this run is active
         id: decision
@@ -70,12 +77,18 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           MANUAL_PUBLISH: ${{ inputs.publish_to_archive }}
           MANUAL_SOURCE_REF: ${{ inputs.source_ref }}
+          CANDIDATE_TARGET: ${{ inputs.candidate_target }}
+          NATIVE_MATRIX: '{"include":[{"arch":"amd64","runner":"ubuntu-24.04"},{"arch":"arm64","runner":"ubuntu-24.04-arm"}]}'
           SCHEDULE_ENABLED: ${{ vars.UBUNTU_DAILY_STABLE_ENABLED }}
         run: |
           set -euo pipefail
           should_run=false
           should_publish=false
           source_ref=main
+          if [ -n "${CANDIDATE_TARGET:-}" ] && [ "${MANUAL_PUBLISH:-false}" = true ]; then
+            echo "::error::Candidate builds cannot publish to the archive"
+            exit 1
+          fi
 
           case "$EVENT_NAME" in
             workflow_dispatch)
@@ -105,7 +118,26 @@ jobs:
             echo "should_run=$should_run"
             echo "should_publish=$should_publish"
             echo "source_ref=$source_ref"
+            echo "native_matrix=$NATIVE_MATRIX"
           } >> "$GITHUB_OUTPUT"
+      - name: Checkout catalog for candidate inputs
+        if: inputs.candidate_target != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve catalog build inputs
+        id: candidate
+        if: inputs.candidate_target != ''
+        env:
+          TARGET: ${{ inputs.candidate_target }}
+          NATIVE_MATRIX: ${{ steps.decision.outputs.native_matrix }}
+        run: |
+          set -euo pipefail
+          python3 devtools/release/package-candidate-plan.py \
+            --build-target "$TARGET" --workflow "ubuntu_daily_stable.yml" \
+            --native-matrix "$NATIVE_MATRIX" > candidate-build.json
+          printf 'matrix=%s\n' "$(jq -c .matrix candidate-build.json)" >> "$GITHUB_OUTPUT"
+          printf 'policy=%s\n' "$(jq -r .policy candidate-build.json)" >> "$GITHUB_OUTPUT"
 
   build:
     name: build Ubuntu 26.04 ${{ matrix.arch }} packages
@@ -113,12 +145,7 @@ jobs:
     if: needs.preflight.outputs.should_run == 'true'
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-          - arch: arm64
-            runner: ubuntu-24.04-arm
+      matrix: ${{ fromJSON(needs.preflight.outputs.build_matrix) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     container:
@@ -133,6 +160,11 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       source_sha: ${{ steps.source.outputs.source_sha }}
     steps:
+      - name: Select catalog policy for candidate build
+        if: needs.preflight.outputs.candidate_policy != ''
+        env:
+          CANDIDATE_POLICY: ${{ needs.preflight.outputs.candidate_policy }}
+        run: printf '%s=%s\n' 'DEBIAN_CI_POLICY_FILE' "$CANDIDATE_POLICY" >> "$GITHUB_ENV"
       - name: Bootstrap container tools
         run: |
           apt-get update
