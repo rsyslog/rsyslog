@@ -680,7 +680,7 @@ and Python changes with available repository linters.
 For runtime stages, follow the current
 [build](../../../.agent/skills/rsyslog_build/SKILL.md),
 [test](../../../.agent/skills/rsyslog_test/SKILL.md),
-[local security review](../../../.agent/skills/rsyslog-security-pr-review/SKILL.md),
+[PR security review](../../../.agent/skills/rsyslog-security-pr-review/SKILL.md),
 and [container validation](../../../.agent/skills/rsyslog_local_container_testing/SKILL.md)
 skills. The repository helper classifies the actual diff:
 
