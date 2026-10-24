@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omgssapi GssTokenIOTimeout legacy directive.
+   :keywords: rsyslog, omgssapi, GssTokenIOTimeout, legacy configuration
+
 .. _param-omgssapi-gsstokeniotimeout:
 .. _omgssapi.parameter.module.gsstokeniotimeout:
 
@@ -40,18 +44,22 @@ Module usage
 .. _param-omgssapi-module-gsstokeniotimeout:
 .. _omgssapi.parameter.module.gsstokeniotimeout-usage:
 
-.. code-block:: rsyslog
+This module supports legacy directives and selector actions. Load it before
+setting the directive, then configure the forwarding action.
 
-   module(load="omgssapi" gssTokenIOTimeout="30")
-   action(type="omgssapi" target="receiver.mydomain.com")
+.. code-block:: none
+
+   module(load="omgssapi")
+   $GssTokenIOTimeout 30
+   *.* :omgssapi:receiver.mydomain.com
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
+The following directive is the supported configuration interface for omgssapi.
 
 .. _omgssapi.parameter.legacy.gsstokeniotimeout:
 
-- $GssTokenIOTimeout — maps to GssTokenIOTimeout (status: legacy)
+- ``$GssTokenIOTimeout`` — sets GssTokenIOTimeout for subsequent forwarding actions.
 
 .. index::
    single: omgssapi; $GssTokenIOTimeout

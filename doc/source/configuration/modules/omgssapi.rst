@@ -1,5 +1,16 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Forward syslog messages with GSSAPI using omgssapi legacy directives and selector actions.
+   :keywords: rsyslog, omgssapi, GSSAPI, Kerberos, forwarding
+
+.. summary-start
+
+The omgssapi output module forwards syslog messages over GSSAPI-secured sessions.
+Configure it with legacy directives and the ``:omgssapi:`` selector action.
+
+.. summary-end
+
 *************************************
 omgssapi: GSSAPI Syslog Output Module
 *************************************
@@ -87,8 +98,8 @@ Configuration Parameters
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
-Module Parameters
------------------
+Legacy Configuration Directives
+-------------------------------
 
 .. list-table::
    :widths: 30 70
@@ -113,15 +124,18 @@ Module Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
-Action Parameters
------------------
+Action Syntax
+-------------
 
-The ``omgssapi`` action is configured via module parameters. In modern
-``action()`` syntax, it takes a ``target`` parameter and can optionally have a ``template`` assigned.
+The module supports legacy directives and ``:omgssapi:`` selector actions.
+Modern module parameters and ``action(type="omgssapi" ...)`` are not supported.
+Load the module with ``module(load="omgssapi")`` or ``$ModLoad omgssapi`` before
+setting its directives. Append ``;TemplateName`` to a selector action to choose
+an explicit template.
 
-Legacy ``:omgssapi:`` syntax is also supported and includes options for
-compression and TCP framing. These are specified in parentheses after the
-selector, for example ``:omgssapi:(z5,o)hostname``.
+The selector syntax also includes options for compression and TCP framing.
+These are specified in parentheses after the selector, for example
+``:omgssapi:(z5,o)hostname``.
 
 -  **z[0-9]**: Enables zlib compression. The optional digit specifies the
    compression level (0-9). Defaults to 9 if no digit is given.
