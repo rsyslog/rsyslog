@@ -13,7 +13,7 @@ persistStateAfterSubmission
 
 .. summary-start
 
-Persists state file information after each batch submission for robustness.
+Persists state after imfile flushes submissions at the end of a read pass.
 
 .. summary-end
 
@@ -28,10 +28,17 @@ This parameter applies to :doc:`../../configuration/modules/imfile`.
 
 Description
 -----------
-When switched ``on``, imfile persists state file information after a batch of
-messages has been submitted. This enhances robustness against unclean
-shutdowns, but may cause frequent state file writes and degrade performance,
-depending on overall rsyslog configuration.
+When switched ``on``, imfile writes state after flushing its pending messages
+at the end of a file read pass. The write follows imfile's submission to the
+processing queue; it does not confirm downstream processing or durable output
+delivery. This enhances robustness against unclean shutdowns, but may cause
+frequent state file writes and degrade performance, depending on overall
+rsyslog configuration.
+
+This setting is independent of :ref:`PersistStateInterval
+<param-imfile-persiststateinterval>`: it can write state before the configured
+line count is reached. It does not turn ``PersistStateInterval`` into a time
+interval.
 
 Input usage
 -----------
