@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Both names are wrapped and _FILE_OFFSET_BITS is kept undefined: with it,
  * glibc redirects fstat() to fstat64(), which rsyslogd calls on LP64 too.
  */
