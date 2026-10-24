@@ -279,8 +279,9 @@ when the overall volume is low.
 .. code-block:: rsyslog
 
    module(load="omsendertrack")
+   template(name="sender-hostname" type="string" string="%hostname%")
    action(type="omsendertrack"
-          senderId="%hostname%"
+          senderId="sender-hostname"
           interval="60"
           stateFile="/var/lib/rsyslog/senderstats.json")
 
@@ -374,9 +375,7 @@ processing flows for other actions.
 
    # Default ruleset (if messages don't match other inputs)
    # This is here for completeness, you can remove or modify it as needed.
-   ruleset(name="RSYSLOG_DefaultRuleset") {
-       stop
-   }
+   stop
 
 Example 3: Multiple Instances for Separate Statistics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -388,11 +387,13 @@ state files.
 
 .. code-block:: rsyslog
 
+   template(name="sender-ip" type="string" string="%fromhost-ip%")
+
    # Track UDP senders in a separate state file
    ruleset(name="udp-sender-tracking") {
        action(
            type="omsendertrack"
-           senderId="%fromhost-ip%"
+           senderId="sender-ip"
            interval="300"
            stateFile="/var/lib/rsyslog/udp_sender_stats.json"
        )
@@ -403,7 +404,7 @@ state files.
    ruleset(name="tcp-sender-tracking") {
        action(
            type="omsendertrack"
-           senderId="%fromhost-ip%"
+           senderId="sender-ip"
            interval="300"
            stateFile="/var/lib/rsyslog/tcp_sender_stats.json"
        )
@@ -415,6 +416,4 @@ state files.
    input(type="imtcp" port="514" ruleset="tcp-sender-tracking")
 
    # Further processing for all messages (e.g., default ruleset)
-   ruleset(name="RSYSLOG_DefaultRuleset") {
-       stop
-   }
+   stop

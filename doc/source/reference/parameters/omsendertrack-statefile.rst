@@ -67,8 +67,9 @@ Action usage
 .. code-block:: rsyslog
 
    module(load="omsendertrack")
+   template(name="sender-hostname" type="string" string="%hostname%")
    action(type="omsendertrack"
-          senderId="%hostname%"
+          senderId="sender-hostname"
           stateFile="/var/lib/rsyslog/senderstats.json")
 
 See also

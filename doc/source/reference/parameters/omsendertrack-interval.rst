@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omsendertrack interval action parameter.
+   :keywords: rsyslog, omsendertrack, interval, sender tracking
+
 .. _param-omsendertrack-interval:
 .. _omsendertrack.parameter.input.interval:
 
@@ -20,9 +24,9 @@ state file.
 This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 :Name: interval
-:Scope: input
+:Scope: action
 :Type: integer
-:Default: input=60
+:Default: action=60
 :Required?: no
 :Introduced: 8.2506.0 (Proof-of-Concept)
 
@@ -37,15 +41,16 @@ file, reducing potential data loss in case of an unexpected system crash, but
 it also increases disk I/O. A larger ``interval`` reduces I/O but means less
 up-to-date statistics on disk.
 
-Input usage
------------
+Action usage
+------------
 .. _omsendertrack.parameter.input.interval-usage:
 
 .. code-block:: rsyslog
 
    module(load="omsendertrack")
+   template(name="sender-hostname" type="string" string="%hostname%")
    action(type="omsendertrack"
-          senderId="%hostname%"
+          senderId="sender-hostname"
           interval="60"
           stateFile="/var/lib/rsyslog/senderstats.json")
 
