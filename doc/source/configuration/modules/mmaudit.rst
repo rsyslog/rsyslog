@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Parse Linux Audit records with mmaudit using its supported legacy action syntax.
+   :keywords: rsyslog, mmaudit, Linux Audit, legacy action, RainerScript, YAML
+
 .. _ref-mmaudit:
 
 *******************************
@@ -15,11 +19,15 @@ mmaudit: Linux Audit Log Parser
 Purpose
 =======
 
+.. summary-start
+
 The **mmaudit** message modification module detects Linux Audit records
 and exposes their data as structured properties. When a message
 matches the expected auditd format the module parses the record and adds
 a JSON subtree under ``$!audit``. Subsequent actions can query those
 fields when routing, filtering, or formatting audit events.
+
+.. summary-end
 
 The plugin is optional at build time. Use
 ``./configure --enable-mmaudit`` to compile it when building rsyslog
@@ -28,7 +36,7 @@ from source.
 Message detection and parsing
 =============================
 
-``mmaudit`` operates on the raw message string. After trimming leading
+``mmaudit`` operates on the message's ``msg`` property. After trimming leading
 whitespace the module expects the record to start with
 ``type=<digits> audit(``. Messages that do not match this pattern are
 left untouched.
@@ -65,16 +73,15 @@ After a successful parse the following properties become available:
   in the record body.
 
 The original message text is preserved. The module also sets the message
-parse flag, so later actions can test ``if $parsesuccess == "on"`` to
+parse flag, so later actions can test ``if $parsesuccess == "OK"`` to
 check whether ``mmaudit`` produced structured data.
 
 Configuration Parameters
 ========================
 
-.. note::
-
-   Parameter names are case-insensitive; camelCase is recommended for
-   readability.
+The module currently supports only its legacy ``:mmaudit:`` action syntax.
+Loading it with ``module(load="mmaudit")`` is supported, but
+``action(type="mmaudit")`` is not.
 
 Module Parameters
 -----------------
@@ -84,8 +91,8 @@ This module has no module parameters.
 Action Parameters
 -----------------
 
-This module has no action parameters. Simply configure
-``action(type="mmaudit")`` in the processing chain.
+This module has no action parameters. Invoke ``:mmaudit:`` in the processing
+chain, as shown below.
 
 Example
 =======
@@ -94,7 +101,11 @@ The snippet below parses audit records, writes the structured payload to
 an auxiliary file, and demonstrates how to access one of the generated
 fields.
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: mmaudit
+
+.. code-block:: rsyslog
+   :force:
 
    module(load="mmaudit")
 
@@ -102,14 +113,41 @@ fields.
             type="string"
             string="%timegenerated% %HOSTNAME% %syslogtag% %$!audit%\n")
 
-   action(type="mmaudit")
-   if $parsesuccess == "on" then {
+   :mmaudit:
+   if $parsesuccess == "OK" then {
        # The field name contains the quote that preceded it in the log.
        set $.exe = get_property($!audit!data, '" exe');
        action(type="omfile"
               file="/var/log/audit-json.log"
               template="audit-json")
    }
+
+YAML configuration
+------------------
+
+For YAML, use the documented :doc:`RainerScript scripting escape hatch
+<../yaml_config>`. Bind the input carrying audit events to the ``auditparse``
+ruleset. The legacy action belongs inside ``script:``; it cannot be replaced
+with a YAML ``type: mmaudit`` action object.
+
+.. code-block:: yaml
+
+   version: 2
+   modules:
+     - load: mmaudit
+   templates:
+     - name: audit-json
+       type: string
+       string: '%timegenerated% %HOSTNAME% %syslogtag% %$!audit%\n'
+   rulesets:
+     - name: auditparse
+       script: |
+         :mmaudit:
+         if $parsesuccess == "OK" then {
+             action(type="omfile"
+                    file="/var/log/audit-json.log"
+                    template="audit-json")
+         }
 
 Caveats
 =======
