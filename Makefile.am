@@ -4,6 +4,10 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
+	devtools/prepare-flake-evidence.py \
+	devtools/collect-flake-evidence.py \
+	devtools/ci-flake-phase.sh \
+	devtools/tests/test_flake_evidence.py \
 	devtools/record-container-validation.py \
 	README.md \
 	platform/README \
