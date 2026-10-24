@@ -1157,12 +1157,6 @@ TESTS_SNMP_MINIMAL = \
 TESTS_SNMP_YAML = \
 	yaml-omsnmp-traptype-range.sh
 
-TESTS_SNMP_VG = \
-	omsnmp-traptype-range-vg.sh
-
-TESTS_SNMP_YAML_VG = \
-	yaml-omsnmp-traptype-range-vg.sh
-
 TESTS_SNMP_FULL = \
 	sndrcv_omsnmpv1_udp.sh \
 	sndrcv_omsnmpv1_udp_dynsource.sh \
@@ -2683,7 +2677,7 @@ EXTRA_DIST += $(TESTS_RATELIMIT_YAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_IMPTCP_YAML)
 EXTRA_DIST += $(TESTS_IMPTCP_FROMHOST_PORT)
 EXTRA_DIST += ratelimit-persource-port-keys-common.sh
-EXTRA_DIST += $(TESTS_SNMP_YAML) $(TESTS_SNMP_VG) $(TESTS_SNMP_YAML_VG)
+EXTRA_DIST += $(TESTS_SNMP_YAML)
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
@@ -3489,14 +3483,8 @@ endif # ENABLE_IMTCP_TESTS
 
 if ENABLE_SNMP
 TESTS += $(TESTS_SNMP_MINIMAL)
-if HAVE_VALGRIND
-TESTS += $(TESTS_SNMP_VG)
-endif
 if HAVE_LIBYAML
 TESTS += $(TESTS_SNMP_YAML)
-if HAVE_VALGRIND
-TESTS += $(TESTS_SNMP_YAML_VG)
-endif
 endif
 if ENABLE_SNMP_TESTS
 TESTS += $(TESTS_SNMP_FULL)

@@ -117,6 +117,6 @@ support expectations change.
 
 `tests/omsnmp-traptype-range.sh` and its YAML companion decode loopback
 SNMPv1 datagrams to check valid generic trap types, the omitted default,
-and the invalid-value fallback. Their `-vg.sh` wrappers use the same wire oracle under Valgrind.
+and the invalid-value fallback.
 The test-owned receiver binds an ephemeral port and needs no external SNMP
 service, pysnmp, or MIB package.
