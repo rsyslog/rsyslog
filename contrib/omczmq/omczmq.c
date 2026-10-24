@@ -39,6 +39,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
+#include <limits.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -101,7 +102,7 @@ typedef struct wrkrInstanceData {
 
 static struct cnfparamdescr actpdescr[] = {
     {"endpoints", eCmdHdlrGetWord, 1},        {"socktype", eCmdHdlrGetWord, 1},
-    {"sendhwm", eCmdHdlrGetWord, 0},
+    {"sendhwm", eCmdHdlrNonNegInt, 0},
 #if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
     {"heartbeatttl", eCmdHdlrGetWord, 0},     {"heartbeativl", eCmdHdlrGetWord, 0},
     {"heartbeattimeout", eCmdHdlrGetWord, 0}, {"connecttimeout", eCmdHdlrGetWord, 0},
@@ -135,6 +136,7 @@ static rsRetVal initCZMQ(instanceData *pData) {
     }
 
     zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
+    if (pData->sendHWM >= 0) zsock_set_sndhwm(pData->sock, pData->sendHWM);
 
 #if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
     if (pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0 && pData->heartbeatTTL > 0) {
@@ -324,6 +326,7 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->tplName = NULL;
     pData->sockType = -1;
     pData->sendTimeout = -1;
+    pData->sendHWM = -1; /* Preserve CZMQ defaults unless explicitly configured. */
     pData->topics = NULL;
     pData->topicFrame = false;
 #if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
@@ -509,10 +512,11 @@ BEGINnewActInst
             free(tmpSendTimeout);
             DBGPRINTF("omczmq: sendTimeout set to %d\n", pData->sendTimeout);
         } else if (!strcmp(actpblk.descr[i].name, "sendhwm")) {
-            char *tmpSendTimeout;
-            CHKmalloc(tmpSendTimeout = es_str2cstr(pvals[i].val.d.estr, NULL));
-            pData->sendHWM = atoi(tmpSendTimeout);
-            free(tmpSendTimeout);
+            if (pvals[i].val.d.n > INT_MAX) {
+                LogError(0, RS_RET_INVALID_PARAMS, "omczmq: sendhwm must be between 0 and %d", INT_MAX);
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            pData->sendHWM = (int)pvals[i].val.d.n;
             DBGPRINTF("omczmq: sendHWM set to %d\n", pData->sendHWM);
         }
 #if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
