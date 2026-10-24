@@ -24,6 +24,12 @@ EXTRA_DIST = \
 	devtools/release/rpm-disable-optional-modules.py \
 	devtools/release/check-optional-module-policy.py
 
+EXTRA_DIST += \
+	devtools/prepare-flake-evidence.py \
+	devtools/collect-flake-evidence.py \
+	devtools/ci-flake-phase.sh \
+	devtools/tests/test_flake_evidence.py
+
 SUBDIRS = doc compat grammar runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 # external plugin driver is always enabled (core component)
 SUBDIRS += plugins/mmexternal
