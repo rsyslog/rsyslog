@@ -1,8 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Decode real loopback SNMPv1 datagrams: configured 0/3/6 remain unchanged,
-# while out-of-range -1 and 7 fall back to 6. The receiver publishes its port only
-# after binding; a bounded receive timeout detects missing sends. Its exit
+# while out-of-range -1 and 7 and the omitted value use 6. The receiver
+# publishes its port only after binding; a bounded receive timeout detects missing sends. Its exit
 # status and exact decoded fields are the oracle, followed by synchronized
 # rsyslog shutdown. The negative-case -N1 check permits only its expected fallback error; all
 # other parsing errors fail before traffic. No external SNMP service is needed.
@@ -16,7 +16,7 @@ cleanup_receiver() {
     fi
 }
 trap cleanup_receiver EXIT
-$PYTHON "$srcdir/omsnmp-traptype-receiver.py" "$RSYSLOG_DYNNAME.port" "$RSYSLOG_OUT_LOG" 5 &
+$PYTHON "$srcdir/omsnmp-traptype-receiver.py" "$RSYSLOG_DYNNAME.port" "$RSYSLOG_OUT_LOG" 6 &
 receiver_pid=$!
 wait_file_exists "$RSYSLOG_DYNNAME.port"
 port=$(cat "$RSYSLOG_DYNNAME.port")
@@ -40,9 +40,16 @@ else
 module(load="../plugins/omsnmp/.libs/omsnmp")
 '
 fi
-for traptype in 0 3 6 7 -1; do
+for traptype in 0 3 6 7 -1 omitted; do
     specific=$traptype
     [ "$traptype" = -1 ] && specific=99
+    setting='trapType="'"$traptype"'"'
+    yaml_setting='        trapType: "'"$traptype"'"'
+    if [ "$traptype" = omitted ]; then
+        specific=98
+        setting=
+        yaml_setting=
+    fi
     if [ "${OMSNMP_TEST_YAML:-0}" = 1 ]; then
         cat >> "$RSYSLOG_DYNNAME.yaml" <<YAML_EOF
       - type: omsnmp
@@ -50,14 +57,14 @@ for traptype in 0 3 6 7 -1; do
         port: "$port"
         version: "0"
         community: public
-        trapType: "$traptype"
+$yaml_setting
         specificType: "$specific"
 YAML_EOF
     else
         add_conf '
 if $msg contains "msgnum:" then action(type="omsnmp"
             server="127.0.0.1" port="'"$port"'" version="0" community="public"
-            trapType="'"$traptype"'" specificType="'"$specific"'")
+            '"$setting"' specificType="'"$specific"'")
 '
     fi
     if [ "$traptype" = 6 ]; then
@@ -88,6 +95,6 @@ fi
 receiver_pid=
 shutdown_when_empty
 wait_shutdown
-printf '0:0\n3:3\n6:6\n7:6\n99:6\n' > "$RSYSLOG_DYNNAME.expected"
+printf '0:0\n3:3\n6:6\n7:6\n98:6\n99:6\n' > "$RSYSLOG_DYNNAME.expected"
 cmp_exact_file "$RSYSLOG_DYNNAME.expected" "$RSYSLOG_OUT_LOG"
 exit_test

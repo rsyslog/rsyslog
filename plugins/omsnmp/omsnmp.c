@@ -450,6 +450,7 @@ BEGINfreeWrkrInstance
 ENDfreeWrkrInstance
 
 static void setInstParamDefaults(instanceData *pData) {
+    pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
     pData->tplName = NULL;
     pData->szTransport = NULL;
     pData->szCommunity = NULL;
