@@ -4453,7 +4453,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
             }
         }
-        if (iFrom >= bufLen) {
+        if (iFrom >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
             DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n", iFrom, bufLen);
             if (*pbMustBeFreed == 1) free(pRes);
             pRes = (uchar *)"";
