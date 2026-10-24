@@ -225,7 +225,7 @@ delivery\_mode
   :widths: auto
   :class: parameter-table
 
-  "string", "no", "TRANSIENT\|PERSISTENT", "TRANSIENT"
+  "string", "no", "TRANSIENT\|PERSISTENT", "PERSISTENT"
 
 persistence of the message in the broker
 
@@ -265,17 +265,19 @@ content\_type
 
 content type as a MIME value
 
-declare\_exchange
-^^^^^^^^^^^^^^^^^
+exchange\_type
+^^^^^^^^^^^^^^
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
   :widths: auto
   :class: parameter-table
 
-  "binary", "no", "off", 
+  "string", "no", "exchange type", "unset"
 
-Rsyslog tries to declare the exchange on startup. Declaration failure (already exists with different parameters or insufficient rights) is warned but does not cancel the module instance.
+When this parameter is set, rsyslog tries to declare the exchange with the
+specified type (for example, ``topic``) on startup. If it is omitted, rsyslog
+does not declare the exchange. Declaration failure (already exists with different parameters or insufficient rights) is warned but does not cancel the module instance.
 
 recover\_policy
 ^^^^^^^^^^^^^^^
