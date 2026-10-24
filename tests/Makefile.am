@@ -14,6 +14,10 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_MMCOUNT = mmcount-distinct-values.sh
+TESTS_MMCOUNT_YAML = yaml-mmcount-distinct-values.sh
+EXTRA_DIST += $(TESTS_MMCOUNT) $(TESTS_MMCOUNT_YAML)
+
 TESTS_DISK_QUEUE_SERIALIZER = diskqueue-serializer-abi.sh
 EXTRA_DIST += $(TESTS_DISK_QUEUE_SERIALIZER)
 
@@ -3484,6 +3488,13 @@ TESTS += $(TESTS_SNMP_FULL)
 endif # if ENABLE_SNMP_TESTS
 endif # if ENABLE_SNMP
 
+
+if ENABLE_MMCOUNT
+TESTS += $(TESTS_MMCOUNT)
+if HAVE_LIBYAML
+TESTS += $(TESTS_MMCOUNT_YAML)
+endif
+endif
 
 if ENABLE_MMUTF8FIX
 TESTS += $(TESTS_MMUTF8FIX)
