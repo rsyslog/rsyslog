@@ -1163,6 +1163,18 @@ done:
  * rgerhards, 2012-03-29
  */
 static int formatTimestampUnix(struct syslogTime *ts, char *pBuf) {
+    /* A valid local 1970 timestamp can precede the UTC epoch. Compute this
+     * bounded case from fields so it also works with unsigned time_t, while
+     * preserving the existing unsigned conversion for all other dates.
+     */
+    if (ts->year == 1970 && ts->month == 1 && ts->day == 1 && ts->OffsetMode == '+') {
+        const long seconds =
+            ts->hour * 3600L + ts->minute * 60L + ts->second - ts->OffsetHour * 3600L - ts->OffsetMinute * 60L;
+        if (seconds < 0) {
+            snprintf(pBuf, 11, "%ld", seconds);
+            return 11;
+        }
+    }
     snprintf(pBuf, 11, "%u", (unsigned)syslogTime2time_t(ts));
     return 11;
 }
