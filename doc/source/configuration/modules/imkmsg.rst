@@ -4,6 +4,10 @@
 imkmsg: /dev/kmsg Log Input Module
 **********************************
 
+.. meta::
+   :description: Read structured Linux kernel logs with configurable kernel timestamp handling.
+   :keywords: rsyslog, imkmsg, kernel log, parseKernelTimestamp
+
 ===========================  ===========================================================================
 **Module Name:**             **imkmsg**
 **Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
@@ -14,8 +18,12 @@ imkmsg: /dev/kmsg Log Input Module
 Purpose
 =======
 
+.. summary-start
+
 Reads messages from the /dev/kmsg structured kernel log and submits them
 to the syslog engine.
+
+.. summary-end
 
 The printk log buffer contains log records. These records are exported
 by /dev/kmsg device as structured data in the following format:
@@ -37,15 +45,15 @@ Configuration Parameters
 Module Parameters
 -----------------
 
-Mode
-^^^^
+parseKernelTimestamp
+^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "word", "parseKernelTimestamp", "no", "none"
+   "word", "startup", "no", "none"
 
 .. versionadded:: 8.2312.0
 
@@ -183,8 +191,26 @@ parameters are left by default, which is usually a good idea. Please
 note that loading the plugin is sufficient to activate it. No directive
 is needed to start pulling messages.
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: imkmsg
+   :append: action(type="omfile" file="/dev/null")
+
+.. code-block:: rsyslog
 
    module(load="imkmsg")
 
 
+Use wallclock timestamps only
+-----------------------------
+
+Set ``parseKernelTimestamp="off"`` to use the time when rsyslog reads each
+message instead of its kernel timestamp, including during the initial read.
+The parameter name is ``parseKernelTimestamp``, not ``mode``.
+
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: imkmsg
+   :append: action(type="omfile" file="/dev/null")
+
+.. code-block:: rsyslog
+
+   module(load="imkmsg" parseKernelTimestamp="off")
