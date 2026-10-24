@@ -112,3 +112,11 @@ support expectations change.
   module reference guides or changelog entries).
 - Cross-link any new documentation from the appropriate `index.rst` so users
   can discover it easily.
+
+### mmaudit audit identifiers
+
+`tests/mmaudit-auditid.sh` verifies complete audit IDs, numeric types, body
+fields, parse status, original messages, leading whitespace, and non-audit
+records. `tests/yaml-mmaudit-auditid.sh` runs the same oracle through a YAML
+ruleset. These tests use mmaudit's supported legacy action syntax; they do not
+exercise the separately documented quoted-value limitation.

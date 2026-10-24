@@ -15,6 +15,10 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_MMAUDIT = mmaudit-auditid.sh
+TESTS_MMAUDIT_YAML = yaml-mmaudit-auditid.sh
+EXTRA_DIST += $(TESTS_MMAUDIT) $(TESTS_MMAUDIT_YAML)
+
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
 	diskqueue-qi-reload-abi.sh
@@ -4040,6 +4044,13 @@ TESTS += $(TESTS_MMNORMALIZE_REGEX)
 endif
 endif # ENABLE_MMNORMALIZE
 
+
+if ENABLE_MMAUDIT
+TESTS += $(TESTS_MMAUDIT)
+if HAVE_LIBYAML
+TESTS += $(TESTS_MMAUDIT_YAML)
+endif
+endif
 
 if ENABLE_MMLEEFPARSE
 if ENABLE_IMPTCP
