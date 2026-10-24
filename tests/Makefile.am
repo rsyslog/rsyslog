@@ -14,7 +14,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
-TESTS_DISK_QUEUE_SERIALIZER = diskqueue-serializer-abi.sh
+TESTS_DISK_QUEUE_SERIALIZER = \
+	diskqueue-serializer-abi.sh \
+	diskqueue-qi-reload-abi.sh
 EXTRA_DIST += $(TESTS_DISK_QUEUE_SERIALIZER)
 
 TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-hup.sh
