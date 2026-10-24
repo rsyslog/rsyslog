@@ -905,6 +905,8 @@ static const char *exprOpToStr(unsigned nodetype) {
             return "startswith_i";
         case CMP_ENDSWITH:
             return "endswith";
+        case CMP_FNMATCH:
+            return "fnmatch";
         case OR:
             return "or";
         case AND:

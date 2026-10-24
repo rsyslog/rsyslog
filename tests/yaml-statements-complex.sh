@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# Tests the YAML-native statements complex routing and iteration example
-# from the YAML configuration documentation.
+# Tests YAML-native statements and verifies that embedded expressions accept
+# the same fnmatch operator and right-hand pattern arrays as RainerScript.
 #
 # Added 2026, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -28,7 +28,7 @@ rulesets:
     statements:
       - set:
           var: "\$.is_audit"
-          expr: 're_match(\$msg, "AUDIT")'
+          expr: 're_match(\$msg, "AUDIT") and (\$msg fnmatch ["*AUDIT message*", "never"])'
       - type: mmjsonparse
       - foreach:
           var: "\$.item"
