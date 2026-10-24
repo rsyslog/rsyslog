@@ -77,6 +77,7 @@ BEGINstrgen
     getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
     pMSG = getMSG(pMsg);
     lenMSG = getMSGLen(pMsg);
+    if (lenMSG > 0 && pMSG[lenMSG - 1] == '\n') --lenMSG;
 
     /* calculate len, constants for spaces and similar fixed strings */
     lenTotal = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 2;
