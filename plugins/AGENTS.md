@@ -112,3 +112,11 @@ support expectations change.
   module reference guides or changelog entries).
 - Cross-link any new documentation from the appropriate `index.rst` so users
   can discover it easily.
+
+### immark interval validation
+
+`tests/immark-interval-validation.sh` uses configuration-validation mode only
+(`-N1`) to check positive/default periods, zero rejection, and negative-period
+rejection through modern and legacy syntax. The YAML companion
+`tests/yaml-immark-interval-validation.sh` checks the module parameter through
+that frontend. Neither regression starts a negative-period input thread.
