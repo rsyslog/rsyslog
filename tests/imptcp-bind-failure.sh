@@ -8,6 +8,8 @@
 # surviving three seconds proves the compatibility cases stayed running.
 # The port file proves that the
 # holder has selected its port; a connection proves listen() completed.
+# Wait for the holder's port file before connecting; the bounded wait also
+# diagnoses a holder that exits before it becomes ready.
 # A two-second termination grace is followed by SIGKILL if a daemon hangs.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
 # are read from process output because they occur before input delivery.
@@ -44,6 +46,22 @@ cleanup_holder() {
 }
 trap cleanup_holder EXIT
 
+# A dead helper must fail immediately with its specific diagnostic rather than
+# consuming the readiness budget. This guards the negative path independently
+# of the healthy holder above.
+sh -c 'exit 7' &
+exited_pid=$!
+wait "$exited_pid" || :
+early_exit_log="$testdir/$RSYSLOG_DYNNAME.early-exit.log"
+if (error_exit() { exit "$1"; }; wait_file_exists_for_process \
+	"$testdir/$RSYSLOG_DYNNAME.never.port" "$exited_pid" 200 \
+	"exited helper" "") > "$early_exit_log" 2>&1; then
+	error_exit 1 "readiness wait accepted an exited helper"
+fi
+if ! grep -q 'exited before writing readiness file' "$early_exit_log"; then
+	error_exit 1 "readiness wait did not diagnose the exited helper"
+fi
+
 # Keep the startup bound portable to macOS, where GNU timeout is unavailable.
 # Return 124 when rsyslogd is still running at the deadline, after stopping it.
 run_bounded() {
@@ -79,7 +97,8 @@ run_bounded() {
 	return "$status"
 }
 
-wait_file_exists_for_process "$portfile" "$holder_pid" 10 "imptcp holder" "$holder_log"
+# The helper counts 100 ms polls; allow the standard 20-second startup budget.
+wait_file_exists_for_process "$portfile" "$holder_pid" 200 "imptcp holder" "$holder_log"
 port=$(cat "$portfile")
 case "$port" in
 	''|*[!0-9]*) error_exit 1 "invalid holder port: $port" ;;
