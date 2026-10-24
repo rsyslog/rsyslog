@@ -26,6 +26,7 @@ TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
 TESTS_RELEASE_PACKAGING = \
+	ubuntu-qpid-generation-order.sh \
 	rpm-baseline-patch-policy.sh \
 	daily-stable-package-drift.sh \
 	daily-stable-failure-report.sh
@@ -57,7 +58,7 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-basic \
 	fuzz/corpus/syslog-message/rfc5424-escaped-sd \
 	fuzz/corpus/syslog-message/rfc5424-nil
-EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
+EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS) unit/qpid_generation_order.py
 
 TESTS_MERMAID_OFFLINE = mermaid-offline.sh
 EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
