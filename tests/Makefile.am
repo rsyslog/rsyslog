@@ -709,6 +709,7 @@ TESTS_DEFAULT = \
 	rscript_ruleset_call_indirect-invld.sh \
 	rscript_set_unset_invalid_var.sh \
 	rscript_set_modify.sh \
+	rscript_set_root_type.sh \
 	rscript_unaffected_reset.sh \
 	rscript_replace_complex.sh \
 	$(TESTS_RSCRIPT_REPLACE_OVERLAP) \
