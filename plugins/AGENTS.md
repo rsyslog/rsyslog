@@ -103,6 +103,10 @@ support expectations change.
 - Ensure new tests run cleanly when invoked directly via `./tests/<script>.sh`.
   When reviewers request a CI reproduction, confirm the test also passes under
   `make check`.
+- mmleefparse delimiter coverage lives in
+  `tests/mmleefparse-delimiter-backslash.sh` and
+  `tests/yaml-mmleefparse-delimiter-backslash.sh`; these check explicit
+  backslash separators, recognised escapes, and ordinary-delimiter controls.
 - When a module requires external services (databases, message queues, etc.),
   document setup steps in the module metadata and reference any helper scripts
   placed under `tests/`.
