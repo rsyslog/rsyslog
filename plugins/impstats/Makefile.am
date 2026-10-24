@@ -53,4 +53,6 @@ CLEANFILES = remote.pb-c.c remote.pb-c.h remote.pb-c.stamp
 endif
 
 EXTRA_DIST = \
+	statslog-analyzer.py \
+	statslog_regex.py \
 	remote.proto 
