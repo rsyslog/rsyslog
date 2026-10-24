@@ -1346,6 +1346,9 @@ TESTS_IMJOURNAL_VALGRIND = \
 	imjournal-basic-vg.sh \
 	imjournal-statefile-vg.sh
 
+TESTS_OMJOURNAL_SEND_ERRORS = omjournal-send-errors.sh
+EXTRA_DIST += $(TESTS_OMJOURNAL_SEND_ERRORS)
+
 TESTS_OMJOURNAL = \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
@@ -2866,11 +2869,22 @@ CLEANFILES+= \
 
 check_LTLIBRARIES =
 
+# This service-independent shell regression still needs the testbench helpers.
+if ENABLE_TESTBENCH
+if ENABLE_OMJOURNAL
+check_LTLIBRARIES += libomjournal_send_errors_preload.la
+libomjournal_send_errors_preload_la_SOURCES = omjournal-send-errors-preload.c
+libomjournal_send_errors_preload_la_CFLAGS =
+libomjournal_send_errors_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+TESTS_OMJOURNAL_INDEPENDENT = $(TESTS_OMJOURNAL_SEND_ERRORS)
+endif
+endif
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer
-TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
+TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer
 
