@@ -15,9 +15,13 @@ core but are compiled directly into the rsyslog binary:
   additional `./configure` flags are required.
 - **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to incrementally build the tools and test dependencies.
 - **Bootstrap:** Run `./autogen.sh` only when autotools inputs change.
-- There are no standalone regression scripts for these built-in modules. When
-  modifying them, rely on targeted configuration tests under `tests/` (e.g.
-  `./tests/omfile-basic.sh`) or add new ones as needed.
+- Validate built-in modules with targeted configuration tests under `tests/`
+  (e.g. `./tests/omfile-basic.sh`) and add regressions as needed.
+- ompipe template coverage: `tests/ompipe-module-template.sh` checks module
+  defaults, explicit action overrides, and legacy selector compatibility;
+  `tests/yaml-ompipe-module-template.sh` checks the modern actions through YAML.
+  `tests/ompipe-default-template.sh` checks the unchanged built-in default when
+  no module template is configured.
 
 ## Metadata
 - Shared metadata lives in `tools/MODULE_METADATA.json` so we do not duplicate
