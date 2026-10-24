@@ -480,6 +480,7 @@ TESTS_DEFAULT = \
 	timestamp-isoweek.sh \
 	template-fixedwidth-empty.sh \
 	timestamp-unixtimestamp-offset.sh \
+	timestamp-dateordinal-offset.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
@@ -1124,6 +1125,7 @@ TESTS_LIBYAML = \
 	yaml-template-list.sh \
 	yaml-template-fixedwidth-empty.sh \
 	yaml-timestamp-unixtimestamp-offset.sh \
+	yaml-timestamp-dateordinal-offset.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
 	yaml-allowed-sender-modern.sh \
