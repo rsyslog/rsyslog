@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omrabbitmq output module to send syslog messages with raw or templated RabbitMQ bodies.
+   :keywords: rsyslog, omrabbitmq, RabbitMQ, body_template, message format
+
 **********************************
 omrabbitmq: RabbitMQ output module
 **********************************
@@ -13,8 +17,12 @@ omrabbitmq: RabbitMQ output module
 Purpose
 =======
 
+.. summary-start
+
 This module sends syslog messages into RabbitMQ server.
 Only v6 configuration syntax is supported.
+
+.. summary-end
 
 **omrabbitmq is tested and is running in production with 8.x version of rsyslog.**
 
@@ -316,9 +324,12 @@ This is the simplest action :
 
 - The sent message use JSON format
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     action(type="omrabbitmq" 
            host="localhost"
            virtual_host="/"
@@ -338,9 +349,12 @@ Action characteristics :
 
 - The sent message is a raw message
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     template(name="rkTpl" type="string" string="%syslogtag%.%syslogfacility-text%.%syslogpriority-text%")
 
     action(type="omrabbitmq" 
@@ -350,7 +364,7 @@ Action characteristics :
            password="guest"
            exchange="syslog"
            routing_key_template="rkTpl"
-           template_body="")
+           body_template="")
 
 Example 3
 ---------
@@ -363,9 +377,12 @@ HA action :
 
 - The sent message is formatted using RSYSLOG_ForwardFormat standard template
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     template(name="rkTpl" type="string" string="%syslogtag%.%syslogfacility-text%.%syslogpriority-text%")
 
     action(type="omrabbitmq" 
@@ -375,7 +392,7 @@ HA action :
            password="guest"
            exchange="syslog"
            routing_key_template="rkTpl"
-           template_body="RSYSLOG_ForwardFormat")
+           body_template="RSYSLOG_ForwardFormat")
 
 Example 4
 ---------
@@ -390,9 +407,12 @@ SSL enabled connection, with Heartbeat :
 
 - Heartbeat is set to 20 seconds
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     action(type="omrabbitmq" 
            host="localhost"
            virtual_host="/"
