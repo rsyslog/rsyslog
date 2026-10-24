@@ -63,6 +63,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional
 
 from prometheus_client import generate_latest
+from prometheus_client.parser import text_string_to_metric_families
 from prometheus_client.core import (
     CollectorRegistry,
     CounterMetricFamily,
@@ -310,33 +311,22 @@ def parse_prometheus_impstats(file_path: str) -> List[Metric]:
                 if line.startswith("#"):
                     continue
 
-                # Parse metric line: metric_name{labels} value
-                match = re.match(r'^([a-zA-Z_:][a-zA-Z0-9_:]*)\s*(\{[^}]*\})?\s+([0-9.eE+\-]+)', line)
-                if not match:
-                    continue
-
-                metric_name = match.group(1)
-                labels_str = match.group(2) or "{}"
+                # Parse each sample independently so malformed lines do not
+                # prevent later samples from being collected. The public parser
+                # handles quoted commas, braces and escaped label values.
                 try:
-                    value = float(match.group(3))
+                    samples = [sample for family in text_string_to_metric_families(line)
+                               for sample in family.samples]
                 except ValueError:
                     continue
 
-                # Parse labels
-                labels = {}
-                if labels_str != "{}":
-                    labels_str = labels_str.strip("{}")
-                    for label_pair in labels_str.split(","):
-                        if "=" in label_pair:
-                            k, v = label_pair.split("=", 1)
-                            labels[k.strip()] = v.strip().strip('"')
-
-                metrics.append(Metric(
-                    name=metric_name,
-                    value=value,
-                    labels=labels,
-                    metric_type="counter" if current_type == "counter" else "gauge",
-                ))
+                for sample in samples:
+                    metrics.append(Metric(
+                        name=sample.name,
+                        value=sample.value,
+                        labels=sample.labels,
+                        metric_type="counter" if current_type == "counter" else "gauge",
+                    ))
 
     except FileNotFoundError:
         logger.error(f"Impstats file not found: {file_path}")
