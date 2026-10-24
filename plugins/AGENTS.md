@@ -112,3 +112,11 @@ support expectations change.
   module reference guides or changelog entries).
 - Cross-link any new documentation from the appropriate `index.rst` so users
   can discover it easily.
+
+## mmsnmptrapd validation coverage
+
+Enable `--enable-mmsnmptrapd` and run `tests/mmsnmptrapd-severity-sign.sh`
+and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
+severity codes with valid and invalid numeric controls using configuration
+validation exit status. The YAML test exercises the existing legacy directive
+and action through a ruleset script.
