@@ -1008,6 +1008,7 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 TESTS_IMTCP = \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
+	smfile-final-lf.sh \
 	fromhost-port-async-ruleset.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
@@ -1123,7 +1124,8 @@ TESTS_IMTCP_YAML = \
 
 TESTS_IMTCP_VALGRIND = \
 	imtcp-octet-framing-too-long-vg.sh \
-	omfwd-rebind-tcp-vg.sh
+	omfwd-rebind-tcp-vg.sh \
+	smfile-final-lf-vg.sh
 
 TESTS_RATELIMIT = \
 	ratelimit_exclusivity.sh \

@@ -19,6 +19,14 @@ core but are compiled directly into the rsyslog binary:
   modifying them, rely on targeted configuration tests under `tests/` (e.g.
   `./tests/omfile-basic.sh`) or add new ones as needed.
 
+## Compiled file formatting
+
+`smfile.c` implements `RSYSLOG_FileFormat`. Run
+`tests/smfile-final-lf.sh` and its `-vg` companion for exact output checks
+against the documented list template. Binary TCP frames preserve zero, one,
+and two terminal message LFs; empty-MSG controls cover zero-length safety
+without changing the existing compiled separator behavior.
+
 ## Metadata
 - Shared metadata lives in `tools/MODULE_METADATA.json` so we do not duplicate
   YAML files beside each source.
