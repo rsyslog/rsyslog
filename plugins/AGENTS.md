@@ -112,3 +112,11 @@ support expectations change.
   module reference guides or changelog entries).
 - Cross-link any new documentation from the appropriate `index.rst` so users
   can discover it easily.
+
+## Focused omsnmp coverage
+
+`tests/omsnmp-traptype-range.sh` and its YAML companion decode loopback
+SNMPv1 datagrams to check valid generic trap types and the invalid-value
+fallback. Their `-vg.sh` wrappers use the same wire oracle under Valgrind.
+The test-owned receiver binds an ephemeral port and needs no external SNMP
+service, pysnmp, or MIB package.
