@@ -6,6 +6,10 @@
 imczmq: Input module for ZeroMQ
 *******************************
 
+.. meta::
+   :description: Receive ZeroMQ messages with imczmq and configure comma-separated endpoints.
+   :keywords: rsyslog, imczmq, ZeroMQ, CZMQ, endpoints
+
 .. index:: ! imczmq
 
 ===========================  ===================================================
@@ -16,10 +20,14 @@ imczmq: Input module for ZeroMQ
 Purpose
 =======
 
+.. summary-start
+
 The ``imczmq`` module receives log messages from ZeroMQ sockets using the
 CZMQ library. Each incoming frame is converted into an rsyslog message and
 processed by the configured ruleset. Multiple socket types and optional
 CURVE authentication are supported.
+
+.. summary-end
 
 Configuration Parameters
 ========================
@@ -46,7 +54,8 @@ Input Parameters
 ----------------
 
 ``endpoints``
-  Space-separated list of ZeroMQ endpoints to bind or connect to.
+  Comma-separated list of ZeroMQ endpoints to bind or connect to. Do not
+  separate endpoints with spaces.
 
 ``socktype``
   ZeroMQ socket type such as ``PULL``, ``SUB``, ``ROUTER``, ``DISH`` or ``SERVER``.
@@ -60,6 +69,22 @@ Input Parameters
 
 Examples
 ========
+
+To receive from two local IPC endpoints, separate their addresses with a comma.
+The ``/run/rsyslog`` directory must exist and allow the rsyslog process to
+create socket entries before the input starts. The example writes received
+messages to ``zeromq.log`` in the working directory.
+
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: imczmq
+
+.. code-block:: rsyslog
+
+   module(load="imczmq")
+   input(type="imczmq" socktype="PULL"
+         endpoints="ipc:///run/rsyslog/input-one.sock,ipc:///run/rsyslog/input-two.sock")
+   action(type="omfile" file="./zeromq.log")
+
 
 .. code-block:: none
 
