@@ -849,6 +849,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmanon-embeddedipv4-anonmode.rst \
     source/reference/parameters/mmanon-embeddedipv4-bits.rst \
     source/reference/parameters/mmanon-embeddedipv4-enable.rst \
+    source/reference/parameters/mmanon-excludesubnets.rst \
     source/reference/parameters/mmanon-embeddedipv4-limituniquemaxretries.rst \
     source/reference/parameters/mmanon-embeddedipv4-maxretryhandling.rst \
     source/reference/parameters/mmanon-embeddedipv4-uniqueretrycount.rst \
