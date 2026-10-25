@@ -85,7 +85,11 @@ Maintainer background tasks can run on the separate `rsyslog-background-tasks`
 VM. Its first use is the time-gated public PR handoff for coordinated security
 disclosures. The private GHSA Desk and Adiscon infrastructure repositories own
 the case workflow, scheduling, and host details; keep case data and credentials
-out of this public repository. The VM is not a CI runner.
+out of this public repository. The VM is not a CI runner. Authorized agents
+should start in the private
+[`rgerhards/rsyslog-security-ops`](https://github.com/rgerhards/rsyslog-security-ops)
+repository at `AGENTS.md` and `DISCLOSURE_RUNBOOK.md`; its exact-SHA PR handoff
+procedure is in `SCHEDULED_PUBLIC_PR.md`. Verify access before handling a case.
 
 ## Package Archive Automation
 
