@@ -2890,12 +2890,15 @@ static void ATTR_NONNULL() doFunct_ParseTime(struct cnffunc *__restrict__ const 
         int len = strlen(str);
         uchar *pszTS = (uchar *)str;
         memset(&s, 0, sizeof(struct syslogTime));
-        // Attempt to parse the date/time string
-        if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
+        /* Shared parsers accept message prefixes; script values must be fully consumed. */
+        const rsRetVal parseRet = datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len);
+        if (parseRet == RS_RET_OK && len == 0) {
             ret->d.n = datetime.syslogTime2time_t(&s);
             DBGPRINTF("parse_time: RFC3339 format found\n");
-        } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
-                                               NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+        } else if (parseRet != RS_RET_OK &&
+                   datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
+                                               NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK &&
+                   len == 0) {
             time_t t = time(NULL);
             struct tm tm;
             gmtime_r(&t, &tm);  // Get the current UTC date
@@ -2934,12 +2937,15 @@ static void ATTR_NONNULL() doFunct_ParseTimeLocalTz(struct cnffunc *__restrict__
             int len = strlen(str);
             uchar *pszTS = (uchar *)str;
             memset(&s, 0, sizeof(struct syslogTime));
-            // Attempt to parse the date/time string
-            if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
+            /* Shared parsers accept message prefixes; script values must be fully consumed. */
+            const rsRetVal parseRet = datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len);
+            if (parseRet == RS_RET_OK && len == 0) {
                 ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
                 DBGPRINTF("parse_time: RFC3339 format found\n");
-            } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
-                                                   NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+            } else if (parseRet != RS_RET_OK &&
+                       datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
+                                                   NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK &&
+                       len == 0) {
                 time_t t = time(NULL);
                 struct tm tm;
                 gmtime_r(&t, &tm);  // Get the current UTC date
@@ -2999,14 +3005,14 @@ static int ATTR_NONNULL(1, 3, 4) doFunc_is_time(const char *__restrict__ const s
             if (f == DATE_RFC3339) {
                 if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
                     DBGPRINTF("is_time: RFC3339 format found.\n");
-                    ret = 1;
+                    ret = (len == 0);
                     break;
                 }
             } else if (f == DATE_RFC3164) {
                 if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
                                                 NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
                     DBGPRINTF("is_time: RFC3164 format found.\n");
-                    ret = 1;
+                    ret = (len == 0);
                     break;
                 }
             } else if (f == DATE_UNIX) {

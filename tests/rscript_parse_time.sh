@@ -1,6 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Added 2017-10-28 by Stephen Workman, released under ASL 2.0
+# A timestamp conversion must reject RFC 3339 and RFC 3164 prefixes followed
+# by message text while accepting a single final ASCII space. Exact timestamps
+# remain controls; each result and immediately captured script_error() value
+# provide a deterministic oracle without depending on local timezone/year.
 
 # Because this script tests functionality that depends on the current date,
 # we cannot use static values for the expected results. They have to be
@@ -90,6 +94,26 @@ set $!datetime!rfc3164_12 = parse_time("'"$rfc3164_12"'");
 set $!datetime!rfc3339    = parse_time("2017-10-05T01:10:11Z");
 set $!datetime!rfc3339tz1 = parse_time("2017-10-05T01:10:11+04:00");
 set $!datetime!rfc3339tz2 = parse_time("2017-10-05T01:10:11+00:00");
+set $!datetime!rfc3339_suffix = parse_time("2017-10-05T01:10:11Z trailing-text");
+set $!datetime!errno_rfc3339_suffix = script_error();
+set $!datetime!rfc3339_space_ok = parse_time("2017-10-05T01:10:11Z ") > 0;
+set $!datetime!errno_rfc3339_space = script_error();
+set $!datetime!rfc3164_suffix = parse_time("Oct  5 01:10:11 trailing-text");
+set $!datetime!errno_rfc3164_suffix = script_error();
+set $!datetime!rfc3164_space_ok = parse_time("Oct  5 01:10:11 ") > 0;
+set $!datetime!errno_rfc3164_space = script_error();
+set $!datetime!localtz_rfc3339_exact_ok = parse_time_localtz("2017-10-05T01:10:11Z") > 0;
+set $!datetime!errno_localtz_rfc3339_exact = script_error();
+set $!datetime!localtz_rfc3339_suffix = parse_time_localtz("2017-10-05T01:10:11Z trailing-text");
+set $!datetime!errno_localtz_rfc3339_suffix = script_error();
+set $!datetime!localtz_rfc3339_space_ok = parse_time_localtz("2017-10-05T01:10:11Z ") > 0;
+set $!datetime!errno_localtz_rfc3339_space = script_error();
+set $!datetime!localtz_rfc3164_exact_ok = parse_time_localtz("Oct  5 01:10:11") > 0;
+set $!datetime!errno_localtz_rfc3164_exact = script_error();
+set $!datetime!localtz_rfc3164_suffix = parse_time_localtz("Oct  5 01:10:11 trailing-text");
+set $!datetime!errno_localtz_rfc3164_suffix = script_error();
+set $!datetime!localtz_rfc3164_space_ok = parse_time_localtz("Oct  5 01:10:11 ") > 0;
+set $!datetime!errno_localtz_rfc3164_space = script_error();
 
 # Test invalid date strings, these should return 0
 set $!datetime!inval1 = parse_time("not a date/time");
@@ -107,7 +131,7 @@ shutdown_when_empty
 wait_shutdown
 
 # Our fixed and calculated expected results
-export EXPECTED='{ "rfc3164_1": '"$rfc3164_1_r"', "rfc3164_2": '"$rfc3164_2_r"', "rfc3164_3": '"$rfc3164_3_r"', "rfc3164_4": '"$rfc3164_4_r"', "rfc3164_5": '"$rfc3164_5_r"', "rfc3164_6": '"$rfc3164_6_r"', "rfc3164_7": '"$rfc3164_7_r"', "rfc3164_8": '"$rfc3164_8_r"', "rfc3164_9": '"$rfc3164_9_r"', "rfc3164_10": '"$rfc3164_10_r"', "rfc3164_11": '"$rfc3164_11_r"', "rfc3164_12": '"$rfc3164_12_r"', "rfc3339": 1507165811, "rfc3339tz1": 1507151411, "rfc3339tz2": 1507165811, "inval1": 0, "inval2": 0, "inval3": 0 }'
+export EXPECTED='{ "rfc3164_1": '"$rfc3164_1_r"', "rfc3164_2": '"$rfc3164_2_r"', "rfc3164_3": '"$rfc3164_3_r"', "rfc3164_4": '"$rfc3164_4_r"', "rfc3164_5": '"$rfc3164_5_r"', "rfc3164_6": '"$rfc3164_6_r"', "rfc3164_7": '"$rfc3164_7_r"', "rfc3164_8": '"$rfc3164_8_r"', "rfc3164_9": '"$rfc3164_9_r"', "rfc3164_10": '"$rfc3164_10_r"', "rfc3164_11": '"$rfc3164_11_r"', "rfc3164_12": '"$rfc3164_12_r"', "rfc3339": 1507165811, "rfc3339tz1": 1507151411, "rfc3339tz2": 1507165811, "rfc3339_suffix": 0, "errno_rfc3339_suffix": 1, "rfc3339_space_ok": 1, "errno_rfc3339_space": 0, "rfc3164_suffix": 0, "errno_rfc3164_suffix": 1, "rfc3164_space_ok": 1, "errno_rfc3164_space": 0, "localtz_rfc3339_exact_ok": 1, "errno_localtz_rfc3339_exact": 0, "localtz_rfc3339_suffix": 0, "errno_localtz_rfc3339_suffix": 1, "localtz_rfc3339_space_ok": 1, "errno_localtz_rfc3339_space": 0, "localtz_rfc3164_exact_ok": 1, "errno_localtz_rfc3164_exact": 0, "localtz_rfc3164_suffix": 0, "errno_localtz_rfc3164_suffix": 1, "localtz_rfc3164_space_ok": 1, "errno_localtz_rfc3164_space": 0, "inval1": 0, "inval2": 0, "inval3": 0 }'
 
 # FreeBSD's cmp does not support reading from STDIN
 cmp <(echo "$EXPECTED") $RSYSLOG_OUT_LOG
