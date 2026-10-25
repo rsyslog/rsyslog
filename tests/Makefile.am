@@ -1204,6 +1204,9 @@ TESTS_MAIL_MMJSONPARSE = \
 
 TESTS_MMANON = \
 	mmanon_with_debug.sh \
+	mmanon_excludesubnets.sh \
+	mmanon_excludesubnets_invalid.sh \
+	yaml-mmanon-excludesubnets.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
