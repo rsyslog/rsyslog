@@ -1324,7 +1324,8 @@ TESTS_LIBDBI_VALGRIND = \
 	libdbi-basic-vg.sh
 
 TESTS_FMHTTP = \
-	rscript_http_request.sh
+	rscript_http_request.sh \
+	rscript_http_request-protocols.sh
 
 TESTS_FMHTTP_VALGRIND = \
 	rscript_http_request-vg.sh
