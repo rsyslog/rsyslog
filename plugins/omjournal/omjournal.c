@@ -306,7 +306,16 @@ finalize_it:
     RETiRet;
 }
 
-static void send_non_template_message(smsg_t *const __restrict__ pMsg) {
+/* A failed submission must enter the normal action retry/fallback path.
+ * systemd returns negative errno values without updating errno itself.
+ */
+static rsRetVal journal_send_result(const int result) {
+    if (result >= 0) return RS_RET_OK;
+    LogError(-result, RS_RET_SUSPENDED, "omjournal: journal submission failed");
+    return RS_RET_SUSPENDED;
+}
+
+static rsRetVal send_non_template_message(smsg_t *const __restrict__ pMsg) {
     uchar *tag;
     int lenTag;
     int sev;
@@ -317,21 +326,23 @@ static void send_non_template_message(smsg_t *const __restrict__ pMsg) {
      * is some real user interest. We can always add later...
      */
     /* Journald stores severity and facility in separate fields. */
-    sd_journal_send("MESSAGE=%s", getMSG(pMsg), "PRIORITY=%d", sev, "SYSLOG_FACILITY=%d", pMsg->iFacility,
-                    "SYSLOG_IDENTIFIER=%s", tag, NULL);
+    return journal_send_result(sd_journal_send("MESSAGE=%s", getMSG(pMsg), "PRIORITY=%d", sev, "SYSLOG_FACILITY=%d",
+                                               pMsg->iFacility, "SYSLOG_IDENTIFIER=%s", tag, NULL));
 }
 
-static void send_template_message(struct json_object *const __restrict__ json) {
+static rsRetVal send_template_message(struct json_object *const __restrict__ json) {
+    int result = 0;
     size_t argc;
     struct iovec *iovec;
     size_t i;
 
     iovec = build_iovec(&argc, json);
     if (NULL != iovec) {
-        sd_journal_sendv(iovec, argc);
+        result = sd_journal_sendv(iovec, argc);
         for (i = 0; i < argc; i++) free(iovec[i].iov_base);
         free(iovec);
     }
+    return journal_send_result(result);
 }
 
 BEGINdoAction_NoStrings
@@ -347,9 +358,9 @@ BEGINdoAction_NoStrings
     } else if (pData->namespace != NULL) {
         CHKiRet(send_non_template_message_with_namespace(pData->namespace, (smsg_t *)((void **)pMsgData)[0]));
     } else if (pData->tplName == NULL) {
-        send_non_template_message((smsg_t *)((void **)pMsgData)[0]);
+        CHKiRet(send_non_template_message((smsg_t *)((void **)pMsgData)[0]));
     } else {
-        send_template_message((struct json_object *)((void **)pMsgData)[0]);
+        CHKiRet(send_template_message((struct json_object *)((void **)pMsgData)[0]));
     }
 finalize_it:
 ENDdoAction
