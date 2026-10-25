@@ -629,7 +629,7 @@ static rsRetVal callExtProg(instanceData *__restrict__ const pData,
         getRawMsg(pMsg, (uchar **)&inputstr, &lenWrite);
         bFreeInputstr = 0;
     } else {
-        inputstr = msgGetJSONMESG(pMsg);
+        CHKmalloc(inputstr = msgGetJSONMESG(pMsg));
         lenWrite = strlen((const char *)inputstr);
     }
 

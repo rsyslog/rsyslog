@@ -1837,6 +1837,23 @@ fi
 AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
 AM_CONDITIONAL(LOGNORM_TURBO_SUPPORTED, test x$lognorm_turbo_supported = xyes)
 AM_CONDITIONAL(LOGNORM_TURBO_TRUNCATION_SUPPORTED, test x$lognorm_turbo_truncation_supported = xyes)
+# The turbo unit test links the whole runtime archive. GNU ld and lld spell
+# that --whole-archive (probed: darwin is classified as "bsd" above), Apple
+# ld64 spells it -force_load. Other linkers do not build the test.
+AC_CACHE_CHECK([whether the linker accepts --whole-archive], [rsyslog_cv_ld_whole_archive], [
+	save_LDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS -Wl,--whole-archive -Wl,--no-whole-archive"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+		[rsyslog_cv_ld_whole_archive=yes], [rsyslog_cv_ld_whole_archive=no])
+	LDFLAGS="$save_LDFLAGS"
+])
+case "$rsyslog_cv_ld_whole_archive:$host_os" in
+	yes:*) ld_whole_archive_mode=gnu ;;
+	no:darwin*) ld_whole_archive_mode=ld64 ;;
+	*) ld_whole_archive_mode=none ;;
+esac
+AM_CONDITIONAL(LD_WHOLE_ARCHIVE, test x$ld_whole_archive_mode = xgnu)
+AM_CONDITIONAL(LD_LINK_WHOLE_RUNTIME, test x$ld_whole_archive_mode != xnone)
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 if test "x$lognorm_turbo_supported" = "xyes"; then
 	AC_DEFINE(HAVE_LOGNORM_TURBO, 1, [liblognorm has turbo VM support])
