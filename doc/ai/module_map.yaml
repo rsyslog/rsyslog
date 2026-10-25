@@ -353,3 +353,15 @@ imfifo:
     - Reads log messages line-by-line from local POSIX named pipes (FIFOs).
     - Utilizes non-blocking poll() loops with a 100ms timeout to ensure clean and immediate shutdown.
     - Uses O_RDWR opening technique to keep a dummy writer in the daemon itself to avoid startup hangs and EOF reopening loops.
+
+runtime_permitted_peers:
+  paths:
+    - "runtime/net.c"
+    - "runtime/net.h"
+  requires_serialization: false
+  notes:
+    - >-
+      AddPermittedPeer fully compiles plain/wildcard classification and domain
+      components before publishing an entry. TLS workers may concurrently match
+      the immutable list; configuration owns construction and destruction and
+      must retain entries until all session users have stopped.

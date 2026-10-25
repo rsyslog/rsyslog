@@ -2150,6 +2150,8 @@ TESTS_OSSL = \
 	imtcp-tls-ossl-prioritize-san-cn-fallback.sh \
 	imtcp-tls-ossl-prioritize-san-reject-cn.sh \
 	imtcp-tls-ossl-manycon.sh \
+	imtcp-tls-ossl-manycon-wildcard.sh \
+	tls-permittedpeer-invalid.sh \
 	imtcp-tls-ossl-x509name-wildcard.sh \
 	imtcp-tls-ossl-x509name-wildcard-invld.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
