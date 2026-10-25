@@ -1,5 +1,11 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the built-in pmlastmsg parser for malformed repeated-message records.
+   :keywords: rsyslog, pmlastmsg, rsyslog.lastline, parser chain, repeated messages
+
+.. _ref-pmlastmsg:
+
 *************************************************
 pmlastmsg: "last message repeated n times" parser
 *************************************************
@@ -13,6 +19,13 @@ pmlastmsg: "last message repeated n times" parser
 
 Purpose
 =======
+
+.. summary-start
+
+``pmlastmsg`` provides the built-in parser ``rsyslog.lastline`` for malformed
+"last message repeated n times" records.
+
+.. summary-end
 
 Some syslog daemons are known to emit severity malformed messages with content
 "last message repeated n times". These messages can mess up message reception,
@@ -35,15 +48,13 @@ integer. All other messages are left untouched.
 Configuration Parameters
 ========================
 
-.. note::
-
-   Parameter names are case-insensitive; camelCase is recommended for
-   readability.
-
 Parser Parameters
 -----------------
 
-There are no configuration parameters for this module currently.
+There are no configurable parser-instance parameters. Loading ``pmlastmsg``
+registers the built-in parser ``rsyslog.lastline``. Reference that name directly
+in the parser chain; custom ``parser(type="pmlastmsg" ...)`` instances are not
+supported.
 
 
 Examples
@@ -56,16 +67,23 @@ This example is the typical use case, where some systems emit malformed
 "repeated msg" messages. Other than that, the default :rfc:`5424` and
 :rfc:`3164` parsers should be used. Note that when a parser is specified,
 the default parser chain is removed, so we need to specify all three
-parsers. We use this together with the default ruleset.
+parsers. This example accepts messages on loopback TCP port 10514 and binds
+that input to the named ruleset ``repeated_messages``.
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: pmlastmsg
+   :require-plugin: imtcp
+
+.. code-block:: rsyslog
 
    module(load="pmlastmsg")
+   module(load="imtcp")
 
-   parser(type="pmlastmsg" name="custom.pmlastmsg")
-
-   ruleset(name="ruleset" parser=["custom.pmlastmsg", "rsyslog.rfc5424",
-                                  "rsyslog.rfc3164"]) {
-        ... do processing here ...
+   ruleset(name="repeated_messages"
+           parser=["rsyslog.lastline", "rsyslog.rfc5424", "rsyslog.rfc3164"]) {
+       action(type="omfile" file="/var/log/remote.log")
    }
+
+   input(type="imtcp" address="127.0.0.1" port="10514"
+         ruleset="repeated_messages")
 
