@@ -965,8 +965,10 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                CHKiRet(iRet);
             }
         } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
@@ -1218,8 +1220,10 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer);
                 free(peer);
+                CHKiRet(iRet);
             }
         } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
