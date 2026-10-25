@@ -4,6 +4,8 @@
 // are a normal no-upload result, while inconsistent provenance is an error.
 const assert = require('node:assert/strict');
 const resolve = require('../devtools/pr-coverage-source.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
 
 function fixture(sameRepo = false, docs = false) {
   const base = {id: 1, full_name: 'rsyslog/rsyslog', owner: {login: 'rsyslog'}};
@@ -60,6 +62,33 @@ async function evaluate(data) {
       assert.equal(output.check, docs ? 'PR coverage upload (docs-samples)' : 'PR coverage upload (pr-ubuntu-24)');
     }
   }
+  // Both supported targets and arbitrary legal ref characters retain exact
+  // API identity matching. Branch text stays data, including shell punctuation.
+  for (const base of ['main', 'v8-stable']) {
+    for (const branch of ['fix#123', 'feature/é', 'fix(topic)', 'fix/$topic']) {
+      for (const docs of [false, true]) {
+        const data = fixture(false, docs);
+        data.prs[0].base.ref = base;
+        data.run.head_branch = data.event.head_branch = data.prs[0].head.ref = branch;
+        assert.equal((await evaluate(data)).branch, `alice:${branch}`);
+      }
+    }
+  }
+  // Contract-only edits must pass both scheduling gates before the pinned
+  // host checks can execute; exact path membership is the scheduling oracle.
+  const workflowPath = path.join(__dirname, '../.github/workflows/run_checks.yml');
+  // Release tarballs omit GitHub workflows; their resolver contracts still run.
+  if (fs.existsSync(workflowPath)) {
+    const workflow = fs.readFileSync(workflowPath, 'utf8');
+    for (const name of ['Check broad code changes', 'Check for code changes']) {
+      const scope = name === 'Check for code changes' ? workflow.split('\n  CI:')[1] : workflow;
+      const step = scope.split(`- name: ${name}\n`)[1].split('\n      - name:')[0];
+      for (const file of ['devtools/pr-coverage-source.cjs', 'devtools/validate-pr-coverage.py',
+        'tests/pr-coverage-source.cjs', 'tests/pr-coverage-artifact.py']) {
+        assert.ok(step.includes(`            ${file}\n`), `${name} must schedule ${file}`);
+      }
+    }
+  }
   const rejected = {
     'wrong repository': d => { d.run.repository.full_name = 'mallory/rsyslog'; },
     'wrong workflow path': d => { d.workflow.path = '.github/workflows/other.yml'; },
@@ -89,7 +118,7 @@ async function evaluate(data) {
     'stale PR head': d => { d.prs[0].head.sha = 'b'.repeat(40); },
     'closed PR': d => { d.prs[0].state = 'closed'; },
     'other PR repo': d => { d.prs[0].head.repo.id = 9; },
-    'wrong PR base': d => { d.prs[0].base.ref = 'v8-stable'; },
+    'unsupported PR base': d => { d.prs[0].base.ref = 'unsupported'; },
     'ambiguous PR': d => { d.prs.push(d.prs[0]); },
     'failed runtime lane': d => { d.jobs[0].conclusion = 'failure'; },
     'missing coverage job': d => { d.jobs = []; },

@@ -24,9 +24,11 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
       !/^[0-9a-f]{40}$/.test(run.head_sha)) {
     throw new Error('Unexpected coverage source workflow/run');
   }
+  // Branch names come from GitHub and remain API/action data. Reject control
+  // characters that could split output records without excluding legal refs.
   const owner = run.head_repository?.owner?.login;
   if (!owner || !/^[a-zA-Z0-9-]+$/.test(owner) ||
-      !/^[a-zA-Z0-9_.\/+@-]+$/.test(run.head_branch)) {
+      typeof run.head_branch !== 'string' || !run.head_branch || /[\x00-\x1f\x7f]/.test(run.head_branch)) {
     throw new Error('Unsafe or missing source branch metadata');
   }
   // workflow_run.pull_requests can be empty for fork PRs. Resolve via
@@ -36,7 +38,7 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
     ...repo, state: 'open', head: `${owner}:${run.head_branch}`, per_page: 100
   });
   const matches = candidates.filter(pr => pr.state === 'open' && pr.base.repo.full_name === 'rsyslog/rsyslog' &&
-    pr.base.ref === 'main' && pr.head.sha === run.head_sha &&
+    ['main', 'v8-stable'].includes(pr.base.ref) && pr.head.sha === run.head_sha &&
     pr.head.ref === run.head_branch && pr.head.repo?.id === run.head_repository.id);
   if (matches.length !== 1) {
     core.notice('No unique current PR head; stale/closed runs are not uploaded');

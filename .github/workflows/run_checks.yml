@@ -93,6 +93,10 @@ jobs:
             grammar/lexer.l
             grammar/grammar.y
             tests/*.sh
+            devtools/pr-coverage-source.cjs
+            devtools/validate-pr-coverage.py
+            tests/pr-coverage-source.cjs
+            tests/pr-coverage-artifact.py
             diag.sh
             **/Makefile.am
             configure.ac
@@ -492,6 +496,10 @@ jobs:
             grammar/lexer.l
             grammar/grammar.y
             tests/*.sh
+            devtools/pr-coverage-source.cjs
+            devtools/validate-pr-coverage.py
+            tests/pr-coverage-source.cjs
+            tests/pr-coverage-artifact.py
             diag.sh
             **/Makefile.am
             configure.ac

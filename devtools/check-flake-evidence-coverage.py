@@ -41,7 +41,7 @@ EXPECTED_UPLOADS = {
 }
 TEST_COMMAND_RE = re.compile(
     r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh"
-    r"|tests/pr-coverage-(?:source\.cjs|artifact\.py)"
+    r"|(?:node|python3)\s+tests/pr-coverage-(?:source\.cjs|artifact\.py)"
 )
 UPLOAD_RE = re.compile(
     r"^(?:      - |        )uses:\s+"
