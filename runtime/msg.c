@@ -3740,7 +3740,7 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
                 CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
             }
         } else if (pTpe->data.field.options.dataType == TPE_DATATYPE_BOOL) {
-            if (buflen == 1 && *pSrc == '0') {
+            if (buflen == 0 || (buflen == 1 && *pSrc == '0')) {
                 es_addBufConstcstr(&dst, "false");
             } else {
                 es_addBufConstcstr(&dst, "true");
