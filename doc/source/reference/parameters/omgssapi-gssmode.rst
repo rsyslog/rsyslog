@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omgssapi GssMode legacy directive.
+   :keywords: rsyslog, omgssapi, GssMode, legacy configuration
+
 .. _param-omgssapi-gssmode:
 .. _omgssapi.parameter.module.gssmode:
 
@@ -41,18 +45,22 @@ Module usage
 .. _param-omgssapi-module-gssmode:
 .. _omgssapi.parameter.module.gssmode-usage:
 
-.. code-block:: rsyslog
+This module supports legacy directives and selector actions. Load it before
+setting the directive, then configure the forwarding action.
 
-   module(load="omgssapi" gssMode="encryption")
-   action(type="omgssapi" target="receiver.mydomain.com")
+.. code-block:: none
+
+   module(load="omgssapi")
+   $GssMode encryption
+   *.* :omgssapi:receiver.mydomain.com
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
+The following directive is the supported configuration interface for omgssapi.
 
 .. _omgssapi.parameter.legacy.gssmode:
 
-- $GssMode — maps to GssMode (status: legacy)
+- ``$GssMode`` — sets GssMode for subsequent forwarding actions.
 
 .. index::
    single: omgssapi; $GssMode

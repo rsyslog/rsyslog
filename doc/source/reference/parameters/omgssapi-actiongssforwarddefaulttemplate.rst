@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omgssapi ActionGSSForwardDefaultTemplate legacy directive.
+   :keywords: rsyslog, omgssapi, ActionGSSForwardDefaultTemplate, legacy configuration
+
 .. _param-omgssapi-actiongssforwarddefaulttemplate:
 .. _omgssapi.parameter.module.actiongssforwarddefaulttemplate:
 
@@ -38,21 +42,22 @@ Module usage
 .. _param-omgssapi-module-actiongssforwarddefaulttemplate:
 .. _omgssapi.parameter.module.actiongssforwarddefaulttemplate-usage:
 
-.. code-block:: rsyslog
+This module supports legacy directives and selector actions. Load it before
+setting the directive, then configure the forwarding action.
 
-   module(
-       load="omgssapi"
-       actionGssForwardDefaultTemplate="RSYSLOG_ForwardFormat"
-   )
-   action(type="omgssapi" target="receiver.mydomain.com")
+.. code-block:: none
+
+   module(load="omgssapi")
+   $ActionGSSForwardDefaultTemplate RSYSLOG_ForwardFormat
+   *.* :omgssapi:receiver.mydomain.com
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
+The following directive is the supported configuration interface for omgssapi.
 
 .. _omgssapi.parameter.legacy.actiongssforwarddefaulttemplate:
 
-- $ActionGSSForwardDefaultTemplate — maps to ActionGSSForwardDefaultTemplate (status: legacy)
+- ``$ActionGSSForwardDefaultTemplate`` — sets ActionGSSForwardDefaultTemplate for subsequent forwarding actions.
 
 .. index::
    single: omgssapi; $ActionGSSForwardDefaultTemplate
