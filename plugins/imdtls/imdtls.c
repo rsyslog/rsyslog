@@ -985,8 +985,10 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
             for (j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                CHKiRet(iRet);
             }
         } else {
             dbgprintf(
