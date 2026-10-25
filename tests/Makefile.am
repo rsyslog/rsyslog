@@ -76,6 +76,9 @@ EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYA
 TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 
+TESTS_RSCRIPT_FNMATCH = rscript_fnmatch.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_FNMATCH)
+
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
@@ -409,6 +412,7 @@ TESTS_DEFAULT = \
 	hostname-with-slash-dflt-slash-valid.sh \
 	empty-app-name.sh \
 	endswith-basic.sh \
+	$(TESTS_RSCRIPT_FNMATCH) \
 	contains-longer-needle.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
