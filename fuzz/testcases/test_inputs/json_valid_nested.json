@@ -1,0 +1,6 @@
+{
+  "msg": "nested ok",
+  "hostname": "fuzzhost",
+  "structured-data": "[id@1 a=\"b\"]",
+  "nested": { "level1": { "level2": 42 } }
+}

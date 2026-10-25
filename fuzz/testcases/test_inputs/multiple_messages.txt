@@ -1,0 +1,4 @@
+# Multiple messages in one file (RFC 3164 format)
+<164>Oct 12 18:22:18 mymachine first message
+<165>Oct 12 18:22:19 mymachine second message
+<166>Oct 12 18:22:20 mymachine third message
