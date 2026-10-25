@@ -2791,7 +2791,11 @@ BEGINnewActInst
                     DBGPRINTF("omfwd: ignoring empty permitted peer\n");
                 } else {
                     dbgprintf("omfwd: adding permitted peer: '%s'\n", start);
-                    CHKiRet(net.AddPermittedPeer(&(pData->pPermPeers), start));
+                    iRet = net.AddPermittedPeer(&(pData->pPermPeers), start);
+                    if (iRet != RS_RET_OK) {
+                        free(str);
+                        FINALIZE;
+                    }
                 }
                 start = p + 1;
                 if (lenStr) --lenStr;
