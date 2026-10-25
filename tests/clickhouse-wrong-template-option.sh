@@ -27,6 +27,6 @@ shutdown_when_empty
 wait_shutdown
 
 clickhouse-client --query="DROP TABLE rsyslog.template"
-content_check "you have to specify the SQL or stdSQL option in your template!"
+content_check 'the SQL option (option.sql="on") in your template!'
 
 exit_test

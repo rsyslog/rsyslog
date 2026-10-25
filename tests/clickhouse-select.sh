@@ -7,7 +7,7 @@ generate_conf
 add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
-template(name="outfmt" option.stdsql="on" type="string" string="SELECT * FROM rsyslog.select")
+template(name="outfmt" option.sql="on" type="string" string="SELECT * FROM rsyslog.select")
 
 :syslogtag, contains, "tag" action(type="omclickhouse" server="localhost" port="8443"
 					bulkmode="off" user="default" pwd=""

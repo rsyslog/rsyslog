@@ -7,7 +7,7 @@ generate_conf
 add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.retryerror (id, severity, message) VALUES (%msg:F,58:2%, %syslogseverity%, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.retryerror (id, severity, message) VALUES (%msg:F,58:2%, %syslogseverity%, '
 add_conf "'%msg%')"
 add_conf '")
 

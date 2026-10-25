@@ -8,7 +8,7 @@ generate_conf
 add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.limited (id, ipaddress, message) VALUES (%msg:F,58:2%, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.limited (id, ipaddress, message) VALUES (%msg:F,58:2%, '
 add_conf "'%fromhost-ip%', '%msg:F,58:2%')"
 add_conf '")
 

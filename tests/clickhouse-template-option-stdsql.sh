@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Verify that omclickhouse accepts a custom INSERT template when the SQL
-# escaping requirement is expressed with the template-level option.stdsql
-# parameter. This covers the config-validation path from issue #6297 without
-# requiring a live ClickHouse service.
+# Verify that omclickhouse rejects standard SQL escaping during validation.
+# The diagnostic and absence of successful validation prove the unsafe action
+# is rejected without requiring a ClickHouse service.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
@@ -24,8 +23,8 @@ action(type="omclickhouse"
        template="CustomClickHouseFmt")
 '
 
-../tools/rsyslogd -C -N1 -f "${TESTCONF_NM}.conf" -M"$RSYSLOG_MODDIR" > "$RSYSLOG_DYNNAME.log" 2>&1
-content_check "End of config validation run" "$RSYSLOG_DYNNAME.log"
-check_not_present "Action disabled. To use this action" "$RSYSLOG_DYNNAME.log"
+../tools/rsyslogd -C -N1 -f "${TESTCONF_NM}.conf" -M"$RSYSLOG_MODDIR" > "$RSYSLOG_DYNNAME.log" 2>&1 || true
+content_check 'the SQL option (option.sql="on") in your template!' "$RSYSLOG_DYNNAME.log"
+check_not_present "End of config validation run" "$RSYSLOG_DYNNAME.log"
 
 exit_test

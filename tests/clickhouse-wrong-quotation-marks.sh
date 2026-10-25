@@ -9,7 +9,7 @@ module(load="../plugins/omclickhouse/.libs/omclickhouse")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.quotation (id, severity, message) VALUES ( 1, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.quotation (id, severity, message) VALUES ( 1, '
 add_conf "%syslogseverity%, '%msg%')"
 add_conf '")
 
@@ -27,7 +27,7 @@ shutdown_when_empty
 wait_shutdown
 clickhouse-client --query="SELECT id, severity, message FROM rsyslog.quotation" > $RSYSLOG_OUT_LOG
 
-export EXPECTED="1	2	it\\'s a test"
+export EXPECTED="1	2	it's a test"
 cmp_exact $RSYSLOG_OUT_LOG
 
 clickhouse-client --query="DROP TABLE rsyslog.quotation"

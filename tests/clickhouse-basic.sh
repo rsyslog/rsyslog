@@ -7,7 +7,7 @@ generate_conf
 add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.basic (id, severity, facility, timestamp, ipaddress, tag, message) VALUES (%msg:F,58:2%, %syslogseverity%, %syslogfacility%, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.basic (id, severity, facility, timestamp, ipaddress, tag, message) VALUES (%msg:F,58:2%, %syslogseverity%, %syslogfacility%, '
 add_conf "'%timereported:::date-unixtimestamp%', '%fromhost-ip%', '%syslogtag%', '%msg%')"
 add_conf '")
 

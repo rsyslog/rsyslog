@@ -10,7 +10,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.errorfile (id, severity, facility, timestamp, ipaddress, tag, message) VALUES (%msg:F,58:2%, %syslogseverity%, %syslogfacility%, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.errorfile (id, severity, facility, timestamp, ipaddress, tag, message) VALUES (%msg:F,58:2%, %syslogseverity%, %syslogfacility%, '
 add_conf "'%timereported:::date-unixtimestamp%', '%fromhost-ip%', '%syslogtag%', '%msg%')"
 add_conf '")
 
