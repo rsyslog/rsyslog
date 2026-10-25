@@ -3,6 +3,10 @@
 # Verify that omrelp uses its compiled default port when no port parameter is
 # configured. imrelp must explicitly bind the same default port because this is
 # the behavior under test; success is the full ordered delivery sequence.
+# Keep this fixed/default port: a dynamic replacement would bypass the normal
+# deployment path. Run isolated from other users of that port. The low-port
+# non-root skip below is not a capability probe; root containers can still lack
+# permission to bind, so a skipped or failed prerequisite is not delivery proof.
 # added 2013-12-10 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
