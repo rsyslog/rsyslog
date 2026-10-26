@@ -202,6 +202,20 @@ typedef struct targetData {
      * torn down (a new TLS session owes nothing). */
     sbool hash_write_pending;
     sbool hash_write_pending_tx; /* hash_write_pending was set by the current commitTransaction */
+    /* pool.policy="hash": a frame larger than sndBuf is copied here before it
+     * is written, so a retried write is offered from the same address. The
+     * frame handed over can be a new allocation on every call (octet-counted
+     * framing, a message without the delimiter, single-message compression). */
+    uchar *oversize_buf;
+    size_t oversize_buf_size;
+    /* length of the write on oversize_buf that returned RS_RET_RETRY and is
+     * still owed, 0 if none */
+    size_t oversize_owed_len;
+    /* pool.policy="hash": a deferred write on partial_buf had partial_sent
+     * bytes accepted before it returned RS_RET_RETRY (a TLS driver sends
+     * at most one record per call). The repeat continues after them. */
+    uchar *partial_buf;
+    unsigned partial_sent;
     time_t ttResume;
     targetStats_t *pTargetStats;
 /* sndBuf buffer size is intensionally fixed -- see no good reason to make configurable */
@@ -866,6 +880,8 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
     }
     pTarget->bIsConnected = 0;
     pTarget->hash_write_pending = 0;
+    pTarget->oversize_owed_len = 0;
+    pTarget->partial_sent = 0;
     pTarget->bInDestruct = RSFALSE;
     DBGPRINTF("omfwd: DestructTargetData: %p %s:%s, connected %d, ttResume %lld\n", pTarget, pTarget->target_name,
               pTarget->port, pTarget->bIsConnected, (long long)pTarget->ttResume);
@@ -1115,6 +1131,7 @@ BEGINfreeWrkrInstance
     if (pWrkrData->pData->protocol == FORW_TCP) {
         for (int i = 0; i < pWrkrData->pData->nTargets; ++i) {
             tcpclt.Destruct(&pWrkrData->target[i].pTCPClt);
+            free(pWrkrData->target[i].oversize_buf);
         }
     }
     free(pWrkrData->target); /* note: this frees all target memory,calloc()ed array! */
@@ -1312,8 +1329,22 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
     DEFiRet;
     unsigned alreadySent;
     ssize_t lenSend;
+    sbool bNotRepeated = 0; /* the drop below is already logged */
 
     alreadySent = 0;
+    if (pTarget->partial_sent != 0) {
+        if (buf != pTarget->partial_buf || len <= pTarget->partial_sent) {
+            bNotRepeated = 1;
+            LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+                   "omfwd: target %s:%s owes the rest of a partly sent write that the next send does "
+                   "not repeat, dropping the connection",
+                   pTarget->target_name, pTarget->port);
+            pTarget->partial_sent = 0;
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+        alreadySent = pTarget->partial_sent;
+        pTarget->partial_sent = 0;
+    }
     if (pTarget->pData->bExtendedConnCheck) {
         CHKiRet(netstrm.CheckConnection(pTarget->pNetstrm));
         /* hack for plain tcp syslog - see ptcp driver for details */
@@ -1322,7 +1353,13 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
     while (alreadySent != len) {
         lenSend = len - alreadySent;
         iRet = netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend);
-        if (iRet == RS_RET_RETRY) ABORT_FINALIZE(iRet);
+        if (iRet == RS_RET_RETRY) {
+            if (alreadySent != 0 && pTarget->pData->pool_policy == POOL_HASH) {
+                pTarget->partial_buf = buf;
+                pTarget->partial_sent = alreadySent;
+            }
+            ABORT_FINALIZE(iRet);
+        }
         CHKiRet(iRet);
         DBGPRINTF("omfwd: TCP sent %zd bytes, requested %u\n", lenSend, len - alreadySent);
         alreadySent += lenSend;
@@ -1335,7 +1372,7 @@ finalize_it:
         if (iRet == RS_RET_RETRY) {
             DBGPRINTF("omfwd: TCP send deferred for retry\n");
         } else {
-            emitConnectionErrorMsg(pTarget, iRet);
+            if (!bNotRepeated) emitConnectionErrorMsg(pTarget, iRet);
             if (!pTarget->bInDestruct) {
                 DestructTargetData(pTarget, 0);
             }
@@ -1552,6 +1589,19 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, const size_t len) {
 
     DBGPRINTF("omfwd: add %zu bytes to send buffer (curr offs %u, max len %d) msg: %*s\n", len, pTarget->offsSndBuf,
               pTarget->maxLenSndBuf, (int)len, msg);
+    if (pTarget->oversize_owed_len != 0 &&
+        (len != pTarget->oversize_owed_len || memcmp(pTarget->oversize_buf, msg, len) != 0)) {
+        /* A deferred write on oversize_buf must be repeated with the same
+         * bytes. A different frame (tcpclt resending its previous message
+         * after a reconnect, for one) can neither complete it nor reuse the
+         * buffer, so the connection is dropped. */
+        LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+               "omfwd: target %s:%s owes a deferred write that the next send does not repeat, "
+               "dropping the connection",
+               pTarget->target_name, pTarget->port);
+        DestructTargetData(pTarget, 0);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
     if (pTarget->offsSndBuf != 0 && (pTarget->offsSndBuf + len) >= (size_t)pTarget->maxLenSndBuf) {
         /* no buffer space left, need to commit previous records. With the
          * current API, there unfortunately is no way to signal this
@@ -1569,7 +1619,24 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, const size_t len) {
 
     /* check if the message is too large to fit into buffer */
     if (len > sizeof(pTarget->sndBuf)) {
-        CHKiRet(TCPSendBuf(pTarget, (uchar *)msg, len, NO_FLUSH));
+        uchar *frame = (uchar *)msg;
+        if (pTarget->pData->pool_policy == POOL_HASH) {
+            /* An owed write was checked above to be this frame, already in
+             * the buffer. Otherwise nothing is owed and the buffer may grow. */
+            if (pTarget->oversize_owed_len == 0) {
+                if (pTarget->oversize_buf_size < len) {
+                    free(pTarget->oversize_buf);
+                    pTarget->oversize_buf_size = 0;
+                    CHKmalloc(pTarget->oversize_buf = malloc(len));
+                    pTarget->oversize_buf_size = len;
+                }
+                memcpy(pTarget->oversize_buf, msg, len);
+            }
+            frame = pTarget->oversize_buf;
+        }
+        iRet = TCPSendBuf(pTarget, frame, len, NO_FLUSH);
+        if (frame == pTarget->oversize_buf) pTarget->oversize_owed_len = (iRet == RS_RET_RETRY) ? len : 0;
+        CHKiRet(iRet);
         pTarget->hash_write_pending = 0;
         ABORT_FINALIZE(RS_RET_OK); /* committed everything so far */
     }
@@ -2036,7 +2103,8 @@ finalize_it:
  * right away would make the action engine replay the whole batch: frames
  * still in a send buffer would go out twice, messages of one key could be
  * reordered, and the ratelimiter would count them again. The wait is
- * bounded, like the engine's own local retry of one second. */
+ * bounded per commitTransaction, across all targets and messages, like the
+ * engine's own local retry of one second. */
 #define HASH_RETRY_ATTEMPTS 100
 #define HASH_RETRY_SLEEP_USEC 10000
 
@@ -2067,6 +2135,7 @@ BEGINcommitTransaction
      * action engine treats a raw RS_RET_RETRY from commitTransaction as a
      * permanent data failure and drops the batch. */
     sbool hash_send_retry = 0;
+    int hash_retry_budget = HASH_RETRY_ATTEMPTS; /* sleeps left for this commit */
     CODESTARTcommitTransaction;
     for (int j = 0; j < pWrkrData->pData->nTargets; ++j) {
         pWrkrData->target[j].offs_snd_buf_tx_start = pWrkrData->target[j].offsSndBuf;
@@ -2154,9 +2223,9 @@ BEGINcommitTransaction
                  * same bytes again. */
                 /* a target already pending got its wait: suspend at once
                  * instead of waiting again for every replayed message */
-                for (int attempt = 0; pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
-                                      !pTarget->hash_write_pending && attempt < HASH_RETRY_ATTEMPTS;
-                     ++attempt) {
+                while (pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
+                       !pTarget->hash_write_pending && hash_retry_budget > 0) {
+                    --hash_retry_budget;
                     srSleep(0, HASH_RETRY_SLEEP_USEC);
                     iRet = processMsg(pTarget, &actParam(pParams, pWrkrData->pData->num_tpls, i, 0));
                 }
@@ -2164,11 +2233,12 @@ BEGINcommitTransaction
                     dotry = 0;
                 } else if (pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
                            pTarget->offsSndBuf == 0) {
-                    /* A frame larger than the send buffer is written from its
-                     * own rendering, so the owed bytes are not kept anywhere
-                     * a later commit could offer again. Treat the target as
-                     * down: a new session owes nothing, and the next pool
-                     * member is probed as for any failed target. */
+                    /* A frame larger than the send buffer is not kept in it,
+                     * and the replayed batch may write other frames to this
+                     * target first, which would not repeat the owed write.
+                     * Treat the target as down: a new session owes nothing,
+                     * and the next pool member is probed as for any failed
+                     * target. */
                     LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                            "omfwd: [wrkr %u] target %s:%s kept deferring a send larger than the "
                            "send buffer, dropping the connection",
@@ -2211,9 +2281,9 @@ BEGINcommitTransaction
         if (pWrkrData->target[j].bIsConnected && pWrkrData->target[j].offsSndBuf != 0) {
             iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf, pWrkrData->target[j].offsSndBuf,
                               IS_FLUSH);
-            for (int attempt = 0; pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
-                                  !pWrkrData->target[j].hash_write_pending && attempt < HASH_RETRY_ATTEMPTS;
-                 ++attempt) {
+            while (pWrkrData->pData->pool_policy == POOL_HASH && iRet == RS_RET_RETRY &&
+                   !pWrkrData->target[j].hash_write_pending && hash_retry_budget > 0) {
+                --hash_retry_budget;
                 srSleep(0, HASH_RETRY_SLEEP_USEC);
                 iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf, pWrkrData->target[j].offsSndBuf,
                                   IS_FLUSH);
@@ -2899,6 +2969,15 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR,
                  "omfwd: pool.policy=\"hash\" requires protocol=\"tcp\" "
                  "(UDP forwarding uses only the first target)");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->pool_policy == POOL_HASH && pData->compressionMode >= COMPRESS_STREAM_ALWAYS) {
+        /* A retried stream-compressed write would deflate the same input
+         * again and offer different bytes than the write it repeats. */
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: pool.policy=\"hash\" cannot be combined with "
+                 "compression.mode=\"stream:always\"");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 

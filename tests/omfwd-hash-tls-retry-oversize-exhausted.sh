@@ -4,8 +4,9 @@
 # Copyright 2026 Jérémie Jourdin.
 #
 # A frame larger than the send buffer whose TLS write stays deferred past the
-# bounded wait: omfwd does not keep those bytes, so it drops that connection
-# and the pool fails over. Nothing may be lost; messages may repeat.
+# bounded wait: the retried batch may write other frames to that connection
+# first, so omfwd drops it and the pool fails over. Nothing may be lost;
+# messages may repeat.
 export OMFWD_FRAME_PAD=17000
 export NUMMESSAGES=200
 export OMFWD_HASH_RETRY_COUNT=105

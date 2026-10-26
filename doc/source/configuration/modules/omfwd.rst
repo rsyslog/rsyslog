@@ -467,7 +467,9 @@ Selects how a target is chosen from a target pool (two or more entries in
 "target"). ``pool.policy="hash"`` requires ``protocol="tcp"``. UDP forwarding
 always uses the first target, so hash selection is rejected at configuration
 time when ``protocol="udp"`` and when ``protocol`` is omitted (the default is
-UDP).
+UDP). It is also rejected together with stream compression
+(``compression.mode="stream:always"``), which cannot repeat a deferred send
+with the same bytes.
 
 - "roundrobin" (default): each message is sent to the next target in turn.
   Distributes load but gives no affinity between a key and a target.
@@ -478,16 +480,18 @@ UDP).
   A deferred send on a target that is still connected (TLS waiting for a
   read before it can write) does not fail over: sending the message to the
   next pool member would break the shard. The same send is repeated on that
-  target for up to one second. Only if it is still deferred then is the
-  action suspended and the batch retried, without a further wait on that
-  target until its pending write completes. The retry can deliver twice what
-  that target was handed and what other pool members had already sent for
-  the batch. Stream compression (``compression.mode="stream:always"``) does
-  not survive a deferred send: avoid it with ``pool.policy="hash"`` over TLS.
-  One case does fail over: a frame larger than omfwd's 16 KiB send buffer
-  that is still deferred after the wait. omfwd does not keep those bytes for
-  the retried write, so it drops that connection, and the target's keys
-  fail over until it resumes.
+  target, continuing after any part the TLS driver already accepted. The wait is bounded to about one second per transaction, shared by
+  all targets and messages of the batch, so a peer that keeps deferring
+  stalls the action worker for at most that long per transaction. Only if
+  the send is still deferred then is the action suspended and the batch
+  retried, without a further wait on that target until its pending write
+  completes. The retry can deliver twice what that target was handed and
+  what other pool members had already sent for the batch. One case does
+  fail over: a frame larger than omfwd's 16 KiB send buffer that is still
+  deferred after the wait. The retried batch may write other frames to that
+  target first, so omfwd drops that connection, and the target's keys fail
+  over until it resumes. Once a transaction has used up its wait, such a
+  frame drops its connection without waiting.
 
 Hash selection lets stateful downstream processing (deduplication,
 correlation, per-key aggregation, per-source rate limiting) be sharded across a

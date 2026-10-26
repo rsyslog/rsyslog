@@ -25,12 +25,18 @@
  *
  * When OVERRIDE_OSSL_SEND_RETRY_MARKER names a file, it is created when the
  * retry is injected and holds the length of the deferred write, so the test
- * can prove the fixture fired and on which send.
+ * can prove the fixture fired and on which send, followed by the length of
+ * the short write that preceded it (0 if none).
+ *
+ * When OVERRIDE_OSSL_SEND_RETRY_PARTIAL is a positive N, the first write
+ * longer than N is really written for its first N bytes only and returns N,
+ * as a TLS driver that sends one record per call does; the retry is then
+ * injected on the write of the rest.
  *
  * The deferred write is recorded. The next write on that session must
- * offer at least as many bytes and begin with the same ones, which is what
- * OpenSSL accepts as a repeat of a write that returned a retry; anything
- * else aborts the process, so the test fails.
+ * come from the same buffer, offer at least as many bytes and begin with
+ * the same ones, which is what OpenSSL accepts as a repeat of a write that
+ * returned a retry; anything else aborts the process, so the test fails.
  */
 #include "config.h" /* _GNU_SOURCE, for RTLD_NEXT on older glibc */
 #include <dlfcn.h>
@@ -52,6 +58,7 @@ enum { ARMED, WRITE_FAILED, READ_PENDING, READ_FAILED, READ_DONE, PASSTHROUGH };
 
 static int state = ARMED;
 static const SSL *owed_ssl; /* session that owes the repeat */
+static const void *owed_buf; /* buffer of the deferred write */
 static int owed_len = -1; /* length of the deferred write */
 static uint32_t owed_sum; /* FNV-1a of its bytes */
 
@@ -68,6 +75,8 @@ static uint32_t fnv1a(const void *buf, int len) {
     return (uint32_t)h;
 }
 static int empty_reads_left = -1; /* sends that still find nothing to read */
+static int partial_done; /* the short write was made */
+static int partial_len; /* its length */
 
 /* rsyslog also builds without atomic builtins, so the state machine is
  * guarded by a mutex; this fixture is not on any measured path. */
@@ -94,6 +103,21 @@ static void set_empty_reads(int n) {
     pthread_mutex_unlock(&state_mut);
 }
 
+/* claims the one short write, if one is requested and still due */
+static int claim_partial(const int num) {
+    const char *const env = getenv("OVERRIDE_OSSL_SEND_RETRY_PARTIAL");
+    const int n = (env != NULL) ? atoi(env) : 0;
+    if (n <= 0 || num <= n) return 0;
+    pthread_mutex_lock(&state_mut);
+    const int claimed = !partial_done && state == ARMED;
+    if (claimed) {
+        partial_done = 1;
+        partial_len = n;
+    }
+    pthread_mutex_unlock(&state_mut);
+    return claimed ? n : 0;
+}
+
 /* returns the number of empty reads still to report after this one */
 static int consume_empty_read(void) {
     pthread_mutex_lock(&state_mut);
@@ -116,12 +140,15 @@ static void *real_symbol(const char *const name) {
 static void mark_injected(void) {
     static int marked;
     const char *const path = getenv("OVERRIDE_OSSL_SEND_RETRY_MARKER");
-    char len[16];
+    char len[32];
     if (marked || path == NULL || path[0] == '\0') return;
     marked = 1;
     const int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
     if (fd < 0) return;
-    const int n = snprintf(len, sizeof(len), "%d\n", owed_len);
+    pthread_mutex_lock(&state_mut);
+    const int partial = partial_len;
+    pthread_mutex_unlock(&state_mut);
+    const int n = snprintf(len, sizeof(len), "%d %d\n", owed_len, partial);
     if (n > 0 && write(fd, len, (size_t)n) < 0) {
         /* the test reports an empty marker */
     }
@@ -130,13 +157,21 @@ static void mark_injected(void) {
 
 int SSL_write(SSL *ssl, const void *buf, int num) {
     static int (*real)(SSL *, const void *, int);
+    if (real == NULL) real = (int (*)(SSL *, const void *, int))real_symbol("SSL_write");
+    const int partial = claim_partial(num);
+    if (partial > 0) return real(ssl, buf, partial);
     if (state_is(ARMED)) {
         owed_ssl = ssl;
+        owed_buf = buf;
         owed_len = num;
         owed_sum = fnv1a(buf, num);
         if (advance(ARMED, WRITE_FAILED)) return -1;
     }
     if (owed_len >= 0 && ssl == owed_ssl) {
+        if (buf != owed_buf) {
+            fprintf(stderr, "override_ossl_send_retry: repeat of a deferred write comes from another buffer\n");
+            abort();
+        }
         if (num < owed_len || fnv1a(buf, owed_len) != owed_sum) {
             fprintf(stderr, "override_ossl_send_retry: repeat of a deferred write offers %d bytes, owed %d\n", num,
                     owed_len);
@@ -144,7 +179,6 @@ int SSL_write(SSL *ssl, const void *buf, int num) {
         }
         owed_len = -1;
     }
-    if (real == NULL) real = (int (*)(SSL *, const void *, int))real_symbol("SSL_write");
     return real(ssl, buf, num);
 }
 

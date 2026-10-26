@@ -19,9 +19,12 @@
 # 8 frames fits the send buffer and the deferral hits the end-of-batch flush;
 # a small value makes the buffer fill on a target's second frame, so it hits
 # a send inside the batch (omfwd-hash-tls-retry-midbatch.sh). OMFWD_FRAME_PAD
-# pads every frame past the 16 KiB send buffer, so frames are written
-# directly and the deferred write is a re-rendered frame
-# (omfwd-hash-tls-retry-oversize.sh).
+# pads every frame past the 16 KiB send buffer, so frames bypass it and are
+# written from a per-target copy (omfwd-hash-tls-retry-oversize.sh). OMFWD_FRAMING sets tcp_framing.
+# Octet-counted framing makes tcpclt build every frame in a new buffer.
+# OMFWD_HASH_RETRY_PARTIAL makes the deferred write follow a short write of
+# that many bytes, so the repeat must continue after them
+# (omfwd-hash-tls-retry-partial.sh, omfwd-hash-tls-retry-oversize-partial.sh).
 . ${srcdir:=.}/diag.sh init
 skip_platform "Darwin" "LD_PRELOAD fixtures are not loaded by dyld"
 export NUMMESSAGES=${NUMMESSAGES:-2000}
@@ -58,6 +61,9 @@ PORT_RCVR2=$(cat "$RSYSLOG_DYNNAME.tcpflood_port2")
 if [ -n "${OMFWD_IOBUFFER:-}" ]; then
 	IOBUFFER_PARAM="iobuffer.maxsize=\"$OMFWD_IOBUFFER\""
 fi
+if [ -n "${OMFWD_FRAMING:-}" ]; then
+	FRAMING_PARAM="tcp_framing=\"$OMFWD_FRAMING\""
+fi
 generate_conf 2
 add_conf '
 '"${RCV_MAXSIZE:-}"'
@@ -76,12 +82,13 @@ template(name="shardkey" type="string" string="%msg:F,58:2%")
 :msg, contains, "msgnum:" action(type="omfwd" protocol="tcp"
 	target=["127.0.0.1", "127.0.0.1"] port=["'$TCPFLOOD_PORT'", "'$PORT_RCVR2'"]
 	StreamDriverMode="1" StreamDriverAuthMode="anon"
-	pool.policy="hash" pool.hashkey="shardkey" '"${SND_TEMPLATE_PARAM:-}"'
+	pool.policy="hash" pool.hashkey="shardkey" '"${SND_TEMPLATE_PARAM:-}"' '"${FRAMING_PARAM:-}"'
 	action.resumeRetryCount="-1" action.resumeInterval="1")
 :msg, contains, "dropping the connection" action(type="omfile" file="'$RSYSLOG_DYNNAME'.dropped.log")
 ' 2
 export OVERRIDE_OSSL_SEND_RETRY_MARKER="$RETRY_MARKER"
 export OVERRIDE_OSSL_SEND_RETRY_COUNT="${OMFWD_HASH_RETRY_COUNT:-1}"
+export OVERRIDE_OSSL_SEND_RETRY_PARTIAL="${OMFWD_HASH_RETRY_PARTIAL:-0}"
 export RSYSLOG_PRELOAD=.libs/liboverride_ossl_send_retry.so
 startup 2
 unset RSYSLOG_PRELOAD
@@ -96,13 +103,18 @@ if [ ! -f "$RETRY_MARKER" ]; then
 	echo "FAIL: the send retry was never injected, the test proved nothing"
 	error_exit 1
 fi
+read -r owed partial < "$RETRY_MARKER"
+if [ "${partial:-0}" -ne "${OMFWD_HASH_RETRY_PARTIAL:-0}" ]; then
+	echo "FAIL: the deferral followed a short write of ${partial:-?} bytes, not ${OMFWD_HASH_RETRY_PARTIAL:-0}"
+	error_exit 1
+fi
 if [ -n "${OMFWD_HASH_EXPECT_DROP:-}" ] && [ ! -s "$RSYSLOG_DYNNAME.dropped.log" ]; then
 	echo "FAIL: the oversize deferral did not drop the connection"
 	error_exit 1
 fi
 if [ -n "${OMFWD_FRAME_PAD:-}" ]; then
-	owed=$(cat "$RETRY_MARKER")
-	if [ "${owed:-0}" -le 16384 ]; then
+	owed=$(( ${owed:-0} + ${partial:-0} ))
+	if [ "$owed" -le 16384 ]; then
 		echo "FAIL: the deferred write was ${owed:-?} bytes, not a frame larger than the send buffer"
 		error_exit 1
 	fi

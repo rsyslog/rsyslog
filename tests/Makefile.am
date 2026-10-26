@@ -444,6 +444,7 @@ TESTS_DEFAULT = \
 	omfwd-lb-2target-hash-distinct-keys.sh \
 	omfwd-lb-2target-hash-failover.sh \
 	omfwd-hash-udp-rejected.sh \
+	omfwd-hash-stream-compression-rejected.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
 	omfwd-missing-target.sh \
@@ -2235,7 +2236,9 @@ TESTS_OSSL_OPENSSL_OMFWD_HASH = \
 	omfwd-hash-tls-retry-midbatch.sh \
 	omfwd-hash-tls-retry-exhausted.sh \
 	omfwd-hash-tls-retry-oversize.sh \
-	omfwd-hash-tls-retry-oversize-exhausted.sh
+	omfwd-hash-tls-retry-oversize-exhausted.sh \
+	omfwd-hash-tls-retry-partial.sh \
+	omfwd-hash-tls-retry-oversize-partial.sh
 
 TESTS_OSSL_OPENSSL_SNI = \
 	omfwd-tls-ossl-files-mtls.sh \
