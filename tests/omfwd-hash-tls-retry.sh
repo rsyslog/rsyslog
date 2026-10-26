@@ -56,6 +56,9 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+# generate_conf 2 assigns a new TCPFLOOD_PORT, so both receiver ports are
+# kept before it
+PORT_RCVR1=$TCPFLOOD_PORT
 PORT_RCVR2=$(cat "$RSYSLOG_DYNNAME.tcpflood_port2")
 
 if [ -n "${OMFWD_IOBUFFER:-}" ]; then
@@ -80,7 +83,7 @@ module(load="builtin:omfwd" '"${IOBUFFER_PARAM:-}"')
 template(name="shardkey" type="string" string="%msg:F,58:2%")
 '"${SND_TEMPLATE:-}"'
 :msg, contains, "msgnum:" action(type="omfwd" protocol="tcp"
-	target=["127.0.0.1", "127.0.0.1"] port=["'$TCPFLOOD_PORT'", "'$PORT_RCVR2'"]
+	target=["127.0.0.1", "127.0.0.1"] port=["'$PORT_RCVR1'", "'$PORT_RCVR2'"]
 	StreamDriverMode="1" StreamDriverAuthMode="anon"
 	pool.policy="hash" pool.hashkey="shardkey" '"${SND_TEMPLATE_PARAM:-}"' '"${FRAMING_PARAM:-}"'
 	action.resumeRetryCount="-1" action.resumeInterval="1")

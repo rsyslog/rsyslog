@@ -31,7 +31,8 @@
  * When OVERRIDE_OSSL_SEND_RETRY_PARTIAL is a positive N, the first write
  * longer than N is really written for its first N bytes only and returns N,
  * as a TLS driver that sends one record per call does; the retry is then
- * injected on the write of the rest.
+ * injected on the write of the rest. Shorter writes before it pass through,
+ * so the retry never lands on a write that was not split.
  *
  * The deferred write is recorded. The next write on that session must
  * come from the same buffer, offer at least as many bytes and begin with
@@ -118,6 +119,16 @@ static int claim_partial(const int num) {
     return claimed ? n : 0;
 }
 
+/* a short write is requested and not made yet */
+static int partial_pending(void) {
+    const char *const env = getenv("OVERRIDE_OSSL_SEND_RETRY_PARTIAL");
+    if (env == NULL || atoi(env) <= 0) return 0;
+    pthread_mutex_lock(&state_mut);
+    const int pending = !partial_done && state == ARMED;
+    pthread_mutex_unlock(&state_mut);
+    return pending;
+}
+
 /* returns the number of empty reads still to report after this one */
 static int consume_empty_read(void) {
     pthread_mutex_lock(&state_mut);
@@ -160,6 +171,7 @@ int SSL_write(SSL *ssl, const void *buf, int num) {
     if (real == NULL) real = (int (*)(SSL *, const void *, int))real_symbol("SSL_write");
     const int partial = claim_partial(num);
     if (partial > 0) return real(ssl, buf, partial);
+    if (partial_pending()) return real(ssl, buf, num);
     if (state_is(ARMED)) {
         owed_ssl = ssl;
         owed_buf = buf;
