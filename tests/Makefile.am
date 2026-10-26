@@ -440,6 +440,11 @@ TESTS_DEFAULT = \
 	omfwd-lb-1target-retry-1_byte_buf-TargetFail.sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
+	omfwd-lb-2target-hash.sh \
+	omfwd-lb-2target-hash-distinct-keys.sh \
+	omfwd-lb-2target-hash-failover.sh \
+	omfwd-hash-udp-rejected.sh \
+	omfwd-hash-stream-compression-rejected.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
 	omfwd-missing-target.sh \
@@ -2225,6 +2230,16 @@ TESTS_OSSL_OPENSSL_VALGRIND = \
 	imtcp-tls-ossl-basic-vg.sh \
 	imtcp-tls-ossl-basic-brokenhandshake-vg.sh
 
+# OpenSSL only: the wolfSSL compatibility layer retries SSL_write in place.
+TESTS_OSSL_OPENSSL_OMFWD_HASH = \
+	omfwd-hash-tls-retry.sh \
+	omfwd-hash-tls-retry-midbatch.sh \
+	omfwd-hash-tls-retry-exhausted.sh \
+	omfwd-hash-tls-retry-oversize.sh \
+	omfwd-hash-tls-retry-oversize-exhausted.sh \
+	omfwd-hash-tls-retry-partial.sh \
+	omfwd-hash-tls-retry-oversize-partial.sh
+
 TESTS_OSSL_OPENSSL_SNI = \
 	omfwd-tls-ossl-files-mtls.sh \
 	omfwd-tls-ossl-pkcs11-ca-mtls-ecdsa-sigalgs.sh \
@@ -2831,6 +2846,7 @@ EXTRA_DIST += $(TESTS_OSSL)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL_VALGRIND)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL_SNI)
+EXTRA_DIST += $(TESTS_OSSL_OPENSSL_OMFWD_HASH)
 EXTRA_DIST += $(TESTS_OSSL_WOLFSSL)
 EXTRA_DIST += $(TESTS_GNUTLS_OPENSSL_INTEROP)
 EXTRA_DIST += $(TESTS_OMUXSOCK)
@@ -3197,6 +3213,25 @@ liboverride_fstat_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_fstat_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif # if OS_LINUX
 endif # if ENABLE_IMFILE_TESTS
+
+if ENABLE_OPENSSL
+check_LTLIBRARIES += liboverride_ossl_send_retry.la
+liboverride_ossl_send_retry_la_SOURCES = override_ossl_send_retry.c
+# Same uninstrumented build as liblocal_queue_omfile_cancel_preload.la: the
+# fixture is preloaded into a sanitized rsyslogd and its symbolizers.
+liboverride_ossl_send_retry_la_CFLAGS =
+liboverride_ossl_send_retry_la-override_ossl_send_retry.lo: override_ossl_send_retry.c $(top_builddir)/config.h
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+		$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(OPENSSL_CFLAGS) \
+		$(filter-out -fsanitize=%,$(CFLAGS)) -c -o $@ $(srcdir)/override_ossl_send_retry.c
+liboverride_ossl_send_retry_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(filter-out -fsanitize=%,$(CFLAGS)) \
+	$(liboverride_ossl_send_retry_la_LDFLAGS) $(filter-out -fsanitize=%,$(LDFLAGS)) -o $@
+liboverride_ossl_send_retry_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+# libssl is linked so that it joins the global scope after this fixture:
+# rsyslog loads lmnsd_ossl with local scope, where RTLD_NEXT cannot see it.
+liboverride_ossl_send_retry_la_LIBADD = $(OPENSSL_LIBS) $(DL_LIBS) $(PTHREADS_LIBS)
+endif
 
 if ENABLE_OMUDPSPOOF
 check_LTLIBRARIES += liboverride_libnet_write_fail.la
@@ -4203,6 +4238,7 @@ if ENABLE_OPENSSL
 TESTS += $(TESTS_OSSL_OPENSSL)
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_OSSL)
+TESTS += $(TESTS_OSSL_OPENSSL_OMFWD_HASH)
 endif # ENABLE_IMTCP_TESTS
 if HAVE_VALGRIND
 TESTS += $(TESTS_OSSL_OPENSSL_VALGRIND)
