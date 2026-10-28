@@ -896,7 +896,8 @@ jobs:
         run: echo "No relevant changes detected; skipping RPM build."
 
       - name: Upload RPM artifacts
-        if: steps.code_changes.outputs.any_changed == 'true'
+        # Preserve mock build.log/root.log when the RPM build fails.
+        if: ${{ !cancelled() && steps.code_changes.outputs.any_changed == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rpms-${{ matrix.mock_config }}
