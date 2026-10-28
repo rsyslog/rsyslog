@@ -132,6 +132,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imjournal-defaulttag.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imjournal-scopebybootid`
+     - .. include:: ../../reference/parameters/imjournal-scopebybootid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Input Parameters
@@ -170,6 +174,7 @@ Parameters specific to the input module.
    ../../reference/parameters/imjournal-remote
    ../../reference/parameters/imjournal-namespace
    ../../reference/parameters/imjournal-defaulttag
+   ../../reference/parameters/imjournal-scopebybootid
    ../../reference/parameters/imjournal-main
 
 
