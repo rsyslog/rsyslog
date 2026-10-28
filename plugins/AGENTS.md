@@ -120,3 +120,11 @@ SNMPv1 datagrams to check valid generic trap types, the omitted default,
 and the invalid-value fallback.
 The test-owned receiver binds an ephemeral port and needs no external SNMP
 service, pysnmp, or MIB package.
+
+## mmsnmptrapd validation coverage
+
+Enable `--enable-mmsnmptrapd` and run `tests/mmsnmptrapd-severity-sign.sh`
+and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
+severity codes with valid and invalid numeric controls using configuration
+validation exit status. The YAML test exercises the existing legacy directive
+and action through a ruleset script.
