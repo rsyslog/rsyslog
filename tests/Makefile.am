@@ -15,6 +15,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_STATSLOG_PERCENT = statslog-evicted-percent.sh
+EXTRA_DIST += $(TESTS_STATSLOG_PERCENT) helpers/statslog-evicted-percent.sh
+
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
 	diskqueue-qi-reload-abi.sh
@@ -3232,7 +3235,7 @@ if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
-TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG)
+TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_STATSLOG_PERCENT)
 TESTS += $(TESTS_LOCAL_OMFILE_ACTIVATION)
 if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
