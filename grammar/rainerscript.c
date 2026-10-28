@@ -5759,32 +5759,32 @@ static struct cnfexpr *cnfexprOptimize_CMP_severity_facility(struct cnfexpr *exp
 
     if (!strcmp("syslogseverity", ((struct cnfvar *)expr->l)->name)) {
         if (expr->r->nodetype == 'N') {
-            int sev = (int)((struct cnfnumval *)expr->r)->val;
+            const long long sev = ((struct cnfnumval *)expr->r)->val;
             if (sev >= 0 && sev <= 7) {
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-                prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+                prifiltSetSeverity(func->funcdata, (int)sev, expr->nodetype);
                 cnfexprDestruct(expr);
                 expr = (struct cnfexpr *)func;
             } else {
                 parser_errmsg(
-                    "invalid syslogseverity %d, expression will always "
+                    "invalid syslogseverity %lld, expression will always "
                     "evaluate to FALSE",
                     sev);
             }
         }
     } else if (!strcmp("syslogfacility", ((struct cnfvar *)expr->l)->name)) {
         if (expr->r->nodetype == 'N') {
-            int fac = (int)((struct cnfnumval *)expr->r)->val;
+            const long long fac = ((struct cnfnumval *)expr->r)->val;
             if (fac >= 0 && fac <= 24) {
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-                prifiltSetFacility(func->funcdata, fac, expr->nodetype);
+                prifiltSetFacility(func->funcdata, (int)fac, expr->nodetype);
                 cnfexprDestruct(expr);
                 expr = (struct cnfexpr *)func;
             } else {
                 parser_errmsg(
-                    "invalid syslogfacility %d, expression will always "
+                    "invalid syslogfacility %lld, expression will always "
                     "evaluate to FALSE",
                     fac);
             }
