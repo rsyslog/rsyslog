@@ -1,9 +1,13 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
+# Exercise shared permitted-peer entries across concurrent TLS handshakes.
+# Complete sequence output after synchronized shutdown is the delivery oracle;
+# sanitizer lanes additionally reject races in plain and wildcard matching.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100000
 ulimit -n 2048 # may or may not work ;-)
+PERMITTED_PEERS=${PERMITTED_PEERS:-'"/CN=rsyslog-client/OU=Adiscon GmbH/O=Adiscon GmbH/L=Grossrinderfeld/ST=BW/C=DE/DC=rsyslog.com","rsyslog.com"'}
 generate_conf
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -17,7 +21,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="ossl"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="x509/name"
-	PermittedPeer=["/CN=rsyslog-client/OU=Adiscon GmbH/O=Adiscon GmbH/L=Grossrinderfeld/ST=BW/C=DE/DC=rsyslog.com","rsyslog.com"]
+	PermittedPeer=['"$PERMITTED_PEERS"']
      )
 input(type="imtcp" address="127.0.0.1" socketBacklog="1000" maxsessions="1000" port="0"
 	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
