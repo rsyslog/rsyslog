@@ -2255,6 +2255,15 @@ finalize_it:
     RETiRet;
 }
 
+static void warnIfLegacyCompressionConfigured(const instanceData *const pData) {
+    if (pData->compressionMode == COMPRESS_SINGLE_MSG && pData->compressionLevel > 0) {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING,
+               "omfwd: legacy single-message z compression is historic compatibility behavior, not recommended "
+               "for new configurations. Use compression.mode=\"stream:always\" with a matching receiver, "
+               "or uncompressed transport. Legacy compressed TCP records use octet-counted framing.");
+    }
+}
+
 /** Warn in secure warn mode when omfwd is configured without TLS transport protection. */
 static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
     if (pData->protocol == FORW_UDP) {
@@ -2699,6 +2708,7 @@ BEGINnewActInst
     }
 
     warnIfNonTlsForwardingConfigured(pData);
+    warnIfLegacyCompressionConfigured(pData);
 
     if (pData->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
@@ -2892,6 +2902,7 @@ BEGINparseSelectorAct
     CHKiRet(applyModuleTlsDefaults(pData, loadModConf));
     CHKiRet(applySecureDefaultsToForwarding(pData));
     warnIfNonTlsForwardingConfigured(pData);
+    warnIfLegacyCompressionConfigured(pData);
     CODE_STD_FINALIZERparseSelectorAct if (iRet == RS_RET_OK) {
         setupInstStatsCtrs(pData);
     }
