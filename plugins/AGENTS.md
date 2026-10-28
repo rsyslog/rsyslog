@@ -192,7 +192,7 @@ arithmetic in the receive path.
 companion exercise malformed PRI and short/variable-width timestamps through
 real Unix sockets, checking raw-message preservation and tag/body cursors.
 
-### immark interval validation
+## immark interval validation
 
 `tests/immark-interval-validation.sh` uses configuration-validation mode only
 (`-N1`) to check positive/default periods, zero rejection, and negative-period
