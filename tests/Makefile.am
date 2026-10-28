@@ -376,6 +376,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 
 TESTS_DEFAULT = \
 	imtcp-bind-failure-window.sh \
+	kafka-dependency-download-cache.sh \
 	record-container-validation.sh \
 	codex-pre-push-container-gate.sh \
 	mysql-reconnect-relevance.sh \
