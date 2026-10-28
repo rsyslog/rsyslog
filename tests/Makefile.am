@@ -95,6 +95,10 @@ TESTS_IMUDP_BUFFER_SIZING = imudp-batchsize-range.sh imudp-batchsize-runtime.sh
 TESTS_IMUDP_BUFFER_SIZING_LIBYAML = yaml-imudp-batchsize-range.sh
 EXTRA_DIST += $(TESTS_IMUDP_BUFFER_SIZING) $(TESTS_IMUDP_BUFFER_SIZING_LIBYAML)
 
+TESTS_IMMARK_INTERVAL = immark-interval-validation.sh
+TESTS_IMMARK_INTERVAL_YAML = yaml-immark-interval-validation.sh
+EXTRA_DIST += $(TESTS_IMMARK_INTERVAL) $(TESTS_IMMARK_INTERVAL_YAML)
+
 TESTS_RSCRIPT_REPLACE_LIMIT = rscript-replace-result-limit.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_LIMIT)
 
@@ -377,7 +381,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh
 
-TESTS_DEFAULT = \
+TESTS_DEFAULT = $(TESTS_IMMARK_INTERVAL) \
 	imtcp-bind-failure-window.sh \
 	kafka-dependency-download-cache.sh \
 	record-container-validation.sh \
@@ -3238,6 +3242,7 @@ endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_STATSLOG_PERCENT)
 TESTS += $(TESTS_LOCAL_OMFILE_ACTIVATION)
 if HAVE_LIBYAML
+TESTS += $(TESTS_IMMARK_INTERVAL_YAML)
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 endif
