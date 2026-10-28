@@ -129,7 +129,7 @@ severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
 
-### immark interval validation
+## immark interval validation
 
 `tests/immark-interval-validation.sh` uses configuration-validation mode only
 (`-N1`) to check positive/default periods, zero rejection, and negative-period
