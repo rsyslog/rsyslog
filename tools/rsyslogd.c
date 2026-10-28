@@ -70,6 +70,7 @@
 #include "srUtils.h"
 #include "rainerscript.h"
 #include "rsconf.h"
+#include "reload-validate.h"
 #include "translate.h"
 #include "cfsysline.h"
 #include "datetime.h"
@@ -1772,6 +1773,7 @@ static void initAll(int argc, char **argv) {
 
     resetErrMsgsFlag();
     localRet = rsconf.Load(&ourConf, ConfFile);
+    CHKiRet(rsReloadValidateStartupFinish((const char *)ConfFile, localRet, hadErrMsgs()));
     /* Never permit an unaudited local graph, including developer/partial-config
      * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */
     if (localRet == RS_RET_LOCAL_QUEUE_CONFIG || (loadConf != NULL && loadConf->local_config_error))
@@ -2138,6 +2140,7 @@ static void doHUP(void) {
     ratelimitDoHUP();
     DBGPRINTF("doHUP: doing errmsgs\n");
     errmsgDoHUP();
+    rsReloadValidateHUP();
 }
 
 /**
@@ -2602,6 +2605,7 @@ static void deinitAll(void) {
     DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 
     DBGPRINTF("destructing current config...\n");
+    rsReloadValidateDestruct();
     rsconf.Destruct(&runConf);
 
     modExitIminternal();

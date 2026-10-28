@@ -122,6 +122,11 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 #define S_CALL_INDIRECT 4011
 #define S_FUNC_EXISTS 4012 /* special case function which must get varname only */
+/* Capture-only nodes. They are destroyed before a candidate can become a
+ * runtime plan and therefore never occur in message processing. */
+#define S_RELOAD_ACT 4013
+#define S_RELOAD_PRIFILT 4014
+#define S_RELOAD_PROPFILT 4015
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char *cnfFiltType2str(const enum cnfFiltType filttype);
@@ -170,6 +175,7 @@ struct cnfstmt {
             struct cnfstmt *t_else;
         } s_propfilt;
         struct action_s *act;
+        struct nvlst *reload_action;
         struct {
             struct cnfitr *iter;
             struct cnfstmt *body;
@@ -279,6 +285,9 @@ struct cnffunc {
     rscriptFuncPtr fPtr;
     void *funcdata; /* global data for function-specific use (e.g. compiled regex) */
     uint8_t destructable_funcdata;
+    /* Keep nodetype first and expr at its existing offset. This flag uses
+     * padding; private ASTs never ran module init/destruct callbacks. */
+    uint8_t reloadSyntaxOnly;
     struct cnfexpr *expr[];
 } __attribute__((aligned(8)));
 
@@ -391,7 +400,15 @@ void varFreeMembers(const struct svar *r);
 int cnfexprIsLocalQueueSafe(const struct cnfexpr *expr);
 int cnfvarIsLocalQueueSafe(const uchar *name);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
-void readConfFile(FILE *fp, es_str_t **str);
+/**
+ * @brief Read and preprocess a borrowed open configuration stream.
+ * @param fp Readable stream; caller retains ownership and closes it.
+ * @param str Non-NULL output slot with *str initially NULL; receives owned text
+ * to release with es_deleteStr(). Existing text is not freed before overwrite.
+ * @return RS_RET_OK, RS_RET_OUT_OF_MEMORY, or RS_RET_IO_ERROR. Failure frees
+ * partial text and clears the output. Caller must propagate the error to Load.
+ */
+rsRetVal readConfFile(FILE *fp, es_str_t **str);
 struct objlst *objlstNew(struct cnfobj *obj);
 void objlstDestruct(struct objlst *lst);
 void objlstPrint(struct objlst *lst);
@@ -406,6 +423,8 @@ struct nvlst *nvlstFindName(struct nvlst *lst, es_str_t *name);
 int nvlstChkDisabled(struct nvlst *lst);
 struct cnfobj *cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
+/** @brief Consume an object plus its owned script and members; NULL is safe. */
+void cnfobjDestructAll(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr *cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
@@ -413,6 +432,12 @@ void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr,
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
 struct json_object *cnfexprEvalCollection(struct cnfexpr *const expr, void *const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
+/** @brief Consume a parser array and its owned contents; NULL is safe. */
+void cnfarrayDestruct(struct cnfarray *ar);
+/** @brief Consume a complete function-parameter list and its expressions; NULL is safe. */
+void cnffparamlstDestruct(struct cnffparamlst *params);
+/** @brief Consume an iterator, variable name and collection expression; NULL is safe. */
+void cnfIteratorDestruct(struct cnfitr *itr);
 struct cnfnumval *cnfnumvalNew(long long val);
 struct cnfstringval *cnfstringvalNew(es_str_t *estr);
 struct cnfvar *cnfvarNew(char *name);
@@ -420,6 +445,27 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst);
 struct cnffuncexists *cnffuncexistsNew(const char *varname);
 struct cnffparamlst *cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(const char *name, const int optional);
+/**
+ * @brief Clear the process-global fatal parser status before a serialized load.
+ * Owns no objects; use only while no other parser/load call is running.
+ */
+void cnfClearFatalParseError(void);
+/**
+ * @brief Record a fatal parser error for normal load/candidate unwinding.
+ * @param error Non-success rsRetVal; an already recorded out-of-memory error
+ * takes precedence. Also forwards the error to an active private capture.
+ * Does not exit, destroy caller-owned syntax, or abort parsing directly.
+ * Access must be serialized with all other parser operations.
+ */
+void cnfNoteFatalParseError(rsRetVal error);
+/**
+ * @brief Return and clear fatal status after parsing, including include failures.
+ * @return Recorded rsRetVal, or RS_RET_OK when none was recorded. The load caller
+ * must propagate non-success through its ordinary cleanup/error path rather
+ * than treating successful yyparse() as sufficient. No ownership transfers.
+ * Requires serialized parser access.
+ */
+rsRetVal cnfTakeFatalParseError(void);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals *nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params, struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
@@ -454,7 +500,15 @@ void unescapeStr(uchar *s, int len);
 const char *tokenval2str(int tok);
 uchar *var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
 long long var2Number(struct svar *r, int *bSuccess);
-void includeProcessCnf(struct nvlst *const lst);
+/**
+ * @brief Process include parameters using the serialized parser's input stack.
+ * @param lst Consumed parameter list, including on error; NULL is diagnosed.
+ * @return Zero for normal/diagnosed nonfatal processing, or a fatal rsRetVal for
+ * missing abort-if-missing input, allocation, or I/O failure. Fatal status is
+ * also latched for cnfTakeFatalParseError(); the grammar must abort parsing and
+ * the load caller must unwind normally. This function never exits the process.
+ */
+int includeProcessCnf(struct nvlst *const lst);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);

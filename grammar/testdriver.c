@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     cnfSetLexFile(argc == 1 ? NULL : argv[1]);
     yydebug = 0;
-    r = yyparse();
-    printf("yyparse() returned %d\n", r);
+    r = cnfParse();
+    printf("cnfParse() returned %d\n", r);
     return r;
 }

@@ -50,6 +50,8 @@
  * limitations under the License.
  */
 #include "config.h"
+#include "reload-candidate.h"
+#include "reload-validate.h"
 
 #ifdef HAVE_LIBYAML
 
@@ -91,6 +93,17 @@ static rsRetVal yaml_value_to_nvlst_node(
 static rsRetVal build_stmts_rs(yaml_parser_t *parser, es_str_t **s, const char *fname);
 static rsRetVal expect_event(
     yaml_parser_t *parser, yaml_event_t *ev, yaml_event_type_t expected, const char *ctx, const char *fname);
+    /* YAML historically continues after some schema errors. A private candidate
+     * must retain that incompleteness instead of claiming the skipped syntax was
+     * analyzed. OFF keeps precisely the existing diagnostics and return paths. */
+    #define yamlconfLogError(...)               \
+        do {                                    \
+            rsReloadCandidateNoteParseError();  \
+            rsReloadCandidateSourceNoteError(); \
+            rsReloadValidateObserveOther();     \
+            LogError(__VA_ARGS__);              \
+        } while (0)
+
 static void skip_node(yaml_parser_t *parser);
 
 typedef struct yamlIncludeFrame_s {
@@ -120,7 +133,7 @@ static es_str_t *scalar_to_estr(const char *val) {
  * Returns 0 on success, -1 on error. */
 static int estr_append_cstr(es_str_t **s, const char *buf, size_t len) {
     if (len > (size_t)INT_MAX) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "yamlconf: string length %zu exceeds maximum supported size", len);
+        yamlconfLogError(0, RS_RET_OUT_OF_MEMORY, "yamlconf: string length %zu exceeds maximum supported size", len);
         return -1;
     }
     return es_addBuf(s, buf, (es_size_t)len);
@@ -195,10 +208,10 @@ static rsRetVal build_ruleset_rainerscript(struct nvlst *lst, const char *script
             if (estr_append_char(&s, ']') != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         } else {
             /* Unexpected type; skip with a warning (should not happen for rulesets) */
-            LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: unexpected nvlst value datatype '%c' in ruleset "
-                     "parameter serialisation, skipping",
-                     n->val.datatype);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: unexpected nvlst value datatype '%c' in ruleset "
+                             "parameter serialisation, skipping",
+                             n->val.datatype);
             if (estr_append_cstr(&s, "\"\"", 2) != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
     }
@@ -233,12 +246,12 @@ finalize_it:
 /* Emit a parse-error message that includes the YAML source location. */
 static void yaml_errmsg(yaml_parser_t *parser, const char *fname, const char *extra) {
     if (parser->problem != NULL) {
-        LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: %s (line %lu col %lu)%s%s", fname, parser->problem,
-                 (unsigned long)parser->problem_mark.line + 1, (unsigned long)parser->problem_mark.column + 1,
-                 extra ? " " : "", extra ? extra : "");
+        yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: %s (line %lu col %lu)%s%s", fname, parser->problem,
+                         (unsigned long)parser->problem_mark.line + 1, (unsigned long)parser->problem_mark.column + 1,
+                         extra ? " " : "", extra ? extra : "");
     } else {
-        LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: parse error%s%s", fname, extra ? " " : "",
-                 extra ? extra : "");
+        yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: parse error%s%s", fname, extra ? " " : "",
+                         extra ? extra : "");
     }
 }
 
@@ -259,8 +272,8 @@ static rsRetVal expect_event(
     DEFiRet;
     CHKiRet(next_event(parser, ev, fname));
     if (ev->type != expected) {
-        LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected event %d got %d in %s", fname, (int)expected,
-                 (int)ev->type, ctx);
+        yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected event %d got %d in %s", fname,
+                         (int)expected, (int)ev->type, ctx);
         yaml_event_delete(ev);
         ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
     }
@@ -284,10 +297,10 @@ static void skip_node(yaml_parser_t *parser) {
                 depth++;
                 if (depth > YAMLCONF_MAX_DEPTH) {
                     yaml_event_delete(&ev);
-                    LogError(0, RS_RET_CONF_PARSE_ERROR,
-                             "yamlconf: YAML nesting exceeds maximum depth %d; "
-                             "skipping remainder",
-                             YAMLCONF_MAX_DEPTH);
+                    yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                     "yamlconf: YAML nesting exceeds maximum depth %d; "
+                                     "skipping remainder",
+                                     YAMLCONF_MAX_DEPTH);
                     return;
                 }
                 break;
@@ -324,7 +337,7 @@ static rsRetVal build_array_from_sequence(yaml_parser_t *parser, struct cnfarray
             break;
         }
         if (ev.type != YAML_SCALAR_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: array elements must be scalars", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: array elements must be scalars", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -397,7 +410,8 @@ static rsRetVal yaml_value_to_nvlst_node(
         if (node == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     } else {
         yaml_event_delete(ev);
-        LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unsupported value type for parameter '%s'", fname, key);
+        yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unsupported value type for parameter '%s'", fname,
+                         key);
         ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
     }
 
@@ -440,7 +454,7 @@ static rsRetVal build_nvlst_from_mapping(yaml_parser_t *parser, struct nvlst **o
         }
 
         if (ev.type != YAML_SCALAR_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in mapping", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in mapping", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -457,8 +471,8 @@ static rsRetVal build_nvlst_from_mapping(yaml_parser_t *parser, struct nvlst **o
             /* Nested mappings are not part of the rsyslog parameter model.
              * Skip and warn so the user knows the key was ignored. */
             yaml_event_delete(&ev);
-            LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: %s: nested mapping for key '%s' is not supported – ignoring", fname, key);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: nested mapping for key '%s' is not supported – ignoring", fname, key);
             skip_node(parser);
             continue;
         }
@@ -518,7 +532,7 @@ static rsRetVal parse_obj_sequence(yaml_parser_t *parser, enum cnfobjType objTyp
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: sequence item must be a mapping", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: sequence item must be a mapping", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -571,10 +585,10 @@ static rsRetVal parse_elements_sequence(yaml_parser_t *parser, struct objlst **o
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: %s: each elements: item must be a mapping with a "
-                     "'property' or 'constant' key",
-                     fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: each elements: item must be a mapping with a "
+                             "'property' or 'constant' key",
+                             fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -583,8 +597,8 @@ static rsRetVal parse_elements_sequence(yaml_parser_t *parser, struct objlst **o
         /* Read the element type key: "property" or "constant" */
         CHKiRet(next_event(parser, &ev, fname));
         if (ev.type != YAML_SCALAR_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: elements: item key must be 'property' or 'constant'",
-                     fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: elements: item key must be 'property' or 'constant'", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -599,8 +613,9 @@ static rsRetVal parse_elements_sequence(yaml_parser_t *parser, struct objlst **o
         } else if (!strcmp(elemtype, "constant")) {
             etype = CNFOBJ_CONSTANT;
         } else {
-            LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: %s: elements: item key must be 'property' or 'constant', got '%s'", fname, elemtype);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: elements: item key must be 'property' or 'constant', got '%s'", fname,
+                             elemtype);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
 
@@ -677,7 +692,8 @@ static rsRetVal parse_template_sequence(yaml_parser_t *parser, const char *fname
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: templates sequence item must be a mapping", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: templates sequence item must be a mapping",
+                             fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -695,7 +711,8 @@ static rsRetVal parse_template_sequence(yaml_parser_t *parser, const char *fname
                 break;
             }
             if (ev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in template mapping", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in template mapping",
+                                 fname);
                 yaml_event_delete(&ev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -709,10 +726,10 @@ static rsRetVal parse_template_sequence(yaml_parser_t *parser, const char *fname
             if (!strcmp(kname, "elements")) {
                 /* elements: [...] – sub-objects for list template */
                 if (ev.type != YAML_SEQUENCE_START_EVENT) {
-                    LogError(0, RS_RET_CONF_PARSE_ERROR,
-                             "yamlconf: %s: 'elements' value must be a sequence of "
-                             "property/constant items",
-                             fname);
+                    yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                     "yamlconf: %s: 'elements' value must be a sequence of "
+                                     "property/constant items",
+                                     fname);
                     yaml_event_delete(&ev);
                     ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
                 }
@@ -771,7 +788,7 @@ static rsRetVal parse_actions_sequence(yaml_parser_t *parser, struct cnfstmt **h
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: actions: item must be a mapping", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: actions: item must be a mapping", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -943,8 +960,8 @@ static rsRetVal parse_foreach_mapping(
                 ABORT_FINALIZE(sret);
             }
             if (sev.type != YAML_SEQUENCE_START_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: foreach 'do' must be a sequence of statements",
-                         fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: foreach 'do' must be a sequence of statements", fname);
                 yaml_event_delete(&sev);
                 free(fk);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
@@ -962,7 +979,11 @@ static rsRetVal parse_foreach_mapping(
                 ABORT_FINALIZE(bret);
             }
         } else {
-            /* skip unknown foreach sub-key */
+            /* Preserve startup's ignored-key behavior; private capture must
+             * identify syntax that it cannot completely analyze. */
+            if (rsReloadCandidateCaptureActive()) parser_errmsg("YAML foreach key '%s' is unsupported", fk);
+            rsReloadCandidateSourceNoteError();
+            rsReloadValidateObserveOther();
             yaml_event_t fv;
             rsRetVal fret = next_event(parser, &fv, fname);
             if (fret == RS_RET_OK) yaml_event_delete(&fv);
@@ -1072,7 +1093,7 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             break;
         }
         if (ev.type != YAML_SCALAR_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in statements item", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in statements item", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -1088,7 +1109,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
                 FINALIZE;
             }
             if (vev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'if' value must be a scalar expression", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'if' value must be a scalar expression",
+                                 fname);
                 yaml_event_delete(&vev);
                 free(kname);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
@@ -1107,8 +1129,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t sev;
             CHKiRet(next_event(parser, &sev, fname));
             if (sev.type != YAML_SEQUENCE_START_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: 'then'/'else' value must be a sequence of statements", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'then'/'else' value must be a sequence of statements", fname);
                 yaml_event_delete(&sev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1134,8 +1156,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t mev;
             CHKiRet(next_event(parser, &mev, fname));
             if (mev.type != YAML_MAPPING_START_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: 'action' value must be a mapping of action parameters", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'action' value must be a mapping of action parameters", fname);
                 yaml_event_delete(&mev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1166,7 +1188,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t vev;
             CHKiRet(next_event(parser, &vev, fname));
             if (vev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'stop' value must be a scalar (true/false)", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'stop' value must be a scalar (true/false)",
+                                 fname);
                 yaml_event_delete(&vev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1183,8 +1206,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t vev;
             CHKiRet(next_event(parser, &vev, fname));
             if (vev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'continue' value must be a scalar (true/false)",
-                         fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'continue' value must be a scalar (true/false)", fname);
                 yaml_event_delete(&vev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1201,7 +1224,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t vev;
             CHKiRet(next_event(parser, &vev, fname));
             if (vev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'call' value must be a ruleset name", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'call' value must be a ruleset name",
+                                 fname);
                 yaml_event_delete(&vev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1216,8 +1240,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t vev;
             CHKiRet(next_event(parser, &vev, fname));
             if (vev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: 'call_indirect' value must be a variable expression", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'call_indirect' value must be a variable expression", fname);
                 yaml_event_delete(&vev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1232,7 +1256,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t vev;
             CHKiRet(next_event(parser, &vev, fname));
             if (vev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'unset' value must be a variable name", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'unset' value must be a variable name",
+                                 fname);
                 yaml_event_delete(&vev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1248,8 +1273,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t mev;
             CHKiRet(next_event(parser, &mev, fname));
             if (mev.type != YAML_MAPPING_START_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: 'foreach' value must be a mapping with var:, in:, and do: keys", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'foreach' value must be a mapping with var:, in:, and do: keys", fname);
                 yaml_event_delete(&mev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1262,8 +1287,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t mev;
             CHKiRet(next_event(parser, &mev, fname));
             if (mev.type != YAML_MAPPING_START_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: 'set' value must be a mapping with var: and expr: keys", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'set' value must be a mapping with var: and expr: keys", fname);
                 yaml_event_delete(&mev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1276,10 +1301,10 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             yaml_event_t mev;
             CHKiRet(next_event(parser, &mev, fname));
             if (mev.type != YAML_MAPPING_START_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: 'reload_lookup_table' value must be a mapping with at "
-                         "least a 'table' key",
-                         fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: 'reload_lookup_table' value must be a mapping with at "
+                                 "least a 'table' key",
+                                 fname);
                 yaml_event_delete(&mev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1309,8 +1334,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             }
             nvlstDestruct(rlt_nl);
             if (rlt_table == NULL && has_rlt) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: reload_lookup_table: 'table' key is required",
-                         fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: reload_lookup_table: 'table' key is required", fname);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
 
@@ -1381,7 +1406,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
 
     } else if (has_foreach) {
         if (foreach_var == NULL || foreach_in == NULL || foreach_body == NULL) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: foreach: requires 'var', 'in', and 'do' keys", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: foreach: requires 'var', 'in', and 'do' keys",
+                             fname);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
         if (estr_append_cstr(s, "foreach (", 9) != 0 || estr_append_cstr(s, foreach_var, strlen(foreach_var)) != 0 ||
@@ -1392,7 +1418,8 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
 
     } else if (has_set) {
         if (set_var == NULL || set_expr == NULL) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: set: requires both 'var' and 'expr' keys", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: set: requires both 'var' and 'expr' keys",
+                             fname);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
         if (estr_append_cstr(s, "set ", 4) != 0 || estr_append_cstr(s, set_var, strlen(set_var)) != 0 ||
@@ -1418,10 +1445,10 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
         if (estr_append_cstr(s, ")\n", 2) != 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
     } else {
-        LogError(0, RS_RET_CONF_PARSE_ERROR,
-                 "yamlconf: %s: unrecognised statement item in statements: "
-                 "(expected if/type/stop/continue/call/call_indirect/unset/set/foreach/reload_lookup_table)",
-                 fname);
+        yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                         "yamlconf: %s: unrecognised statement item in statements: "
+                         "(expected if/type/stop/continue/call/call_indirect/unset/set/foreach/reload_lookup_table)",
+                         fname);
         ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
     }
 
@@ -1462,8 +1489,8 @@ static rsRetVal build_stmts_rs(yaml_parser_t *parser, es_str_t **s, const char *
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: each item in a statements: sequence must be a mapping",
-                     fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: each item in a statements: sequence must be a mapping", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -1523,7 +1550,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: rulesets sequence item must be a mapping", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: rulesets sequence item must be a mapping",
+                             fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -1543,7 +1571,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                 break;
             }
             if (ev.type != YAML_SCALAR_EVENT) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in ruleset mapping", fname);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key in ruleset mapping",
+                                 fname);
                 yaml_event_delete(&ev);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -1560,10 +1589,10 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             if (!strcmp(kname, "script")) {
                 /* script: must be a scalar (RainerScript text) */
                 if (ev.type != YAML_SCALAR_EVENT) {
-                    LogError(0, RS_RET_CONF_PARSE_ERROR,
-                             "yamlconf: %s: 'script' value must be a scalar"
-                             " (use a YAML block scalar '|' for multi-line)",
-                             fname);
+                    yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                     "yamlconf: %s: 'script' value must be a scalar"
+                                     " (use a YAML block scalar '|' for multi-line)",
+                                     fname);
                     yaml_event_delete(&ev);
                     ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
                 }
@@ -1576,7 +1605,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                 /* statements: sequence — YAML-native scripting.
                  * Translates to RainerScript and stored in script_str. */
                 if (ev.type != YAML_SEQUENCE_START_EVENT) {
-                    LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'statements' value must be a sequence", fname);
+                    yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'statements' value must be a sequence",
+                                     fname);
                     yaml_event_delete(&ev);
                     ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
                 }
@@ -1596,7 +1626,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             } else if (!strcmp(kname, "filter")) {
                 /* filter: "<pri-filter>" or ":<property-filter>" */
                 if (ev.type != YAML_SCALAR_EVENT) {
-                    LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'filter' value must be a scalar string", fname);
+                    yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'filter' value must be a scalar string",
+                                     fname);
                     yaml_event_delete(&ev);
                     ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
                 }
@@ -1607,7 +1638,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             } else if (!strcmp(kname, "actions")) {
                 /* actions: [ {type: ..., ...}, ... ] */
                 if (ev.type != YAML_SEQUENCE_START_EVENT) {
-                    LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'actions' value must be a sequence", fname);
+                    yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: 'actions' value must be a sequence",
+                                     fname);
                     yaml_event_delete(&ev);
                     ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
                 }
@@ -1628,10 +1660,10 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
 
         /* Sanity: script:/statements: and actions: are mutually exclusive */
         if (script_str != NULL && actions != NULL) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: %s: ruleset cannot have both 'script'/'statements' and 'actions';"
-                     " use one or the other",
-                     fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: ruleset cannot have both 'script'/'statements' and 'actions';"
+                             " use one or the other",
+                             fname);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
 
@@ -1748,7 +1780,8 @@ static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname)
             break;
         }
         if (ev.type != YAML_MAPPING_START_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include sequence item must be a mapping", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include sequence item must be a mapping",
+                             fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -1784,8 +1817,8 @@ static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname)
             } else {
                 /* Non-scalar value for an include key is a config error.
                  * Consume the nested structure so the parser stays in sync. */
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: include item key '%s' must have a scalar value, skipping", fname, k);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: include item key '%s' must have a scalar value, skipping", fname, k);
                 if (vev.type == YAML_MAPPING_START_EVENT || vev.type == YAML_SEQUENCE_START_EVENT) {
                     yaml_event_delete(&vev);
                     skip_node(parser);
@@ -1810,7 +1843,8 @@ static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname)
             items[nitems].optional = optional;
             nitems++;
         } else {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include item missing required 'path' key", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include item missing required 'path' key",
+                             fname);
             /* non-fatal: skip this item */
         }
     }
@@ -1826,11 +1860,11 @@ static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname)
             has_conf_item = 1;
     }
     if (has_yaml_item && has_conf_item) {
-        LogError(0, RS_RET_OK,
-                 "yamlconf: %s: include: list mixes .yaml and non-YAML files; "
-                 "YAML files are loaded first regardless of document order — "
-                 "use separate include: blocks if strict ordering is required",
-                 fname);
+        yamlconfLogError(0, RS_RET_OK,
+                         "yamlconf: %s: include: list mixes .yaml and non-YAML files; "
+                         "YAML files are loaded first regardless of document order — "
+                         "use separate include: blocks if strict ordering is required",
+                         fname);
     }
 
     for (int i = 0; i < nitems; i++) {
@@ -1839,8 +1873,8 @@ static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname)
         if (!is_yaml) continue;
         int iret = cnfDoInclude(items[i].path, items[i].optional);
         if (iret != 0 && !items[i].optional) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include of '%s' failed (non-optional)", fname,
-                     items[i].path);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include of '%s' failed (non-optional)", fname,
+                             items[i].path);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
     }
@@ -1854,8 +1888,8 @@ static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname)
         if (is_yaml) continue;
         int iret = cnfDoInclude(items[i].path, items[i].optional);
         if (iret != 0 && !items[i].optional) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include of '%s' failed (non-optional)", fname,
-                     items[i].path);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: include of '%s' failed (non-optional)", fname,
+                             items[i].path);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
     }
@@ -1909,7 +1943,7 @@ static rsRetVal process_top_level(yaml_parser_t *parser, const char *key, const 
         yaml_event_t ev;
         if (next_event(parser, &ev, fname) == RS_RET_OK) yaml_event_delete(&ev);
     } else {
-        LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unknown top-level key '%s' – ignoring", fname, key);
+        yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unknown top-level key '%s' – ignoring", fname, key);
         /* Skip the value node so the parser stays in sync */
         yaml_event_t ev;
         if (next_event(parser, &ev, fname) == RS_RET_OK) {
@@ -1958,8 +1992,8 @@ rsRetVal yamlconf_load(const char *fname) {
     if (frame.path == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     for (yamlIncludeFrame_t *it = yamlIncludeStack; it != NULL; it = it->prev) {
         if (!strcmp(it->path, frame.path)) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: trying to include file '%s', which is already included - ignored", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: trying to include file '%s', which is already included - ignored", fname);
             iRet = RS_RET_OK;
             goto finalize_it;
         }
@@ -1971,12 +2005,12 @@ rsRetVal yamlconf_load(const char *fname) {
 
     fh = fopen(fname, "r");
     if (fh == NULL) {
-        LogError(errno, RS_RET_CONF_FILE_NOT_FOUND, "yamlconf: cannot open config file '%s'", fname);
+        yamlconfLogError(errno, RS_RET_CONF_FILE_NOT_FOUND, "yamlconf: cannot open config file '%s'", fname);
         ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
     }
 
     if (!yaml_parser_initialize(&parser)) {
-        LogError(0, RS_RET_INTERNAL_ERROR, "yamlconf: failed to initialize YAML parser");
+        yamlconfLogError(0, RS_RET_INTERNAL_ERROR, "yamlconf: failed to initialize YAML parser");
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
     parserInit = 1;
@@ -2005,7 +2039,7 @@ rsRetVal yamlconf_load(const char *fname) {
             break;
         }
         if (ev.type != YAML_SCALAR_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key at top level", fname);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: expected scalar key at top level", fname);
             yaml_event_delete(&ev);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
@@ -2017,11 +2051,11 @@ rsRetVal yamlconf_load(const char *fname) {
         /* Warn on duplicate top-level key. */
         for (int ki = 0; ki < seen_count; ++ki) {
             if (!strcmp(seen_keys[ki], topkey)) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: duplicate top-level key '%s' - "
-                         "this is unsupported; use sequences for multiple items "
-                         "or include: for file-level composition",
-                         fname, topkey);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: duplicate top-level key '%s' - "
+                                 "this is unsupported; use sequences for multiple items "
+                                 "or include: for file-level composition",
+                                 fname, topkey);
                 break;
             }
         }
@@ -2047,7 +2081,8 @@ rsRetVal yamlconf_load(const char *fname) {
          * consumed the opening event – so verify it makes sense. */
         if (vev.type != YAML_MAPPING_START_EVENT && vev.type != YAML_SEQUENCE_START_EVENT &&
             vev.type != YAML_SCALAR_EVENT) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unexpected value type for key '%s'", fname, topkey);
+            yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unexpected value type for key '%s'", fname,
+                             topkey);
             yaml_event_delete(&vev);
             if (!topkey_owned) free(topkey);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
@@ -2059,10 +2094,10 @@ rsRetVal yamlconf_load(const char *fname) {
             if (!strcmp(topkey, "version")) {
                 /* silently accept */
             } else {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: key '%s' has a scalar value but expects"
-                         " a mapping or sequence",
-                         fname, topkey);
+                yamlconfLogError(0, RS_RET_CONF_PARSE_ERROR,
+                                 "yamlconf: %s: key '%s' has a scalar value but expects"
+                                 " a mapping or sequence",
+                                 fname, topkey);
                 /* non-fatal */
             }
             yaml_event_delete(&vev);

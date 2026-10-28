@@ -118,6 +118,7 @@ static uchar *GetDfltNetstrmDrvr(rsconf_t *cnf);
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
+    {"config.reloadonhup", eCmdHdlrGetWord, 0},
     {"workdirectory", eCmdHdlrString, 0},
     {"operatingstatefile", eCmdHdlrString, 0},
     {"dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0},
@@ -1558,6 +1559,8 @@ rsRetVal glblDoneLoadCnf(void) {
             SetOptionDisallowWarning(!((int)cnfparamvals[i].val.d.n));
         } else if (!strncmp(paramblk.descr[i].name, "compatibility.", 14)) {
             /* processed immediately by glblProcessCnf(), as later syntax depends on it */
+        } else if (!strcmp(paramblk.descr[i].name, "config.reloadonhup")) {
+            /* Startup observer selects the mode before object dispatch. */
         } else if (!strcmp(paramblk.descr[i].name, "systemd.notifyreadydelay")) {
             loadConf->globals.systemdNotifyReadyDelay = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {

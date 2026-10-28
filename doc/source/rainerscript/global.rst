@@ -1,7 +1,14 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure rsyslog global startup parameters and validate-only HUP analysis.
+   :keywords: rsyslog, global, startup, HUP, reload, validation
+
+
 global() configuration object
 =============================
+
+.. summary-start
 
 The global configuration object permits to set global parameters. Note
 that each parameter can only be set once and cannot be re-set
@@ -9,7 +16,81 @@ thereafter. If a parameter is set multiple times, the behaviour is
 unpredictable. As with other configuration objects, parameters for this
 object are case-insensitive.
 
+.. summary-end
+
 The following parameters can be set:
+
+- **config.reloadOnHUP** - word, default ``off``
+
+  Select ``validate`` at startup to inspect configuration candidates on SIGHUP.
+  Place the selection in the first configuration object, before modules,
+  statements, includes or legacy directives. Comments and whitespace may precede
+  it. For RainerScript, start the file with:
+
+  .. code-block:: rsyslog
+
+      global(config.reloadOnHUP="validate")
+
+  For YAML (requires a build with libyaml), put ``global`` before the other
+  configuration sections:
+
+  .. code-block:: yaml
+
+      version: 2
+      global:
+        config.reloadOnHUP: "validate"
+
+  HUP first performs the established hostname, action, module, lookup-table,
+  rate-limit and error-reporting hooks in their existing order. It then parses
+  the candidate privately and compares its structural graph with source syntax
+  observed during startup. Candidate objects are never activated: structurally compared
+  and rejected candidates both retain the running configuration,
+  listeners, queues and actions. Existing HUP hooks retain their usual effects,
+  including reopening output files and reloading lookup tables.
+
+  Mode selection is fixed for the process lifetime. OFF does not inspect
+  changed files on HUP, so adding the setting to an OFF daemon requires a
+  restart. In validate mode, explicit changes to ``off`` or removal of the
+  setting require a restart and reject the candidate. ``on`` is not implemented
+  and is rejected in a HUP candidate. Invalid or conflicting startup settings
+  log an error and fall back to ``off``; they do not independently abort
+  startup. The usual ``abortOnUncleanConfig`` policy still applies to
+  configuration errors.
+
+  The checkpoint supports structural capture of RainerScript objects,
+  statements and include files, and equivalent YAML objects, structured
+  statements and embedded RainerScript. Legacy PRI and property filters can
+  wrap modern actions. Legacy actions, ``$`` directives (including
+  ``$ResetConfigVariables``), BSD selector blocks and backtick expansion are
+  unsupported for candidate analysis. Their normal startup behavior is
+  unchanged. Relative includes use the startup working directory even when
+  the daemon later changes directory. They are read using the daemon's current
+  privileges; an unreadable candidate is rejected.
+
+  Reports identify added, removed and modified instances and the concrete
+  limitation ``activation_not_implemented``. ``structurally_compared`` and
+  ``analysis=structural_only`` mean source structure was captured and compared; they do
+  **not** establish semantic compatibility. Module parameters, function binding,
+  referenced object existence, templates' runtime expansion and module resource
+  readiness are not checked by constructing or activating runtime objects.
+  Even an unchanged graph carries this limitation. ``validate`` reports what changed; ``rsyslogd -N1`` is the configuration
+  check. An unknown action module, an invalid module parameter or a missing
+  ruleset can therefore be structurally compared even though ``-N1`` rejects
+  the candidate. Run ``rsyslogd -N1`` before deploying it.
+
+  Unsupported source syntax, startup errors or selecting validate after earlier
+  configuration produce ``result=incomplete`` rather than a compatibility
+  claim. A late selection also emits one startup warning explaining that the
+  setting was seen too late and HUP analysis will report incomplete. Unknown or ignored YAML schema entries also invalidate private
+  analysis. There is no active source reread on HUP and no promotion of the
+  candidate into the comparison baseline. Each attempt compares with the
+  original startup capture. The files read during one attempt are not an
+  atomic snapshot of concurrent filesystem edits.
+
+  Reports use normal internal logging at information severity. Configure
+  ``processInternalMessages="on"`` and ``internalmsg.severity="info"`` to
+  route them through configured outputs. OFF adds no graph capture, reload
+  statistics or reload diagnostics.
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
 

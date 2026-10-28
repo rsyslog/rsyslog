@@ -34,6 +34,10 @@
 #include <libestr.h>
 #include "rainerscript.h"
 #include "parserif.h"
+#if defined(__GNUC__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 #define YYDEBUG 1
 extern int yylineno;
 extern char *yytext;
@@ -109,6 +113,9 @@ extern int yyerror(const char*);
 %token CMP_STARTSWITH
 %token CMP_STARTSWITHI
 %token CMP_ENDSWITH
+/* Fatal scanner status is latched separately. This explicit token is never
+ * accepted as syntax; do not rely on Bison-internal error token names. */
+%token CNF_SCANNER_ERROR
 
 %type <nvlst> nv nvlst value
 %type <obj> obj property constant
@@ -118,6 +125,20 @@ extern int yyerror(const char*);
 %type <itr> iterator_decl
 %type <fparams> fparams
 %type <arr> array arrayelt
+
+/* Bison discards partially reduced values during error recovery. Explicit
+ * ownership destructors are required because HUP may parse many rejected
+ * candidates in one daemon lifetime. */
+%destructor { free($$); } LEGACY_ACTION LEGACY_RULESET PRIFILT PROPFILT BSD_TAG_SELECTOR BSD_HOST_SELECTOR VAR
+%destructor { es_deleteStr($$); } NAME FUNC STRING
+%destructor { cnfobjDestructAll($$); } obj property constant
+%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script elseif_tail
+%destructor { nvlstDestruct($$); } nv nvlst value
+%destructor { objlstDestruct($$); } propconst
+%destructor { cnfexprDestruct($$); } expr
+%destructor { cnfarrayDestruct($$); } array arrayelt
+%destructor { cnffparamlstDestruct($$); } fparams
+%destructor { cnfIteratorDestruct($$); } iterator_decl
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI CMP_ENDSWITH
@@ -139,7 +160,7 @@ conf:	/* empty (to end recursion) */
 	| conf LEGACY_RULESET		{ cnfDoCfsysline($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
-include:  BEGIN_INCLUDE nvlst ENDOBJ	{ includeProcessCnf($2); }
+include:  BEGIN_INCLUDE nvlst ENDOBJ	{ if(includeProcessCnf($2) != 0) YYABORT; }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
         | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
@@ -254,6 +275,17 @@ arrayelt: STRING			{ $$ = cnfarrayNew($1); }
 	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
 
 %%
+#if defined(__GNUC__)
+# pragma GCC diagnostic pop
+#endif
+
+/* Keep the raw generated parser entry point behind a stable project API;
+ * older supported Bison headers do not declare yyparse(). Fatal scanner
+ * status remains latched for the load caller to consume after this returns. */
+int cnfParse(void)
+{
+	return yyparse();
+}
 /*
 int yyerror(char *s)
 {
