@@ -187,6 +187,8 @@ struct msg {
     /* preserve case in fromhost */
     #define NO_LEGACY_Z_DECOMPRESS 0x400
     /* skip built-in legacy 'z' transport-frame decompression */
+    #define TCP_NON_OCTET_COUNTED 0x800
+    /* received over TCP without octet-counted framing */
 
     /* (syslog) protocol types */
     #define MSG_LEGACY_PROTOCOL 0

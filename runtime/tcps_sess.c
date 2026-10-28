@@ -407,6 +407,8 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
     if (pThis->streamDecompressed) {
         pMsg->msgFlags |= NO_LEGACY_Z_DECOMPRESS;
+    } else if (pThis->eFraming != TCP_FRAMING_OCTET_COUNTING) {
+        pMsg->msgFlags |= TCP_NON_OCTET_COUNTED;
     }
     MsgSetRcvFrom(pMsg, pThis->fromHost);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));

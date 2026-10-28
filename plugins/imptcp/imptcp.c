@@ -1099,6 +1099,8 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
     if (pThis->bStreamDecompressed) {
         pMsg->msgFlags |= NO_LEGACY_Z_DECOMPRESS;
+    } else if (pThis->eFraming != TCP_FRAMING_OCTET_COUNTING) {
+        pMsg->msgFlags |= TCP_NON_OCTET_COUNTED;
     }
     MsgSetRcvFrom(pMsg, pThis->peerName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));

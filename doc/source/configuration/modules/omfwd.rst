@@ -622,6 +622,16 @@ compressed. If not, it is sent uncompressed. As such, it is totally
 valid that compressed and uncompressed messages are intermixed within
 a conversation.
 
+Legacy single-message compression is historic compatibility behavior and is
+not recommended for new configurations. Configuring it, including implicitly
+through a nonzero ``zipLevel``, emits one warning per action. Prefer matching
+stream-compression settings on both ends or uncompressed transport.
+
+Legacy compressed records contain binary data, which can include LF bytes.
+TCP requires octet-counted framing for these records; delimiter framing can
+split a record before decompression. ``omfwd`` already forces octet-counted
+framing for legacy compressed TCP records, regardless of ``TCP_Framing``.
+
 In "stream:always" compression mode the full stream is being
 compressed. This also uses non-standard protocol and is compatible
 only with receivers configured for the same stream-compression mode
@@ -635,8 +645,9 @@ that some hundred messages may be held in local buffers before they
 are actually sent. This mode has been introduced in 7.5.1.
 
 Use :doc:`imtcp <imtcp>` with ``compression.mode="stream:always"`` to receive
-stream-compressed TCP data from ``omfwd``. ``imtcp`` does not receive the
-sender-side ``single`` compression mode.
+stream-compressed TCP data from ``omfwd``. Legacy sender-side ``single``
+compression is handled separately by the built-in parser compatibility hook,
+controlled by ``parser.supportCompressionExtension``.
 
 Stream compression is an rsyslog layer and is not TLS-native compression. The
 default compression driver is ``zlib``. Set ``compression.driver="zstd"`` only
