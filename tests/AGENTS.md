@@ -38,6 +38,27 @@ minimal containers. Findings are review prompts, not automatic blockers.
   listener binds is racy. Another process can take the port in the gap. Prefer
   listener `port="0"` plus a port file, or helper-owned readiness where the file
   is written only after `listen(2)` succeeds.
+- **Intentional privileged or default ports**: preserve tests that prove the
+  normal deployment path works, including binding the standard syslog port
+  514 and using a module's omitted/default destination port. Replacing these
+  ports with dynamically allocated ports would remove that coverage. A fixed
+  port is a documented exception when it is part of the contract under test;
+  an advisory scanner match is not a reason to change it.
+  State the intended port/default, successful delivery or bind oracle, required
+  privileges, and isolation assumptions in the test header. Keep these tests
+  isolated from other users of the same port. Check the actual environment:
+  UID 0 alone does not guarantee bind/raw-socket capabilities in a container,
+  and some systems permit unprivileged low-port binding. Use a narrowly scoped
+  prerequisite skip where the harness supports it; never reinterpret a missing
+  prerequisite as proof that privileged-port behavior works.
+  `sndrcv_relp_dflt_pt.sh` tests the compiled default (normally 514), with a
+  non-root skip for low ports and an ordered delivery oracle;
+  `sndrcv_omudpspoof.sh` exercises standard UDP port 514 and raw-socket sending.
+  Their existing root checks are prerequisite approximations, not capability
+  probes. In contrast, `imudp_error_msg.sh` deliberately rejects an unavailable
+  bind address: its port-514 diagnostic is negative-path coverage, not proof
+  of successful privileged-port operation. Do not conflate config-only or
+  error-message fixtures with positive listener/delivery coverage.
 - **Fixed sleeps as synchronization**: `sleep 1`, `msleep 3000`, and similar
   waits usually encode host-speed assumptions. Prefer explicit readiness or
   completion oracles such as port files, `wait_file_lines`, `wait_queueempty`,

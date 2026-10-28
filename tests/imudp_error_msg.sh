@@ -1,5 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Verify the diagnostic for an unavailable bind address, including literal
+# port 514. This negative-path fixture does not prove successful privileged-port
+# binding; retain separate standard/default-port delivery coverage.
 # add 2016-11-22 by Pascal Withopf, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
