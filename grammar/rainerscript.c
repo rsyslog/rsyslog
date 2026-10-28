@@ -3968,7 +3968,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
         n_r = var2Number(&r, &convok_r);
     }
     if (convok_l && convok_r) {
-        ret = n_l - n_r;
+        ret = (n_l > n_r) - (n_l < n_r);
     } else {
         estr_l = var2String(&l, &bMustFree);
         estr_r = var2String(&r, &bMustFree2);
