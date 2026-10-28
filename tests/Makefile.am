@@ -18,6 +18,9 @@ EXTRA_DIST = \
 TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_PRI_RANGE)
 
+TESTS_RSCRIPT_NUMERIC_COMPARISON = rscript-numeric-comparison.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_NUMERIC_COMPARISON)
+
 TESTS_STATSLOG_PERCENT = statslog-evicted-percent.sh
 EXTRA_DIST += $(TESTS_STATSLOG_PERCENT) helpers/statslog-evicted-percent.sh
 TESTS_MINITCP_EXCLUSIVE = minitcpsrv-exclusive-port.sh
@@ -746,6 +749,7 @@ TESTS_DEFAULT = \
 	$(TESTS_PRIFILT_TRAILING_SEPARATOR) \
 	rscript_optimizer1.sh \
 	rscript_optimizer_const_cmp.sh \
+	$(TESTS_RSCRIPT_NUMERIC_COMPARISON) \
 	rscript_ruleset_call.sh \
 	rscript_ruleset_call-recursion-limit.sh \
 	rscript_ruleset_call_indirect-basic.sh \
