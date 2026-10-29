@@ -18,3 +18,9 @@ AI agents working in `contrib/` MUST follow the standardized skills in `.agent/s
 
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](../CONTRIBUTING.md).*
+
+## Focused coverage
+
+- `tests/mmcount-distinct-values.sh` verifies independent counters for distinct
+  property values with colliding hashes. Its YAML companion checks action
+  parameter parity.

@@ -1184,6 +1184,10 @@ TESTS_SNMP_FULL = \
 	sndrcv_omsnmpv1_udp_dynsource.sh \
 	sndrcv_omsnmpv1_udp_invalidoid.sh
 
+TESTS_MMCOUNT = mmcount-distinct-values.sh
+TESTS_MMCOUNT_YAML = yaml-mmcount-distinct-values.sh
+EXTRA_DIST += $(TESTS_MMCOUNT) $(TESTS_MMCOUNT_YAML)
+
 TESTS_MMUTF8FIX = \
         mmutf8fix_no_error.sh \
         mmutf8fix_replacement_sequence.sh \
@@ -3587,6 +3591,13 @@ TESTS += $(TESTS_SNMP_FULL)
 endif # if ENABLE_SNMP_TESTS
 endif # if ENABLE_SNMP
 
+
+if ENABLE_MMCOUNT
+TESTS += $(TESTS_MMCOUNT)
+if HAVE_LIBYAML
+TESTS += $(TESTS_MMCOUNT_YAML)
+endif
+endif
 
 if ENABLE_MMUTF8FIX
 TESTS += $(TESTS_MMUTF8FIX)
