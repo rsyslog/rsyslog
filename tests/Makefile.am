@@ -426,6 +426,7 @@ TESTS_DEFAULT = \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	glbl-ruleset-queue-defaults.sh \
+	filecreatemode-invalid-digits.sh \
 	glbl-internalmsg_severity-info-shown.sh \
 	glbl-internalmsg_severity-debug-shown.sh \
 	glbl-internalmsg_severity-debug-not_shown.sh \
@@ -989,6 +990,7 @@ TESTS_LIBYAML = \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
 	yaml-omfile-dynafilecachesize-invalid.sh \
+	yaml-filecreatemode-invalid-digits.sh \
 	yaml-omfile-dynafile-template-type-invalid.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
