@@ -113,6 +113,13 @@ is too noisy for routine rsyslog PR validation.
   when the edited instructions include command snippets whose syntax is
   uncertain. If the agent-doc change also edits code, testbench files,
   workflows, build files, or scripts, validate those touched areas normally.
+- **Local validation tooling only**. When the planner classifies a change as
+  `local-validation-tooling`, run `devtools/local-validation-plan.sh --run`.
+  It applies the available tooling linters and, for formatter/selector/planner
+  changes, runs the isolated Git-history regression in
+  `devtools/tests/test_format_code.py`. This reduced lane does not need runtime
+  container CI or a static analyzer unless the change also affects their
+  execution. Missing Python 3 or Bash is a reported regression-test coverage gap.
 - **User-facing documentation changes**. If the diff changes rendered
   user-facing docs, such as `doc/source/**` or Sphinx support files that affect
   that tree, do not run the Ubuntu 26.04 runtime check just because docs
