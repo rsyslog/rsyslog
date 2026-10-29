@@ -405,6 +405,7 @@ TESTS_DEFAULT = \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
 	chkseq_usage_output.sh \
+	chkseq-duplicate-increments.sh \
 	minitcpsrv_usage_output.sh \
 	minitcpsrv-reconnect.sh \
 	diagtalker-retry.sh \
