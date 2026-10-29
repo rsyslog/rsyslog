@@ -91,6 +91,11 @@ EXTRA_DIST += $(TESTS_MMSNMPTRAPD_SEVERITY) $(TESTS_MMSNMPTRAPD_SEVERITY_YAML)
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
+TESTS_OMFWD_UDP_SOURCE_FAMILY = omfwd-udp-source-socket-failure.sh omfwd-udp-source-address.sh omfwd-udp-source-family.sh omfwd-udp-source-family-sendall.sh omfwd-udp-source-family-dual-local.sh
+TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML = yaml-omfwd-udp-source-socket-failure.sh yaml-omfwd-udp-source-family.sh yaml-omfwd-udp-source-family-sendall.sh
+TESTS_OMFWD_UDP_SOURCE_FAMILY_VG = omfwd-udp-source-socket-failure-vg.sh
+EXTRA_DIST += $(TESTS_OMFWD_UDP_SOURCE_FAMILY) $(TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML) $(TESTS_OMFWD_UDP_SOURCE_FAMILY_VG)
+
 TESTS_IMUDP_BUFFER_SIZING = imudp-batchsize-range.sh imudp-batchsize-runtime.sh
 TESTS_IMUDP_BUFFER_SIZING_LIBYAML = yaml-imudp-batchsize-range.sh
 EXTRA_DIST += $(TESTS_IMUDP_BUFFER_SIZING) $(TESTS_IMUDP_BUFFER_SIZING_LIBYAML)
@@ -3167,7 +3172,10 @@ liblocal_queue_omfile_cancel_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif
 endif
-TESTS += $(TESTS_IMUDP_BUFFER_SIZING)
+TESTS += $(TESTS_IMUDP_BUFFER_SIZING) $(TESTS_OMFWD_UDP_SOURCE_FAMILY)
+if HAVE_VALGRIND
+TESTS += $(TESTS_OMFWD_UDP_SOURCE_FAMILY_VG)
+endif
 check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
@@ -3177,6 +3185,12 @@ check_LTLIBRARIES += liboverride_gethostname_nonfqdn.la
 liboverride_gethostname_nonfqdn_la_SOURCES = override_gethostname_nonfqdn.c
 liboverride_gethostname_nonfqdn_la_CFLAGS =
 liboverride_gethostname_nonfqdn_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+
+check_LTLIBRARIES += liboverride_omfwd_udp_family.la
+liboverride_omfwd_udp_family_la_SOURCES = override_omfwd_udp_family.c
+liboverride_omfwd_udp_family_la_CFLAGS =
+liboverride_omfwd_udp_family_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_omfwd_udp_family_la_LIBADD = $(DL_LIBS)
 
 check_LTLIBRARIES += liboverride_getaddrinfo.la
 liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
@@ -3445,7 +3459,7 @@ endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 if HAVE_LIBYAML
 TESTS += $(TESTS_LIBYAML)
-TESTS += $(TESTS_IMUDP_BUFFER_SIZING_LIBYAML)
+TESTS += $(TESTS_IMUDP_BUFFER_SIZING_LIBYAML) $(TESTS_OMFWD_UDP_SOURCE_FAMILY_LIBYAML)
 if ENABLE_INOTIFY
 TESTS += $(TESTS_RATELIMIT_WATCH)
 endif # ENABLE_INOTIFY

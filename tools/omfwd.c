@@ -175,6 +175,7 @@ typedef struct targetData {
     char *port;
     struct addrinfo *f_addr;
     int *pSockArray; /* sockets to use for UDP */
+    sa_family_t *pSockFamilies; /* per-descriptor UDP families when Address is configured */
     int bIsConnected; /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
     int nXmit; /* number of transmissions since last (re-)bind */
     tcpclt_t *pTCPClt; /* our tcpclt object */
@@ -833,6 +834,8 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         net.closeUDPListenSockets(pTarget->pSockArray);
         pTarget->pSockArray = NULL;
     }
+    free(pTarget->pSockFamilies);
+    pTarget->pSockFamilies = NULL;
     if (pTarget->f_addr != NULL) {
         freeaddrinfo(pTarget->f_addr);
         pTarget->f_addr = NULL;
@@ -1152,7 +1155,10 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
     bSendSuccess = RSFALSE;
     for (r = pTarget->f_addr; r; r = r->ai_next) {
         int runSockArrayLoop = 1;
+        /* A skipped family must not look like a successful zero-byte send. */
+        if (pWrkrData->pData->address != NULL) lsent = -1;
         for (i = 0; runSockArrayLoop && (i < *pTarget->pSockArray); i++) {
+            if (pWrkrData->pData->address != NULL && pTarget->pSockFamilies[i] != r->ai_family) continue;
             int try_send = 1;
             size_t lenThisTry = len;
             while (try_send) {
@@ -1802,17 +1808,6 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
         }
         address = pTarget->target_name;
         if (pData->address) {
-            struct addrinfo *addr;
-            /* The AF of the bind addr must match that of target */
-            hints.ai_family = res->ai_family;
-            hints.ai_flags |= AI_PASSIVE;
-            iErr = getaddrinfo(pData->address, pTarget->port, &hints, &addr);
-            if (iErr != 0) {
-                LogError(0, RS_RET_SUSPENDED, "omfwd: cannot use bind address '%s' for host '%s': %s", pData->address,
-                         pTarget->target_name, gai_strerror(iErr));
-                ABORT_FINALIZE(RS_RET_SUSPENDED);
-            }
-            freeaddrinfo(addr);
             bBindRequired = 1;
             address = pData->address;
         }
@@ -1827,7 +1822,35 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
             CHKiRet(returnToOriginalNs(pData));
             bNeedReturnNs = 0;
         }
+        if (pData->address != NULL && pTarget->pSockArray == NULL) ABORT_FINALIZE(RS_RET_SUSPENDED);
         if (pTarget->pSockArray != NULL) {
+            if (pData->address != NULL) {
+                int compatible = 0;
+                /* Cache actual bound families once; named sources can create
+                 * multiple sockets, and some family binds may have failed. */
+                CHKmalloc(pTarget->pSockFamilies = calloc((size_t)*pTarget->pSockArray, sizeof(sa_family_t)));
+                for (int i = 0; i < *pTarget->pSockArray; ++i) {
+                    struct sockaddr_storage localAddress = {0};
+                    socklen_t localAddressLength = sizeof(localAddress);
+                    if (getsockname(pTarget->pSockArray[i + 1], (struct sockaddr *)&localAddress,
+                                    &localAddressLength) != 0) {
+                        LogError(errno, RS_RET_SUSPENDED, "omfwd: could not inspect UDP bind socket for '%s'",
+                                 pData->address);
+                        ABORT_FINALIZE(RS_RET_SUSPENDED);
+                    }
+                    pTarget->pSockFamilies[i] = localAddress.ss_family;
+                    for (const struct addrinfo *targetAddress = pTarget->f_addr; targetAddress != NULL;
+                         targetAddress = targetAddress->ai_next) {
+                        if (targetAddress->ai_family == localAddress.ss_family) compatible = 1;
+                    }
+                }
+                if (!compatible) {
+                    LogError(0, RS_RET_SUSPENDED,
+                             "omfwd: no UDP target address for host '%s' matches bind address '%s'",
+                             pTarget->target_name, pData->address);
+                    ABORT_FINALIZE(RS_RET_SUSPENDED);
+                }
+            }
             pTarget->bIsConnected = 1;
         }
     } else {
@@ -1846,6 +1869,9 @@ finalize_it:
     if (iRet != RS_RET_OK) {
         if (bNeedReturnNs) {
             returnToOriginalNs(pData);
+        }
+        if (pData->protocol == FORW_UDP && pData->address != NULL) {
+            DestructTargetData(pTarget, 0);
         }
         if (pTarget->f_addr != NULL) {
             freeaddrinfo(pTarget->f_addr);
