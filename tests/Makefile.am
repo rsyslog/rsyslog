@@ -112,8 +112,6 @@ EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_LATENCY_ORACLE) ../benchmarks/queue-conten
 	../benchmarks/queue-contention/latency-observer-selftest.py ../benchmarks/queue-contention/trial-latency.sh \
 	../benchmarks/queue-contention/compare-latency.py ../benchmarks/queue-contention/docker_image.py
 
-TESTS_QUEUE_DEFERRED_IDLE_WAKEUP = queue-deferred-idle-wakeup.sh queue-deferred-idle-shutdown.sh
-EXTRA_DIST += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP) override_queue_disposal.c
 TESTS_QUEUE_LEASE = queue-discard-only-lease.sh queue-lease-attribution.sh
 EXTRA_DIST += $(TESTS_QUEUE_LEASE)
 
@@ -3183,13 +3181,6 @@ liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 
-check_LTLIBRARIES += liboverride_queue_disposal.la
-liboverride_queue_disposal_la_SOURCES = override_queue_disposal.c
-liboverride_queue_disposal_la_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
-liboverride_queue_disposal_la_CFLAGS =
-liboverride_queue_disposal_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
-liboverride_queue_disposal_la_LIBADD = $(LIBFASTJSON_LIBS) $(DL_LIBS) $(PTHREADS_LIBS)
-
 if ENABLE_IMPTCP
 check_LTLIBRARIES += liboverride_epoll_ctl.la
 liboverride_epoll_ctl_la_SOURCES = override_epoll_ctl.c
@@ -3380,7 +3371,7 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
 TESTS += $(TESTS_MERMAID_OFFLINE)
-TESTS += $(TESTS_QUEUE_BENCHMARK_ORACLE) $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP)
+TESTS += $(TESTS_QUEUE_BENCHMARK_ORACLE)
 TESTS += $(TESTS_QUEUE_LEASE)
 TESTS += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG)
 if ENABLE_IMTCP_TESTS
