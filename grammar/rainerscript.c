@@ -1918,13 +1918,23 @@ static void ATTR_NONNULL() doFunc_parse_json(struct cnffunc *__restrict__ const 
     assert(container != NULL);
     assert(pMsg != NULL);
 
+    const size_t jsontextlen = strlen(jsontext);
+    /* The tokener's int length must also include the terminating NUL. */
+    if (jsontextlen >= INT_MAX) {
+        retVal = RS_SCRIPT_EINVAL;
+        wtiSetScriptErrno(pWti, retVal);
+        goto finalize_it;
+    }
+
     struct json_tokener *const tokener = json_tokener_new();
     if (tokener == NULL) {
         retVal = 1;
         goto finalize_it;
     }
-    json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
-    if (json == NULL) {
+    /* Include the terminator so a scalar at end of input is complete.
+     * JSON null is represented by NULL even when parsing succeeds. */
+    json = json_tokener_parse_ex(tokener, jsontext, (int)(jsontextlen + 1));
+    if (fjson_tokener_get_error(tokener) != fjson_tokener_success) {
         retVal = RS_SCRIPT_EINVAL;
     } else {
         /* Check for trailing garbage */
