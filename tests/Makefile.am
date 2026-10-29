@@ -66,6 +66,9 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-nil
 EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS) unit/qpid_generation_order.py
 
+TESTS_FLAKE_EVIDENCE_STATUSES = flake-evidence-statuses.sh
+EXTRA_DIST += $(TESTS_FLAKE_EVIDENCE_STATUSES)
+
 # Trusted coverage upload boundaries are pure helper tests, not daemon tests.
 TESTS_PR_COVERAGE = pr-coverage-artifact.sh pr-coverage-source.sh
 EXTRA_DIST += $(TESTS_PR_COVERAGE) pr-coverage-artifact.py pr-coverage-source.cjs \
@@ -3145,6 +3148,7 @@ endif
 endif
 
 if ENABLE_TESTBENCH
+TESTS += $(TESTS_FLAKE_EVIDENCE_STATUSES)
 if ENABLE_IMTCP_TESTS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_OMFILE_CANCEL)
