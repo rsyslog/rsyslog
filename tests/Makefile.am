@@ -399,6 +399,7 @@ TESTS_DEFAULT = \
 	timestamp-3164.sh \
 	timestamp-3339.sh \
 	timestamp-isoweek.sh \
+	timestamp-dateordinal-offset.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
@@ -1007,6 +1008,7 @@ TESTS_LIBYAML = \
 	yaml-statements-unset.sh \
 	yaml-template-controlcharacters.sh \
 	yaml-template-list.sh \
+	yaml-timestamp-dateordinal-offset.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
 	yaml-allowed-sender-modern.sh \
