@@ -111,6 +111,12 @@ section.  LEEF 1.0 devices commonly use the tab character, but some send
 delimiter and understands the escape sequences ``\t`` (tab), ``\n`` (newline)
 and ``\\`` (backslash).
 
+When backslash is selected as the delimiter, the recognised escape pairs
+``\\``, ``\=`` and ``\|`` retain their escape meaning; other backslashes
+separate extension fields. Use keys that do not begin with backslash, ``=``
+or ``|`` with this delimiter, because a preceding separator and such a key
+prefix would form an escape pair. Header escaping remains unchanged.
+
 searchCookie
 ^^^^^^^^^^^^
 
