@@ -1577,6 +1577,9 @@ TESTS_IMDOCKER_VALGRIND = \
 	imdocker-new-logs-from-start-vg.sh \
 	imdocker-multi-line-vg.sh
 
+TESTS_OMCZMQ = \
+	omczmq-sendhwm.sh
+
 TESTS_IMCZMQ = \
 	imczmq-startup-failure.sh \
 	imczmq-topic-too-long.sh
@@ -2777,7 +2780,7 @@ EXTRA_DIST += $(TESTS_OMKINESIS) $(TESTS_OMKINESIS_YAML) omkinesis-mock-common.s
 EXTRA_DIST += omawslogshlc-env.sh
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
-EXTRA_DIST += $(TESTS_IMCZMQ)
+EXTRA_DIST += $(TESTS_IMCZMQ) $(TESTS_OMCZMQ)
 EXTRA_DIST += $(TESTS_IMHTTP)
 EXTRA_DIST += $(TESTS_IMHTTP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMBEATS)
@@ -3125,6 +3128,16 @@ runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
+
+if ENABLE_TESTBENCH
+if ENABLE_OMCZMQ
+check_LTLIBRARIES += libomczmq_socket_options_preload.la
+libomczmq_socket_options_preload_la_SOURCES = omczmq-socket-options-preload.c
+libomczmq_socket_options_preload_la_CPPFLAGS = $(CZMQ_CFLAGS)
+libomczmq_socket_options_preload_la_LIBADD = $(CZMQ_LIBS)
+libomczmq_socket_options_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+endif
+endif
 
 if ENABLE_TESTBENCH
 if ENABLE_OMJOURNAL
@@ -3922,6 +3935,10 @@ endif # ENABLE_IMDOCKER_TESTS
 endif # ENABLE_IMDOCKER
 
 
+
+if ENABLE_OMCZMQ
+TESTS += $(TESTS_OMCZMQ)
+endif
 
 if ENABLE_IMCZMQ
 TESTS += $(TESTS_IMCZMQ)
