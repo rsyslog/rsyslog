@@ -47,6 +47,20 @@ for key, (name_key, reason_key) in sections.items():
             names_fh.write(f"{name}\n")
             reasons_fh.write(f"{name}\t{reason}\n")
 
+# Copy reviewed refresh content into the loaded policy so later resolution does
+# not depend on the caller's working directory. Native patch hashes remain the
+# authority: a changed distro patch must be reviewed again.
+refreshes = []
+for entry in policy.get("patch_refreshes", []):
+    replacement = os.path.realpath(os.path.join(os.path.dirname(policy_path), entry["replacement"]))
+    policy_dir = os.path.realpath(os.path.dirname(policy_path))
+    if os.path.commonpath([replacement, policy_dir]) != policy_dir:
+        raise ValueError("patch refresh replacement escapes policy directory")
+    with open(replacement, encoding="utf-8") as fh:
+        refreshes.append(dict(entry, content=fh.read()))
+with open(os.path.join(out_dir, "patch_refreshes.json"), "w", encoding="utf-8") as fh:
+    json.dump(refreshes, fh)
+
 replacements_path = os.path.join(out_dir, "control_replacements.tsv")
 replacements_reasons_path = os.path.join(out_dir, "control_replacements.reasons.txt")
 with open(replacements_path, "w", encoding="utf-8") as replacements_fh, \
@@ -374,6 +388,52 @@ apply_not_installed_policy() {
   fi
 }
 
+apply_patch_refreshes() {
+  local source_dir="$1"
+  local refreshes_file="$2"
+
+  [ -f "$refreshes_file" ] || return 0
+  python3 - "$source_dir" "$refreshes_file" <<'PY_REFRESH'
+import hashlib
+import json
+import pathlib
+import re
+import sys
+
+source_dir, manifest = sys.argv[1:]
+patch_dir = pathlib.Path(source_dir) / "debian/patches"
+with open(manifest, encoding="utf-8") as fh:
+    entries = json.load(fh)
+series = patch_dir / "series"
+active = set()
+if series.exists():
+    for line in series.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            active.add(line.split()[0])
+updates = []
+for entry in entries:
+    name = entry["patch"]
+    if pathlib.PurePosixPath(name).name != name or name in ("", ".", ".."):
+        raise ValueError("invalid patch refresh name")
+    if name not in active:
+        raise ValueError("reviewed Debian patch no longer in series: " + name)
+    expected = entry["sha256"]
+    if not re.fullmatch(r"[0-9a-f]{64}", expected) or not entry.get("reason", "").strip():
+        raise ValueError("patch refresh requires SHA-256 and reason")
+    patch = patch_dir / name
+    # An absent or altered native patch is baseline drift, never an implicit skip.
+    actual = hashlib.sha256(patch.read_bytes()).hexdigest()
+    if actual != expected:
+        raise ValueError("native Debian patch changed; review refresh: " + name)
+    updates.append((patch, entry["content"], entry["reason"]))
+# Check every guard before modifying any patch.
+for patch, content, reason in updates:
+    patch.write_text(content, encoding="utf-8")
+    print("Refreshed reviewed Debian patch " + patch.name + ": " + reason)
+PY_REFRESH
+}
+
 resolve_patch_policy() {
   local source_dir="$1"
   local allowed_file="$2"
@@ -386,6 +446,20 @@ resolve_patch_policy() {
 
   : > "$excluded_file"
   cp "$allowed_file" "$allowed_tmp" 2>/dev/null || : > "$allowed_tmp"
+
+  local refresh_error
+  if ! refresh_error="$(apply_patch_refreshes "$source_dir" "$(dirname "$allowed_file")/patch_refreshes.json" 2>&1)"; then
+    printf '%s\n' "$refresh_error" >&2
+    if [ "$mode" = "diagnostics" ] && [ -n "$findings_dir" ]; then
+      append_finding "$findings_dir" "blocking_gate_failures" \
+        "- Reviewed Debian patch refresh failed; native baseline requires review."
+      append_finding "$findings_dir" "release_handoff_items" \
+        "- Review Debian patch refresh policy against the changed native baseline."
+      return 0
+    fi
+    return 1
+  fi
+  [ -z "$refresh_error" ] || printf '%s\n' "$refresh_error"
 
   if [ ! -f "$series_file" ] || [ ! -s "$series_file" ]; then
     return 0

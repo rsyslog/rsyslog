@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Refresh of the Debian patch below for upstream BIGINT schema IDs.
+From: Michael Biebl <biebl@debian.org>
+Date: Thu, 13 Mar 2014 17:58:08 +0100
+Subject: Don't create a database
+
+dbconfig-common, which is used by rsyslog-mysql and rsyslog-pgsql, takes
+care of creating the database for us.
+---
+ plugins/ommysql/createDB.sql | 6 ++----
+ plugins/ompgsql/createDB.sql | 2 --
+ 2 files changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/plugins/ommysql/createDB.sql b/plugins/ommysql/createDB.sql
+index 6261284..9dc48de 100644
+--- a/plugins/ommysql/createDB.sql
++++ b/plugins/ommysql/createDB.sql
+@@ -1,6 +1,4 @@
+-CREATE DATABASE Syslog;
+-USE Syslog;
+-CREATE TABLE SystemEvents
++CREATE TABLE IF NOT EXISTS SystemEvents
+ (
+         ID bigint unsigned not null auto_increment primary key,
+         CustomerID bigint,
+@@ -31,4 +29,4 @@ CREATE TABLE SystemEvents
+-CREATE TABLE SystemEventsProperties
++CREATE TABLE IF NOT EXISTS SystemEventsProperties
+ (
+         ID bigint unsigned not null auto_increment primary key,
+         SystemEventID bigint unsigned NULL ,
+diff --git a/plugins/ompgsql/createDB.sql b/plugins/ompgsql/createDB.sql
+index 2f1ade0..879a1b5 100644
+--- a/plugins/ompgsql/createDB.sql
++++ b/plugins/ompgsql/createDB.sql
+@@ -1,5 +1,3 @@
+-CREATE DATABASE "Syslog" WITH ENCODING 'SQL_ASCII' TEMPLATE template0;
+-\c Syslog;
+ CREATE TABLE SystemEvents
+ (
+         ID serial not null primary key,
