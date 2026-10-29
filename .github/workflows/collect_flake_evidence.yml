@@ -6,6 +6,7 @@ name: collect flake evidence
   workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows:
       - check
+      - documentation build
       - daily focused tests
       - daily full distro CI
       - weekly_cross_arch
