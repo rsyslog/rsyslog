@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Write logs to PostgreSQL and monitor submitted messages, committed messages, and transaction outcomes.
+   :keywords: rsyslog, ompgsql, PostgreSQL, impstats, transaction counters
+
 .. index:: ! ompgsql
 
 *******************************************
@@ -16,9 +20,14 @@ PostgreSQL Database Output Module (ompgsql)
 Purpose
 =======
 
+.. summary-start
+
 This module provides native support for logging to PostgreSQL databases.
 It's an alternative (with potentially superior performance) to the more
-generic :doc:`omlibdbi <omlibdbi>` module.
+generic :doc:`omlibdbi <omlibdbi>` module. Transaction and message counters
+are available through impstats.
+
+.. summary-end
 
 
 Configuration Parameters
@@ -176,6 +185,25 @@ An action queue and templated example.
           queue.workerthreadMinimumMessages="500"
           queue.timeoutWorkerthreadShutdown="1000"
           queue.timeoutEnqueue="10000")
+
+
+Statistics
+==========
+
+The :doc:`impstats <impstats>` module reports one aggregate object named
+``ompgsql`` with origin ``ompgsql`` for all PostgreSQL output actions:
+
+* ``submitted``: messages presented to transaction callbacks, including retries.
+* ``committed``: messages in transactions whose final SQL ``COMMIT`` succeeded.
+* ``transactions``: transaction callbacks that completed successfully.
+* ``failed``: transaction callbacks that returned an error.
+
+These are attempt counters, not counts of unique database rows. Retries can
+increase ``submitted`` more than once for the same message. A successful
+``COMMIT`` response does not establish exactly-once delivery after a connection
+failure. Connection probes and individual SQL statements are not counted as
+transactions. All four counters honor impstats ``resetCounters``. Updates occur
+once per batch, without per-message timers.
 
 
 Building
