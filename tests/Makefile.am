@@ -17,6 +17,8 @@ EXTRA_DIST = \
 
 TESTS_STATSLOG_PERCENT = statslog-evicted-percent.sh
 EXTRA_DIST += $(TESTS_STATSLOG_PERCENT) helpers/statslog-evicted-percent.sh
+TESTS_MINITCP_EXCLUSIVE = minitcpsrv-exclusive-port.sh
+EXTRA_DIST += $(TESTS_MINITCP_EXCLUSIVE)
 
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
@@ -3127,6 +3129,7 @@ endif
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
+TESTS += $(TESTS_MINITCP_EXCLUSIVE)
 if ENABLE_OMJOURNAL
 if HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE
 check_LTLIBRARIES += liboverride_omjournal_namespace.la
