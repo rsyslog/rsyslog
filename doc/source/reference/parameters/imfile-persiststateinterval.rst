@@ -28,15 +28,24 @@ This parameter applies to :doc:`../../configuration/modules/imfile`.
 
 Description
 -----------
-Specifies how often the state file is written when processing the input
-file. A value of ``0`` means the state file is written when the monitored
-file is closed, typically at rsyslog shutdown. Any other value ``n``
-causes the state file to be written after at least every ``n`` processed
-lines. This setting can guard against message duplication due to fatal
-errors but may reduce performance if set to a low value. Rsyslog may write
-state files more frequently if needed.
+Specifies the number of processed lines between state file writes for this
+input. A value of ``0`` disables line-count-based writes; the state is still
+written when the monitored file is closed, typically at rsyslog shutdown.
+A positive value ``n`` triggers a write after ``n`` processed lines. This
+parameter does not measure elapsed time or start a timer while the file is
+idle. If rsyslog stops unexpectedly before the next state write, it resumes
+from the last saved position and may read and submit those lines again. A
+smaller interval limits this replay window when state writes succeed, at the
+cost of more state file writes. Rsyslog may also write state at other points.
 
-**Note: If this parameter is not set, state files are not created.**
+With :ref:`persistStateAfterSubmission <param-imfile-persiststateaftersubmission>`
+enabled, imfile also writes state after flushing a submission batch. That
+setting is independent of the line-count interval and can cause writes before
+the configured number of lines has been reached.
+
+An unset or zero interval disables periodic line-count checkpoints, but does
+not prevent state files from being written at other points, such as when the
+monitored file is closed.
 
 Input usage
 -----------
