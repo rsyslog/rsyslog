@@ -70,9 +70,13 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   core.setOutput('check', `PR coverage upload (${profile.flag})`);
   core.setOutput('sha', run.head_sha);
   core.setOutput('pr', pr.number);
-  // Namespace fork branches even with a token; never attribute fork
-  // data to main or another protected baseline branch.
-  core.setOutput('branch', pr.head.repo.id === pr.base.repo.id ? pr.head.ref : `${owner}:${pr.head.ref}`);
+  // Codecov accepts public fork uploads without credentials only on a
+  // colon-prefixed branch. Derive both the auth mode and namespace from the
+  // verified PR identity, never from producer-supplied artifact metadata.
+  // https://docs.codecov.com/docs/codecov-tokens#commits-on-unprotected-branches
+  const fork = pr.head.repo.id !== pr.base.repo.id;
+  core.setOutput('branch', fork ? `${owner}:${pr.head.ref}` : pr.head.ref);
+  core.setOutput('tokenless', pr.base.repo.private === false && fork ? 'true' : 'false');
   core.setOutput('artifact', reports[0].id);
   core.setOutput('url', run.html_url);
 };

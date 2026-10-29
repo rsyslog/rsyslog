@@ -85,7 +85,7 @@ jobs:
             --source-root "$source_root"
 
       - name: Require token authentication
-        if: steps.source.outputs.artifact != ''
+        if: steps.source.outputs.artifact != '' && steps.source.outputs.tokenless != 'true'
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
@@ -94,12 +94,15 @@ jobs:
             exit 1
           fi
 
-      - name: Upload coverage with the trusted repository token
+      # Public fork uploads use Codecov's colon-prefixed branch contract.
+      # Trusted provenance/report validation above remains mandatory. Other
+      # PRs retain credentials; never fall back after an authentication error.
+      - name: Upload coverage from the trusted consumer
         if: steps.source.outputs.artifact != ''
         id: upload
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ steps.source.outputs.tokenless != 'true' && secrets.CODECOV_TOKEN || '' }}
           slug: rsyslog/rsyslog
           files: coverage.info
           disable_search: true
