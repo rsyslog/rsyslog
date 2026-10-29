@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Configure the omrabbitmq output module to send syslog messages with raw or templated RabbitMQ bodies.
+   :keywords: rsyslog, omrabbitmq, RabbitMQ, body_template, message format
+
 **********************************
 omrabbitmq: RabbitMQ output module
 **********************************
@@ -13,8 +17,12 @@ omrabbitmq: RabbitMQ output module
 Purpose
 =======
 
+.. summary-start
+
 This module sends syslog messages into RabbitMQ server.
 Only v6 configuration syntax is supported.
+
+.. summary-end
 
 **omrabbitmq is tested and is running in production with 8.x version of rsyslog.**
 
@@ -217,7 +225,7 @@ delivery\_mode
   :widths: auto
   :class: parameter-table
 
-  "string", "no", "TRANSIENT\|PERSISTENT", "TRANSIENT"
+  "string", "no", "TRANSIENT\|PERSISTENT", "PERSISTENT"
 
 persistence of the message in the broker
 
@@ -257,17 +265,19 @@ content\_type
 
 content type as a MIME value
 
-declare\_exchange
-^^^^^^^^^^^^^^^^^
+exchange\_type
+^^^^^^^^^^^^^^
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
   :widths: auto
   :class: parameter-table
 
-  "binary", "no", "off", 
+  "string", "no", "exchange type", "unset"
 
-Rsyslog tries to declare the exchange on startup. Declaration failure (already exists with different parameters or insufficient rights) is warned but does not cancel the module instance.
+When this parameter is set, rsyslog tries to declare the exchange with the
+specified type (for example, ``topic``) on startup. If it is omitted, rsyslog
+does not declare the exchange. Declaration failure (already exists with different parameters or insufficient rights) is warned but does not cancel the module instance.
 
 recover\_policy
 ^^^^^^^^^^^^^^^
@@ -316,9 +326,12 @@ This is the simplest action :
 
 - The sent message use JSON format
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     action(type="omrabbitmq" 
            host="localhost"
            virtual_host="/"
@@ -338,9 +351,12 @@ Action characteristics :
 
 - The sent message is a raw message
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     template(name="rkTpl" type="string" string="%syslogtag%.%syslogfacility-text%.%syslogpriority-text%")
 
     action(type="omrabbitmq" 
@@ -350,7 +366,7 @@ Action characteristics :
            password="guest"
            exchange="syslog"
            routing_key_template="rkTpl"
-           template_body="")
+           body_template="")
 
 Example 3
 ---------
@@ -363,9 +379,12 @@ HA action :
 
 - The sent message is formatted using RSYSLOG_ForwardFormat standard template
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     template(name="rkTpl" type="string" string="%syslogtag%.%syslogfacility-text%.%syslogpriority-text%")
 
     action(type="omrabbitmq" 
@@ -375,7 +394,7 @@ HA action :
            password="guest"
            exchange="syslog"
            routing_key_template="rkTpl"
-           template_body="RSYSLOG_ForwardFormat")
+           body_template="RSYSLOG_ForwardFormat")
 
 Example 4
 ---------
@@ -390,9 +409,12 @@ SSL enabled connection, with Heartbeat :
 
 - Heartbeat is set to 20 seconds
 
-.. code-block:: none
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: omrabbitmq
 
-    module(load='omrabbitmq')
+.. code-block:: rsyslog
+
+    module(load="omrabbitmq")
     action(type="omrabbitmq" 
            host="localhost"
            virtual_host="/"
