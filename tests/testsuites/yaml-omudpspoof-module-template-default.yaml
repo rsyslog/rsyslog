@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+modules:
+  - load: "../plugins/imtcp/.libs/imtcp"
+  - load: "../plugins/omudpspoof/.libs/omudpspoof"
+    template: "yamlModuleDefault"
+
+templates:
+  - name: spoofaddr
+    type: string
+    string: "127.0.0.1"
+  - name: yamlModuleDefault
+    type: string
+    string: "<%PRI%>%TIMESTAMP% %HOSTNAME% testtag: YAML_MODULE_DEFAULT_MARKER:%msg%\n"
+
+inputs:
+  - type: imtcp
+    port: "@TCPFLOOD_PORT@"
+    ruleset: spoof_test
+
+rulesets:
+  - name: spoof_test
+    actions:
+      - type: omudpspoof
+        target: "127.0.0.1"
+        port: "@PORT_UDP@"
+        sourceTemplate: spoofaddr
