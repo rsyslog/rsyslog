@@ -132,6 +132,9 @@ TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh wtp-exiting-worker-restart.sh
 EXTRA_DIST += $(TESTS_WTP_TARGETED_WAKEUP) unit/wtp_wakeup_test.c
 TESTS_QUEUE_SHUTDOWN_SAVE = queue-shutdown-save-full-inflight.sh
 EXTRA_DIST += $(TESTS_QUEUE_SHUTDOWN_SAVE)
+TESTS_OMPIPE_MODULE_TEMPLATE = ompipe-module-template.sh ompipe-default-template.sh
+EXTRA_DIST += $(TESTS_OMPIPE_MODULE_TEMPLATE)
+
 TESTS_OMPIPE_LEGACY_PATH = ompipe-legacy-path-length.sh
 TESTS_OMPIPE_LEGACY_PATH_VALGRIND = ompipe-legacy-path-length-vg.sh
 EXTRA_DIST += $(TESTS_OMPIPE_LEGACY_PATH) $(TESTS_OMPIPE_LEGACY_PATH_VALGRIND)
@@ -968,6 +971,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	yaml-ompipe-module-template.sh \
 	config-translate-rs-to-yaml.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
@@ -3389,6 +3393,7 @@ TESTS += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_LOCAL)
 endif
 TESTS += $(TESTS_WTP_TARGETED_WAKEUP)
 TESTS += $(TESTS_OMPIPE_LEGACY_PATH)
+TESTS += $(TESTS_OMPIPE_MODULE_TEMPLATE)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
 if ENABLE_SEGQUEUE_TOOL
