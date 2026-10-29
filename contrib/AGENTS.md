@@ -16,5 +16,12 @@ AI agents working in `contrib/` MUST follow the standardized skills in `.agent/s
 - Changes SHOULD preserve backward compatibility.
 - Use `MODULE_METADATA.yaml` to document third-party dependencies and manual setup.
 
+## Regression coverage
+
+- `imbatchreport`: `tests/imbatchreport-multiple-inputs.sh` and its native
+  YAML wrapper configure three distinct report globs with three files each.
+  Exact output and consumed-file checks cover retention of every input
+  instance; the existing single-input tests remain controls.
+
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](../CONTRIBUTING.md).*
