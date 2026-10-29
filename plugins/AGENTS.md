@@ -128,3 +128,10 @@ and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
 severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
+
+## Module regression coverage
+
+- `tests/mmjsonparse-find-json-scan-stats.sh` and its pure-YAML companion
+  verify that `scan.truncated` counts byte-window cutoffs rather than completed
+  unsuccessful searches. They also assert exact message bytes, parse outcomes,
+  and lengths for final-brace, boundary, ordinary-miss, and valid-object cases.
