@@ -5,7 +5,7 @@
 ##   ./tests/run-validate.sh
 ##
 ## This script creates .venv in the sidecar directory if missing,
-## installs requirements.txt, and runs tests/validate.py.
+## installs requirements.txt, and runs the sample and exact-label validators.
 
 set -euo pipefail
 
@@ -19,4 +19,7 @@ fi
 
 "${VENV_DIR}/bin/pip" install -r "${SIDECAR_DIR}/requirements.txt"
 
-exec "${VENV_DIR}/bin/python" "${SCRIPT_DIR}/validate.py"
+# Parser validation must not start the import-time default UDP listener.
+export IMPSTATS_MODE=file IMPSTATS_PATH=/dev/null IMPSTATS_FORMAT=prometheus
+"${VENV_DIR}/bin/python" "${SCRIPT_DIR}/validate.py"
+exec "${VENV_DIR}/bin/python" "${SIDECAR_DIR}/../tests/sidecar-prometheus-labels.py"
