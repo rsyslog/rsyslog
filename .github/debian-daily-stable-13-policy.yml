@@ -45,5 +45,13 @@
       "path": "usr/lib/*/rsyslog/omkinesis.so",
       "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Debian 13 packaging has no package for this optional module."
     }
+  ],
+  "patch_refreshes": [
+    {
+      "patch": "Don-t-create-a-database.patch",
+      "sha256": "6e591bcef892320442fa5d8ab001d1b4c1c62845ef6493f00fe6683b91948eb8",
+      "replacement": "debian-patch-refreshes/dont-create-database.patch",
+      "reason": "Debian 13 8.2504.0-1+deb13u2 delegates database creation to dbconfig-common and makes MySQL table creation idempotent; refresh only context for upstream c3491993 BIGINT IDs, preserving these required downstream semantics."
+    }
   ]
 }

@@ -12,6 +12,8 @@
 # - The Debian quilt loop skips an unlisted patch that fails to apply only when
 #   the detector proves it upstream; an unproven failing patch still fails.
 #   This part needs quilt and the .github CI helper and is skipped without them.
+# - A checksum-pinned Debian schema patch refresh preserves database ownership,
+#   idempotent MySQL tables, and upstream BIGINT IDs, and rejects native drift.
 # - rpm-disable-optional-modules.py disables listed modules after %configure
 #   and rejects a native spec that enables one explicitly, while accepting
 #   the --enable-MODULE=no disable spelling.
@@ -111,6 +113,103 @@ elif command -v quilt >/dev/null 2>&1; then
 	grep -F "unexpected Debian patch failure 'local.patch'" "$work_dir/quilt.out" >/dev/null
 else
 	echo "quilt not installed; skipping Debian patch resolution checks"
+fi
+
+
+# The real Debian 13 patch must still apply after upstream widened MySQL IDs.
+# The oracle checks applied SQL semantics, preserved BIGINT columns, unchanged
+# series membership, and rejection of even harmless native-patch drift.
+if [ -f "$repo_dir/.github/debian-daily-stable-13-policy.yml" ] && command -v quilt >/dev/null 2>&1; then
+    abs_work=$(cd "$work_dir" && pwd)
+    schema_src="$abs_work/schema-src"
+    mkdir -p "$schema_src/debian/patches" "$schema_src/plugins/ommysql" "$schema_src/plugins/ompgsql"
+    cp "$repo_dir/plugins/ommysql/createDB.sql" "$schema_src/plugins/ommysql/"
+    cp "$repo_dir/plugins/ompgsql/createDB.sql" "$schema_src/plugins/ompgsql/"
+    cat >"$schema_src/debian/patches/Don-t-create-a-database.patch" <<'NATIVE_PATCH'
+From: Michael Biebl <biebl@debian.org>
+Date: Thu, 13 Mar 2014 17:58:08 +0100
+Subject: Don't create a database
+
+dbconfig-common, which is used by rsyslog-mysql and rsyslog-pgsql, takes
+care of creating the database for us.
+---
+ plugins/ommysql/createDB.sql | 6 ++----
+ plugins/ompgsql/createDB.sql | 2 --
+ 2 files changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/plugins/ommysql/createDB.sql b/plugins/ommysql/createDB.sql
+index 6261284..9dc48de 100644
+--- a/plugins/ommysql/createDB.sql
++++ b/plugins/ommysql/createDB.sql
+@@ -1,6 +1,4 @@
+-CREATE DATABASE Syslog;
+-USE Syslog;
+-CREATE TABLE SystemEvents
++CREATE TABLE IF NOT EXISTS SystemEvents
+ (
+         ID int unsigned not null auto_increment primary key,
+         CustomerID bigint,
+@@ -28,7 +26,7 @@ CREATE TABLE SystemEvents
+         SystemID int NULL
+ );
+@
+-CREATE TABLE SystemEventsProperties
++CREATE TABLE IF NOT EXISTS SystemEventsProperties
+ (
+         ID int unsigned not null auto_increment primary key,
+         SystemEventID int NULL ,
+diff --git a/plugins/ompgsql/createDB.sql b/plugins/ompgsql/createDB.sql
+index 2f1ade0..879a1b5 100644
+--- a/plugins/ompgsql/createDB.sql
++++ b/plugins/ompgsql/createDB.sql
+@@ -1,5 +1,3 @@
+-CREATE DATABASE "Syslog" WITH ENCODING 'SQL_ASCII' TEMPLATE template0;
+-\c Syslog;
+ CREATE TABLE SystemEvents
+ (
+         ID serial not null primary key,
+NATIVE_PATCH
+    # Restore quilt's blank context line without source-file trailing whitespace.
+    sed -i 's/^@$/ /' "$schema_src/debian/patches/Don-t-create-a-database.patch"
+    printf '%s\n' Don-t-create-a-database.patch >"$schema_src/debian/patches/series"
+    cp "$schema_src/debian/patches/Don-t-create-a-database.patch" "$abs_work/native-schema.patch"
+    bash "$debian_helper" load_policy "$repo_dir/.github/debian-daily-stable-13-policy.yml" "$abs_work/schema-policy"
+    # First reproduce the failure without the policy refresh; no allowlist entry
+    # may hide this required downstream patch.
+    if bash "$debian_helper" resolve_patch_policy "$schema_src" "$abs_work/allowed.txt" \
+        "$abs_work/reasons.txt" strict >"$work_dir/schema-before.out" 2>&1; then
+        echo "unrefreshed native schema patch unexpectedly applied" >&2
+        exit 1
+    fi
+    grep -F "unexpected Debian patch failure 'Don-t-create-a-database.patch'" "$work_dir/schema-before.out" >/dev/null
+    bash "$debian_helper" resolve_patch_policy "$schema_src" \
+        "$abs_work/schema-policy/allowed_patch_skips.txt" \
+        "$abs_work/schema-policy/allowed_patch_skips.reasons.txt" strict
+    test "$(cat "$schema_src/debian/patches/series")" = Don-t-create-a-database.patch
+    (cd "$schema_src" && QUILT_PATCHES=debian/patches quilt push --fuzz=0 -a)
+    ! grep -E '^(CREATE DATABASE|USE |\\c )' "$schema_src"/plugins/*/createDB.sql
+    test "$(grep -c '^CREATE TABLE IF NOT EXISTS ' "$schema_src/plugins/ommysql/createDB.sql")" -eq 2
+    test "$(grep -c 'ID bigint unsigned not null auto_increment primary key' "$schema_src/plugins/ommysql/createDB.sql")" -eq 2
+    grep -F 'SystemEventID bigint unsigned NULL' "$schema_src/plugins/ommysql/createDB.sql" >/dev/null
+    (cd "$schema_src" && QUILT_PATCHES=debian/patches quilt pop -a)
+    cp "$abs_work/native-schema.patch" "$schema_src/debian/patches/Don-t-create-a-database.patch"
+    printf '\n' >>"$schema_src/debian/patches/Don-t-create-a-database.patch"
+    if bash "$debian_helper" resolve_patch_policy "$schema_src" \
+        "$abs_work/schema-policy/allowed_patch_skips.txt" \
+        "$abs_work/schema-policy/allowed_patch_skips.reasons.txt" strict >"$work_dir/schema-drift.out" 2>&1; then
+        echo "changed native schema patch was silently refreshed" >&2
+        exit 1
+    fi
+    grep -F 'native Debian patch changed; review refresh' "$work_dir/schema-drift.out" >/dev/null
+    cp "$abs_work/native-schema.patch" "$schema_src/debian/patches/Don-t-create-a-database.patch"
+    : >"$schema_src/debian/patches/series"
+    if bash "$debian_helper" resolve_patch_policy "$schema_src" \
+        "$abs_work/schema-policy/allowed_patch_skips.txt" \
+        "$abs_work/schema-policy/allowed_patch_skips.reasons.txt" strict >"$work_dir/schema-absent.out" 2>&1; then
+        echo "stale native schema refresh was accepted" >&2
+        exit 1
+    fi
+    grep -F 'reviewed Debian patch no longer in series' "$work_dir/schema-absent.out" >/dev/null
 fi
 
 spec="$work_dir/rsyslog.spec"
