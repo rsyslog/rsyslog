@@ -1,0 +1,25 @@
+plugins/omprog/omprog.c
+  s_5e773934876cb4::t_f8533df801f0b4 129
+tests/Makefile.am
+  s_5e773934876cb4::t_571180eddfee0b 1408,1432-1433,2761,3829-3831
+tests/omprog-confirmtimeout-validation.sh
+  s_5e773934876cb4::t_759406a6da737d 1-63
+tests/yaml-omprog-confirmtimeout-validation.sh
+  s_5e773934876cb4::t_c658a676ada8fb 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8efea72290627b8e5650939855b2a76a0e203c4a",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
