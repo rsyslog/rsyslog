@@ -3794,13 +3794,9 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     /* it is sufficient to persist only when the bulk of work is done */
     qqueueChkPersist(pThis, nDequeued + nDiscarded + nDeleted);
 
-    /* If messages where DISCARDED, we need to substract them from the OverallQueueSize */
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
-    #else
-    iOverallQueueSize -= nDiscarded; /* racy, but we can't wait for a mutex! */
-    #endif
+    /* Batch retirement decrements iOverallQueueSize for discarded records too.
+     * Keep them counted until then so the testbench observes completion once. */
     DBGOPRINT((obj_t *)pThis, "dequeued %d discarded %d QueueSize %d consumable elements, szlog %d sz phys %d\n",
               nDequeued, nDiscarded, iOverallQueueSize, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 #else
@@ -4025,13 +4021,27 @@ static rsRetVal DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSki
 retry_dequeue:
     CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
-    if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
+    if (pWti->batch.nElem == 0) {
+        /* Discarded messages still occupy physical queue capacity. Retire
+         * them before sleeping, even though no messages remain to deliver.
+         */
+        const int nDiscarded = pWti->batch.nElemDeq;
+        if (nDiscarded > 0) {
+            qqueueDrainDeferredLocked(pThis, pWti);
+            CHKiRet(DeleteProcessedBatch(pThis, pWti));
+            qqueueChkPersist(pThis, nDiscarded);
+            /* Disposal may have unlocked the queue before retirement. An
+             * enqueue there could not signal us as a waiter yet. */
+            if (getLogicalQueueSize(pThis) > 0) goto retry_dequeue;
+        }
+        ABORT_FINALIZE(RS_RET_IDLE);
+    }
 
 finalize_it:
     /* An idle acquisition has no batch to retire. All other non-OK paths keep
      * their attribution so a store context or partial dequeue cannot be
      * completed through a callback owner's queue by mistake. */
-    if (iRet == RS_RET_IDLE &&
+    if (iRet == RS_RET_IDLE && pWti->source_queue != NULL &&
         !qqueueLeaseHasResponsibility(pWti->batch.nElem, pWti->batch.nElemDeq, pWti->batch.storeData)) {
         const rsRetVal clearRet = qqueueClearWtiSource(pThis, pWti);
         if (clearRet != RS_RET_OK) iRet = clearRet;
