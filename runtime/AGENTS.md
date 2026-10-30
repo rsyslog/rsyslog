@@ -46,6 +46,8 @@ collection, and process orchestration).
 - Discard-only batch retirement before idle and subsequent delivery without
   restart are covered for both memory queue types by
   `tests/queue-discard-only-recovery.sh` (imdiag and impstats required).
+- Discarded-batch and invalid disk-tail accounting are covered together by
+  `tests/queue-discard-corrupt-tail.sh` (imdiag and the disposal hook required).
 - Known-success FE/BE callback retirement through cooperative immediate stop
   and cancellation has deterministic post-return gates in
   `tests/local-queue-known-success.sh`; existing force-term action tests retain

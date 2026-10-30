@@ -3624,7 +3624,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
                     break;
                 }
                 *pSkippedMsgs = iQueueSize;
-                qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                qqueueSubtractOverallQueueSize(iQueueSize);
                 pThis->iQueueSize -= iQueueSize;
                 recoverFromInvalidQi(pThis, wr_fd, wr_offs);
                 iQueueSize = 0;
@@ -3654,7 +3654,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
                         break;
                     }
                     *pSkippedMsgs = iQueueSize;
-                    qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                    qqueueSubtractOverallQueueSize(iQueueSize);
                     pThis->iQueueSize -= iQueueSize;
                     recoverFromInvalidQi(pThis, wr_fd, wr_offs);
                     iQueueSize = 0;
@@ -3681,7 +3681,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
                     break;
                 }
                 *pSkippedMsgs = iQueueSize;
-                qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                qqueueSubtractOverallQueueSize(iQueueSize);
                 pThis->iQueueSize -= iQueueSize;
                 recoverFromInvalidQi(pThis, strmGetCurrFileNum(pThis->tVars.disk.pWrite),
                                      pThis->tVars.disk.pWrite->iCurrOffs);
@@ -3722,7 +3722,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
                     break;
                 }
                 *pSkippedMsgs = iQueueSize;
-                qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                qqueueSubtractOverallQueueSize(iQueueSize);
                 pThis->iQueueSize -= iQueueSize;
                 recoverFromInvalidQi(pThis, strmGetCurrFileNum(pThis->tVars.disk.pWrite),
                                      pThis->tVars.disk.pWrite->iCurrOffs);
