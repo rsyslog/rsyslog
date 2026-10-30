@@ -32,6 +32,7 @@ TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
 TESTS_RELEASE_PACKAGING = \
+	ubuntu-noble-logrotate.sh \
 	ubuntu-qpid-generation-order.sh \
 	rpm-baseline-patch-policy.sh \
 	daily-stable-package-drift.sh \
