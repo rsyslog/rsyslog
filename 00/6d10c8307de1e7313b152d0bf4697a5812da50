@@ -1,0 +1,23 @@
+.github/workflows/pr_coverage_upload.yml
+  s_5e773934876cb4::t_d9b2a6b7c2d49b 25,42-45,47,54-55,118,121-122,126-128
+devtools/pr-coverage-source.cjs
+  s_5e773934876cb4::t_a0e4761ecb5b75 83-95
+tests/pr-coverage-source.cjs
+  s_5e773934876cb4::t_71a14e7e73207c 169-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "006d10c8307de1e7313b152d0bf4697a5812da50",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
