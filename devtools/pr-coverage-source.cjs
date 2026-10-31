@@ -80,3 +80,16 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   core.setOutput('artifact', reports[0].id);
   core.setOutput('url', run.html_url);
 };
+
+// A workflow_run consumer reports against a different commit from its own run.
+// Checks created with GITHUB_TOKEN can attach to another Actions workflow's
+// suite for that SHA, so a coverage failure can make Code Style Check look red
+// and be copied by a style-only rerun. Commit statuses have no suite attachment.
+module.exports.reportStatus = async function reportCoverageStatus({github, context, sha, name, state}) {
+  await github.rest.repos.createCommitStatus({
+    ...context.repo, sha, context: name, state,
+    target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+    description: state === 'pending' ? 'Validating and uploading source coverage' :
+      state === 'success' ? 'Coverage uploaded' : 'Coverage validation/upload failed'
+  });
+};

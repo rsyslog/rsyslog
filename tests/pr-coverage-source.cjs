@@ -166,5 +166,40 @@ async function evaluate(data) {
     wrongWorkflow.workflow.name = docs ? 'check' : 'documentation build';
     await assert.rejects(evaluate(wrongWorkflow));
   }
+  // Cross-workflow coverage must use an independent commit status: creating a
+  // GitHub Actions check on this SHA attaches it to an unrelated workflow suite
+  // (observed on Code Style Check), whose reruns then copy the coverage failure.
+  // Execute the reporter against the API boundary; every terminal upload result
+  // must remain visible on the exact PR head without touching any check suite.
+  const reported = [];
+  const reporterGithub = {rest: {repos: {createCommitStatus: async payload => { reported.push(payload); }}}};
+  const reporterContext = {repo: {owner: 'rsyslog', repo: 'rsyslog'},
+    serverUrl: 'https://github.com', runId: 99};
+  for (const state of ['pending', 'success', 'failure']) {
+    await resolve.reportStatus({github: reporterGithub, context: reporterContext,
+      sha: 'a'.repeat(40), name: 'PR coverage upload (pr-ubuntu-24)', state});
+    const payload = reported.at(-1);
+    assert.equal(payload.sha, 'a'.repeat(40));
+    assert.equal(payload.context, 'PR coverage upload (pr-ubuntu-24)');
+    assert.equal(payload.state, state);
+    assert.equal(payload.target_url, 'https://github.com/rsyslog/rsyslog/actions/runs/99');
+    assert.equal(payload.owner, 'rsyslog');
+    assert.equal(payload.repo, 'rsyslog');
+    assert.ok(payload.description.length > 0 && payload.description.length <= 140);
+  }
+  // A status API outage must fail the reporting step rather than silently
+  // pretending the PR was updated. Final upload reporting runs only after the
+  // pending status succeeded; skipped producers never receive an upload status.
+  await assert.rejects(resolve.reportStatus({
+    github: {rest: {repos: {createCommitStatus: async () => { throw new Error('status API unavailable'); }}}},
+    context: reporterContext, sha: 'a'.repeat(40), name: 'PR coverage upload (docs-samples)', state: 'failure'
+  }), /status API unavailable/);
+  if (fs.existsSync(consumerPath)) {
+    const reportingWorkflow = fs.readFileSync(consumerPath, 'utf8');
+    assert.ok(reportingWorkflow.includes('statuses: write'));
+    assert.ok(!reportingWorkflow.includes('checks: write'));
+    assert.ok(!reportingWorkflow.includes('github.rest.checks.'));
+    assert.ok(reportingWorkflow.includes("steps.status.outcome == 'success'"));
+  }
   console.log('PASS: PR runtime/docs coverage identity and stale/provenance refusal contracts');
 })().catch(error => { console.error(error); process.exitCode = 1; });
