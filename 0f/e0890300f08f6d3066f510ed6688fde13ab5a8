@@ -1,0 +1,21 @@
+.github/actionlint.yaml
+  s_5e773934876cb4::t_832fdef36ea084 1-6
+.github/workflows/run_checks.yml
+  s_5e773934876cb4::t_c6bf74b32efb2c 976-978,981
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0fe0890300f08f6d3066f510ed6688fde13ab5a8",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
