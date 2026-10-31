@@ -973,12 +973,12 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # 1 x from macos-14 (x64 NONE)
-          - os: macos-14
+          # Pin Intel labels for both x64 lanes; generic macos-15 is arm64.
+          # macos-14 is retiring and scheduled brownouts prevent jobs starting.
+          - os: macos-15-intel
             arch: x64
             sanitizer: none
-          # 2 x from macos-15 (x64 ASAN and arm64 TSAN)
-          - os: macos-15
+          - os: macos-15-intel
             arch: x64
             sanitizer: asan
           - os: macos-15
