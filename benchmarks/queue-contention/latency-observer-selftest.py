@@ -102,14 +102,18 @@ with tempfile.TemporaryDirectory() as directory:
     server = threading.Thread(target=sink)
     server.start()
     expected = Path(directory) / 'expected'
+    # This exercises oracle wiring, not host timing.  On slow or loaded hosts
+    # (e.g. riscv64 buildds) a late first send makes the rest catch up in a
+    # burst, so the achieved rate legitimately overshoots by several hundred
+    # percent; keep the timing validity limits effectively unbounded here.
     result = observer.run(SimpleNamespace(host='127.0.0.1', port=listener.getsockname()[1], output=output,
                           expected=expected,
-                          messages=4, connections=1, rate=100, id_start=0, poll_us=100, warmup_ms=5,
-                          completion_timeout=2, connect_timeout=2, max_rate_drift_percent=100,
-                          max_lateness_us=100000, max_poll_gap_us=100000, payload=128))
+                          messages=4, connections=1, rate=100, id_start=0, poll_us=100, warmup_ms=100,
+                          completion_timeout=10, connect_timeout=10, max_rate_drift_percent=1e9,
+                          max_lateness_us=1e7, max_poll_gap_us=1e7, payload=128))
     server.join()
     final = observer.final_oracle(output, {0, 1, 2, 3}, 128,
                                   observer.load_expected(expected, {0, 1, 2, 3}))
-    assert result['status'] == 'completed' and result['oracle']['received'] == 4
+    assert result['status'] == 'completed' and result['oracle']['received'] == 4, json.dumps(result, indent=2)
     assert not (final['missing'] or final['duplicates'] or final['invalid_output']
                 or final['timestamp_mismatch'] or final['trailing_bytes'])
