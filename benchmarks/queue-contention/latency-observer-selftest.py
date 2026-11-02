@@ -116,4 +116,4 @@ with tempfile.TemporaryDirectory() as directory:
                                   observer.load_expected(expected, {0, 1, 2, 3}))
     assert result['status'] == 'completed' and result['oracle']['received'] == 4, json.dumps(result, indent=2)
     assert not (final['missing'] or final['duplicates'] or final['invalid_output']
-                or final['timestamp_mismatch'] or final['trailing_bytes'])
+                or final['timestamp_mismatch'] or final['trailing_bytes']), json.dumps(final, indent=2)

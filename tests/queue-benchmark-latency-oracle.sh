@@ -69,5 +69,5 @@ metric_file="$PWD/$RSYSLOG_DYNNAME.latency.json"
         BENCH_MAX_LATENESS_US=10000000 BENCH_MAX_POLL_GAP_US=10000000 \
         BENCH_METRIC_FILE="$metric_file" \
         bash "$srcdir/../benchmarks/queue-contention/trial-latency.sh"
-) || error_exit 1
+) || { cat "$metric_file" 2>/dev/null; error_exit 1; }
 exit_test
