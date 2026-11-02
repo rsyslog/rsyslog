@@ -881,7 +881,7 @@ StreamDriverMode
 
    "integer", "0", "no", "``$ActionSendStreamDriverMode``"
 
-The recommended alias, compatible with imtcp, is "StreamDriver.Mode".
+The recommended alias, compatible with imtcp, is "StreamDriver.Mode" (added in version 8.2606.0).
 
 Mode to use with the stream driver (driver-specific)
 
@@ -907,7 +907,7 @@ StreamDriverAuthMode
 
    "string", "none", "no", "``$ActionSendStreamDriverAuthMode``"
 
-The recommended alias, compatible with imtcp, is "StreamDriver.AuthMode".
+The recommended alias, compatible with imtcp, is "StreamDriver.AuthMode" (added in version 8.2606.0).
 
 Authentication mode to use with the stream driver. Note that this
 parameter requires TLS netstream drivers. For all others, it will be
