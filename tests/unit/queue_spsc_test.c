@@ -294,6 +294,23 @@ static void signal_peer(spsc_thread_test_state_t *state) {
     (void)pthread_cond_signal(&state->wait_cond);
 }
 
+/* Progress counters are only for the watchdog report; guard them with the
+ * wait mutex rather than raw atomics so the test stays portable. */
+static void publish_progress(spsc_thread_test_state_t *state, const int is_producer, const uint32_t items) {
+    (void)pthread_mutex_lock(&state->wait_mutex);
+    if (is_producer)
+        state->produced_items = items;
+    else
+        state->consumed_items = items;
+    (void)pthread_mutex_unlock(&state->wait_mutex);
+}
+
+static void thread_finished(spsc_thread_test_state_t *state) {
+    (void)pthread_mutex_lock(&state->wait_mutex);
+    ++state->threads_done;
+    (void)pthread_mutex_unlock(&state->wait_mutex);
+}
+
 /* Yield a few times, then block briefly on the peer's progress signal.  A
  * spinning thread must not keep a CPU from its peer: on small macOS runners
  * sched_yield() alone can leave both threads starving each other past the
@@ -337,14 +354,14 @@ static void *producer_main(void *arg) {
         if (rsSpscQueueTryPush(&state->queue, batch, count)) {
             next_id += count;
             misses = 0;
-            __atomic_store_n(&state->produced_items, next_id - 1U, __ATOMIC_RELAXED);
+            publish_progress(state, 1, next_id - 1U);
             signal_peer(state);
         } else {
             if (misses == 0) ++state->full_episodes;
             wait_for_peer(state, &misses);
         }
     }
-    (void)__atomic_fetch_add(&state->threads_done, 1, __ATOMIC_RELEASE);
+    thread_finished(state);
     return NULL;
 }
 
@@ -378,10 +395,10 @@ static void *consumer_main(void *arg) {
             if (payload->checksum != payload_checksum(payload)) state->consumer_result = 1;
             ++received;
         }
-        __atomic_store_n(&state->consumed_items, received, __ATOMIC_RELAXED);
+        publish_progress(state, 0, received);
         signal_peer(state);
     }
-    (void)__atomic_fetch_add(&state->threads_done, 1, __ATOMIC_RELEASE);
+    thread_finished(state);
     return NULL;
 }
 
@@ -412,15 +429,20 @@ static int test_variable_batch_threads(void) {
     (void)pthread_cond_broadcast(&state.start_cond);
     (void)pthread_mutex_unlock(&state.start_mutex);
     /* Watchdog: report progress counters instead of dying silently on SIGALRM. */
-    while (__atomic_load_n(&state.threads_done, __ATOMIC_ACQUIRE) < 2) {
+    for (;;) {
         const struct timespec tick = {0, 10000000};
+        int done;
 
+        (void)pthread_mutex_lock(&state.wait_mutex);
+        done = state.threads_done;
+        (void)pthread_mutex_unlock(&state.wait_mutex);
+        if (done >= 2) break;
         (void)nanosleep(&tick, NULL);
         if (++waited_ms > 6000) {
+            (void)pthread_mutex_lock(&state.wait_mutex);
             fprintf(stderr, "SPSC thread test stalled: produced %u, consumed %u of %u items, %lu full, %lu empty\n",
-                    __atomic_load_n(&state.produced_items, __ATOMIC_RELAXED),
-                    __atomic_load_n(&state.consumed_items, __ATOMIC_RELAXED), CONCURRENT_ITEMS,
-                    state.full_episodes, state.empty_episodes);
+                    state.produced_items, state.consumed_items, CONCURRENT_ITEMS, state.full_episodes,
+                    state.empty_episodes);
             _exit(1);
         }
     }
