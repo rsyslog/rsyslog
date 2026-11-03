@@ -926,7 +926,17 @@ jobs:
           echo "== Install build tools for autoreconf/configure/make dist =="
           dnf_retry install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
-          curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
+          # Retry the idempotent key GET on all curl errors: mixed IPv4/IPv6
+          # failures can hide connection refusal from --retry-connrefused.
+          # Keep incomplete downloads away from the key path consumed by dnf.
+          key_tmp=$(mktemp /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon.XXXXXX)
+          if curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 --retry-max-time 180 --connect-timeout 15 --max-time 60 -o "$key_tmp" https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon; then
+            mv "$key_tmp" /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon
+          else
+            status=$?
+            rm -f "$key_tmp"
+            exit "$status"
+          fi
           {
             echo '[adiscon]'
             echo 'name=adiscon'
