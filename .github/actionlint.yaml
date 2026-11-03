@@ -1,3 +1,9 @@
+# GitHub-hosted Intel label documented by actions/runner-images; the bundled
+# actionlint 1.7.7 runner catalog predates it. Keep this compatibility list exact.
+self-hosted-runner:
+  labels:
+    - macos-15-intel
+
 # actionlint 1.7.7 predates GitHub's `$/` self-repository syntax.
 # Keep this compatibility ignore narrow until actionlint supports that syntax.
 paths:
