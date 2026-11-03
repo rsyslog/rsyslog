@@ -398,7 +398,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
           flags: daily-${{ matrix.lane }}
-          fail_ci_if_error: true
+          # Coverage is informational; Codecov problems must not fail CI.
+          fail_ci_if_error: false
 
       - name: Upload test failure evidence
         if: >-

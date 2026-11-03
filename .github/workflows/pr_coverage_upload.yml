@@ -22,7 +22,6 @@ jobs:
       actions: read
       contents: read
       pull-requests: read
-      statuses: write
     steps:
       # Checkout is always the trusted default-branch workflow revision. Never
       # checkout the source run's SHA, restore its caches, or execute its files.
@@ -38,22 +37,6 @@ jobs:
         with:
           script: |
             await require('./devtools/pr-coverage-source.cjs')({github, context, core});
-
-      # Commit statuses stay independent of source workflow check suites. A
-      # synthetic Actions check on this SHA can attach to Code Style Check and
-      # incorrectly make its successful job appear to have failed.
-      - name: Report pending upload on the PR head
-        if: steps.source.outputs.artifact != ''
-        id: status
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          PR_HEAD_SHA: ${{ steps.source.outputs.sha }}
-          CHECK_NAME: ${{ steps.source.outputs.check }}
-        with:
-          script: |
-            await require('./devtools/pr-coverage-source.cjs').reportStatus({
-              github, context, sha: process.env.PR_HEAD_SHA, name: process.env.CHECK_NAME, state: 'pending'
-            });
 
       - name: Download bounded report archive
         if: steps.source.outputs.artifact != ''
@@ -82,22 +65,16 @@ jobs:
           python3 devtools/validate-pr-coverage.py "$RUNNER_TEMP/pr-coverage.zip" coverage.info \
             --source-root "$source_root"
 
-      - name: Require token authentication
-        if: steps.source.outputs.artifact != '' && steps.source.outputs.tokenless != 'true'
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: |
-          if [ -z "$CODECOV_TOKEN" ]; then
-            echo "CODECOV_TOKEN is unavailable; refusing tokenless upload" >&2
-            exit 1
-          fi
-
       # Public fork uploads use Codecov's colon-prefixed branch contract.
       # Trusted provenance/report validation above remains mandatory. Other
       # PRs retain credentials; never fall back after an authentication error.
+      # Coverage is informational: a Codecov outage, rate limit or rejected
+      # token must never turn CI red or force test reruns. Failures stay
+      # visible as a warning in this run's log and summary only.
       - name: Upload coverage from the trusted consumer
         if: steps.source.outputs.artifact != ''
         id: upload
+        continue-on-error: true
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ steps.source.outputs.tokenless != 'true' && secrets.CODECOV_TOKEN || '' }}
@@ -114,16 +91,8 @@ jobs:
           name: ${{ steps.source.outputs.flag }}-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
           fail_ci_if_error: true
 
-      - name: Report upload outcome on the PR head
-        if: always() && steps.status.outcome == 'success'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          PR_HEAD_SHA: ${{ steps.source.outputs.sha }}
-          CHECK_NAME: ${{ steps.source.outputs.check }}
-          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
-        with:
-          script: |
-            await require('./devtools/pr-coverage-source.cjs').reportStatus({
-              github, context, sha: process.env.PR_HEAD_SHA, name: process.env.CHECK_NAME,
-              state: process.env.UPLOAD_OUTCOME === 'success' ? 'success' : 'failure'
-            });
+      - name: Warn about a failed upload
+        if: steps.upload.outcome == 'failure'
+        run: |
+          msg="Coverage was not uploaded; see the upload step log. CI results are unaffected."
+          echo "::warning title=Codecov upload failed::$msg"

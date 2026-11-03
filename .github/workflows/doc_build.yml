@@ -208,7 +208,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: doc-builder/coverage.info
           flags: docs-samples
-          fail_ci_if_error: true
+          # Coverage is informational; Codecov problems must not fail CI.
+          fail_ci_if_error: false
 
       - name: Validate generated HTML links
         if: >-
