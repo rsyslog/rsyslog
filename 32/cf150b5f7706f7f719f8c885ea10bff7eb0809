@@ -1,0 +1,21 @@
+grammar/rainerscript.c
+  s_5e773934876cb4::t_2e5a0f29b37b66 1685,1693,1705,1728
+tests/rscript_re_extract.sh
+  s_5e773934876cb4::t_e891b201f6b602 4-6,13,18,21-50,59-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32cf150b5f7706f7f719f8c885ea10bff7eb0809",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
