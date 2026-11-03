@@ -14,8 +14,8 @@ if [ "$(uname)" != "Linux" ]; then
     exit 77
 fi
 
-if ! command -v python3 >/dev/null 2>&1; then
-    echo "This test requires python3."
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+    echo "This test requires python3 3.6 or newer."
     exit 77
 fi
 

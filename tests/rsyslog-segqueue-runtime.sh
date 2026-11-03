@@ -13,7 +13,7 @@ QUEUE_DIR="$SPOOL_DIR/mainq.segq"
 SEGQUEUE_TOOL="$srcdir/../tools/rsyslog-segqueue"
 EXPORT_FILE="${RSYSLOG_DYNNAME}.jsonl"
 
-command -v python3 >/dev/null 2>&1 || skip_platform "python3 not available"
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || { echo "python3 >= 3.6 not available - skipping"; exit 77; }
 
 generate_conf
 add_conf '

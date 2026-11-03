@@ -30,7 +30,7 @@ disable="$repo_dir/devtools/release/rpm-disable-optional-modules.py"
 guard="$repo_dir/devtools/release/check-optional-module-policy.py"
 work_dir="./daily-stable-package-drift-work.$$"
 
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 
 cleanup() {
 	rm -rf -- "$work_dir"

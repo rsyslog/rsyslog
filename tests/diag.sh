@@ -621,7 +621,7 @@ get_core_pattern() {
 
 core_policy_uses_external_collector() {
 	local core_pattern
-	[ "$(uname)" = "Linux" ] || return 1
+	[ "$(uname)" = "Linux" ] || [ -n "${RSTB_CORE_PATTERN_OVERRIDE:-}" ] || return 1
 	core_pattern="$(get_core_pattern)"
 	case "$core_pattern" in
 	\|*) return 0 ;;
@@ -3649,6 +3649,12 @@ check_command_available() {
 	else
 		if command -v "$1" >/dev/null 2>&1; then
 			have_cmd=1
+		fi
+		# helper scripts use f-strings/pathlib etc.: need Python >= 3.6
+		if [ "$1" == "python3" ] && [ $have_cmd -eq 1 ] && \
+		   ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+			printf 'Testbench requires python3 >= 3.6\n'
+			have_cmd=0
 		fi
 	fi
 	if [ $have_cmd -eq 0 ] ; then
