@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jay Beavers, Tolt Technologies.
 # Shared body for the omfwd gtls PKCS#11 tests. GTLS_PKCS11_CASE selects:
 #   mtls       CA, certificate and PIN-protected key all come from a SoftHSM
 #              token through action-level pkcs11: URIs; the oracle is that the
