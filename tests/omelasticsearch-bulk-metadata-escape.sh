@@ -10,7 +10,7 @@
 require_plugin omelasticsearch
 
 if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
-	printf 'SKIP: python3 is required for local omelasticsearch capture server\n'
+	printf 'SKIP: python3 >= 3.6 is required for local omelasticsearch capture server\n'
 	skip_test
 fi
 

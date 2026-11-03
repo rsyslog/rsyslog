@@ -4,7 +4,7 @@
 # Rejection must raise an error before writing output, leaving an outside
 # sentinel intact; positive cases must produce the expected normalized report.
 if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
-    echo "SKIP: PR coverage artifact contract requires Python 3"
+    echo "SKIP: PR coverage artifact contract requires Python 3.6+"
     exit 77
 fi
 exec python3 "${srcdir:-$(dirname "$0")}/pr-coverage-artifact.py"

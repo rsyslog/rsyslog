@@ -10,7 +10,7 @@
 . ${srcdir:=.}/diag.sh init
 
 if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
-	echo "SKIP: python3 is unavailable"
+	echo "SKIP: python3 >= 3.6 is unavailable"
 	skip_test
 fi
 

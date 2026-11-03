@@ -14,7 +14,7 @@
 # as CentOS 8's 3.6 cannot run it, so the test skips there instead of failing
 # on a SyntaxError.
 . ${srcdir:=.}/diag.sh init
-python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
+command -v python3 >/dev/null 2>&1 || exit 77
 if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 8))'; then
 	echo "SKIP: queue benchmark harness requires Python 3.8 or newer"
 	skip_test
