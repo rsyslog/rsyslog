@@ -26,6 +26,13 @@
 
 #include "nsd.h"
 
+/* pkcs11: URIs for our own certificate and key need GnuTLS built with PKCS#11 (p11-kit) support. */
+#if defined(HAVE_GNUTLS_X509_CRT_IMPORT_URL) && defined(HAVE_GNUTLS_PKCS11_PRIVKEY_IMPORT_URL)
+    #define GTLS_HAVE_PKCS11_URI 1
+    #include <gnutls/gnutls.h>
+    #include <gnutls/pkcs11.h>
+#endif
+
 #define NSD_GTLS_MAX_RCVBUF 16 * 1024 + 1 /* TLS RFC 8449: max size of buffer for message reception */
 #define NSD_GTLS_MAX_CERT 10 /* max number of certs in our chain */
 
@@ -86,8 +93,12 @@ struct nsd_gtls_s {
                                 (unused in server mode) */
         unsigned int nOurCerts; /* number of certificates in our chain */
         gnutls_x509_privkey_t ourKey; /**< our private key, if in client mode (unused in server mode) */
+#ifdef GTLS_HAVE_PKCS11_URI
+        gnutls_pkcs11_privkey_t ourP11Key; /**< our private key when KeyFile is a pkcs11: URI */
+#endif
         short bOurCertIsInit; /**< 1 if our certificate is initialized and must be deinit on destruction */
         short bOurKeyIsInit; /**< 1 if our private key is initialized and must be deinit on destruction */
+        short bOurKeyIsP11; /**< 1 if our private key is ourP11Key rather than ourKey */
         char *pszRcvBuf;
         int lenRcvBuf;
         /**< -1: empty, 0: connection closed, 1..NSD_GTLS_MAX_RCVBUF-1: data of that size present */
