@@ -2197,6 +2197,8 @@ TESTS_GNUTLS_VALGRIND = \
 TESTS_GNUTLS_OPENSSL = \
 	omfwd-tls-gtls-module-files-mtls.sh \
 	omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh \
+	omfwd-tls-gtls-pkcs11-mtls.sh \
+	omfwd-tls-gtls-pkcs11-error-key.sh \
 	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh
 
 TESTS_MBEDTLS = \
@@ -4560,6 +4562,7 @@ EXTRA_DIST += \
 	privdrop_common.sh \
 	rscript_compare-common.sh \
 	omfwd-tls-ossl-pkcs11-error.sh \
+	omfwd-tls-gtls-pkcs11-common.sh \
 	omfwd-tls-ossl-pkcs11-ecdsa-sigalgs-common.sh \
 	omfwd-tls-ossl-pkcs11-sigalgs-negative-common.sh \
 	omfwd-tls-ossl-pkcs11-sigalgs-common.sh \
