@@ -476,6 +476,7 @@ TESTS_DEFAULT = \
 	omfile-dynafile-mmnormalize-property.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-followsymlinks.sh \
+	omfile-followsymlinks-legacy.sh \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \

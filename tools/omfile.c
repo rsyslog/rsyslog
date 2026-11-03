@@ -2100,6 +2100,18 @@ BEGINparseSelectorAct
     if (loadModConf != NULL) {
         pData->bPermitDynaFilePathEscape = loadModConf->bPermitDynaFilePathEscape;
         pData->bRestrictDynaFileTplType = loadModConf->bRestrictDynaFileTplType;
+        pData->bFollowSymlinks = loadModConf->bFollowSymlinks;
+        pData->bFollowSymlinksExplicit = loadModConf->bFollowSymlinksExplicit;
+    } else {
+        pData->bFollowSymlinks = -1;
+        pData->bFollowSymlinksExplicit = 0;
+    }
+    /* Legacy selector actions bypass setInstParamDefaults(), so apply the
+     * compatibility-controlled symlink policy here as well. Otherwise the
+     * zero-initialized instance would silently reject final-component
+     * symlinks (e.g. /dev/null on Solaris) even in the default mode. */
+    if (pData->bFollowSymlinks == -1) {
+        pData->bFollowSymlinks = getCompatDefaultFollowSymlinks(loadConf);
     }
 
     if (*p == '-') {
