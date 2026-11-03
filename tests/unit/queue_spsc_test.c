@@ -23,9 +23,11 @@
  * The test therefore also requires at least one full and one empty episode.
  * Each episode is a producer/consumer handoff whose wall-clock cost is set by
  * the scheduler, not the queue; on a loaded macOS TSan runner it can approach
- * a scheduler quantum.  TSan builds therefore move fewer items: TSan flags a
+ * a scheduler quantum.  Sanitizer builds therefore move fewer items: TSan flags a
  * missing happens-before edge on the first unordered access, so item volume
- * adds little there, while uninstrumented builds keep 100k items to give real
+ * adds little there; ASan builds are equally scheduler-bound on loaded macOS
+ * x64 runners (the 60 s alarm fired there with 100k items).  Uninstrumented
+ * builds keep 100k items to give real
  * weakly ordered hardware more chances to expose a stale payload checksum.
  * A 60-second alarm bounds a regression hang; it is not the success oracle.
  */
@@ -224,15 +226,15 @@ static int test_cached_full_and_slot_reuse(void) {
     return 0;
 }
 
-#if defined(__SANITIZE_THREAD__)
-    #define SPSC_TEST_UNDER_TSAN 1
+#if defined(__SANITIZE_THREAD__) || defined(__SANITIZE_ADDRESS__)
+    #define SPSC_TEST_SANITIZED 1
 #elif defined(__has_feature)
-    #if __has_feature(thread_sanitizer)
-        #define SPSC_TEST_UNDER_TSAN 1
+    #if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
+        #define SPSC_TEST_SANITIZED 1
     #endif
 #endif
 
-#ifdef SPSC_TEST_UNDER_TSAN
+#ifdef SPSC_TEST_SANITIZED
     #define CONCURRENT_ITEMS 20000U
 #else
     #define CONCURRENT_ITEMS 100000U
