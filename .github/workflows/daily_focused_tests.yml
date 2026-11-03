@@ -206,13 +206,14 @@ jobs:
           sudo bash -c 'echo "127.0.0.1 localhost" > /etc/hosts'
           cat -n /etc/hosts
 
-      - name: require Codecov token
+      # Coverage is informational: a missing token only skips the upload.
+      - name: check Codecov token
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           if [ -z "$CODECOV_TOKEN" ]; then
-            echo "CODECOV_TOKEN secret is not configured" >&2
-            exit 1
+            msg="CODECOV_TOKEN is not configured; coverage upload will fail without affecting CI."
+            echo "::warning title=Codecov token missing::$msg"
           fi
 
       - name: enable coverage flags

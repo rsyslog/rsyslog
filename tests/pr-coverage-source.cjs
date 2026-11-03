@@ -79,6 +79,11 @@ async function evaluate(data) {
     assert.ok(upload.includes('fail_ci_if_error: true'));
     // Upload problems are reported, but must never fail the consumer job.
     assert.ok(upload.includes('continue-on-error: true'));
+    // Credentialed targets never fall back to a tokenless upload.
+    assert.ok(upload.includes("steps.auth.outputs.ready == 'true'"));
+    const auth = consumer.split('- name: Check upload credentials')[1].split('\n      - name:')[0];
+    assert.ok(auth.includes('[ "$TOKENLESS" != "true" ] && [ -z "$CODECOV_TOKEN" ]'));
+    assert.ok(auth.includes('ready=false'));
     assert.ok(upload.includes('override_branch: ${{ steps.source.outputs.branch }}'));
     assert.ok(!consumer.includes('id-token: write'));
   }

@@ -65,6 +65,25 @@ jobs:
           python3 devtools/validate-pr-coverage.py "$RUNNER_TEMP/pr-coverage.zip" coverage.info \
             --source-root "$source_root"
 
+      # Same-repository and private PRs require the token. If it is missing,
+      # skip the upload with a warning instead of attempting a tokenless one.
+      - name: Check upload credentials
+        if: steps.source.outputs.artifact != ''
+        id: auth
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          TOKENLESS: ${{ steps.source.outputs.tokenless }}
+        run: |
+          if [ "$TOKENLESS" != "true" ] && [ -z "$CODECOV_TOKEN" ]; then
+            echo "::warning title=Codecov upload skipped::CODECOV_TOKEN is unavailable for this PR."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # This consumer intentionally publishes no GitHub status/check on the PR
+      # head: synthetic checks can attach to an unrelated Actions suite, such
+      # as Code Style Check, and make a successful job appear failed.
       # Public fork uploads use Codecov's colon-prefixed branch contract.
       # Trusted provenance/report validation above remains mandatory. Other
       # PRs retain credentials; never fall back after an authentication error.
@@ -72,7 +91,7 @@ jobs:
       # token must never turn CI red or force test reruns. Failures stay
       # visible as a warning in this run's log and summary only.
       - name: Upload coverage from the trusted consumer
-        if: steps.source.outputs.artifact != ''
+        if: steps.source.outputs.artifact != '' && steps.auth.outputs.ready == 'true'
         id: upload
         continue-on-error: true
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
