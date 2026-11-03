@@ -26,8 +26,10 @@
 
 #include "nsd.h"
 
-/* pkcs11: URIs for our own certificate and key need GnuTLS built with PKCS#11 (p11-kit) support. */
-#if defined(HAVE_GNUTLS_X509_CRT_IMPORT_URL) && defined(HAVE_GNUTLS_PKCS11_PRIVKEY_IMPORT_URL)
+/* pkcs11: URIs for our own certificate and key need GnuTLS built with PKCS#11 (p11-kit) support, and
+ * the retrieve callback that can hand GnuTLS a PKCS#11 key. */
+#if defined(HAVE_GNUTLS_X509_CRT_IMPORT_URL) && defined(HAVE_GNUTLS_PKCS11_PRIVKEY_IMPORT_URL) && \
+    defined(HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION)
     #define GTLS_HAVE_PKCS11_URI 1
     #include <gnutls/gnutls.h>
     #include <gnutls/pkcs11.h>

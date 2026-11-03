@@ -282,7 +282,7 @@ static const char *gtlsLogSafe(const uchar *const input, char **const sanitized)
         char *pos = *sanitized;
         while ((pos = strstr(pos, pinKeys[k])) != NULL) {
             pos += strlen(pinKeys[k]);
-            while (*pos != '\0' && *pos != ';' && *pos != ',') {
+            while (*pos != '\0' && *pos != ';' && *pos != '&') {
                 *pos++ = '*';
             }
         }
@@ -296,7 +296,7 @@ static const char *gtlsLogSafe(const uchar *const input, char **const sanitized)
  * @return Non-zero when @p ref begins with ``pkcs11:``.
  */
 static int gtlsIsPkcs11Uri(const uchar *const ref) {
-    return ref != NULL && !strncasecmp((const char *)ref, "pkcs11:", sizeof("pkcs11:") - 1);
+    return ref != NULL && strncmp((const char *)ref, "pkcs11:", sizeof("pkcs11:") - 1) == 0;
 }
 
 /**
@@ -317,7 +317,7 @@ static rsRetVal gtlsLoadOurCert(nsd_gtls_t *const pThis, const uchar *const cert
 #else
         char *safe;
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
-                 "error: certificate '%s' is a PKCS#11 URI, but this GnuTLS has no PKCS#11 support",
+                 "error: certificate '%s' is a PKCS#11 URI, but this GnuTLS build cannot load PKCS#11 objects",
                  gtlsLogSafe(certFile, &safe));
         free(safe);
         ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
@@ -355,7 +355,7 @@ static rsRetVal gtlsLoadOurKey(nsd_gtls_t *const pThis, const uchar *const keyFi
         CHKgnutls(gnutls_pkcs11_privkey_import_url(pThis->ourP11Key, (const char *)keyFile, 0));
 #else
         char *safe;
-        LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: key '%s' is a PKCS#11 URI, but this GnuTLS has no PKCS#11 support",
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: key '%s' is a PKCS#11 URI, but this GnuTLS build cannot load PKCS#11 objects",
                  gtlsLogSafe(keyFile, &safe));
         free(safe);
         ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);

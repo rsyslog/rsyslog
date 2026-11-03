@@ -6,8 +6,10 @@
 #              OpenSSL helper, which requires a valid client certificate,
 #              captures the forwarded payload.
 #   error-key  the key URI names a missing object and carries the PIN; the
-#              oracle is rsyslog's error naming the key with the PIN masked,
+#              oracle is rsyslog's error naming the key with the whole PIN
+#              masked (it holds a comma, which is URI data, not a separator),
 #              and the PIN appearing nowhere in rsyslog's own messages.
+# GTLS_PKCS11_CONF=yaml configures the same action through the YAML frontend.
 # GnuTLS finds the token through p11-kit, so the test registers SoftHSM in a
 # per-test HOME. It skips cleanly when SoftHSM, pkcs11-tool, GnuTLS p11tool or
 # GnuTLS PKCS#11 support is unavailable.
@@ -27,7 +29,9 @@ if [ ! -f "$gtls_module" ]; then
 	echo "lmnsd_gtls module not built - skipping test"
 	exit 77
 fi
-if ! grep -q '^#define HAVE_GNUTLS_PKCS11_PRIVKEY_IMPORT_URL 1' ../config.h; then
+if ! grep -q '^#define HAVE_GNUTLS_PKCS11_PRIVKEY_IMPORT_URL 1' ../config.h ||
+	! grep -q '^#define HAVE_GNUTLS_X509_CRT_IMPORT_URL 1' ../config.h ||
+	! grep -q '^#define HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 1' ../config.h; then
 	echo "GnuTLS without PKCS#11 support - skipping test"
 	exit 77
 fi
@@ -64,7 +68,7 @@ server_stderr="$workdir/server.stderr"
 softhsm_conf="$workdir/softhsm2.conf"
 token_dir="$workdir/tokens"
 token_label="rsyslog-gtls-test-token"
-token_pin="482915"
+token_pin="4829,1573"
 token_so_pin="73926184"
 started_log="$RSYSLOG_DYNNAME.started"
 mkdir -p "$workdir" "$token_dir" "$workdir/home/.config/pkcs11/modules"
@@ -150,6 +154,10 @@ target_port=1
 if [ "$GTLS_PKCS11_CASE" = "error-key" ]; then
 	key_uri="pkcs11:token=$token_label;object=missing-key;type=private;pin-value=$token_pin"
 else
+	test_error_exit_handler() {
+		kill "$server_pid" 2>/dev/null
+		wait "$server_pid" 2>/dev/null
+	}
 	./openssl_mtls_server 0 "$workdir/server.pem" "$workdir/server.key" "$workdir/ca.pem" \
 		"$port_file" "$server_capture" 2>"$server_stderr" &
 	server_pid=$!
@@ -166,7 +174,30 @@ global(
 
 module(load="'$gtls_module'")
 template(name="outfmt" type="string" string="%msg%\n")
-
+'
+if [ "$GTLS_PKCS11_CONF" = "yaml" ]; then
+	add_conf '
+include(file="'$RSYSLOG_DYNNAME'.yaml")
+if $msg contains "omfwd-gtls-pkcs11" then call fwd
+'
+	cat >"$RSYSLOG_DYNNAME.yaml" <<YAMLEOF
+rulesets:
+  - name: fwd
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "tcp"
+        port: "$target_port"
+        template: "outfmt"
+        streamdriver.name: "gtls"
+        streamdriver.mode: 1
+        streamdriver.authmode: "x509/certvalid"
+        streamdriver.cafile: "$ca_uri"
+        streamdriver.certfile: "$cert_uri"
+        streamdriver.keyfile: "$key_uri"
+YAMLEOF
+else
+	add_conf '
 if $msg contains "omfwd-gtls-pkcs11" then {
 	action(
 		type="omfwd"
@@ -183,6 +214,7 @@ if $msg contains "omfwd-gtls-pkcs11" then {
 	)
 }
 '
+fi
 
 startup
 injectmsg_literal '<165>1 2003-03-01T01:00:00.000Z host app - - - omfwd-gtls-pkcs11'
@@ -190,7 +222,7 @@ if [ "$GTLS_PKCS11_CASE" = "error-key" ]; then
 	wait_content "error adding our certificate" "$started_log"
 	shutdown_immediate
 	wait_shutdown
-	content_check "object=missing-key;type=private;pin-value=******" "$started_log"
+	content_check "object=missing-key;type=private;pin-value=*********'" "$started_log"
 	check_not_present "$token_pin" "$started_log"
 else
 	wait_file_lines "$server_capture" 1
