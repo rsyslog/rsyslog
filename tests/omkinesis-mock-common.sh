@@ -10,7 +10,7 @@
 # delay the port file; its stderr is kept for the readiness failure report.
 . ${srcdir:=.}/diag.sh init
 require_plugin omkinesis
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 
 port_file="${RSYSLOG_DYNNAME}.kinesis.port"
 capture_file="${RSYSLOG_DYNNAME}.kinesis.capture"

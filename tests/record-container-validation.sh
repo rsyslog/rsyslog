@@ -19,7 +19,7 @@
 # trees and exact result logs provide deterministic oracles; no daemon/network.
 # The original broad failure remains in the audit even after accepted reruns.
 set -eu
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 command -v git >/dev/null 2>&1 || exit 77
 test_srcdir="${srcdir:-$(dirname "$0")}"
 python3 - "$test_srcdir/../devtools/record-container-validation.py" <<'PY'

@@ -9,7 +9,7 @@
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 
-if ! command -v python3 >/dev/null 2>&1; then
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
 	echo "SKIP: python3 is unavailable"
 	skip_test
 fi

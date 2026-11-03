@@ -27,7 +27,7 @@ trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 test_srcdir="${srcdir:-$(dirname "$0")}"
 gate_source="$test_srcdir/../.codex/pre_push_container_gate.sh"
 [ -f "$gate_source" ] || exit 77
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 command -v git >/dev/null 2>&1 || exit 77
 
 mkdir -p "$tmpdir/.codex"
