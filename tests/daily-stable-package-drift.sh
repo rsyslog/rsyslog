@@ -75,6 +75,14 @@ expect_detect no 'Origin: vendor, fixes a regression from commit bbbbbbbbbb33\n-
 # A commit that main later reverted is not integrated, by reference or subject.
 expect_detect no 'Subject: x\n\n(cherry picked from commit dddddddddd55)\n---\n'
 expect_detect no 'Subject: imfile: experimental watch mode\n---\n'
+# A format-patch export hash from a distribution branch is not an upstream
+# claim: an unresolved one falls back to the subject check (Leap, #7752).
+expect_detect yes 'From eeeeeeeeee666666666666666666666666666666 Mon Sep 17 00:00:00 2001\nSubject: [PATCH] rainerscript: align replace sizing rewind\n---\n'
+expect_detect yes 'From bbbbbbbbbb333333333333333333333333333333 Mon Sep 17 00:00:00 2001\nSubject: [PATCH] local wording\n---\n'
+expect_detect no 'From eeeeeeeeee666666666666666666666666666666 Mon Sep 17 00:00:00 2001\nSubject: [PATCH] local tweak only\n---\n'
+# An explicit cherry-pick reference that main lacks still fails, even with
+# a matching subject.
+expect_detect no 'Subject: rainerscript: align replace sizing rewind\n\n(cherry picked from commit eeeeeeeeee66)\n---\n'
 # References after the header (inside the diff) are not evidence.
 expect_detect no 'Subject: local tweak\n---\ndiff --git a/x b/x\n+(cherry picked from commit bbbbbbbbbb33)\n'
 
