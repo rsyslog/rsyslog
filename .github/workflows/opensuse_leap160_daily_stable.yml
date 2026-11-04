@@ -212,7 +212,10 @@ jobs:
             -w /workspace \
             opensuse/leap:16.0 bash -lc '
               set -euo pipefail
-              zypper -n install findutils gzip python3 rpm-build tar
+              # Install OpenSSL first: pkgconfig(openssl) otherwise resolves
+              # to libressl-devel, which imdtls/omdtls do not build against.
+              zypper -n install findutils gzip python3 rpm-build tar \
+                libopenssl-3-devel
               zypper -n modifyrepo --enable openSUSE:repo-oss-source
               zypper -n refresh openSUSE:repo-oss-source
               # Keep the official source RPM for provenance and extraction;
