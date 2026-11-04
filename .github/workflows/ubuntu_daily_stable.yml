@@ -428,6 +428,13 @@ jobs:
             gpg --batch --import
           gpg --batch --list-secret-keys
 
+      - name: Check archive signing key expiry
+        env:
+          ARCHIVE_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
+        run: >-
+          devtools/release/check-signing-key-expiry.sh
+          "$ARCHIVE_GPG_FINGERPRINT" 60
+
       - name: Download current indexes
         run: |
           set -euo pipefail

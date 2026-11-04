@@ -411,6 +411,11 @@ jobs:
           printf '%s' "$ARCHIVE_GPG_PASSPHRASE" > "$passphrase_file"
           echo "GPG_PASSPHRASE_FILE=$passphrase_file" >> "$GITHUB_ENV"
 
+      - name: Check archive signing key expiry
+        run: >-
+          devtools/release/check-signing-key-expiry.sh
+          "$ARCHIVE_GPG_FINGERPRINT" 60
+
       - name: Sign binary and source RPMs
         run: |
           for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
