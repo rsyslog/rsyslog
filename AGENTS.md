@@ -97,7 +97,7 @@ For any daily-stable, scheduled-release packaging, package archive, or
 distribution-extension work, first read the
 [`Daily Stable Package Archive Program`](.github/DAILY_STABLE_PACKAGE_ARCHIVE.md).
 It defines the current-main/native-baseline model, DigitalOcean Spaces archive,
-five-year retention, publication verification, and common feature-contract
+retention (dailies 90 days, releases indefinitely), publication verification, and common feature-contract
 rules.  Treat a package build as incomplete until the public archive has been
 signature-verified and the exact published package has been installed and
 smoke-tested on the matching target.

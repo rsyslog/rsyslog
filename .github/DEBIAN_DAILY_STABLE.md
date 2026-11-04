@@ -41,10 +41,11 @@ Signed APT indexes are published under both `binary-amd64/` and
 `binary-arm64/`. Each package is built and installed on a native runner of the
 matching architecture.
 
-The APT indexes retain every published package version. The Space must not have
-a lifecycle rule that removes package-pool, by-hash, or snapshot objects before
-five years. Retention starts with the first successful publication; the
-workflow does not synthesize historical builds.
+During the 90-day retention window (see DAILY_STABLE_PACKAGE_ARCHIVE.md), the
+APT indexes retain every published package version. Storage must not remove
+package-pool, by-hash, or snapshot objects on its own; once pruning automation
+exists, it must remove old versions from the indexes before deleting their pool
+files and snapshots.
 
 Only the small current `Packages.xz` and `Sources.xz` indexes are downloaded
 before a publication. They are merged with the new build, so daily Actions
@@ -104,6 +105,6 @@ changes:
    installation, and installed-configuration smoke test all pass.
 5. Set `DEBIAN_DAILY_STABLE_ENABLED` to `true`.
 
-There is deliberately no five-year GitHub Actions artifact retention. The
+There is deliberately no long-term GitHub Actions artifact retention. The
 short-lived Actions artifact transfers one build between jobs; DigitalOcean
 Spaces is the durable archive.

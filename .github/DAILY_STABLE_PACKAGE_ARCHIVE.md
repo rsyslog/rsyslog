@@ -63,8 +63,10 @@ before that, then update the private key secret and, for a new key, the
 - Metadata receives a short cache lifetime; immutable packages and snapshots
   receive a long lifetime.  CDN metadata refresh is expected and must not be
   blocked by an object policy that prevents required updates or deletes.
-- Keep all published package versions and snapshots for at least five years
-  from the first successful publication.  GitHub Actions artifacts are only a
+- Keep daily-stable package versions and snapshots for 90 days after
+  publication; scheduled-stable releases are kept indefinitely.  Pruning
+  (not automated yet) must drop old versions from the indexes before it
+  removes their pool files and snapshots.  GitHub Actions artifacts are only a
   short-lived transport between jobs, not the archive of record.
 - A package build alone is not success.  Every published target must verify
   public signed metadata from a clean matching environment, install the exact
