@@ -68,7 +68,7 @@ done
 
 # Immutable files are stored read-only (0444); metadata stays 0644.
 is_immutable() {
-	[ -f "$target" ] && [ "$(stat -c %a "$target")" = 444 ]
+	[ -f "$target" ] && [ -n "$(find "$target" -prune -perm 0444)" ]
 }
 
 receive() {
@@ -79,7 +79,7 @@ receive() {
 	mkdir -p "$dir"
 	tmp="$(mktemp "$dir/.upload.XXXXXX")"
 	head -c "$((max_bytes + 1))" >"$tmp"
-	if [ "$(stat -c %s "$tmp")" -gt "$max_bytes" ]; then
+	if [ "$(wc -c <"$tmp" | tr -d " ")" -gt "$max_bytes" ]; then
 		rm -f "$tmp"
 		fail 6 "upload too large for $path"
 	fi
