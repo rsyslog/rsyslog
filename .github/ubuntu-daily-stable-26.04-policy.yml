@@ -43,5 +43,13 @@
       "path": "usr/lib/*/rsyslog/omkinesis.so",
       "reason": "Current upstream auto-enables omkinesis when libcurl supports it, but the native Ubuntu 26.04 packaging has no package for this optional module."
     }
+  ],
+  "patch_refreshes": [
+    {
+      "patch": "Don-t-create-a-database.patch",
+      "sha256": "6e591bcef892320442fa5d8ab001d1b4c1c62845ef6493f00fe6683b91948eb8",
+      "replacement": "debian-patch-refreshes/dont-create-database.patch",
+      "reason": "Ubuntu 26.04 8.2512.0-1ubuntu4.2 carries the same patch as Debian 13 (identical SHA-256); reuse Debian's reviewed context refresh for upstream c3491993 BIGINT IDs, preserving the dbconfig-common semantics."
+    }
   ]
 }

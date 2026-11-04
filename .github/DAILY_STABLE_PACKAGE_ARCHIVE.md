@@ -45,6 +45,14 @@ workflow never hard-codes credentials or an account API token.  A bucket-scoped
 read/write Spaces key is sufficient; do not require a DigitalOcean account API
 token for regular publication.
 
+The APT and RPM targets share one archive signing key; Alpine uses its own
+RSA key.  Every APT and RPM publish job runs
+`devtools/release/check-signing-key-expiry.sh` right after importing the key.
+The job fails with a clear error when no usable signing key or subkey is left.
+It warns when the key expires within 60 days.  Extend the key or replace it
+before that, then update the private key secret and, for a new key, the
+`DEBIAN_DAILY_STABLE_GPG_FINGERPRINT` variable.
+
 ## Publication invariants
 
 - Build artifacts, package-pool objects, and dated snapshots are immutable.
