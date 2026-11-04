@@ -57,8 +57,15 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
     ...repo, run_id: run.id, per_page: 100
   });
-  const name = `${profile.prefix}-${run.id}-${run.run_attempt}`;
-  const reports = artifacts.filter(artifact => artifact.name === name);
+  // Re-running only some jobs (e.g. a flaky lane) creates a new run attempt
+  // that carries the successful coverage job over without re-running it, so
+  // its artifact keeps the earlier attempt number. Use the newest attempt
+  // that produced a coverage artifact, never one newer than this run.
+  let reports = [];
+  for (let attempt = run.run_attempt; attempt >= 1 && reports.length === 0; attempt--) {
+    const name = `${profile.prefix}-${run.id}-${attempt}`;
+    reports = artifacts.filter(artifact => artifact.name === name);
+  }
   if (reports.length !== 1 || reports[0].expired ||
       reports[0].size_in_bytes <= 0 || reports[0].size_in_bytes > 10485760 ||
       reports[0].workflow_run?.id !== run.id ||

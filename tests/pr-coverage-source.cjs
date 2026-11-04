@@ -127,7 +127,7 @@ async function evaluate(data) {
     'unsafe branch': d => { d.run.head_branch = d.event.head_branch = 'fix\nINJECT=x'; },
     'missing artifact': d => { d.artifacts = []; },
     'duplicate artifact': d => { d.artifacts.push({...d.artifacts[0], id: 82}); },
-    'stale artifact attempt': d => { d.artifacts[0].name = 'coverage-ubuntu-24-pr-41-1'; },
+    'future artifact attempt': d => { d.artifacts[0].name = d.artifacts[0].name.replace(/-2$/, '-3'); },
     'expired artifact': d => { d.artifacts[0].expired = true; },
     'oversized artifact': d => { d.artifacts[0].size_in_bytes = 10485761; },
     'foreign artifact run': d => { d.artifacts[0].workflow_run.id = 42; },
@@ -138,6 +138,17 @@ async function evaluate(data) {
       const data = fixture(false, docs); change(data);
       await assert.rejects(evaluate(data), undefined, name);
     }
+  }
+  // A partial re-run carries the coverage job over: its artifact keeps the
+  // earlier attempt number and must still be uploaded. When several attempts
+  // produced coverage, the newest one not beyond the run's attempt wins.
+  for (const docs of [false, true]) {
+    const carried = fixture(false, docs);
+    carried.artifacts[0].name = carried.artifacts[0].name.replace(/-2$/, '-1');
+    assert.equal((await evaluate(carried)).artifact, 81, 'carried-over artifact');
+    const both = fixture(false, docs);
+    both.artifacts.unshift({...both.artifacts[0], id: 80, name: both.artifacts[0].name.replace(/-2$/, '-1')});
+    assert.equal((await evaluate(both)).artifact, 81, 'newest attempt wins');
   }
   const skipped = {
     'stale PR head': d => { d.prs[0].head.sha = 'b'.repeat(40); },
