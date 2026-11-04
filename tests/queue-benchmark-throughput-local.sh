@@ -10,6 +10,7 @@ set -eo pipefail
 
 : "${srcdir:=.}"
 . "$srcdir/diag.sh" init
+skip_without_local_queue_support
 metric_file="$PWD/queue-benchmark-throughput-local-$$.json"
 trap 'rm -f "$metric_file"' EXIT
 
