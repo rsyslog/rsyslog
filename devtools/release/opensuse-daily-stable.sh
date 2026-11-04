@@ -172,8 +172,18 @@ for package in packages:
 core_files = policy.get("supplemental_core_files", [])
 if any(not path.strip() for path in core_files):
     raise SystemExit("policy contains an empty supplemental core file")
+module_dir = re.compile(r"^%\{rsyslog_module_dir_(?:no|with)deps\}/")
 for path in core_files:
     if has_manifest_path(path):
+        continue
+    # Newer native specs may package the module in a subpackage instead
+    # (8.2608.0 ships mmleefparse.so in module-mmnormalize).  Both module
+    # directory macros expand to the same path, so do not list it twice.
+    module = module_dir.sub("", path)
+    if module != path and re.search(
+        rf"(?m)^%\{{rsyslog_module_dir_(?:no|with)deps\}}/{re.escape(module)}\s*$",
+        spec,
+    ):
         continue
     spec, count = re.subn(
         r"(?m)^(%\{rsyslog_module_dir_nodeps\}/lmzlibw\.so\s*)$",
@@ -240,7 +250,11 @@ spec, source_count = re.subn(
 spec, doc_source_count = re.subn(
     r"(?m)^Source14:\s*.*$", "Source14:       rsyslog-doc-%{version}.tar.gz", spec
 )
-if (macro_count, version_count, release_count, source_count, doc_source_count) != (1, 1, 1, 1, 1):
+# Since 8.2608.0 the native spec takes its documentation from the release
+# tarball's doc/source tree; older specs used a separate doc tarball
+# (Source14) and a version macro workaround.  Accept both layouts.
+if (version_count, release_count, source_count) != (1, 1, 1) or \
+        macro_count > 1 or doc_source_count > 1:
     raise SystemExit("openSUSE spec version/source fields did not match exactly once")
 
 stamp = datetime.now(timezone.utc).strftime("%a %b %d %Y")
