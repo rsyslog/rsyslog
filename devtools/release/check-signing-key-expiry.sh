@@ -48,14 +48,29 @@ fi
 
 # Colon fields: 1 type, 2 validity, 7 expiry (epoch, empty = never),
 # 12 capabilities.  The primary key line (sec) carries the key's overall
-# capabilities in upper case; each key's own ones are lower case.
+# capabilities in upper case; each key's own ones are lower case.  A subkey
+# can never sign past its primary key's expiry, even if the subkey itself
+# lasts longer, so each candidate's lifetime is capped by the primary's.
 best=""
 best_expiry=""
+primary_expiry=""
+primary_usable=""
 while IFS=: read -r type validity _ _ _ _ expiry _ _ _ _ caps _; do
 	case "$type" in
-		sec|ssb) ;;
+		sec)
+			primary_expiry="$expiry"
+			primary_usable="yes"
+			case "$validity" in
+				e|r|i|d|n) primary_usable="" ;;
+			esac
+			if [ -n "$expiry" ] && [ "$expiry" -le "$now" ]; then
+				primary_usable=""
+			fi
+			;;
+		ssb) ;;
 		*) continue ;;
 	esac
+	[ -n "$primary_usable" ] || continue
 	case "$caps" in
 		*s*) ;;
 		*) continue ;;
@@ -63,6 +78,10 @@ while IFS=: read -r type validity _ _ _ _ expiry _ _ _ _ caps _; do
 	case "$validity" in
 		e|r|i|d|n) continue ;;
 	esac
+	if [ -n "$primary_expiry" ] &&
+		{ [ -z "$expiry" ] || [ "$primary_expiry" -lt "$expiry" ]; }; then
+		expiry="$primary_expiry"
+	fi
 	if [ -n "$expiry" ] && [ "$expiry" -le "$now" ]; then
 		continue
 	fi
