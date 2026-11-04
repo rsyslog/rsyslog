@@ -180,8 +180,11 @@ for path in core_files:
     # (8.2608.0 ships mmleefparse.so in module-mmnormalize).  Both module
     # directory macros expand to the same path, so do not list it twice.
     module = module_dir.sub("", path)
+    # Allow RPM directives such as %attr(...) before the path, but not
+    # %exclude, which means the file is not shipped there.
     if module != path and re.search(
-        rf"(?m)^%\{{rsyslog_module_dir_(?:no|with)deps\}}/{re.escape(module)}\s*$",
+        r"(?m)^(?:%(?!exclude\b)[A-Za-z]+(?:\([^)]*\))?\s+)*"
+        rf"%\{{rsyslog_module_dir_(?:no|with)deps\}}/{re.escape(module)}\s*$",
         spec,
     ):
         continue
