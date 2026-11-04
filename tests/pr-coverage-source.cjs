@@ -62,7 +62,6 @@ async function evaluate(data) {
       assert.equal(output.tokenless, sameRepo ? 'false' : 'true');
       assert.equal(output.flag, docs ? 'docs-samples' : 'pr-ubuntu-24');
       assert.equal(output.kind, docs ? 'docs' : 'runtime');
-      assert.equal(output.check, docs ? 'PR coverage upload (docs-samples)' : 'PR coverage upload (pr-ubuntu-24)');
     }
   }
   // Unknown visibility must fail closed to credentials, just like private
@@ -75,11 +74,16 @@ async function evaluate(data) {
   const consumerPath = path.join(__dirname, '../.github/workflows/pr_coverage_upload.yml');
   if (fs.existsSync(consumerPath)) {
     const consumer = fs.readFileSync(consumerPath, 'utf8');
-    const requireToken = consumer.split('- name: Require token authentication')[1].split('\n      - name:')[0];
-    assert.ok(requireToken.includes("steps.source.outputs.tokenless != 'true'"));
     const upload = consumer.split('- name: Upload coverage')[1].split('\n      - name:')[0];
     assert.ok(upload.includes("token: ${{ steps.source.outputs.tokenless != 'true' && secrets.CODECOV_TOKEN || '' }}"));
     assert.ok(upload.includes('fail_ci_if_error: true'));
+    // Upload problems are reported, but must never fail the consumer job.
+    assert.ok(upload.includes('continue-on-error: true'));
+    // Credentialed targets never fall back to a tokenless upload.
+    assert.ok(upload.includes("steps.auth.outputs.ready == 'true'"));
+    const auth = consumer.split('- name: Check upload credentials')[1].split('\n      - name:')[0];
+    assert.ok(auth.includes('[ "$TOKENLESS" != "true" ] && [ -z "$CODECOV_TOKEN" ]'));
+    assert.ok(auth.includes('ready=false'));
     assert.ok(upload.includes('override_branch: ${{ steps.source.outputs.branch }}'));
     assert.ok(!consumer.includes('id-token: write'));
   }
@@ -123,7 +127,7 @@ async function evaluate(data) {
     'unsafe branch': d => { d.run.head_branch = d.event.head_branch = 'fix\nINJECT=x'; },
     'missing artifact': d => { d.artifacts = []; },
     'duplicate artifact': d => { d.artifacts.push({...d.artifacts[0], id: 82}); },
-    'stale artifact attempt': d => { d.artifacts[0].name = 'coverage-ubuntu-24-pr-41-1'; },
+    'future artifact attempt': d => { d.artifacts[0].name = d.artifacts[0].name.replace(/-2$/, '-3'); },
     'expired artifact': d => { d.artifacts[0].expired = true; },
     'oversized artifact': d => { d.artifacts[0].size_in_bytes = 10485761; },
     'foreign artifact run': d => { d.artifacts[0].workflow_run.id = 42; },
@@ -134,6 +138,17 @@ async function evaluate(data) {
       const data = fixture(false, docs); change(data);
       await assert.rejects(evaluate(data), undefined, name);
     }
+  }
+  // A partial re-run carries the coverage job over: its artifact keeps the
+  // earlier attempt number and must still be uploaded. When several attempts
+  // produced coverage, the newest one not beyond the run's attempt wins.
+  for (const docs of [false, true]) {
+    const carried = fixture(false, docs);
+    carried.artifacts[0].name = carried.artifacts[0].name.replace(/-2$/, '-1');
+    assert.equal((await evaluate(carried)).artifact, 81, 'carried-over artifact');
+    const both = fixture(false, docs);
+    both.artifacts.unshift({...both.artifacts[0], id: 80, name: both.artifacts[0].name.replace(/-2$/, '-1')});
+    assert.equal((await evaluate(both)).artifact, 81, 'newest attempt wins');
   }
   const skipped = {
     'stale PR head': d => { d.prs[0].head.sha = 'b'.repeat(40); },
@@ -166,40 +181,15 @@ async function evaluate(data) {
     wrongWorkflow.workflow.name = docs ? 'check' : 'documentation build';
     await assert.rejects(evaluate(wrongWorkflow));
   }
-  // Cross-workflow coverage must use an independent commit status: creating a
-  // GitHub Actions check on this SHA attaches it to an unrelated workflow suite
-  // (observed on Code Style Check), whose reruns then copy the coverage failure.
-  // Execute the reporter against the API boundary; every terminal upload result
-  // must remain visible on the exact PR head without touching any check suite.
-  const reported = [];
-  const reporterGithub = {rest: {repos: {createCommitStatus: async payload => { reported.push(payload); }}}};
-  const reporterContext = {repo: {owner: 'rsyslog', repo: 'rsyslog'},
-    serverUrl: 'https://github.com', runId: 99};
-  for (const state of ['pending', 'success', 'failure']) {
-    await resolve.reportStatus({github: reporterGithub, context: reporterContext,
-      sha: 'a'.repeat(40), name: 'PR coverage upload (pr-ubuntu-24)', state});
-    const payload = reported.at(-1);
-    assert.equal(payload.sha, 'a'.repeat(40));
-    assert.equal(payload.context, 'PR coverage upload (pr-ubuntu-24)');
-    assert.equal(payload.state, state);
-    assert.equal(payload.target_url, 'https://github.com/rsyslog/rsyslog/actions/runs/99');
-    assert.equal(payload.owner, 'rsyslog');
-    assert.equal(payload.repo, 'rsyslog');
-    assert.ok(payload.description.length > 0 && payload.description.length <= 140);
-  }
-  // A status API outage must fail the reporting step rather than silently
-  // pretending the PR was updated. Final upload reporting runs only after the
-  // pending status succeeded; skipped producers never receive an upload status.
-  await assert.rejects(resolve.reportStatus({
-    github: {rest: {repos: {createCommitStatus: async () => { throw new Error('status API unavailable'); }}}},
-    context: reporterContext, sha: 'a'.repeat(40), name: 'PR coverage upload (docs-samples)', state: 'failure'
-  }), /status API unavailable/);
+  // Coverage must not publish any status or check on the PR head: a
+  // Codecov failure would otherwise show red on the PR (or attach to an
+  // unrelated Actions suite such as Code Style Check).
+  assert.equal(resolve.reportStatus, undefined);
   if (fs.existsSync(consumerPath)) {
     const reportingWorkflow = fs.readFileSync(consumerPath, 'utf8');
-    assert.ok(reportingWorkflow.includes('statuses: write'));
-    assert.ok(!reportingWorkflow.includes('checks: write'));
-    assert.ok(!reportingWorkflow.includes('github.rest.checks.'));
-    assert.ok(reportingWorkflow.includes("steps.status.outcome == 'success'"));
+    for (const forbidden of ['statuses: write', 'checks: write', 'github.rest.checks.', 'createCommitStatus']) {
+      assert.ok(!reportingWorkflow.includes(forbidden), forbidden);
+    }
   }
   console.log('PASS: PR runtime/docs coverage identity and stale/provenance refusal contracts');
 })().catch(error => { console.error(error); process.exitCode = 1; });

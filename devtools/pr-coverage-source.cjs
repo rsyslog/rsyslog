@@ -57,8 +57,15 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
     ...repo, run_id: run.id, per_page: 100
   });
-  const name = `${profile.prefix}-${run.id}-${run.run_attempt}`;
-  const reports = artifacts.filter(artifact => artifact.name === name);
+  // Re-running only some jobs (e.g. a flaky lane) creates a new run attempt
+  // that carries the successful coverage job over without re-running it, so
+  // its artifact keeps the earlier attempt number. Use the newest attempt
+  // that produced a coverage artifact, never one newer than this run.
+  let reports = [];
+  for (let attempt = run.run_attempt; attempt >= 1 && reports.length === 0; attempt--) {
+    const name = `${profile.prefix}-${run.id}-${attempt}`;
+    reports = artifacts.filter(artifact => artifact.name === name);
+  }
   if (reports.length !== 1 || reports[0].expired ||
       reports[0].size_in_bytes <= 0 || reports[0].size_in_bytes > 10485760 ||
       reports[0].workflow_run?.id !== run.id ||
@@ -67,7 +74,6 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   }
   core.setOutput('flag', profile.flag);
   core.setOutput('kind', profile.kind);
-  core.setOutput('check', `PR coverage upload (${profile.flag})`);
   core.setOutput('sha', run.head_sha);
   core.setOutput('pr', pr.number);
   // Codecov accepts public fork uploads without credentials only on a
@@ -81,15 +87,3 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   core.setOutput('url', run.html_url);
 };
 
-// A workflow_run consumer reports against a different commit from its own run.
-// Checks created with GITHUB_TOKEN can attach to another Actions workflow's
-// suite for that SHA, so a coverage failure can make Code Style Check look red
-// and be copied by a style-only rerun. Commit statuses have no suite attachment.
-module.exports.reportStatus = async function reportCoverageStatus({github, context, sha, name, state}) {
-  await github.rest.repos.createCommitStatus({
-    ...context.repo, sha, context: name, state,
-    target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-    description: state === 'pending' ? 'Validating and uploading source coverage' :
-      state === 'success' ? 'Coverage uploaded' : 'Coverage validation/upload failed'
-  });
-};
