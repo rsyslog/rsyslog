@@ -1,0 +1,22 @@
+tests/Makefile.am
+  h_95716f3de0caf5 2932-2933,2936-2941
+tests/unit/iminternal_lock_test.c
+  h_95716f3de0caf5 1-69
+tools/Makefile.am
+  h_95716f3de0caf5 38
+tools/iminternal-lock.h
+  h_95716f3de0caf5 1-36
+tools/iminternal.c
+  h_95716f3de0caf5 43-45,83,85-87,95,100-103,130-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcb8a7c7ae866ba5a22334b9995fad8e547f0913",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
