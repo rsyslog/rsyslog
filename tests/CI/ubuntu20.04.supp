@@ -58,3 +58,19 @@
    fun:exit
    fun:(below main)
 }
+
+# Ubuntu 20.04 ships GnuTLS 3.6.13. When gnutls_x509_crt_get_dn() is
+# called with a buffer too small for a long subject DN, it branches on a
+# value from one of its own uninitialised stack variables (valgrind
+# --track-origins points to a stack allocation inside libgnutls). The
+# call still returns GNUTLS_E_SHORT_MEMORY_BUFFER and rsyslog retries
+# with a larger buffer. Newer GnuTLS (Ubuntu 22.04+) does not report
+# this, so it is treated as a CI-only third-party false positive,
+# limited to the certificate-info dump.
+{
+   gnutls 3.6 uninitialised stack value in x509 DN formatting
+   Memcheck:Cond
+   obj:*libgnutls.so*
+   ...
+   fun:gtlsGetCertInfo*
+}
