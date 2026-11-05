@@ -1,0 +1,16 @@
+tests/local-queue-imtcp-registration.sh
+  h_95716f3de0caf5 2-9,29-31,42,44-46
+tests/local-queue-imtcp-tiered.sh
+  h_95716f3de0caf5 7-11,70-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "850535559d18f3170de1a1913dd44383c4b22d8b",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
