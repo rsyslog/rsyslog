@@ -4648,7 +4648,12 @@ omhttp_start_server() {
     omhttp_server_portfile="$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
     server_args="-p $omhttp_server_port ${*:2} --port-file $omhttp_server_portfile"
 
-    setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    # setsid is not available everywhere (e.g. Solaris); it is only a convenience
+    if command -v setsid >/dev/null 2>&1; then
+        setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    else
+        timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    fi
     # shellcheck disable=SC2181 # Preserve the existing background-start check.
     if [ $? -ne 0 ]; then
         echo "Failed to start omhttp test server."
