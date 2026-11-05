@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Anonymize IPv4 and IPv6 address literals in syslog messages, with optional CIDR subnet exclusions.
+   :keywords: rsyslog, mmanon, anonymization, IPv4, IPv6, CIDR, excludeSubnets
+
 ***************************************
 mmanon: IP Address Anonymization Module
 ***************************************
@@ -13,11 +17,18 @@ mmanon: IP Address Anonymization Module
 Purpose
 =======
 
+.. summary-start
+
 The mmanon module permits to anonymize IP addresses. It is a message
 modification module that actually changes the IP address inside the
 message, so after calling mmanon, the original message can no longer be
 obtained. Note that anonymization will break digital signatures on the
 message, if they exist.
+
+The optional ``excludeSubnets`` parameter keeps matching address literals
+unchanged while mmanon anonymizes nonmatching literals in the same message.
+
+.. summary-end
 
 Please note that log files can also be anonymized via
 `SLFA <https://jan.gerhards.net/2017/10/12/slfa-release/>`_ after they
@@ -60,6 +71,10 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
      - Summary
    * - :ref:`ipv4.enable <param-mmanon-ipv4-enable>`
      - .. include:: ../../reference/parameters/mmanon-ipv4-enable.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`excludeSubnets <param-mmanon-excludesubnets>`
+     - .. include:: ../../reference/parameters/mmanon-excludesubnets.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`ipv4.mode <param-mmanon-ipv4-mode>`
@@ -139,6 +154,7 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
    :hidden:
 
    ../../reference/parameters/mmanon-ipv4-enable
+   ../../reference/parameters/mmanon-excludesubnets
    ../../reference/parameters/mmanon-ipv4-mode
    ../../reference/parameters/mmanon-ipv4-bits
    ../../reference/parameters/mmanon-ipv4-replacechar
