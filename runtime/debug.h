@@ -78,6 +78,30 @@ void r_dbgprintf(const char *srcname, const char *fmt, ...) __attribute__((forma
 #define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 
+/* LLVM TSan may ignore nested pthread interceptors when cancellation unwinds
+ * out of a blocking library call (https://github.com/google/sanitizers/issues/646).
+ * These annotations
+ * describe only real mutex operations in affected cleanup paths; they neither
+ * replace locking nor disable memory-access instrumentation. Keep release and
+ * acquire adjacent to the actual unlock/lock, including temporary unlocks.
+ */
+#if defined(__has_feature)
+    #if __has_feature(thread_sanitizer)
+        #define RSYSLOG_TSAN_ENABLED 1
+    #endif
+#endif
+#if defined(__SANITIZE_THREAD__)
+    #define RSYSLOG_TSAN_ENABLED 1
+#endif
+#ifdef RSYSLOG_TSAN_ENABLED
+    #include <sanitizer/tsan_interface.h>
+    #define d_tsan_acquire_mutex(mut) __tsan_acquire(mut)
+    #define d_tsan_release_mutex(mut) __tsan_release(mut)
+#else
+    #define d_tsan_acquire_mutex(mut) ((void)0)
+    #define d_tsan_release_mutex(mut) ((void)0)
+#endif
+
 /* things originally introduced for now removed rtinst */
 #define d_pthread_mutex_lock(x) pthread_mutex_lock(x)
 #define d_pthread_mutex_trylock(x) pthread_mutex_trylock(x)
