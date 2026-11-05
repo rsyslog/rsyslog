@@ -78,12 +78,15 @@ void r_dbgprintf(const char *srcname, const char *fmt, ...) __attribute__((forma
 #define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 
-/* LLVM TSan may ignore nested pthread interceptors when cancellation unwinds
+/**
+ * @brief TSan annotations for queue mutex operations in cancellation cleanup.
+ *
+ * LLVM TSan may ignore nested pthread interceptors when cancellation unwinds
  * out of a blocking library call (https://github.com/google/sanitizers/issues/646).
- * These annotations
- * describe only real mutex operations in affected cleanup paths; they neither
- * replace locking nor disable memory-access instrumentation. Keep release and
- * acquire adjacent to the actual unlock/lock, including temporary unlocks.
+ * These macros describe only real mutex operations in affected cleanup paths;
+ * they neither replace locking nor disable memory-access instrumentation. Keep
+ * release and acquire adjacent to the actual unlock/lock, including temporary
+ * unlocks.
  */
 #if defined(__has_feature)
     #if __has_feature(thread_sanitizer)
