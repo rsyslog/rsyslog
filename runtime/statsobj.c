@@ -83,6 +83,11 @@ static pthread_mutex_t mutSenders;
 
 static struct hashtable *stats_senders = NULL;
 
+/* Keep runtime-supplied counter names from causing disproportionate temporary
+ * allocations while constructing Prometheus metadata. Names beyond this
+ * bound were already omitted by the former fixed-size formatter. */
+#define PROMETHEUS_MAX_RAW_NAME_LEN 1024
+
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
 static rsRetVal statsobjLock(pthread_mutex_t *mutex, const char *lockName) {
@@ -782,6 +787,12 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
         pthread_mutex_unlock(&o->mutCtr);
 
         /* 3) Build the metric name: "<object>_<counter>_total". */
+        if (strlen(objName) > PROMETHEUS_MAX_RAW_NAME_LEN ||
+            strlen((const char *)pCtr->name) > PROMETHEUS_MAX_RAW_NAME_LEN ||
+            strlen(origin) > PROMETHEUS_MAX_RAW_NAME_LEN) {
+            pthread_mutex_lock(&o->mutCtr);
+            continue;
+        }
         if (asprintf(&raw_name, "%s_%s_total", objName, pCtr->name) < 0) {
             raw_name = NULL;
             return RS_RET_OUT_OF_MEMORY;
