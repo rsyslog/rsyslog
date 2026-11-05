@@ -6,7 +6,8 @@
 # that the policy rejects a missing input module, an invalid port, the port-0 fallback, and a
 # missing ruleset that would otherwise route messages to the default ruleset.
 # A ten-second bound detects a strict-mode hang; surviving three seconds
-# proves the compatibility cases stayed running. The port file proves that the
+# after the bind diagnostic proves the conflicting best-effort input stayed
+# running. Slow startup must not consume that window. The port file proves that the
 # holder is listening before each conflicting rsyslogd starts. For the
 # missing-module control, wait for its expected diagnostic; for the
 # missing-ruleset fallback, wait for its own listener before starting the
@@ -106,7 +107,7 @@ EOF
 			fi
 			grep -Fq 'activation of module imtcp failed' "$log" || error_exit 1 "$format $case_name missing activation error"
 		else
-			run_bounded 3 "$config" "$log"
+			run_bounded 3 "$config" "$log" "" "Could not create tcp listener"
 			status=$?
 			if [ "$status" -ne 124 ]; then
 				cat "$log"
