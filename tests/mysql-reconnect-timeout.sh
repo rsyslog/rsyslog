@@ -15,6 +15,8 @@
 . ${srcdir:=.}/diag.sh init
 ensure_module_needs_testing mysql
 require_plugin ommysql
+# Match mysqld-start before the version probe accesses the shared service.
+ensure_module_needs_testing mysql
 
 mysql_test_error() {
 	printf 'TESTBENCH_ERROR: %s\n' "$1" >&2
