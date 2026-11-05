@@ -27,9 +27,9 @@ static inline int iminternalMutexTimedLock(pthread_mutex_t *mutex, const unsigne
         if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return errno;
         if (now.tv_sec > deadline.tv_sec || (now.tv_sec == deadline.tv_sec && now.tv_nsec >= deadline.tv_nsec))
             return ETIMEDOUT;
-        if (nanosleep(&pause, NULL) != 0 && errno != EINTR) return errno;
         ret = pthread_mutex_trylock(mutex);
         if (ret != EBUSY) return ret;
+        if (nanosleep(&pause, NULL) != 0 && errno != EINTR) return errno;
     }
 }
 

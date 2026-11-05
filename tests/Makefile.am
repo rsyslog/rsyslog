@@ -2938,6 +2938,7 @@ TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stri
 
 runtime_unit_iminternal_lock_SOURCES = unit/iminternal_lock_test.c
 runtime_unit_iminternal_lock_CPPFLAGS = -I$(top_srcdir)
+runtime_unit_iminternal_lock_CFLAGS = $(AM_CFLAGS) $(PTHREADS_CFLAGS)
 runtime_unit_iminternal_lock_LDADD = $(PTHREADS_LIBS)
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
