@@ -1294,6 +1294,7 @@ TESTS_PGSQL_CONFIG = \
 	pgsql-long-server-config.sh
 
 TESTS_PGSQL = \
+	pgsql-stats.sh \
 	pgsql-basic.sh \
 	pgsql-long-syslogtag.sh \
 	pgsql-basic-cnf6.sh \
@@ -3680,7 +3681,8 @@ TESTS += $(TESTS_PGSQL_CONFIG)
 if ENABLE_PGSQL_TESTS
 TESTS += $(TESTS_PGSQL)
 
-pgsql-long-syslogtag.log: pgsql-basic.log
+pgsql-stats.log: pgsql-basic.log
+pgsql-long-syslogtag.log: pgsql-stats.log
 pgsql-basic-cnf6.log: pgsql-long-syslogtag.log
 pgsql-basic-threads-cnf6.log: pgsql-basic-cnf6.log
 pgsql-template.log: pgsql-basic-threads-cnf6.log
