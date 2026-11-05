@@ -137,3 +137,8 @@ lists. `tests/imtcp-permittedpeer-invalid-input.sh` and
 disabled during best-effort startup, including a partially compiled list, while
 a healthy listener continues to receive. Plain and wildcard many-connection
 TLS controls exercise immutable matching under sanitizer lanes.
+
+The imbeats TLS listener-rearm and YAML basic tests also keep malformed peer
+arrays disabled while valid Lumberjack events still receive their ACKs. Legacy
+omfwd peer directive failures remain sticky until configuration reset and reject
+TCP actions; the TLS malformed-list tests cover that path in both frontends.
