@@ -1,6 +1,6 @@
 ---
 name: rsyslog-release
-description: Prepare and publish scheduled-stable rsyslog releases, then hand main off to the next release cycle. Use for release metadata, docs and source artifacts, signed tags, GitHub release announcements, stable-to-main merges, and active milestone rotation.
+description: Prepare and publish scheduled-stable rsyslog releases, then hand main off to the next release cycle. Use for release metadata, source artifacts, signed tags, announcements, stable-to-main merges, milestone rotation, OBS packaging, and package-backed Docker releases.
 ---
 
 # Rsyslog Release
@@ -117,6 +117,134 @@ rule. If no such rule exists, treat the GitHub milestone as operational state:
 - report any missing default-assignment automation instead of inventing a new
   one during release publication.
 
+## 6. Stage and promote OBS release packages
+
+Start after the GitHub release assets are available; this can run alongside
+the main-branch handoff. Keep the source release and package-publication
+statuses separate when manual package actions are still pending.
+
+1. Always review distro/version and architecture coverage for the release.
+   Compare vendor support status with the actual OBS native baselines, propose
+   additions/removals, and preserve explicit maintainer overrides. Skip versions
+   OBS does not genuinely support; a project name alone is insufficient if its
+   download configuration still points at a different release. Test approved
+   coverage changes in staging first. Source submit requests do not transfer
+   project `_meta` or `_config`; promote those settings separately with approval.
+2. Use `home:rainergerhards:branches:home:rgerhards` as the reusable staging
+   project and `home:rgerhards` as the official destination. Read local guidance
+   for separate OSC credential profiles and verify the authenticated identity
+   before mutations. Never print credentials or replace one account's profile
+   with the other account's settings.
+3. Download the published GitHub source tarball and its checksum asset; verify
+   the checksum and embedded release version. Update staging RPM specs and
+   changelogs plus the active Debian `.dsc` files and packaging archives.
+   Keep `.dsc` build dependencies consistent with `debian/control`, increment
+   packaging revisions when changing already-published packages, and regenerate
+   archive filenames, sizes, and checksums. Preserve the upstream release asset.
+4. Commit to staging and babysit the complete enabled repository/architecture
+   matrix, including the dependency libraries, not just one RPM and one DEB.
+   Inspect actual logs before fixing failures; resolve native dependency names
+   before dropping a supported feature. Record intentional feature omissions
+   and test skips. Follow dependency waits, native-baseline-triggered rebuilds,
+   signing, and result processing through to their final states. Do not require
+   the maintainer to report routine failures before investigating them.
+5. Submit the tested source revision to the official project when authorized.
+   Always use `osc submitrequest --no-cleanup --revision "$SRCMD5"` with the
+   tested source checksum and verify the request XML has
+   `<sourceupdate>update</sourceupdate>`, not `cleanup`. Never delete the staging
+   fork on acceptance: it is reused for subsequent changes. Record the request
+   URL and verify its source, destination, and revision through the API.
+6. Before acceptance, every enabled official target must be covered by the
+   tested staging matrix or an approved build-disable change. Retain published
+   repositories when retiring builds. Accept only with maintainer authorization,
+   then check official builds and publication. Reconcile staging with accepted
+   official sources while keeping unpromoted staging changes. Verify public
+   repository signatures and install
+   and smoke-test the exact published version on matching targets before calling
+   those packages operational. Follow the package archive program's validation
+   rules; a green build alone does not establish publication or installability.
+
+Keep this release step focused on delivering the release. Unrelated OBS
+cleanup, account repair, and packaging enhancements are separate work.
+
+## 7. Build and publish the Docker image family
+
+Read `packaging/docker/rsyslog/README.md`, its Makefile and
+`release-images.sh` before starting. The five variants are minimal, standard
+(`rsyslog/rsyslog`), collector, dockerlogs and ETL; do not include auxiliary
+directories as release images.
+
+1. Check the stable Adiscon PPA independently of OBS. Successful OBS publication
+   does not satisfy the container prerequisite. Run:
+
+   ```sh
+   packaging/docker/rsyslog/release-images.sh check --rsyslog-version "$STABLE_VERSION"
+   ```
+
+   Stop if the expected release is unavailable; never bypass the PPA gate.
+2. Pass the release version explicitly; do not edit per-release Dockerfile or
+   Makefile defaults. `8.yymm.0` derives the image tag `20yy-mm`, passed as
+   `RSYSLOG_IMG_VERSION` to version labels. `BASE_IMAGE_TAG` identifies the
+   matching parent image; `VCS_REF` and `BUILD_DATE` supply source revision and
+   creation labels. Keep the local default `dev-local`. Packages themselves
+   come from `ppa:adiscon/v8-stable`, not from the tag or a source-tree build.
+3. Check free space on Docker's actual filesystem and inspect available builder
+   platforms. Refresh the configured Ubuntu base and build the family:
+
+   ```sh
+   packaging/docker/rsyslog/release-images.sh build --rsyslog-version "$STABLE_VERSION" --rebuild
+   ```
+
+   Retain all variants when space permits; otherwise build in dependency order
+   and coordinate retention/publication with the maintainer. Do not prune
+   unrelated images or volumes. Check existing registry manifests rather than
+   assuming ARM64 is already published. A local native build is not evidence of
+   a multi-platform release; agree on the intended platforms before publication.
+4. Verify the exact installed core and rsyslog-module package versions, image
+   architecture, version/base/source labels, and shipped entrypoint/config for
+   every variant. Use `.github/workflows/container_build.yml` for role-specific
+   smoke commands and the container-testing skill for applicable validation.
+   Exercise real collector TCP delivery as well. Record image IDs, commands,
+   results and any external Docker/Vespa integration coverage limits.
+5. Build approval is not push approval. Obtain explicit authorization before
+   pushing. For the newest scheduled-stable release, propose publishing both
+   version tags and `latest` together; ask for that scope up front rather than
+   silently leave `latest` pointing to the previous stable release. Older
+   release rebuilds and daily-stable publications must not move stable `latest`.
+   `release_push`/`release_publish` rebuild and push multi-platform images;
+   do not use them merely to upload already-tested local images. For an
+   approved native-only publication, recheck PPA readiness, confirm each local
+   tag still has its validated image ID, then `docker push` those exact version
+   tags. Reject conflicting existing release tags rather than overwrite them.
+   For an approved multi-platform flow, use the release wrapper and validate
+   the published platforms. Move `latest` only with explicit authorization.
+6. Verify each remote manifest's platform and config digest against the tested
+   image for native pushes. For multi-platform releases verify each platform
+   manifest, not just the index. Record remote digests and confirm `latest`
+   remained unchanged when it was not part of the authorization.
+7. After all five versioned variants are verified, promote their already
+   published manifests to `latest` when approved; do not rebuild merely to
+   move tags. Check existing platform coverage first and do not drop a
+   published architecture without approval. Pin each source by its verified
+   digest. For a single-platform carbon copy, use
+   `docker buildx imagetools create --prefer-index=false --tag "$IMAGE_REPOSITORY:latest" "$IMAGE_REPOSITORY@$PUBLISHED_DIGEST"`.
+   For a multi-platform release, preserve the complete published index.
+   Record the previous `latest` digests, then verify all five new `latest`
+   digests match the intended release manifests and version tags are unchanged.
+   Update the GitHub release's `latest` statement only after this verification.
+
+## 8. Update release availability after publication
+
+Once package and container publication is verified, update the existing GitHub
+release body with the actual availability; building alone is insufficient.
+Include package-channel links, the explicit Docker release tag and the five
+variant links, supported image architectures, and whether `latest` was moved.
+Replace obsolete pending-publication language and draft wording on a published
+release. Preserve the highlights, compatibility notes, security maintenance and
+contributor attribution. Edit the real GitHub release through the API/CLI; do
+not create a repository Markdown announcement instead. Read the body back to
+verify the update, and keep any genuinely pending channels clearly qualified.
+
 ## Completion evidence
 
 A release handoff is complete only when the report includes:
@@ -127,11 +255,11 @@ A release handoff is complete only when the report includes:
 - announcement Discussion URL;
 - stable-to-main merge commit and remote refs;
 - signed next-cycle main commit and active milestone status;
+- OBS coverage review, staging build matrix, submit-request URL/revision,
+  fork-preservation check, and official publication/install verification, or
+  the explicit outstanding manual package handoff;
+- PPA readiness, container tags/platforms, validated image IDs and published
+  digests (or pending push approval), plus `latest` status;
+- the GitHub release availability update after verified package/container
+  publication, or the explicit channels still pending;
 - any skipped container or hosted validation gates.
-
-## Open TODO
-
-After the required manual package-build and package-publication actions have
-completed, rebuild the release container images using the package-backed
-release flow. Confirm package readiness first; release-tagged containers must
-not bypass the Adiscon PPA readiness check.
