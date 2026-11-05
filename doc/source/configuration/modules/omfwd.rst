@@ -404,6 +404,50 @@ Operational Tips
 - If you use intermediate CA chains, verify how those certificates are
   provisioned in your environment before switching away from PEM bundle files.
 
+Using PKCS#11 Objects with the gtls Driver
+==========================================
+
+With ``StreamDriver="gtls"``, the action parameters ``StreamDriver.CAFile``,
+``StreamDriver.CertFile``, and ``StreamDriver.KeyFile`` also accept strict
+``pkcs11:`` URIs. ``pkcs11:`` module defaults on ``builtin:omfwd`` still reach
+only ``ossl`` actions, so configurations that pair them with ``gtls`` actions
+using file-backed global defaults keep working; set the URIs on each ``gtls``
+action instead. The global defaults accept file paths only, as for ``ossl``,
+and ``StreamDriver.CAExtraFiles`` is not supported by ``gtls`` at all.
+
+GnuTLS resolves the URIs through p11-kit, so:
+
+- GnuTLS must be built with PKCS#11 support; rsyslog reports an error for a
+  ``pkcs11:`` URI when it is not
+- the PKCS#11 module must be registered with p11-kit, for example in a
+  ``.module`` file under ``/etc/pkcs11/modules`` or
+  ``~/.config/pkcs11/modules`` for the account that runs rsyslog
+- rsyslog installs no PIN callback, so a token that requires login needs the
+  PIN in the URI (``pin-value`` or ``pin-source``)
+
+The private key stays on the token: rsyslog holds a handle and GnuTLS asks the
+token to sign during the handshake. A ``pkcs11:`` certificate reference loads
+the end-entity certificate only; use a PEM file in ``StreamDriver.CertFile``
+when the server needs intermediate certificates from the client. A
+``pkcs11:`` ``StreamDriver.CAFile`` trusts the certificates the token marks as
+trusted.
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="6514"
+       protocol="tcp"
+       StreamDriver="gtls"
+       StreamDriverMode="1"
+       StreamDriverAuthMode="x509/name"
+       StreamDriverPermittedPeers="logs.example.com"
+       StreamDriver.CAFile="/etc/rsyslog.d/ca.pem"
+       StreamDriver.CertFile="pkcs11:token=rsyslog;object=client;type=cert"
+       StreamDriver.KeyFile="pkcs11:token=rsyslog;object=client;type=private"
+   )
+
 Configuration Parameters
 ========================
 

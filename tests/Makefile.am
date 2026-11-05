@@ -1928,6 +1928,9 @@ TESTS_LIBYAML_IMTCP_OSSL = \
 TESTS_LIBYAML_OSSL = \
 	yaml-omfwd-tls-ossl-pkcs11-module-defaults.sh
 
+TESTS_LIBYAML_GNUTLS_OPENSSL = \
+	yaml-omfwd-tls-gtls-pkcs11-mtls.sh
+
 TESTS_LIBYAML_IMHTTP = \
 	yaml-imhttp-apikeyfile.sh \
 	yaml-imhttp-metrics-apikeyfile.sh
@@ -2135,6 +2138,8 @@ TESTS_GNUTLS_VALGRIND = \
 TESTS_GNUTLS_OPENSSL = \
 	omfwd-tls-gtls-module-files-mtls.sh \
 	omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh \
+	omfwd-tls-gtls-pkcs11-mtls.sh \
+	omfwd-tls-gtls-pkcs11-error-key.sh \
 	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh
 
 TESTS_MBEDTLS = \
@@ -2699,6 +2704,7 @@ EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_OSSL)
+EXTRA_DIST += $(TESTS_LIBYAML_GNUTLS_OPENSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
@@ -3464,6 +3470,11 @@ endif # ENABLE_IMTCP_TESTS
 if ENABLE_OSSL
 TESTS += $(TESTS_LIBYAML_OSSL)
 endif # ENABLE_OSSL
+if ENABLE_GNUTLS_TESTS
+if ENABLE_OPENSSL
+TESTS += $(TESTS_LIBYAML_GNUTLS_OPENSSL)
+endif # ENABLE_OPENSSL
+endif # ENABLE_GNUTLS_TESTS
 if ENABLE_IMHTTP
 TESTS += $(TESTS_LIBYAML_IMHTTP)
 endif # ENABLE_IMHTTP
@@ -4437,6 +4448,7 @@ EXTRA_DIST += \
 	privdrop_common.sh \
 	rscript_compare-common.sh \
 	omfwd-tls-ossl-pkcs11-error.sh \
+	omfwd-tls-gtls-pkcs11-common.sh \
 	omfwd-tls-ossl-pkcs11-ecdsa-sigalgs-common.sh \
 	omfwd-tls-ossl-pkcs11-sigalgs-negative-common.sh \
 	omfwd-tls-ossl-pkcs11-sigalgs-common.sh \
