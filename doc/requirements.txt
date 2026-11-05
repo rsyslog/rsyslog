@@ -6,4 +6,4 @@ sphinx_rtd_theme
 rst2pdf
 sphinxcontrib.mermaid
 sphinx-sitemap
-sphinxcontrib-googleanalytics
+sphinxcontrib-googleanalytics>=0.6
