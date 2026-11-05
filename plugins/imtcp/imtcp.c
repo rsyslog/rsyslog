@@ -166,6 +166,7 @@ struct instanceConf_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    rsRetVal permittedPeersResult; /* reject failed input peer-list construction at activation */
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
@@ -633,6 +634,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszStrmDrvrKeyFile = NULL;
     inst->pszStrmDrvrCertFile = NULL;
     inst->pPermPeersRoot = NULL;
+    inst->permittedPeersResult = RS_RET_OK;
     inst->gnutlsPriorityString = NULL;
     inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
     inst->bStrmDrvrModeSet = loadModConf->bStrmDrvrModeSet;
@@ -762,6 +764,7 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     permittedPeers_t *peers;
 
     tcpsrv_t *pOurTcpsrv = NULL;
+    CHKiRet(inst->permittedPeersResult);
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
     CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -963,13 +966,17 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
             CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
+            /* An invalid override must never activate with inherited or partial peers. */
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                inst->permittedPeersResult = RS_RET_ERR;
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
                 CHKmalloc(peer);
                 iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                inst->permittedPeersResult = iRet;
                 CHKiRet(iRet);
             }
+            inst->permittedPeersResult = RS_RET_OK;
         } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
                 LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");

@@ -1932,6 +1932,7 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-include-recursion.sh
 
 TESTS_LIBYAML_IMTCP_OSSL = \
+	yaml-tls-permittedpeer-invalid.sh \
 	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
 
 TESTS_LIBYAML_OSSL = \
@@ -2202,6 +2203,7 @@ TESTS_OSSL = \
 	imtcp-tls-ossl-manycon.sh \
 	imtcp-tls-ossl-manycon-wildcard.sh \
 	tls-permittedpeer-invalid.sh \
+	imtcp-permittedpeer-invalid-input.sh \
 	imtcp-tls-ossl-x509name-wildcard.sh \
 	imtcp-tls-ossl-x509name-wildcard-invld.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \

@@ -128,3 +128,12 @@ and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
 severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
+
+## Permitted-peer construction coverage
+
+`tests/tls-permittedpeer-invalid.sh` checks malformed module and omfwd peer
+lists. `tests/imtcp-permittedpeer-invalid-input.sh` and
+`tests/yaml-tls-permittedpeer-invalid.sh` keep invalid input overrides
+disabled during best-effort startup, including a partially compiled list, while
+a healthy listener continues to receive. Plain and wildcard many-connection
+TLS controls exercise immutable matching under sanitizer lanes.
