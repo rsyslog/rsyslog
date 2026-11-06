@@ -1035,6 +1035,9 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 	yaml-statements-foreach.sh \
 	yaml-statements-complex.sh
 
+TESTS_LIBYAML_IMPTCP = \
+	yaml-imptcp-framing-regex-first-char.sh
+
 TESTS_IMTCP = \
 	smtradfile-final-lf.sh \
 	fromhost-port.sh \
@@ -1790,6 +1793,7 @@ TESTS_IMPTCP = \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
 	imptcp_framing_regex_maxmsg_overflow.sh \
+	imptcp_framing_regex-first-char.sh \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
@@ -2708,6 +2712,7 @@ EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
 EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
+EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_OSSL)
@@ -3473,6 +3478,7 @@ if ENABLE_INOTIFY
 TESTS += $(TESTS_RATELIMIT_WATCH)
 endif # ENABLE_INOTIFY
 if ENABLE_IMPTCP
+TESTS += $(TESTS_LIBYAML_IMPTCP)
 if ENABLE_MMJSONPARSE
 TESTS += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 endif # ENABLE_MMJSONPARSE
@@ -4555,6 +4561,7 @@ EXTRA_DIST += \
 	testsuites/imptcp_framing_regex.testdata \
 	testsuites/imtcp-multiline.testdata \
 	testsuites/imptcp_framing_regex-oversize.testdata \
+	testsuites/imptcp_framing_regex-first-char.testdata \
 	testsuites/imptcp_multi_line.testdata \
 	testsuites/no_octet_counted.testdata \
 	testsuites/spframingfix.testdata \
