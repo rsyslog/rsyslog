@@ -94,12 +94,13 @@ static void *add_message(void *arg) {
 }
 
 static int test_contention(int release, int cancel) {
-    smsg_t msg = {0};
+    smsg_t msg;
     smsg_t *received = NULL;
     struct addition addition = {.msg = &msg, .result = RS_RET_ERR};
     pthread_t thread;
     void *thread_result = NULL;
     struct timespec start, end;
+    memset(&msg, 0, sizeof(msg));
     msg.pszRawMsg = (uchar *)"retained internal diagnostic";
     msg.pszHOSTNAME = (uchar *)"unit-test";
     destroyed = busy_attempts = 0;
