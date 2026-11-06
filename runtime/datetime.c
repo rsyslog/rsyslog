@@ -1388,3 +1388,4 @@ ENDObjClassInit(datetime)
 
 /* vi:set ai:
  */
+/* Solaris CI probe: no functional change, remove before merge. */
