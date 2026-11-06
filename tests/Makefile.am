@@ -37,6 +37,7 @@ TESTS_RELEASE_PACKAGING = \
 	ubuntu-qpid-generation-order.sh \
 	rpm-baseline-patch-policy.sh \
 	daily-stable-package-drift.sh \
+	daily-stable-archive-store.sh \
 	daily-stable-failure-report.sh
 FUZZING_CORPUS = \
 	fuzz/README.md \

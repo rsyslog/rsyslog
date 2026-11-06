@@ -227,7 +227,7 @@ manifest = {
     "distribution_version": distro_version,
     "suite": suite,
     "architecture": arch,
-    "retention": "minimum-five-years-from-publication",
+    "retention": "daily-90-days-from-publication",
     "git_sha": os.environ.get("SOURCE_GIT_SHA", os.environ.get("GITHUB_SHA", "")),
     "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
     "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),

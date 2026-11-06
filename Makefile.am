@@ -22,7 +22,9 @@ EXTRA_DIST = \
 	devtools/release/validate-rpm-baseline-patches.py \
 	devtools/release/upstream_patch_detect.py \
 	devtools/release/rpm-disable-optional-modules.py \
-	devtools/release/check-optional-module-policy.py
+	devtools/release/check-optional-module-policy.py \
+	devtools/release/archive-store.sh \
+	devtools/release/archive-store-server.sh
 
 SUBDIRS = doc compat grammar runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 # external plugin driver is always enabled (core component)
