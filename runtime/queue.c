@@ -551,23 +551,21 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
  * path is selected explicitly per queue because trylock affects throughput.
  * Observed wait time includes scheduler delay and is not mutex hold time.
  */
-static void qqueueLock(qqueue_t *const pThis) {
+static int qqueueLock(qqueue_t *const pThis) {
     if (!pThis->bMutexContentionStats || !STATSCOUNTER_ENABLED()) {
-        d_pthread_mutex_lock(pThis->mut);
-        return;
+        return d_pthread_mutex_lock(pThis->mut);
     }
 
     const int trylock_ret = d_pthread_mutex_trylock(pThis->mut);
-    if (trylock_ret == 0) return;
+    if (trylock_ret == 0) return 0;
     if (trylock_ret != EBUSY) {
-        d_pthread_mutex_lock(pThis->mut);
-        return;
+        return d_pthread_mutex_lock(pThis->mut);
     }
 
     STATSCOUNTER_INC(pThis->ctrMutexContention, pThis->mutCtrMutexContention);
     struct timespec before;
     const int have_before = clock_gettime(CLOCK_MONOTONIC, &before) == 0;
-    d_pthread_mutex_lock(pThis->mut);
+    const int lock_ret = d_pthread_mutex_lock(pThis->mut);
     if (have_before) {
         struct timespec after;
         if (clock_gettime(CLOCK_MONOTONIC, &after) == 0) {
@@ -576,6 +574,7 @@ static void qqueueLock(qqueue_t *const pThis) {
             if (wait_ns >= 0) STATSCOUNTER_ADD(pThis->ctrMutexWaitNs, pThis->mutCtrMutexWaitNs, (uint64_t)wait_ns);
         }
     }
+    return lock_ret;
 }
 
 static int64 getQueueDiskBytes(qqueue_t *pThis) {
@@ -3284,9 +3283,10 @@ static void qqueueDrainDeferred(wti_t *const pWti) {
  * across a condition wait. Recheck queue predicates after reacquiring. */
 static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) {
     if (pWti->n_deferred_msgs != 0) {
+        d_tsan_release_mutex(pThis->mut);
         d_pthread_mutex_unlock(pThis->mut);
         qqueueDrainDeferred(pWti);
-        qqueueLock(pThis);
+        if (qqueueLock(pThis) == 0) d_tsan_acquire_mutex(pThis->mut);
     }
 }
 
