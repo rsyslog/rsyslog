@@ -12,9 +12,7 @@
 # framing. This is a functionality regression test; it has no throughput or
 # elapsed-time oracle.
 
-# Skipped on SunOS: DA shutdown hang, see KNOWN_ISSUES.
 . ${srcdir:=.}/diag.sh init
-skip_platform "SunOS" "DA queue shutdown hangs for the full abort timeout on Solaris, see KNOWN_ISSUES and https://github.com/rsyslog/rsyslog/issues/7917"
 
 NUMMESSAGES=10000
 TCP_CONNECTIONS=4

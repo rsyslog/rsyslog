@@ -10,9 +10,6 @@
 # times instead of giving every scenario its own harness lifecycle.
 for DA_QUEUE_TYPE in LinkedList FixedArray; do
 	for DA_SCOPE in main ruleset action; do
-		# ruleset/action DA queues hang at shutdown on Solaris; the main-queue
-		# scenarios pass there. Remove once that hang is fixed (KNOWN_ISSUES, #7917).
-		[ "$(uname)" = "SunOS" ] && [ "$DA_SCOPE" != main ] && continue
 		export DA_SCOPE DA_QUEUE_TYPE DA_ENGINE=auto
 		"${srcdir:=.}/testsuites/da-engine-behavior-driver.sh" || exit $?
 	done
