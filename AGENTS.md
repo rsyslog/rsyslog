@@ -17,6 +17,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 | [`rsyslog_build`](.agent/skills/rsyslog_build/SKILL.md) | Environment setup and incremental parallel builds. |
 | [`rsyslog_test`](.agent/skills/rsyslog_test/SKILL.md) | Standardized validation and debugging via `diag.sh`. |
 | [`rsyslog-security-pr-review`](.agent/skills/rsyslog-security-pr-review/SKILL.md) | Security review in the PR, optional local delta review, and authorized finding fixes. |
+| [`rsyslog-security-audit`](.agent/skills/rsyslog-security-audit/SKILL.md) | Deep vulnerability audit of a component: per-surface threat model, worst-case write tracing, ASan/UBSan reproduction, chain analysis, private reporting. |
 | [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md) | CI-style local dev-container validation, change-gated Ubuntu 26.04 first, late prompt audits, service-skip checks, and clean-tree rules. |
 | [`rsyslog_pr_babysitting`](.agent/skills/rsyslog_pr_babysitting/SKILL.md) | Post-push PR monitoring, including CI failures, reruns, and unresolved review-thread checks. |
 | [`rsyslog_changelog`](.agent/skills/rsyslog_changelog/SKILL.md) | Selective ChangeLog maintenance that follows release-note style and avoids low-signal churn. |
