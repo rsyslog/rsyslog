@@ -157,26 +157,47 @@ stays open and moves to Phase 3.
 ## Phase 3: Dynamic verification with ASan and UBSan
 
 Build an instrumented tree in a separate worktree or scratch directory, never
-in the coordination checkout. Mirror the `ubuntu_26_san` lane in
-`.github/workflows/run_checks.yml`; with the CI dev container that is roughly:
+in the coordination checkout. Start from the `ubuntu_26_san` lane in
+`.github/workflows/run_checks.yml` and keep its sanitizer set, including
+`nullability` and `unsigned-integer-overflow`, which catch the length and
+offset arithmetic bugs Phase 2 hunts for. With the CI dev container
+(`rsyslog/rsyslog_dev_base_ubuntu:26.04`, `clang-21`) that is:
 
 ```sh
-export CC=clang
+# Set to the configure switches that build the audited component.
+MODULE_FLAGS="--enable-imfoo"
+export CC=clang-21
 export CFLAGS="-g -O1 -fno-omit-frame-pointer \
-	-fsanitize=address,undefined -fno-sanitize-recover=undefined \
+	-fsanitize=address,undefined,nullability,unsigned-integer-overflow \
+	-fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
+	-fno-sanitize=function -fsanitize-blacklist=$(pwd)/tests/asan.supp"
+export LDFLAGS="-fsanitize=address,undefined,nullability,unsigned-integer-overflow \
 	-fno-sanitize=function"
-export LDFLAGS="-fsanitize=address,undefined -fno-sanitize=function"
 ./autogen.sh --enable-debug --enable-testbench --enable-imdiag \
 	--enable-omstdout --disable-libfaketime --disable-valgrind \
-	--without-valgrind-testbench <module enable flags>
+	--without-valgrind-testbench $MODULE_FLAGS
 make -j"${RSYSLOG_LOCAL_BUILD_JOBS:-10}" check TESTS=""
 export ASAN_OPTIONS='abort_on_error=1:halt_on_error=1'
 export LSAN_OPTIONS='detect_leaks=0'
 export UBSAN_OPTIONS='print_stacktrace=1'
 ```
 
-The `function` sanitizer is excluded because the module ABI uses generic
+Two deviations from the CI lane are intentional: `-O1` instead of `-O3` keeps
+stack traces and variable state readable, and `-fstack-protector` and
+`-D_FORTIFY_SOURCE=2` are left out so ASan reports the first bad access itself;
+their effect is checked in the production-like build described below. The `function` sanitizer is excluded because the module ABI uses generic
 callback pointers. Check that the build actually contains the audited module.
+`unsigned-integer-overflow` also reports intentional wraparound (for example in
+hashing); confirm each report against the code before treating it as a
+finding.
+
+If clang's sanitizer runtime is not installed (some minimal containers ship
+clang without `libclang_rt.asan`), fall back to GCC: set `CC=gcc`, use
+`-fsanitize=address,undefined -fno-sanitize-recover=undefined` in `CFLAGS` and
+`-fsanitize=address,undefined` in `LDFLAGS`, drop the clang-only
+`nullability`, `unsigned-integer-overflow`, and `-fsanitize-blacklist` options,
+and add `-Wno-error` if warnings-as-errors stop the build. Say in the coverage
+notes that the reduced sanitizer set was used.
 
 For **each** open or suspicious write from Phase 2, craft inputs that drive it
 to its worst case, and run them against a real rsyslogd instance configured
