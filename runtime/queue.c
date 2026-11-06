@@ -3268,8 +3268,8 @@ finalize_it:
 }
 
 
-/* Concurrency & Locking: completed batch references move to a worker-owned
- * buffer under the queue mutex, after store commit. The buffer holds at most
+/* Concurrency & Locking: local queue backends move completed batch references
+ * to a worker-owned buffer under the queue mutex, after store commit. The buffer holds at most
  * one batch and is drained without the queue mutex and with cancellation
  * disabled. No other worker, producer, or shutdown path accesses this buffer.
  */
@@ -3290,15 +3290,21 @@ static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) 
     }
 }
 
-static void qqueueDeferBatch(wti_t *const pWti) {
+/* Classic queues destroy completed messages here, under the queue mutex.
+ * Deferring this to unlocked per-worker disposal (454b340a1) made workers
+ * free concurrently and contend on malloc arena locks with the next batch's
+ * allocations, costing ~40% CPU on JSON-heavy rulesets (issue #7884).
+ * Serialized release under the mutex is cheaper there. Local queue backends
+ * still defer through p_deferred_msgs; see qqueueCompleteLocalBackend().
+ */
+static void qqueueDisposeBatch(wti_t *const pWti) {
     batch_t *const pBatch = &pWti->batch;
     assert(pWti->n_deferred_msgs == 0);
     assert(pBatch->nElem <= pBatch->maxElem);
     for (int i = 0; i < pBatch->nElem; ++i) {
-        pWti->p_deferred_msgs[i] = pBatch->pElem[i].pMsg;
+        msgDestruct(&pBatch->pElem[i].pMsg);
         pBatch->pElem[i].pMsg = NULL;
     }
-    pWti->n_deferred_msgs = pBatch->nElem;
     pBatch->nElem = pBatch->nElemDeq = 0;
 }
 
@@ -3440,7 +3446,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         }
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
         if (diskOwner != NULL) qqueueLocalDiskTerminal(diskOwner, diskTerminal, diskDiscarded);
-        qqueueDeferBatch(pWti);
+        qqueueDisposeBatch(pWti);
         pBatch->storeData = NULL;
         if (hadResponsibility) {
             iRet = qqueueClearWtiSource(pThis, pWti);
@@ -3494,7 +3500,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     iRet = DeleteBatchFromQStore(pThis, pBatch);
     if (iRet == RS_RET_OK && diskOwner != NULL) qqueueLocalDiskTerminal(diskOwner, diskTerminal, diskDiscarded);
 
-    qqueueDeferBatch(pWti);
+    qqueueDisposeBatch(pWti);
     if (iRet == RS_RET_OK && hadResponsibility) iRet = qqueueClearWtiSource(pThis, pWti);
 
     RETiRet;
@@ -4064,8 +4070,8 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
 
     int iCancelStateSave;
     qqueue_t *const pSource = pWti->source_queue;
-    /* DeleteProcessedBatch() defers final message destruction by resetting
-     * the batch counters, so retain the dequeue count for checkpointing. */
+    /* DeleteProcessedBatch() resets the batch counters, so retain the
+     * dequeue count for checkpointing. */
     const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
