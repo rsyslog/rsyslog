@@ -240,6 +240,19 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 
 #ifdef ENABLE_IMDIAG
     unsigned int iOverallQueueSize = 0;
+    #ifndef HAVE_ATOMIC_BUILTINS
+/* Without atomic builtins (e.g. SunStudio on Solaris) the process-wide counter
+ * is updated by workers of many queues, each holding a different queue mutex.
+ * Unprotected updates lose counts, imdiag then sees a bogus size (e.g. -1) and
+ * never detects an empty queue. This small dedicated mutex keeps it exact. */
+static pthread_mutex_t mutOverallQueueSize = PTHREAD_MUTEX_INITIALIZER;
+
+static void overallQueueSizeAdjust(const int delta) {
+    pthread_mutex_lock(&mutOverallQueueSize);
+    iOverallQueueSize += (unsigned int)delta;
+    pthread_mutex_unlock(&mutOverallQueueSize);
+}
+    #endif
 #endif
 
 #define OVERSIZE_QUEUE_WATERMARK 500000 /* when is a queue considered to be "overly large"? */
@@ -1218,7 +1231,7 @@ static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOve
     #ifdef HAVE_ATOMIC_BUILTINS
             ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
     #else
-            iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
+            overallQueueSizeAdjust(-(int)pThis->iQueueSize);
     #endif
         }
 #endif
@@ -1238,7 +1251,7 @@ static void qqueueSubtractOverallQueueSize(const int nElem) {
     #ifdef HAVE_ATOMIC_BUILTINS
     ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
     #else
-    iOverallQueueSize -= nElem; /* racy, but we can't wait for a mutex! */
+    overallQueueSizeAdjust(-nElem);
     #endif
 #endif
 }
@@ -1251,7 +1264,7 @@ static void qqueueAddOverallQueueSize(const int nElem) {
     #ifdef HAVE_ATOMIC_BUILTINS
     ATOMIC_ADD(iOverallQueueSize, nElem);
     #else
-    iOverallQueueSize += nElem; /* racy, but we can't wait for a mutex! */
+    overallQueueSizeAdjust(nElem);
     #endif
 #endif
 }
@@ -2441,7 +2454,7 @@ static rsRetVal qqueueAddStored(qqueue_t *pThis, smsg_t *pMsg) {
         /* mutex is never used due to conditional compilation */
         ATOMIC_INC(&iOverallQueueSize, &NULL);
     #else
-        ++iOverallQueueSize; /* racy, but we can't wait for a mutex! */
+        overallQueueSizeAdjust(1);
     #endif
 #endif
     }
@@ -3181,7 +3194,7 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
     /* mutex is never used due to conditional compilation */
     ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
     #else
-    iOverallQueueSize -= nElem; /* racy, but we can't wait for a mutex! */
+    overallQueueSizeAdjust(-nElem);
     #endif
 #endif
     ATOMIC_SUB(&pThis->nLogDeq, nElem, &pThis->mutLogDeq);
@@ -3799,7 +3812,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     #ifdef HAVE_ATOMIC_BUILTINS
     ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
     #else
-    iOverallQueueSize -= nDiscarded; /* racy, but we can't wait for a mutex! */
+    overallQueueSizeAdjust(-nDiscarded);
     #endif
     DBGOPRINT((obj_t *)pThis, "dequeued %d discarded %d QueueSize %d consumable elements, szlog %d sz phys %d\n",
               nDequeued, nDiscarded, iOverallQueueSize, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
