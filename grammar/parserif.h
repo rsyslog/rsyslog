@@ -21,10 +21,26 @@
 #ifndef PARSERIF_H_DEFINED
 #define PARSERIF_H_DEFINED
 #include "rainerscript.h"
+/**
+ * @brief Parse the current scanner input under serialized parser ownership.
+ * @return Zero on acceptance, one on syntax failure, or two on exhaustion.
+ * The caller must also consume cnfTakeFatalParseError(): scanner failures
+ * remain fatal independently of the parser's return code. This declaration
+ * is project-owned because supported Bison versions differ in whether their
+ * generated headers declare yyparse(). Only the generated grammar calls it.
+ */
+int cnfParse(void);
 int cnfSetLexFile(const char *);
 void parser_errmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_warnmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tellLexEndParsing(void);
+/**
+ * @brief Release all lexer buffers and reset start conditions after private parsing.
+ * Safe after successful or failed yyparse(); no caller-owned AST is destroyed.
+ * Caller must own serialized parser access. No error is returned and no process
+ * exit occurs; fatal load errors are retrieved with cnfTakeFatalParseError().
+ */
+void cnfResetParser(void);
 /* Returns non-zero when there are config buffers queued for yyparse() to
  * consume.  Used by rsconf.c to run yyparse() after yamlconf_load() has pushed
  * synthesised RainerScript script: blocks via cnfAddConfigBuffer(). */
