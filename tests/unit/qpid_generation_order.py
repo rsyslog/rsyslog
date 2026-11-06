@@ -118,6 +118,21 @@ class ArchiveReuse(unittest.TestCase):
                 archive.write_bytes(existing)
                 tools = work / "tools"
                 tools.mkdir()
+                # Ubuntu packaging uses sha512sum; Darwin lacks that command.
+                # Adapt its check interface with a real portable SHA512 digest.
+                checksum = tools / "sha512sum"
+                checksum.write_text("""#!/usr/bin/env python3
+import hashlib
+from pathlib import Path
+import sys
+expected, name = sys.stdin.read().strip().split(None, 1)
+try:
+    actual = hashlib.sha512(Path(name).read_bytes()).hexdigest()
+except OSError:
+    sys.exit(1)
+sys.exit(0 if actual == expected else 1)
+""")
+                checksum.chmod(0o755)
                 downloader = tools / "wget"
                 downloader.write_text("""#!/usr/bin/env python3
 import os
