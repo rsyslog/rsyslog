@@ -91,6 +91,7 @@ static tcpsrv_etry_t *tcpsrv_root = NULL;
 static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
+static rsRetVal legacyPermittedPeersResult = RS_RET_OK;
 
 /* default number of workers to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
@@ -166,6 +167,7 @@ struct instanceConf_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    rsRetVal permittedPeersResult; /* reject failed input peer-list construction at activation */
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
@@ -223,6 +225,7 @@ struct modConfData_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    rsRetVal permittedPeersResult;
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
@@ -599,9 +602,9 @@ static rsRetVal onErrClose(tcps_sess_t *pSess) {
  */
 static rsRetVal setPermittedPeer(void __attribute__((unused)) * pVal, uchar *pszID) {
     DEFiRet;
-    CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
-    free(pszID); /* no longer needed, but we need to free as of interface def */
-finalize_it:
+    iRet = net.AddPermittedPeer(&pPermPeersRoot, pszID);
+    if (legacyPermittedPeersResult == RS_RET_OK) legacyPermittedPeersResult = iRet;
+    free(pszID); /* the handler owns this string, including construction failure */
     RETiRet;
 }
 
@@ -633,6 +636,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszStrmDrvrKeyFile = NULL;
     inst->pszStrmDrvrCertFile = NULL;
     inst->pPermPeersRoot = NULL;
+    inst->permittedPeersResult = RS_RET_OK;
     inst->gnutlsPriorityString = NULL;
     inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
     inst->bStrmDrvrModeSet = loadModConf->bStrmDrvrModeSet;
@@ -762,6 +766,8 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     permittedPeers_t *peers;
 
     tcpsrv_t *pOurTcpsrv = NULL;
+    CHKiRet(modConf->permittedPeersResult);
+    CHKiRet(inst->permittedPeersResult);
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
     CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -963,11 +969,17 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
             CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
+            /* An invalid override must never activate with inherited or partial peers. */
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                inst->permittedPeersResult = RS_RET_ERR;
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                inst->permittedPeersResult = iRet;
+                CHKiRet(iRet);
             }
+            inst->permittedPeersResult = RS_RET_OK;
         } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
                 LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
@@ -1218,8 +1230,11 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer);
                 free(peer);
+                if (loadModConf->permittedPeersResult == RS_RET_OK) loadModConf->permittedPeersResult = iRet;
+                CHKiRet(iRet);
             }
         } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
@@ -1272,6 +1287,8 @@ ENDsetModCnf
 
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
+    if (pModConf->permittedPeersResult == RS_RET_OK) pModConf->permittedPeersResult = legacyPermittedPeersResult;
+    legacyPermittedPeersResult = RS_RET_OK;
     if (!loadModConf->configSetViaV2Method) {
         iRet = validateLegacySessionLimits();
         if (iRet != RS_RET_OK) {

@@ -15,6 +15,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_LOCAL_QUEUE_STATS_HELPER = local-queue-stats-greater.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_STATS_HELPER)
+
 TESTS_STATSLOG_PERCENT = statslog-evicted-percent.sh
 EXTRA_DIST += $(TESTS_STATSLOG_PERCENT) helpers/statslog-evicted-percent.sh
 TESTS_MINITCP_EXCLUSIVE = minitcpsrv-exclusive-port.sh
@@ -1932,6 +1935,7 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-include-recursion.sh
 
 TESTS_LIBYAML_IMTCP_OSSL = \
+	yaml-tls-permittedpeer-invalid.sh \
 	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
 
 TESTS_LIBYAML_OSSL = \
@@ -2200,6 +2204,9 @@ TESTS_OSSL = \
 	imtcp-tls-ossl-prioritize-san-cn-fallback.sh \
 	imtcp-tls-ossl-prioritize-san-reject-cn.sh \
 	imtcp-tls-ossl-manycon.sh \
+	imtcp-tls-ossl-manycon-wildcard.sh \
+	tls-permittedpeer-invalid.sh \
+	imtcp-permittedpeer-invalid-input.sh \
 	imtcp-tls-ossl-x509name-wildcard.sh \
 	imtcp-tls-ossl-x509name-wildcard-invld.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -3258,7 +3265,7 @@ if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
-TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_STATSLOG_PERCENT)
+TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_STATSLOG_PERCENT) $(TESTS_LOCAL_QUEUE_STATS_HELPER)
 TESTS += $(TESTS_LOCAL_OMFILE_ACTIVATION)
 if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)

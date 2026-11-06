@@ -13,7 +13,8 @@ concurrency:
 
 jobs:
   style-check:
-    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    # Keep the runner aligned with the repository-pinned clang-format-18.
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
 
     steps:
       - name: Checkout repository
