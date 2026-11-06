@@ -2943,16 +2943,22 @@ endif
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock
+	runtime_unit_iminternal_lock runtime_unit_iminternal_contention
 TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock
+	runtime_unit_iminternal_lock runtime_unit_iminternal_contention
 
 runtime_unit_iminternal_lock_SOURCES = unit/iminternal_lock_test.c
 runtime_unit_iminternal_lock_CPPFLAGS = -I$(top_srcdir)
 runtime_unit_iminternal_lock_CFLAGS = $(AM_CFLAGS) $(PTHREADS_CFLAGS)
 runtime_unit_iminternal_lock_LDADD = $(PTHREADS_LIBS)
+
+# Caller-level message ownership and cancellation coverage for the macOS lock.
+runtime_unit_iminternal_contention_SOURCES = unit/iminternal_contention_test.c
+runtime_unit_iminternal_contention_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_iminternal_contention_LDADD = $(RT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+EXTRA_DIST += unit/iminternal_contention_test.c
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime

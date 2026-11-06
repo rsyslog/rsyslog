@@ -22,6 +22,10 @@ core but are compiled directly into the rsyslog binary:
 - Internal diagnostic mutex fallback coverage is registered as
   `runtime_unit_iminternal_lock` from `tests/unit/iminternal_lock_test.c`.
   It checks transient contention and bounded timeout without daemon startup.
+  `runtime_unit_iminternal_contention` from
+  `tests/unit/iminternal_contention_test.c` also exercises the real message-list
+  callers, checking ownership transfer, timeout destruction, and cancellation
+  cleanup through the existing macOS path on every platform.
 
 ## Metadata
 - Shared metadata lives in `tools/MODULE_METADATA.json` so we do not duplicate
