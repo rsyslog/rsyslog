@@ -17,6 +17,28 @@ Performs an HTTP request to target and returns the result of said request.
    to ensure adequate performance.
 
 
+Limits and safety
+=================
+
+``http_request()`` runs synchronously while the rule is evaluated, so the
+following fixed limits apply to every request:
+
+- Only ``http://`` and ``https://`` URLs are accepted, also for redirects.
+  Other schemes such as ``file://`` fail.
+- The connection must be established within 10 seconds, and the whole
+  request must complete within 30 seconds.
+- Replies larger than 16 MiB are discarded.
+
+If a request fails or hits a limit, the function returns the number ``0``
+and logs an error. The logged URL omits user credentials, the query string,
+and the fragment.
+
+Keep the scheme, host, and path of the URL constant in the configuration.
+Message content is untrusted: if you append it to the query string, as in
+the example below, the sender controls that part of the request and can,
+for example, add further query parameters.
+
+
 Example
 =======
 

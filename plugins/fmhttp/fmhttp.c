@@ -47,10 +47,60 @@ MODULE_TYPE_FUNCTION
 MODULE_TYPE_NOKEEP;
 DEF_FMOD_STATIC_DATA;
 
+/* Fixed request limits. http_request() runs synchronously inside rule
+ * evaluation, so a stalled or oversized transfer would otherwise block the
+ * worker thread or exhaust memory.
+ */
+#define FMHTTP_CONNECT_TIMEOUT_MS 10000L
+#define FMHTTP_TOTAL_TIMEOUT_MS 30000L
+#define FMHTTP_MAX_REPLY_SIZE ((size_t)16 * 1024 * 1024)
+
 struct curl_funcData {
     const char *reply;
     size_t replyLen;
+    int bTooLarge;
 };
+
+/* Build a log-safe copy of a request URL: userinfo, query and fragment
+ * are dropped because they may carry credentials or message content.
+ * Returns NULL if out of memory.
+ */
+static char *redactUrlForLog(const char *const url) {
+    const char *hostStart = strstr(url, "://");
+    const char *const end = url + strcspn(url, "?#");
+    char *redacted;
+    size_t prefixLen = 0;
+
+    if (hostStart != NULL && hostStart < end) {
+        hostStart += 3;
+        prefixLen = (size_t)(hostStart - url);
+        const char *const authorityEnd = hostStart + strcspn(hostStart, "/?#");
+        const char *const at = memchr(hostStart, '@', (size_t)(authorityEnd - hostStart));
+        if (at != NULL) hostStart = at + 1;
+    } else {
+        hostStart = url;
+    }
+    const size_t restLen = (size_t)(end - hostStart);
+    if ((redacted = malloc(prefixLen + restLen + 1)) == NULL) return NULL;
+    memcpy(redacted, url, prefixLen);
+    memcpy(redacted + prefixLen, hostStart, restLen);
+    redacted[prefixLen + restLen] = '\0';
+    return redacted;
+}
+
+/* Restrict a handle to plain and TLS HTTP, for requests and redirects. */
+static CURLcode restrictProtocols(CURL *const handle) {
+    CURLcode res;
+#if LIBCURL_VERSION_NUM >= 0x075500 /* 7.85.0: string-based protocol options */
+    if ((res = curl_easy_setopt(handle, CURLOPT_PROTOCOLS_STR, "http,https")) != CURLE_OK) return res;
+    res = curl_easy_setopt(handle, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+#else
+    if ((res = curl_easy_setopt(handle, CURLOPT_PROTOCOLS, (long)(CURLPROTO_HTTP | CURLPROTO_HTTPS))) != CURLE_OK)
+        return res;
+    res = curl_easy_setopt(handle, CURLOPT_REDIR_PROTOCOLS, (long)(CURLPROTO_HTTP | CURLPROTO_HTTPS));
+#endif
+    return res;
+}
 
 /* curl callback for doFunc_http_request */
 static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
@@ -76,6 +126,10 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
         return 0;
     }
     newlen = curlData->replyLen + chunkLen;
+    if (newlen > FMHTTP_MAX_REPLY_SIZE) {
+        curlData->bTooLarge = 1;
+        return 0; /* abort transfer, reported by the caller */
+    }
     if ((buf = realloc((void *)curlData->reply, newlen + 1)) == NULL) {
         LogError(errno, RS_RET_ERR, "rainerscript: realloc failed in curlResult");
         return 0; /* abort due to failure */
@@ -98,7 +152,7 @@ static void ATTR_NONNULL() doFunc_http_request(struct cnffunc *__restrict__ cons
     int resultSet = 0;
     CURL *handle = NULL;
     CURLcode res;
-    struct curl_funcData curlData = {.reply = NULL, .replyLen = 0};
+    struct curl_funcData curlData = {.reply = NULL, .replyLen = 0, .bTooLarge = 0};
     assert(func != NULL);
     rsRetVal iRet __attribute__((unused)) = RS_RET_OK;
 
@@ -107,11 +161,22 @@ static void ATTR_NONNULL() doFunc_http_request(struct cnffunc *__restrict__ cons
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, &curlData);
 
-    curl_easy_setopt(handle, CURLOPT_URL, url);
-    res = curl_easy_perform(handle);
+    curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, FMHTTP_CONNECT_TIMEOUT_MS);
+    curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, FMHTTP_TOTAL_TIMEOUT_MS);
+
+    res = restrictProtocols(handle);
+    if (res == CURLE_OK) res = curl_easy_setopt(handle, CURLOPT_URL, url);
+    if (res == CURLE_OK) res = curl_easy_perform(handle);
     if (res != CURLE_OK) {
-        LogError(0, RS_RET_IO_ERROR, "rainerscript: http_request to failed, URL: '%s', error %s", url,
-                 curl_easy_strerror(res));
+        char *const logUrl = redactUrlForLog(url);
+        if (curlData.bTooLarge) {
+            LogError(0, RS_RET_IO_ERROR, "rainerscript: http_request reply exceeds %zu bytes, URL: '%s'",
+                     FMHTTP_MAX_REPLY_SIZE, logUrl == NULL ? "(unavailable)" : logUrl);
+        } else {
+            LogError(0, RS_RET_IO_ERROR, "rainerscript: http_request failed, URL: '%s', error %s",
+                     logUrl == NULL ? "(unavailable)" : logUrl, curl_easy_strerror(res));
+        }
+        free(logUrl);
         ABORT_FINALIZE(RS_RET_OK);
     }
 
