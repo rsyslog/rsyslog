@@ -9,6 +9,9 @@
 # that case skips while the source-tree test exercises the real script.
 set -eu
 command -v python3 >/dev/null 2>&1 || exit 77
+# The embedded oracle uses f-strings, subprocess.run(text=True) and list
+# unpacking: skip on older Python 3 (e.g. the Solaris builder).
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 7))' >/dev/null 2>&1 || exit 77
 command -v git >/dev/null 2>&1 || exit 77
 test_srcdir="${srcdir:-$(dirname "$0")}"
 test -f "$test_srcdir/../devtools/local-validation-plan.sh" || exit 77
