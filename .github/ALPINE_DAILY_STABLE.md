@@ -47,7 +47,8 @@ older daily versions remain installable until pruned. Only the small mutable APK
 public signing key request a 60-second metadata cache override. DigitalOcean's
 CDN currently enforces a one-hour minimum TTL, so consumers can see a newly
 published index up to one hour later.
-The ordered APK version contains the UTC date and GitHub run/attempt serial;
+The ordered APK version contains the UTC date and GitHub run/attempt serial
+(15 digits in total, as apk-tools rejects very long numeric components);
 the manifest records the exact rsyslog source commit.
 
 ## Signing
