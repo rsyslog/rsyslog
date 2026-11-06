@@ -8,9 +8,11 @@ plus normal configure/build/install events. The separate real dependency/package
 build is required to validate Qpid itself; this fixture fabricates no compiler
 failure and makes no scheduler or timing assumption.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tarfile
 import tempfile
@@ -91,6 +93,56 @@ class GenerationOrder(unittest.TestCase):
                 self.assertEqual(events[-1]["phase"], "install")
                 self.assertEqual((destination / "usr/lib/qpid-fixture").read_text(), "installed\n")
                 self.assertTrue(consumers[0]["complete"], "parallel consumers started before outputs were complete")
+
+
+class ArchiveReuse(unittest.TestCase):
+    def test_copied_archive_is_verified_before_network_fallback(self):
+        # Execute the real container helper with a fixture-specific trust digest.
+        # Only wget is adapted; the SHA-512 checks and failure paths are real.
+        source = (ROOT / "packaging/ubuntu/build-ubuntu.sh").read_text()
+        helper = re.search(r"^ensure_qpid_proton_tarball\(\) \{.*?^\}", source, re.M | re.S).group(0)
+        fixture = b"verified Qpid test fixture\n"
+        helper, replacements = re.subn(r"(?<=expected_hash=')[0-9a-f]{128}(?=')",
+                                       hashlib.sha512(fixture).hexdigest(), helper)
+        self.assertEqual(replacements, 1)
+        for existing, downloaded, download_status, expected_status in [
+                (fixture, b"unused", 1, 0),
+                (b"corrupt", fixture, 0, 0),
+                (b"corrupt", b"still corrupt", 0, 1),
+                (b"corrupt", fixture, 1, 1)]:
+            with self.subTest(existing=existing, downloaded=downloaded, status=download_status), \
+                    tempfile.TemporaryDirectory() as directory:
+                work = Path(directory)
+                archive = work / "debian/qpid-proton/qpid-proton-0.40.0.tar.gz"
+                archive.parent.mkdir(parents=True)
+                archive.write_bytes(existing)
+                tools = work / "tools"
+                tools.mkdir()
+                downloader = tools / "wget"
+                downloader.write_text("""#!/usr/bin/env python3
+import os
+from pathlib import Path
+import sys
+Path(os.environ["DOWNLOAD_TRACE"]).write_text("called\\n")
+if int(os.environ["DOWNLOAD_STATUS"]):
+    sys.exit(int(os.environ["DOWNLOAD_STATUS"]))
+Path(sys.argv[sys.argv.index("-O") + 1]).write_bytes(Path(os.environ["DOWNLOAD_SOURCE"]).read_bytes())
+""")
+                downloader.chmod(0o755)
+                payload = work / "payload"
+                payload.write_bytes(downloaded)
+                trace = work / "download-called"
+                environment = os.environ.copy()
+                environment.update(PATH=str(tools) + os.pathsep + environment["PATH"],
+                                   DOWNLOAD_TRACE=str(trace), DOWNLOAD_SOURCE=str(payload),
+                                   DOWNLOAD_STATUS=str(download_status))
+                result = subprocess.run(["bash", "-e", "-c", helper + "\nensure_qpid_proton_tarball"],
+                                        cwd=str(work), env=environment, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, universal_newlines=True, timeout=10)
+                self.assertEqual(result.returncode, expected_status, result.stdout)
+                self.assertEqual(trace.exists(), existing != fixture)
+                if expected_status == 0:
+                    self.assertEqual(archive.read_bytes(), fixture)
 
 
 if __name__ == "__main__":
