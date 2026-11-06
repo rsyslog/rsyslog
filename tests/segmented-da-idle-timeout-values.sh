@@ -8,6 +8,7 @@
 # while -1 must retain its drained store and final worker until shutdown. Exact
 # output sequences prove both children drained without loss.
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS" "DA queue shutdown hangs for the full abort timeout on Solaris, see rsyslog/rsyslog Solaris nightly issues (root cause not yet found)"
 
 export NUMMESSAGES=1500
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"

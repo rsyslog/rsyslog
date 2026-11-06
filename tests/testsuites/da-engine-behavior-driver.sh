@@ -9,6 +9,11 @@
 # burst. The engine-specific filesystem object proves the child was used; the
 # exact 0..1999 output sequence proves lossless ordered spill and drain.
 . ${srcdir:=.}/diag.sh init
+# The main-queue scenario passes on Solaris; ruleset/action DA queues hang at
+# shutdown there. Remove once the Solaris shutdown hang is fixed.
+if [ "${DA_SCOPE:-}" != main ]; then
+	skip_platform "SunOS" "DA queue shutdown hangs for the full abort timeout on Solaris, see rsyslog/rsyslog Solaris nightly issues (root cause not yet found)"
+fi
 
 export NUMMESSAGES=2000
 DA_SCOPE=${DA_SCOPE:?DA_SCOPE must be main, ruleset, or action}

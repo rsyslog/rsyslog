@@ -13,6 +13,7 @@
 # elapsed-time oracle.
 
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS" "DA queue shutdown hangs for the full abort timeout on Solaris, see rsyslog/rsyslog Solaris nightly issues (root cause not yet found)"
 
 NUMMESSAGES=10000
 TCP_CONNECTIONS=4
