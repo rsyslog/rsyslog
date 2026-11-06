@@ -1,0 +1,19 @@
+tests/local-queue-imtcp-registration.sh
+  s_5e773934876cb4::t_f80e0fc31fd6e8 2-10,14,42-43,45-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7ca63dc5faecc85b97110566b98141168b99d2b1",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
