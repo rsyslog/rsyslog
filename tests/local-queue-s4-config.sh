@@ -21,11 +21,11 @@ for scenario in valid cycle indirect; do
     python3 - "$CONF" "$scenario" "${LOCAL_QUEUE_S4_YAML:-0}" <<'PY'
 import json
 import sys
-from pathlib import Path
 filename, scenario, yaml = sys.argv[1:]
 queue = {'queue.type': 'FixedArray', 'queue.scope': 'local', 'queue.size': '1000',
          'queue.local.frontendSize': '100', 'queue.local.maxFrontends': '4'}
-action = {'type': 'omfile', 'file': '/dev/null', 'template': 'msg', 'action.copyMsg': 'on', **queue}
+action = {'type': 'omfile', 'file': '/dev/null', 'template': 'msg', 'action.copyMsg': 'on'}
+action.update(queue)
 leaf = 'call root' if scenario == 'cycle' else ''
 root = 'call_indirect "leaf";' if scenario == 'indirect' else 'call leaf'
 if yaml == '1':
@@ -33,20 +33,21 @@ if yaml == '1':
     # PyYAML in test environments. Script bodies exercise the shared AST.
     text = 'templates:\n  - name: msg\n    type: string\n    string: "%msg%\\n"\nrulesets:\n'
     for name, script in [('leaf', leaf), ('root', root)]:
-        text += f'  - name: {name}\n'
-        text += ''.join(f'    {key}: {json.dumps(value)}\n' for key, value in queue.items())
+        text += '  - name: {}\n'.format(name)
+        text += ''.join('    {}: {}\n'.format(key, json.dumps(value)) for key, value in queue.items())
         if script:
-            text += f'    script: {json.dumps(script)}\n'
+            text += '    script: {}\n'.format(json.dumps(script))
         else:
             text += '    statements:\n      - ' + '\n        '.join(
-                f'{key}: {json.dumps(value)}' for key, value in action.items()) + '\n'
+                '{}: {}'.format(key, json.dumps(value)) for key, value in action.items()) + '\n'
 else:
-    attrs = ' '.join(f'{key}={json.dumps(value)}' for key, value in queue.items())
-    sink = 'action(' + ' '.join(f'{key}={json.dumps(value)}' for key, value in action.items()) + ')'
+    attrs = ' '.join('{}={}'.format(key, json.dumps(value)) for key, value in queue.items())
+    sink = 'action(' + ' '.join('{}={}'.format(key, json.dumps(value)) for key, value in action.items()) + ')'
     text = 'template(name="msg" type="string" string="%msg%\\n")\n'
-    text += f'ruleset(name="leaf" {attrs}) {{ {leaf or sink} }}\n'
-    text += f'ruleset(name="root" {attrs}) {{ {root} }}\n'
-Path(filename).write_text(text)
+    text += 'ruleset(name="leaf" {}) {{ {} }}\n'.format(attrs, leaf or sink)
+    text += 'ruleset(name="root" {}) {{ {} }}\n'.format(attrs, root)
+with open(filename, 'w') as config:
+    config.write(text)
 PY
     LOG="$PWD/$RSYSLOG_DYNNAME.$scenario.log"
     "$timeout_cmd" -k 2 20 ../tools/rsyslogd -N1 -f "$CONF" -M../runtime/.libs:../.libs >"$LOG" 2>&1
