@@ -6,7 +6,10 @@
 # proves no successful/permanent item replay; final local conservation proves
 # source completion. The maxbytes wrapper forces legacy PREVIOUS_COMMITTED
 # partial flushes. Requests, output files, and helper counters are the oracles;
-# timeouts only detect hangs. No Elasticsearch node download is required.
+# timeouts only detect hangs. Hold the FE callback until all four BE messages
+# are admitted: the helper correctly takes an available partial batch, so an
+# idle-helper wait alone cannot establish the required four-item transaction.
+# No Elasticsearch node download is required.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin omelasticsearch
@@ -22,7 +25,9 @@ STATSFILE="$PWD/$RSYSLOG_DYNNAME.stats"
 STOPMARK="$PWD/$RSYSLOG_DYNNAME.stop"
 BE_ENTRY="$PWD/$RSYSLOG_DYNNAME.be-entry"
 BE_RELEASE="$PWD/$RSYSLOG_DYNNAME.be-release"
-mkfifo "$BE_RELEASE"
+FE_ENTRY="$PWD/$RSYSLOG_DYNNAME.fe-entry"
+FE_RELEASE="$PWD/$RSYSLOG_DYNNAME.fe-release"
+mkfifo "$BE_RELEASE" "$FE_RELEASE"
 maxbytes=${LOCAL_QUEUE_ES_MAXBYTES:-100000}
 test_error_exit_handler() {
     if [ -n "${SERVER_PID:-}" ]; then
@@ -104,6 +109,7 @@ ruleset(name="es_retry" queue.scope="local" queue.type="FixedArray" queue.size="
  if ($.omes!status == 429) then action(type="omelasticsearch" server="127.0.0.1" serverport="'$ES_PORT'"
   bulkmode="on" template="retrydoc" searchIndex="localq" retryfailures="off" indextimeout="5000")
 }
+if ($msg contains "msgnum:00000098:") then :omtesting:file_barrier '$FE_ENTRY' '$FE_RELEASE';esdoc
 if ($msg contains "msgnum:00000099:") then :omtesting:file_barrier '$BE_ENTRY' '$BE_RELEASE';esdoc
 if ($msg contains "msgnum:") and not ($msg contains "msgnum:00000099:") and not ($msg contains "msgnum:00000098:") then
  action(type="omelasticsearch" server="127.0.0.1" serverport="'$ES_PORT'" bulkmode="on" template="esdoc"
@@ -113,12 +119,19 @@ startup
 injectmsg 99 1
 wait_file_lines "$BE_ENTRY" 1
 tcpflood -m1 -i98
-localq_wait_stats_regex "$STATSFILE" 'main Q.local' 'help.waits=[1-9][0-9]*'
+wait_file_lines "$FE_ENTRY" 1
+# The dedicated consumer owns ID99 and the FE callback owns ID98. Neither
+# can dequeue the four target messages until this producer has admitted all
+# of them; no elapsed-time assumption or minimum-batch runtime policy is needed.
+localq_wait_stats "$STATSFILE" 'main Q.local' 'be.physical.messages=1' 'be.active.messages=1' 'fe.inflight.messages=1'
 injectmsg 0 4
+localq_wait_stats "$STATSFILE" 'main Q.local' 'be.physical.messages=5' 'be.active.messages=1' 'fe.inflight.messages=1'
+localq_release_barrier "$FE_RELEASE"
 wait_file_lines --abort-on-oversize "$SUCCESS" 3
 routed_count=4
 [ "$maxbytes" -eq 1 ] && routed_count=2
 wait_file_lines --abort-on-oversize "$ROUTED" "$routed_count"
+localq_wait_stats_regex "$STATSFILE" 'main Q.local' 'help.waits=[1-9][0-9]*'
 localq_wait_stats "$STATSFILE" 'main Q.local' 'batch.help.messages.max=4' 'inflight.help=0'
 response=$(printf 'localqueuestopcheck %s\n' "$STOPMARK" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")
 case "$response" in *OK*) ;; *) error_exit 1 ;; esac
