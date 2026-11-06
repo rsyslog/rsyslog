@@ -1,0 +1,14 @@
+tests/local-queue-s4-output-es.sh
+  h_95716f3de0caf5 9-12,28-30,112,122-126,128-129,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "80a70c150fbb4ceff61310688d6fbb85b4eb3749",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
