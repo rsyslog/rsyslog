@@ -1,0 +1,1 @@
+<134>Jan 15 13:14:15 host123 app[4242]: [exampleSDID@12345 iut="3" eventSource="Application" eventID="1123"] Message with SD block

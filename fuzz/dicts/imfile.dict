@@ -1,0 +1,11 @@
+# imfile-style line ingestion dictionary.
+"\x0a"
+"\x0d\x0a"
+"tag:"
+"startmsg.regex=\""
+"endmsg.regex=\""
+"readMode=\"2\""
+"trimLineOverBytes=\""
+"freshStartTail=\"on\""
+"persistStateInterval=\"1\""
+"multi-line:"

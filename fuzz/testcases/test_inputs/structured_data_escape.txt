@@ -1,0 +1,1 @@
+<165>1 2024-06-02T01:02:03.987654Z escape-host app 7777 - [escape@42 note="a\\b\\c" tricky="ends\\]with\\\"quote" empty=""] Message with escaped SD params and trailing brackets []

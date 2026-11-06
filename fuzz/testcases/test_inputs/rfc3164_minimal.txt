@@ -1,0 +1,2 @@
+# Minimal RFC 3164 message
+<0>Jan  1 00:00:00 localhost test: minimal message

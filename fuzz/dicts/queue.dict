@@ -1,0 +1,13 @@
+# Queue lifecycle dictionary.
+"queue.type=\"direct\""
+"queue.type=\"linkedList\""
+"queue.type=\"disk\""
+"queue.filename=\""
+"queue.highwatermark=\"1\""
+"queue.lowwatermark=\"0\""
+"queue.maxfilesize=\"256\""
+"queue.timeoutenqueue=\"0\""
+"queue.dequeuebatchsize=\"4\""
+"disk"
+"linkedlist"
+"direct"

@@ -1,0 +1,1 @@
+<165>Jan 15 00:01:02 test-host TestApp[1234]: This is a test message
