@@ -40,6 +40,9 @@
 #include "linkedlist.h"
 #include "iminternal.h"
 #include "unicode-helper.h"
+#ifdef __APPLE__
+    #include "iminternal-lock.h"
+#endif
 
 static linkedList_t llMsgs;
 static pthread_mutex_t mutList = PTHREAD_MUTEX_INITIALIZER;
@@ -77,7 +80,11 @@ static rsRetVal iminternalConstruct(iminternal_t **ppThis) {
 rsRetVal iminternalAddMsg(smsg_t *pMsg) {
     DEFiRet;
     iminternal_t *pThis = NULL;
+#ifndef __APPLE__
     struct timespec to;
+#else
+    int oldCancelState;
+#endif
     int r;
     int is_locked = 0;
 
@@ -85,12 +92,15 @@ rsRetVal iminternalAddMsg(smsg_t *pMsg) {
      * block due to internal messages. The 1 second timeout should be
      * sufficient under all circumstances.
      */
+#if !defined(__APPLE__)
     to.tv_sec = time(NULL) + 1;
     to.tv_nsec = 0;
-#if !defined(__APPLE__)
     r = pthread_mutex_timedlock(&mutList, &to);
 #else
-    r = pthread_mutex_trylock(&mutList);  // must check
+    /* The portable wait uses nanosleep, a cancellation point. Keep message
+     * ownership and the mutex protected until the common cleanup completes. */
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
+    r = iminternalMutexTimedLock(&mutList, 1000);
 #endif
     if (r != 0) {
         dbgprintf("iminternalAddMsg: timedlock for mutex failed with %d, msg %s\n", r, getMSG(pMsg));
@@ -117,6 +127,9 @@ finalize_it:
         if (pThis != NULL) iminternalDestruct(pThis);
     }
 
+#ifdef __APPLE__
+    pthread_setcancelstate(oldCancelState, NULL);
+#endif
     RETiRet;
 }
 
