@@ -33,6 +33,7 @@ EXPECTED_UPLOADS = {
     "run_cross_arch_weekly.yml": 1,
     "run_macos_weekly.yml": 1,
     "imbeats.yml": 1,
+    "doc_build.yml": 1,
     "imhttp_prometheus_scrape.yml": 1,
     "impstats_push_victoriametrics.yml": 1,
     "debian_daily_stable.yml": 2,
@@ -42,6 +43,7 @@ EXPECTED_UPLOADS = {
 TEST_COMMAND_RE = re.compile(
     r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh"
     r"|(?:node|python3)\s+tests/pr-coverage-(?:source\.cjs|artifact\.py)"
+    r"|python3\s+doc/tools/validate-doc-samples\.py\b"
 )
 UPLOAD_RE = re.compile(
     r"^(?:      - |        )uses:\s+"

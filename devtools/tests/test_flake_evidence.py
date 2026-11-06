@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import importlib.util
 import io
 import json
@@ -22,6 +23,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -194,6 +196,32 @@ class FlakeEvidenceTests(unittest.TestCase):
                 "pipelines.actions.githubusercontent.com.attacker.example"
             )
         )
+
+    def test_coverage_checker_requires_documentation_oracle_evidence(self):
+        # Doc samples execute the built daemon's configuration validator. A
+        # workflow with that oracle must fail the audit without evidence and
+        # harvester registration; mere successful YAML parsing is insufficient.
+        checker = load_coverage_checker()
+        with tempfile.TemporaryDirectory() as temp:
+            workflows = Path(temp)
+            harvester = workflows / "collect_flake_evidence.yml"
+            harvester.write_text("name: collect\n    workflows:\n      - unrelated tests\n")
+            (workflows / "doc_build.yml").write_text(
+                "name: documentation build\njobs:\n  build_docs:\n    steps:\n"
+                "      - name: Validate documentation config samples\n"
+                "        run: |\n"
+                "          cd doc-builder\n"
+                "          python3 doc/tools/validate-doc-samples.py \\\n"
+                "            --source-dir doc/source --build-dir .\n"
+            )
+            errors = io.StringIO()
+            with mock.patch.multiple(checker, WORKFLOWS=workflows,
+                                     HARVESTER=harvester, EXPECTED_UPLOADS={}):
+                with contextlib.redirect_stderr(errors):
+                    result = checker.main()
+            self.assertEqual(1, result, errors.getvalue())
+            self.assertIn("without an evidence upload", errors.getvalue())
+            self.assertIn("missing from the harvester", errors.getvalue())
 
     def test_coverage_checker_ignores_commented_uploads(self):
         checker = load_coverage_checker()
