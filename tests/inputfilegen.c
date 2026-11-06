@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (filesize != -1) {
-        const int linesize = (17 + nchars); /* 17 is std line size! */
+        const int linesize = 17 + (nchars == NOEXTRADATA ? 0 : nchars); /* 17 is std line size! */
         nmsgs = filesize / linesize;
         fprintf(stderr,
                 "inputfilegen: file size requested %lld, actual %lld with "

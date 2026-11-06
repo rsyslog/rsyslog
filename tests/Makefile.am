@@ -77,6 +77,9 @@ EXTRA_DIST += $(TESTS_PR_COVERAGE) pr-coverage-artifact.py pr-coverage-source.cj
 TESTS_MERMAID_OFFLINE = mermaid-offline.sh
 EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
 
+TESTS_GATHER_CHECK_LOGS = gather-check-logs.sh
+EXTRA_DIST += $(TESTS_GATHER_CHECK_LOGS)
+
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
@@ -384,6 +387,7 @@ TESTS_DEFAULT = \
 	imtcp-bind-failure-window.sh \
 	kafka-dependency-download-cache.sh \
 	record-container-validation.sh \
+	local-validation-log-preservation.sh \
 	codex-pre-push-container-gate.sh \
 	mysql-reconnect-relevance.sh \
 	backtick-cat-procfs.sh \
@@ -408,10 +412,12 @@ TESTS_DEFAULT = \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
 	chkseq_usage_output.sh \
+	chkseq-duplicate-increments.sh \
 	minitcpsrv_usage_output.sh \
 	minitcpsrv-reconnect.sh \
 	diagtalker-retry.sh \
 	test_id_usage_output.sh \
+	inputfilegen-size-limit.sh \
 	uxsockrcvr_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -1931,6 +1937,9 @@ TESTS_LIBYAML_IMTCP_OSSL = \
 TESTS_LIBYAML_OSSL = \
 	yaml-omfwd-tls-ossl-pkcs11-module-defaults.sh
 
+TESTS_LIBYAML_IMHIREDIS = \
+	yaml-imhiredis-default-server-port-yamlonly.sh
+
 TESTS_LIBYAML_IMHTTP = \
 	yaml-imhttp-apikeyfile.sh \
 	yaml-imhttp-metrics-apikeyfile.sh
@@ -2702,6 +2711,7 @@ EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_OSSL)
+EXTRA_DIST += $(TESTS_LIBYAML_IMHIREDIS)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
@@ -2932,10 +2942,17 @@ endif
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
+	runtime_unit_iminternal_lock
 TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
+	runtime_unit_iminternal_lock
+
+runtime_unit_iminternal_lock_SOURCES = unit/iminternal_lock_test.c
+runtime_unit_iminternal_lock_CPPFLAGS = -I$(top_srcdir)
+runtime_unit_iminternal_lock_CFLAGS = $(AM_CFLAGS) $(PTHREADS_CFLAGS)
+runtime_unit_iminternal_lock_LDADD = $(PTHREADS_LIBS)
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
@@ -3132,6 +3149,7 @@ TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
 TESTS += $(TESTS_MINITCP_EXCLUSIVE)
+TESTS += $(TESTS_GATHER_CHECK_LOGS)
 if ENABLE_OMJOURNAL
 if HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE
 check_LTLIBRARIES += liboverride_omjournal_namespace.la
@@ -3979,6 +3997,9 @@ endif # ENABLE_OMRABBITMQ
 if ENABLE_REDIS_TESTS
 if ENABLE_IMHIREDIS
 TESTS += $(TESTS_IMHIREDIS)
+if HAVE_LIBYAML
+TESTS += $(TESTS_LIBYAML_IMHIREDIS)
+endif # HAVE_LIBYAML
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMHIREDIS_VALGRIND)
 endif # HAVE_VALGRIND

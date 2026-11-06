@@ -25,11 +25,11 @@ python3 -u -c '
 import signal
 import socket
 import sys
-from pathlib import Path
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("127.0.0.1", 0))
-Path(sys.argv[1]).write_text(str(sock.getsockname()[1]))
+with open(sys.argv[1], "w") as port_file:
+    port_file.write(str(sock.getsockname()[1]))
 while True:
     signal.pause()
 ' "$portfile" > "$holder_log" 2>&1 &

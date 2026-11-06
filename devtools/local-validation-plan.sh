@@ -206,7 +206,7 @@ if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\
 fi
 
 validation_tooling_only=0
-if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/|^doc/ai/|^doc/security/|^doc/README\.md$|^doc/AGENTS\.md$|^doc/BUILDS_README\.md$|^doc/STRATEGY\.md$|^doc/IMPLEMENTATION_PLAN\.md$|^devtools/(local-validation-plan\.sh|check-test-antipatterns\.sh|format-code\.sh|format-python\.sh|list-git-changed-c-h-files\.sh|check-raw-atomics\.py|raw-atomics-baseline\.txt)$'; then
+if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/|^doc/ai/|^doc/security/|^doc/README\.md$|^doc/AGENTS\.md$|^doc/BUILDS_README\.md$|^doc/STRATEGY\.md$|^doc/IMPLEMENTATION_PLAN\.md$|^devtools/(local-validation-plan\.sh|check-test-antipatterns\.sh|format-code\.sh|format-python\.sh|list-git-changed-c-h-files\.sh|check-raw-atomics\.py|raw-atomics-baseline\.txt|tests/test_format_code\.py)$'; then
 	validation_tooling_only=1
 fi
 
@@ -331,6 +331,17 @@ run_python_style() {
 		done < "$tmp_python"
 	else
 		echo "warning: devtools/format-python.sh missing or not executable; skipping Python style check" >&2
+	fi
+}
+
+run_format_code_tests() {
+	if ! matches_any '^devtools/(format-code\.sh|list-git-changed-c-h-files\.sh|local-validation-plan\.sh|tests/test_format_code\.py)$'; then
+		return 0
+	fi
+	if command -v python3 >/dev/null 2>&1 && command -v bash >/dev/null 2>&1; then
+		PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s devtools/tests -p test_format_code.py -v
+	else
+		echo "warning: Python 3 or Bash not installed; skipping isolated formatter regression tests" >&2
 	fi
 }
 
@@ -582,8 +593,37 @@ run_change_gated_ubuntu26() {
 	export CI_MAKE_CHECK_OPT="-j${check_jobs}"
 	export CI_CHECK_CMD='check'
 	export VERBOSE=1
-	run_timed_env bash -c \
-		'. devtools/apply-service-relevance.sh && rsyslog_apply_default_pr_service_suppressions && exec devtools/devcontainer.sh --rm devtools/run-ci.sh'
+	# A previous log must never be mistaken for the result of this run.
+	rm -f tests/test-suite.log
+	source_commit="$(git rev-parse HEAD)"
+	if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+		source_dirty=yes
+	else
+		source_dirty=no
+	fi
+	if run_timed_env bash -c \
+		'. devtools/apply-service-relevance.sh && rsyslog_apply_default_pr_service_suppressions && exec devtools/devcontainer.sh --rm devtools/run-ci.sh'; then
+		ci_status=0
+	else
+		ci_status=$?
+	fi
+	if [ ! -f tests/test-suite.log ]; then
+		echo "error: tests/test-suite.log missing after Ubuntu 26.04 run-ci.sh; no broad-test log archived" >&2
+		if [ "$ci_status" -eq 0 ]; then return 1; fi
+		return "$ci_status"
+	fi
+	log_root="$repo_root/.codex/local-validation-logs"
+	mkdir -p "$log_root"
+	log_dir="$(mktemp -d "$log_root/run-XXXXXXXX")"
+	cp tests/test-suite.log "$log_dir/test-suite.log"
+	{
+		printf 'source_commit=%s\n' "$source_commit"
+		printf 'source_dirty=%s\n' "$source_dirty"
+		printf 'run_ci_exit_code=%s\n' "$ci_status"
+		printf 'configured_image_reference=%s\n' "$RSYSLOG_DEV_CONTAINER"
+	} > "$log_dir/run.txt"
+	echo "Ubuntu 26.04 Automake log archived: $log_dir/test-suite.log"
+	return "$ci_status"
 }
 
 run_focused_test_shell() {
@@ -639,6 +679,7 @@ agent-doc-only | internal-doc-only)
 	echo "Validation complete: documentation/instruction-only change."
 	;;
 local-validation-tooling)
+	run_format_code_tests
 	echo "Validation complete: local validation tooling checks passed."
 	;;
 rendered-docs)

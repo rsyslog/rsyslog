@@ -618,10 +618,9 @@ BEGINnewInpInst
     }
     if (inst->redisNodesList->server == NULL && inst->redisNodesList->socketPath == NULL) {
         CHKmalloc(inst->redisNodesList->server = (uchar *)strdup("127.0.0.1"));
-        inst->redisNodesList->port = 6379;
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
                "imhiredis: no server parameter specified "
-               "using default 127.0.0.1:6379 -- this may not be what you want!");
+               "using default 127.0.0.1 -- this may not be what you want!");
     }
     if (inst->password == NULL) {
         LogMsg(0, RS_RET_OK, LOG_INFO, "imhiredis: no password specified");

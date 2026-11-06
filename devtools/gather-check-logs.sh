@@ -4,10 +4,12 @@
 # Copyright (C) 2020 by Rainer Gerhards, released under ASL 2.0
 
 show_log() {
-	if grep -q ":test-result: FAIL" "$1"; then
-		printf "\nFAIL: ${1%%.trs} \
+	local result
+	result=$(sed -n 's/^:test-result: //p' "$1")
+	if [ "$result" = FAIL ] || [ "$result" = ERROR ] || [ "$result" = XPASS ]; then
+		printf "\n%s: %s \
 		########################################################\
-		################################\n\n"
+		################################\n\n" "$result" "${1%%.trs}"
 		logfile="${1%%trs}log"
 		if [ -f "$logfile" ]; then
 			lines="$(wc -l < $logfile)"

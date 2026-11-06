@@ -157,3 +157,6 @@ AGENTS.local.md
 
 # Reviewed container outcome and source/log identity audit
 .codex/container_validation.json
+
+# Original Automake logs retained across local validation cleanup
+.codex/local-validation-logs/
