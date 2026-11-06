@@ -49,6 +49,7 @@ jobs:
         run: |
           sudo apt-get update
           #sudo apt-get install --yes python-docutils tcl-dev
+          # Match librdkafka's OpenSSL curl development dependency.
           sudo apt-get install --yes \
               libestr-dev \
               libfastjson-dev \
