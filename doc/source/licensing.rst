@@ -1,7 +1,20 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. _licensing:
+
+.. meta::
+   :description: Overview of rsyslog licensing and how to find license terms for individual source files.
+   :keywords: rsyslog, licensing, source files, SPDX, GPL, LGPL, Apache
+
 Licensing
 =========
+
+.. summary-start
+
+Consult individual source-file notices and SPDX identifiers, where present,
+together with the license texts in the distribution, for file-level license terms.
+
+.. summary-end
 
 If you intend to use rsyslog inside a GPLv3 compatible project, you are free to
 do so. You don't even need to continue reading. If you intend to use rsyslog
@@ -46,29 +59,14 @@ especially important for plugins that do NOT ship as part of the rsyslog
 tarball.
 
 In order to make rsyslog technology available to a broader range of
-applications, the rsyslog runtime is, at least partly, licensed under
-LGPL. If in doubt, check the source file licensing comments. As of now,
-the following files are licensed under LGPL:
+applications, parts of the rsyslog runtime are licensed under LGPL. The
+runtime source files carry different license terms: for example,
+``runtime/queue.c`` declares ``LGPL-3.0-or-later``, while
+``runtime/wti.c`` declares ``Apache-2.0``.
 
--  queue.c/.h
--  wti.c/.h
--  wtp.c/.h
--  vm.c/.h
--  vmop.c/.h
--  vmprg.c/.h
--  vmstk.c/.h
--  expr.c/.h
--  sysvar.c/.h
--  ctok.c/.h
--  ctok\_token.c/.h
--  regexp.c/.h
--  sync.c/.h
--  stream.c/.h
--  var.c/.h
-
-This list will change as time of the runtime modularization. At some
-point in the future, there will be a well-designed set of files inside a
-runtime library branch and all of these will be LGPL. Some select extras
-will probably still be covered by GPL. We are following a similar
-licensing model in GnuTLS, which makes effort to reserve some
-functionality exclusively to open source projects.
+For the terms applicable to an individual source file, consult its license
+notices and SPDX license identifier, where present, together with the
+corresponding license text in the distribution. Some files have no SPDX
+identifier; its absence does not establish the file's license terms.
+Review the existing notices and applicable grants for those files rather
+than inferring a license from their directory or from a package-level summary.
