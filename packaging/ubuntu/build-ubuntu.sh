@@ -113,9 +113,9 @@ if [ -f "rsyslog-${VERSION}/debian/source/include-binaries" ] && \
   if [ ! -f "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" ]; then
     echo "== Fetch qpid-proton tarball =="
     # Bound each mirror attempt so an unavailable archive cannot stall CI.
-    wget -q --timeout=30 --tries=2 -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
+    wget --timeout=30 --tries=2 -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
       https://dlcdn.apache.org/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz ||
-      wget -q --timeout=30 --tries=2 -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
+      wget --timeout=30 --tries=2 -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
         https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
     (cd "rsyslog-${VERSION}/debian/qpid-proton" && \
       echo '3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz' | sha512sum -c -)
@@ -340,15 +340,25 @@ for f in $(find debian -type f -name "*.install"); do
     chmod -x "$f"
   fi
 done
-# Re-fetch qpid-proton tarball in container to avoid corruption from Windows host mount
-if [ -f debian/source/include-binaries ] && grep -q qpid-proton debian/source/include-binaries; then
+# Verify the copied source payload in container-local storage. Reuse it when
+# intact; a Windows mount corruption still forces a fresh, checked download.
+ensure_qpid_proton_tarball() {
+  local archive_path='debian/qpid-proton/qpid-proton-0.40.0.tar.gz'
+  local expected_hash='3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3'
   mkdir -p debian/qpid-proton
-  # Use the same bounded primary and archive fallback as the host fetch.
-  wget -q --timeout=30 --tries=2 -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
+  if printf '%s  %s\n' "$expected_hash" "$archive_path" | sha512sum --check --status 2>/dev/null; then
+    echo "Using verified Qpid source archive from the source package"
+    return 0
+  fi
+  echo "Fetching missing or corrupt Qpid source archive"
+  wget --timeout=30 --tries=2 -O "$archive_path" \
     https://dlcdn.apache.org/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz ||
-    wget -q --timeout=30 --tries=2 -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
+    wget --timeout=30 --tries=2 -O "$archive_path" \
       https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
-  (cd debian/qpid-proton && echo "3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz" | sha512sum -c -)
+  printf '%s  %s\n' "$expected_hash" "$archive_path" | sha512sum --check
+}
+if [ -f debian/source/include-binaries ] && grep -q qpid-proton debian/source/include-binaries; then
+  ensure_qpid_proton_tarball
 fi
 apt_retry_with_fallback "mk-build-deps" \
   mk-build-deps -i -r -t "apt-get ${apt_base_args[*]} -y --no-install-recommends --fix-missing"
