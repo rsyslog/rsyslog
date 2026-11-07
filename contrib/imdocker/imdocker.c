@@ -269,7 +269,7 @@ static struct cnfparamdescr modpdescr[] = {
     {"retrievenewlogsfromstart", eCmdHdlrBinary, 0},
     {"trimlineoverbytes", eCmdHdlrPositiveInt, 0},
     {"defaultseverity", eCmdHdlrSeverity, 0},
-    {"defaultfacility", eCmdHdlrFacility, 0},
+    {"defaultfacility", eCmdHdlrString, 0},
     {"escapelf", eCmdHdlrBinary, 0},
 };
 
@@ -1052,7 +1052,14 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "defaultseverity")) {
             loadModConf->iDfltSeverity = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "defaultfacility")) {
-            loadModConf->iDfltFacility = (int)pvals[i].val.d.n;
+            CHKmalloc(buf = es_str2cstr(pvals[i].val.d.estr, NULL));
+            const int facility = decodeSyslogName((uchar *)buf, syslogFacNames);
+            /* Numeric settings already contain the facility ordinal. Symbolic
+             * names decode to LOG_* constants, so only those need normalizing.
+             * Preserve the existing negative sentinel for invalid settings. */
+            loadModConf->iDfltFacility = facility < 0 || isdigit((unsigned char)buf[0]) ? facility : pri2fac(facility);
+            free(buf);
+            buf = NULL;
         } else if (!strcmp(modpblk.descr[i].name, "escapelf")) {
             loadModConf->bEscapeLf = (sbool)pvals[i].val.d.n;
         } else {
