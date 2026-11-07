@@ -493,6 +493,12 @@ static rsRetVal discardLogSockets(void) {
  * Only sockets and symbolic links (e.g. a /dev/log link) are removed. Any other
  * file type is left in place, so that a mistyped Socket= path cannot delete a
  * regular file. Socket creation then fails with "address in use".
+ *
+ * Note: lstat() and unlink() are not atomic, so the entry could be swapped
+ * in between. This is accepted: POSIX has no "unlink only if same inode",
+ * unlink() never follows links, and anyone able to swap the entry already
+ * has write access to its directory and could remove it directly. The check
+ * guards against misconfiguration, not against a concurrent local attacker.
  */
 static void unlinkSocketPath(const uchar *const path) {
     struct stat st;
