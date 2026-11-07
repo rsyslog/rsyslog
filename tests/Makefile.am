@@ -980,6 +980,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
 	config-translate-rs-to-yaml.sh \
+	yaml-imuxsock-socket-path-checks.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
 	config-translate-rs-statements-to-yaml.sh \
