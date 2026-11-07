@@ -21,8 +21,8 @@ observed. It is skipped on SunOS until the cause of the connect() stall under
 load is understood.
 see also: https://github.com/rsyslog/rsyslog/issues/7917
 
-On Solaris 11 x64 (SunStudio build), tests/imrelp-tls-chainedcert.sh and
-tests/imrelp-tls-mixed-chainedcert.sh fail: imrelp with tls.authmode="certvalid"
+On Solaris 11 x64 (SunStudio build), tests/imrelp-tls-chainedcert.sh,
+tests/imrelp-tls-mixed-chainedcert.sh and tests/imrelp-tls-mixed-chainedcert2.sh fail: imrelp with tls.authmode="certvalid"
 rejects the client certificate file that contains a chain ("certificate verify
 failed" in the server handshake), while the unchained imrelp TLS tests pass.
 They are skipped on SunOS. The root cause (librelp/OpenSSL version on the
