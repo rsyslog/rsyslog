@@ -1215,7 +1215,7 @@ int getOrdinal(struct syslogTime *ts) {
 
     /* adjust previous years to match UTC offset */
     utcOffset = ts->OffsetHour * 3600 + ts->OffsetMinute * 60;
-    if (ts->OffsetMode == '+') utcOffset += -1; /* if timestamp is ahead, we need to "go back" to UTC */
+    if (ts->OffsetMode == '+') utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
     previousyears += utcOffset;
 
     /* subtract seconds from previous years */
