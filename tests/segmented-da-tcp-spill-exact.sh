@@ -12,9 +12,9 @@
 # framing. This is a functionality regression test; it has no throughput or
 # elapsed-time oracle.
 
-# Skipped on SunOS: early connection close under DA backpressure, see KNOWN_ISSUES.
+# Skipped on SunOS: passes alone but stalls under full-suite load, see KNOWN_ISSUES.
 . ${srcdir:=.}/diag.sh init
-skip_platform "SunOS" "tcpflood connections are closed early on Solaris under DA backpressure, see KNOWN_ISSUES and https://github.com/rsyslog/rsyslog/issues/7917"
+skip_platform "SunOS" "connect() to the non-reading receiver stalls under full-suite load on Solaris, see KNOWN_ISSUES and https://github.com/rsyslog/rsyslog/issues/7917"
 
 NUMMESSAGES=10000
 TCP_CONNECTIONS=4

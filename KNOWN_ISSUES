@@ -6,10 +6,13 @@ switch or go back to an older version.
 see also: https://github.com/rsyslog/rsyslog/issues/2099
 
 On Solaris 11 x64 (SunStudio build), tests/segmented-da-tcp-spill-exact.sh
-fails: tcpflood reports "CLOSED REMOTELY (Broken pipe)" after about 64
-messages per connection while imtcp feeds a segmented disk-assisted main
-queue under backpressure. It is skipped on SunOS. The root cause is not yet
-known; remove the skip once it is fixed.
+passes when run alone (about 100 s) but fails inside the full parallel
+"gmake -j2 check": omfwd's connect() to the test's deliberately non-reading
+receiver (minitcpsrv) hangs for minutes, so the disk-assisted spill is never
+reached and tcpflood later reports "CLOSED REMOTELY (Broken pipe)". The test
+is therefore load/concurrency sensitive on Solaris; no rsyslog data loss was
+observed. It is skipped on SunOS until the cause of the connect() stall under
+load is understood.
 see also: https://github.com/rsyslog/rsyslog/issues/7917
 
 On Solaris 11 x64 (SunStudio build), tests/imrelp-tls-chainedcert.sh and
