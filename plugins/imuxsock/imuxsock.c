@@ -1792,6 +1792,10 @@ BEGINrunInput
                 /* such a socket would make poll() return immediately forever */
                 LogError(0, RS_RET_POLL_ERR, "imuxsock: socket '%s' is no longer usable, stop listening on it",
                          listeners[i].sockName);
+                if (pollfds[i].revents & POLLNVAL) {
+                    /* the fd is no longer ours; afterRun must not close it */
+                    listeners[i].fd = -1;
+                }
                 pollfds[i].fd = -1; /* poll() ignores negative fds */
                 --nfds;
             }

@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Verify that imuxsock validates listener socket paths before touching the
 # filesystem:
 #  1. a regular file at a Socket= path must not be removed (Unlink defaults to

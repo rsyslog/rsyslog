@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # YAML companion for imuxsock_socket_path_checks.sh. The imuxsock module and
 # its two Socket= inputs are loaded from a YAML include; the oracles are the
 # same:
