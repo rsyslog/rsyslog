@@ -489,6 +489,33 @@ static rsRetVal discardLogSockets(void) {
 }
 
 
+/* Remove an existing filesystem entry at a listener socket path.
+ * Only sockets and symbolic links (e.g. a /dev/log link) are removed. Any other
+ * file type is left in place, so that a mistyped Socket= path cannot delete a
+ * regular file. Socket creation then fails with "address in use".
+ *
+ * Note: lstat() and unlink() are not atomic, so the entry could be swapped
+ * in between. This is accepted: POSIX has no "unlink only if same inode",
+ * unlink() never follows links, and anyone able to swap the entry already
+ * has write access to its directory and could remove it directly. The check
+ * guards against misconfiguration, not against a concurrent local attacker.
+ */
+static void unlinkSocketPath(const uchar *const path) {
+    struct stat st;
+
+    if (lstat((const char *)path, &st) != 0) {
+        return; /* nothing to remove */
+    }
+    if (!S_ISSOCK(st.st_mode) && !S_ISLNK(st.st_mode)) {
+        LogError(0, RS_RET_ERR_CRE_AFUX, "imuxsock: not removing '%s': path exists and is not a socket", path);
+        return;
+    }
+    if (unlink((const char *)path) != 0 && errno != ENOENT) {
+        LogError(errno, RS_RET_ERR_CRE_AFUX, "imuxsock: cannot remove '%s'", path);
+    }
+}
+
+
 /* used to create a log socket if NOT passed in via systemd.
  */
 /* note: the linux SUN_LEN macro uses a sizeof based on a NULL pointer. This
@@ -507,7 +534,14 @@ static rsRetVal
     struct sockaddr_un sunx;
     DEFiRet;
 
-    if (pLstn->bUnlink) unlink((char *)pLstn->sockName);
+    if (ustrlen(pLstn->sockName) >= sizeof(sunx.sun_path)) {
+        /* bind() would silently use a truncated name, while chmod() and
+         * unlink() would operate on the full one - refuse instead.
+         */
+        errno = ENAMETOOLONG;
+        ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+    }
+    if (pLstn->bUnlink) unlinkSocketPath(pLstn->sockName);
     memset(&sunx, 0, sizeof(sunx));
     sunx.sun_family = AF_UNIX;
     if (pLstn->bCreatePath) {
@@ -543,7 +577,7 @@ finalize_it:
             pLstn->fd = -1;
         }
         if (pLstn->created_here) {
-            unlink((const char *)pLstn->sockName);
+            unlinkSocketPath(pLstn->sockName);
             pLstn->created_here = 0;
         }
     }
@@ -1302,7 +1336,8 @@ static rsRetVal activateListeners(void) {
         }
 #endif
         if (runModConf->ratelimitIntervalSysSock > 0) {
-            if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+            if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+                                                    (void (*)(void *))ratelimitDestruct)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
                          "imuxsock: turning off rate limiting because "
@@ -1380,7 +1415,7 @@ finalize_it:
         for (i = startIndexUxLocalSockets; i < nfd; ++i) {
             if (listeners[i].fd == -1) continue;
             if (listeners[i].created_here && listeners[i].sockName != NULL) {
-                unlink((char *)listeners[i].sockName);
+                unlinkSocketPath(listeners[i].sockName);
                 listeners[i].created_here = 0;
             }
             close(listeners[i].fd);
@@ -1755,9 +1790,20 @@ BEGINrunInput
 
         for (i = startIndexUxLocalSockets; i < nfd && nfds > 0; i++) {
             if (glbl.GetGlobalInputTermState() == 1) ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
-            if (pollfds[i].revents & POLLIN) {
+            if (pollfds[i].revents & (POLLIN | POLLERR)) {
+                /* on POLLERR, recvmsg() reports and clears the pending error */
                 readSocket(&(listeners[i]));
                 --nfds; /* indicate we have processed one */
+            } else if (pollfds[i].revents & (POLLHUP | POLLNVAL)) {
+                /* such a socket would make poll() return immediately forever */
+                LogError(0, RS_RET_POLL_ERR, "imuxsock: socket '%s' is no longer usable, stop listening on it",
+                         listeners[i].sockName);
+                if (pollfds[i].revents & POLLNVAL) {
+                    /* the fd is no longer ours; afterRun must not close it */
+                    listeners[i].fd = -1;
+                }
+                pollfds[i].fd = -1; /* poll() ignores negative fds */
+                --nfds;
             }
         }
     }
@@ -1801,7 +1847,7 @@ BEGINafterRun
 
             if (listeners[i].bUnlink) {
                 DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
-                unlink((char *)listeners[i].sockName);
+                unlinkSocketPath(listeners[i].sockName);
             }
         }
 
