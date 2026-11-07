@@ -5,6 +5,12 @@ runs. If you experience them, either use --disable-libfaketime configure
 switch or go back to an older version.
 see also: https://github.com/rsyslog/rsyslog/issues/2099
 
+Solaris CI is best effort only. The Solaris 11 x64 buildbot builder is slow,
+so its "gmake -j2 check" cannot finish the whole testbench within its time
+limit and only the important core components are covered; coverage there is
+deliberately low. Tests that cannot work on Solaris are skipped with
+skip_platform "SunOS" and listed below.
+
 On Solaris 11 x64 (SunStudio build), tests/segmented-da-tcp-spill-exact.sh
 passes when run alone (about 100 s) but fails inside the full parallel
 "gmake -j2 check": omfwd's connect() to the test's deliberately non-reading
