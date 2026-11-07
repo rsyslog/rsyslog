@@ -128,3 +128,9 @@ and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
 severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
+
+## imuxsock timestamp rewrite coverage
+
+`tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
+companion exercise malformed PRI and short timestamps at raw-buffer boundaries
+through real Unix sockets, checking raw-message preservation and full-width controls.

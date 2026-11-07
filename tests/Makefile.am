@@ -695,6 +695,7 @@ TESTS_DEFAULT = \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_annotate_large.sh \
 	imuxsock-NUL.sh \
+	imuxsock-timestamp-rewrite.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_syssock.sh \
@@ -911,6 +912,7 @@ TESTS_OSSL_WRONG_OPT = \
 
 TESTS_DEFAULT_VALGRIND = \
 	imuxsock-NUL-vg.sh \
+	imuxsock-timestamp-rewrite-vg.sh \
 	omusrmsg-noabort-vg.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
@@ -979,6 +981,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	yaml-imuxsock-timestamp-rewrite.sh \
 	config-translate-rs-to-yaml.sh \
 	yaml-imuxsock-socket-path-checks.sh \
 	config-translate-rs-filter-actions.sh \
@@ -4751,3 +4754,5 @@ inputfilegen_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
+
+EXTRA_DIST += imuxsock-timestamp-rewrite.py
