@@ -1,0 +1,43 @@
+# Test subset for the Solaris 11 buildbot builder (best-effort CI).
+#
+# The Solaris builder is slow and its "gmake -j2 check" runs into the builder's
+# 3300 s limit, so only important core components are covered there. Tests
+# matching a "skip" glob are skipped (exit 77) on SunOS before they do any
+# work; a matching "keep" glob wins over "skip". Globs are matched against the
+# test script's basename. See tests/diag.sh (solaris_subset_skip).
+#
+# Run everything regardless: RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1
+# Test the filter on another OS: RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1
+#
+# Format: "skip <glob>" or "keep <glob>"; "#" starts a comment.
+
+# Disk-assisted, disk, segmented and local queues, worker thread pool:
+# new, Linux-driven code that dominates the run time (about 940 s measured).
+skip daqueue-*
+skip diskqueue-*
+skip segmented-*
+skip classic-da-*
+skip local-queue-*
+skip wtp-*
+# Shared drivers run by the wrapper scripts above (the driver, not the wrapper,
+# calls "diag.sh init" and therefore needs its own entry):
+skip da-engine-*
+skip pure-disk-queue-*
+
+# TLS (gtls, openssl, wolfssl): library logic, covered on Linux (about 650 s).
+skip *tls*
+skip *gtls*
+skip *ossl*
+
+# zlib/zstd writers (about 320 s) and sender/receiver round trips (about 300 s).
+skip gzipwr_*
+skip sndrcv_*
+
+# imfile: keep a handful of basic tests, skip the rest (about 450 s in total).
+skip imfile-*
+keep imfile-basic.sh
+keep imfile-basic-legacy.sh
+keep imfile-readmode2.sh
+keep imfile-endregex.sh
+keep imfile-truncate.sh
+keep imfile-rename.sh
