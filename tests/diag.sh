@@ -5783,7 +5783,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		fi
 		# The testbench only talks to local servers. A CI worker-wide http_proxy
 		# (the Solaris builder has one) must not capture these requests.
-		export no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}"
+		export no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}${NO_PROXY:+,$NO_PROXY}"
 		export NO_PROXY="$no_proxy"
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		# Note: Setting per-process core_pattern would require root privileges via

@@ -247,8 +247,8 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
  * back to a mutex. The process-wide counter is shared by workers of many
  * queues, each holding a different queue mutex, so it needs its own one;
  * unprotected updates lose counts and imdiag never sees an empty queue. */
-static pthread_mutex_t mutOverallQueueSize = PTHREAD_MUTEX_INITIALIZER;
-        #define OVERALL_QSIZE_MUT (&mutOverallQueueSize)
+static pthread_mutex_t mut_overall_queue_size = PTHREAD_MUTEX_INITIALIZER;
+        #define OVERALL_QSIZE_MUT (&mut_overall_queue_size)
     #endif
 #endif
 
