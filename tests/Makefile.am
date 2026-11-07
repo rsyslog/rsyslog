@@ -4748,3 +4748,6 @@ inputfilegen_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
+
+# PROBE (do not merge): run only the Solaris spill diagnostic test
+TESTS = segmented-da-tcp-spill-exact.sh

@@ -14,7 +14,6 @@
 
 # Skipped on SunOS: early connection close under DA backpressure, see KNOWN_ISSUES.
 . ${srcdir:=.}/diag.sh init
-skip_platform "SunOS" "tcpflood connections are closed early on Solaris under DA backpressure, see KNOWN_ISSUES and https://github.com/rsyslog/rsyslog/issues/7917"
 
 NUMMESSAGES=10000
 TCP_CONNECTIONS=4
@@ -57,6 +56,23 @@ wait_file_exists "$INPUT_PORT_FILE"
 
 ./tcpflood -p"$(cat "$INPUT_PORT_FILE")" -c"$TCP_CONNECTIONS" -Y -m"$NUMMESSAGES" -d"$PAYLOAD_BYTES" -q "$SENDER_MARKER" &
 SENDER_PID=$!
+# PROBE (do not merge): dump socket and stack state while waiting for the DA state file
+probe_dump() {
+	echo "=== PROBE t=$1 $(date) ==="
+	echo "--- netstat (receiver port $(cat "$RECEIVER_PORT_FILE") / input port $(cat "$INPUT_PORT_FILE"))"
+	netstat -an | egrep "\.($(cat "$RECEIVER_PORT_FILE")|$(cat "$INPUT_PORT_FILE"))[^0-9]" | head -60
+	echo "--- netstat -s listen drops"
+	netstat -s -P tcp 2>&1 | egrep -i "listen|drop|Overflow|ConnReq" | head
+	echo "--- ndd backlog"
+	ndd -get /dev/tcp tcp_conn_req_max_q 2>&1; ndd -get /dev/tcp tcp_conn_req_max_q0 2>&1
+	RP=$(cat "$RSYSLOG_PIDBASE.pid" 2>/dev/null || cat "${RSYSLOG_PIDBASE}1.pid" 2>/dev/null)
+	echo "--- rsyslogd pid $RP pstack"
+	pstack $RP 2>&1 | head -150
+	echo "--- minitcpsrv pid $RECEIVER_PID pfiles"
+	pfiles $RECEIVER_PID 2>&1 | head -40
+	ls -l "$SPOOL_DIR" "$SPOOL_DIR/mainq.segq" 2>&1 | head -20
+}
+( for t in 10 20 30 40; do sleep 10; probe_dump $t; done ) &
 deadline=$((SECONDS + 60))
 while [ ! -e "$SPOOL_DIR/mainq.segq/state" ]; do
 	# This bounded wait is a liveness ceiling, not a performance assertion.
