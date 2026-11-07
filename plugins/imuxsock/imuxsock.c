@@ -979,7 +979,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
     parse++;
     pri = 0;
     priDigitCount = 0;
-    while (offs < lenMsg && isdigit(*parse)) {
+    while (offs < lenMsg && priDigitCount < 3 && isdigit(*parse)) {
         pri = pri * 10 + *parse - '0';
         ++parse;
         ++offs;
