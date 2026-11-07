@@ -1682,7 +1682,7 @@ finalize_it:
 
 static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrptr, wti_t *const pWti) {
     size_t submatchnbr;
-    short matchnbr;
+    long long matchnbr;
     regmatch_t pmatch[50];
     int bMustFree;
     es_str_t *estr = NULL; /* init just to keep compiler happy */
@@ -1690,7 +1690,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
     struct svar r[CNFFUNC_MAX_ARGS];
     int iLenBuf;
     unsigned iOffs;
-    short iTry = 0;
+    long long iTry = 0;
     uchar bFound = 0;
     iOffs = 0;
     sbool bHadNoMatch = 0;
@@ -1702,7 +1702,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
     cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
     cnfexprEval(func->expr[3], &r[3], usrptr, pWti);
     str = (char *)var2CString(&r[0], &bMustFree);
-    matchnbr = (short)var2Number(&r[2], NULL);
+    matchnbr = var2Number(&r[2], NULL);
     submatchnbr = (size_t)var2Number(&r[3], NULL);
     if (submatchnbr >= sizeof(pmatch) / sizeof(regmatch_t)) {
         DBGPRINTF("re_extract() submatch %zd is too large\n", submatchnbr);
@@ -1725,7 +1725,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
             if (iTry == matchnbr) {
                 bFound = 1;
             } else {
-                DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %d\n", iOffs,
+                DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %lld\n", iOffs,
                           (int)(iOffs + pmatch[0].rm_eo), iTry);
                 if (pmatch[0].rm_eo == 0) {
                     if (str[iOffs] == '\0') {
