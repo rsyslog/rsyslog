@@ -935,7 +935,7 @@ static int doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param, st
 }
 
 
-/* A file create-mode must be a four-digit octal number
+/* A file create-mode must be a four- or five-digit octal number
  * starting with '0'.
  */
 static int doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param, struct cnfparamvals *val) {
@@ -944,7 +944,7 @@ static int doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *para
     uchar *c;
     const int len_val = es_strlen(valnode->val.d.estr);
 
-    if (len_val >= 4) {
+    if (len_val == 4 || len_val == 5) {
         c = es_getBufAddr(valnode->val.d.estr);
         if ((c[0] == '0') && (c[1] >= '0' && c[1] <= '7') && (c[2] >= '0' && c[2] <= '7') &&
             (c[3] >= '0' && c[3] <= '7')) {
