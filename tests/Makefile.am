@@ -15,6 +15,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_PRI_RANGE)
+
 TESTS_STATSLOG_PERCENT = statslog-evicted-percent.sh
 EXTRA_DIST += $(TESTS_STATSLOG_PERCENT) helpers/statslog-evicted-percent.sh
 TESTS_MINITCP_EXCLUSIVE = minitcpsrv-exclusive-port.sh
@@ -805,6 +808,7 @@ TESTS_DEFAULT = \
 	rs-int2hex.sh \
 	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
+	$(TESTS_RSCRIPT_PRI_RANGE) \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	incltest.sh \
