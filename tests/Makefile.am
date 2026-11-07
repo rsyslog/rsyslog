@@ -687,6 +687,7 @@ TESTS_DEFAULT = \
 	imuxsock_missing_socket.sh \
 	imuxsock_logger.sh \
 	imuxsock_unlink_off_stale_socket.sh \
+	imuxsock_socket_path_checks.sh \
 	imuxsock_logger_ratelimit.sh \
 	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_ruleset_ratelimit.sh \
@@ -979,6 +980,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
 	config-translate-rs-to-yaml.sh \
+	yaml-imuxsock-socket-path-checks.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
 	config-translate-rs-statements-to-yaml.sh \
