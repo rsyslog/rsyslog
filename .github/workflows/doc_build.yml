@@ -37,6 +37,7 @@ jobs:
         with:
           use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
+            .github/workflows/doc_build.yml
             doc/**/*.rst
             doc/source/conf.py
             doc/tools/check-html-links.py
@@ -188,7 +189,7 @@ jobs:
           cd doc-builder
           lcov --capture --directory . \
                --rc geninfo_unexecuted_blocks=1 \
-               --ignore-errors mismatch \
+               --ignore-errors mismatch,inconsistent \
                --output-file coverage.raw.info
           lcov --remove coverage.raw.info '/usr/*' '*/tests/*' '*/doc/tools/*' \
                --ignore-errors unused,unused \
