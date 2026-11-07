@@ -240,18 +240,15 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 
 #ifdef ENABLE_IMDIAG
     unsigned int iOverallQueueSize = 0;
-    #ifndef HAVE_ATOMIC_BUILTINS
-/* Without atomic builtins (e.g. SunStudio on Solaris) the process-wide counter
- * is updated by workers of many queues, each holding a different queue mutex.
- * Unprotected updates lose counts, imdiag then sees a bogus size (e.g. -1) and
- * never detects an empty queue. This small dedicated mutex keeps it exact. */
+    #ifdef HAVE_ATOMIC_BUILTINS
+        #define OVERALL_QSIZE_MUT NULL /* unused: atomic builtins need no mutex */
+    #else
+/* Without atomic builtins (e.g. SunStudio on Solaris) the ATOMIC_* macros fall
+ * back to a mutex. The process-wide counter is shared by workers of many
+ * queues, each holding a different queue mutex, so it needs its own one;
+ * unprotected updates lose counts and imdiag never sees an empty queue. */
 static pthread_mutex_t mutOverallQueueSize = PTHREAD_MUTEX_INITIALIZER;
-
-static void overallQueueSizeAdjust(const int delta) {
-    pthread_mutex_lock(&mutOverallQueueSize);
-    iOverallQueueSize += (unsigned int)delta;
-    pthread_mutex_unlock(&mutOverallQueueSize);
-}
+        #define OVERALL_QSIZE_MUT (&mutOverallQueueSize)
     #endif
 #endif
 
@@ -1228,11 +1225,7 @@ static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOve
     if (pThis->iQueueSize > 0) {
 #ifdef ENABLE_IMDIAG
         if (adjustOverallQueueSize) {
-    #ifdef HAVE_ATOMIC_BUILTINS
-            ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
-    #else
-            overallQueueSizeAdjust(-(int)pThis->iQueueSize);
-    #endif
+            ATOMIC_SUB_unsigned(&iOverallQueueSize, pThis->iQueueSize, OVERALL_QSIZE_MUT);
         }
 #endif
         pThis->iQueueSize = 0;
@@ -1248,11 +1241,7 @@ static void qqueueSubtractOverallQueueSize(const int nElem) {
         return;
     }
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
-    #else
-    overallQueueSizeAdjust(-nElem);
-    #endif
+    ATOMIC_SUB_unsigned(&iOverallQueueSize, nElem, OVERALL_QSIZE_MUT);
 #endif
 }
 
@@ -1261,11 +1250,7 @@ static void qqueueAddOverallQueueSize(const int nElem) {
         return;
     }
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_ADD(iOverallQueueSize, nElem);
-    #else
-    overallQueueSizeAdjust(nElem);
-    #endif
+    ATOMIC_ADD_unsigned(&iOverallQueueSize, nElem, OVERALL_QSIZE_MUT);
 #endif
 }
 
@@ -2450,12 +2435,7 @@ static rsRetVal qqueueAddStored(qqueue_t *pThis, smsg_t *pMsg) {
     if (pThis->qType != QUEUETYPE_DIRECT) {
         ATOMIC_INC(&pThis->iQueueSize, &pThis->mutQueueSize);
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-        /* mutex is never used due to conditional compilation */
-        ATOMIC_INC(&iOverallQueueSize, &NULL);
-    #else
-        overallQueueSizeAdjust(1);
-    #endif
+        ATOMIC_INC(&iOverallQueueSize, OVERALL_QSIZE_MUT);
 #endif
     }
 
@@ -3190,12 +3170,7 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
     /* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
     ATOMIC_SUB(&pThis->iQueueSize, nElem, &pThis->mutQueueSize);
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    /* mutex is never used due to conditional compilation */
-    ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
-    #else
-    overallQueueSizeAdjust(-nElem);
-    #endif
+    ATOMIC_SUB_unsigned(&iOverallQueueSize, nElem, OVERALL_QSIZE_MUT);
 #endif
     ATOMIC_SUB(&pThis->nLogDeq, nElem, &pThis->mutLogDeq);
     DBGPRINTF("doDeleteBatch: delete batch from store, new sizes: log %d, phys %d\n", getLogicalQueueSize(pThis),
@@ -3809,11 +3784,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
 
     /* If messages where DISCARDED, we need to substract them from the OverallQueueSize */
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
-    #else
-    overallQueueSizeAdjust(-nDiscarded);
-    #endif
+    ATOMIC_SUB_unsigned(&iOverallQueueSize, nDiscarded, OVERALL_QSIZE_MUT);
     DBGOPRINT((obj_t *)pThis, "dequeued %d discarded %d QueueSize %d consumable elements, szlog %d sz phys %d\n",
               nDequeued, nDiscarded, iOverallQueueSize, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 #else

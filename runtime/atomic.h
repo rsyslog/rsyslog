@@ -64,6 +64,7 @@
     #define ATOMIC_SUB(data, val, phlpmut) __atomic_fetch_sub((data), (val), __ATOMIC_SEQ_CST)
     #define ATOMIC_SUB_unsigned(data, val, phlpmut) __atomic_fetch_sub((data), (val), __ATOMIC_SEQ_CST)
     #define ATOMIC_ADD(data, val) __atomic_fetch_add(&(data), (val), __ATOMIC_SEQ_CST)
+    #define ATOMIC_ADD_unsigned(data, val, phlpmut) ((void)__atomic_fetch_add((data), (val), __ATOMIC_SEQ_CST))
     #define ATOMIC_INC(data, phlpmut) ((void)__atomic_fetch_add((data), 1, __ATOMIC_SEQ_CST))
     #define ATOMIC_INC_AND_FETCH_int(data, phlpmut) __atomic_add_fetch((data), 1, __ATOMIC_SEQ_CST)
     #define ATOMIC_INC_AND_FETCH_unsigned(data, phlpmut) __atomic_add_fetch((data), 1, __ATOMIC_SEQ_CST)
@@ -283,6 +284,12 @@ static inline void ATOMIC_SUB(int *data, int val, pthread_mutex_t *phlpmut) {
 static inline void ATOMIC_SUB_unsigned(unsigned *data, int val, pthread_mutex_t *phlpmut) {
     pthread_mutex_lock(phlpmut);
     (*data) -= val;
+    pthread_mutex_unlock(phlpmut);
+}
+
+static inline void ATOMIC_ADD_unsigned(unsigned *data, int val, pthread_mutex_t *phlpmut) {
+    pthread_mutex_lock(phlpmut);
+    (*data) += val;
     pthread_mutex_unlock(phlpmut);
 }
 
