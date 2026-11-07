@@ -19,6 +19,10 @@ core but are compiled directly into the rsyslog binary:
   modifying them, rely on targeted configuration tests under `tests/` (e.g.
   `./tests/omfile-basic.sh`) or add new ones as needed.
 
+- Internal diagnostic mutex fallback coverage is registered as
+  `runtime_unit_iminternal_lock` from `tests/unit/iminternal_lock_test.c`.
+  It checks transient contention and bounded timeout without daemon startup.
+
 ## Metadata
 - Shared metadata lives in `tools/MODULE_METADATA.json` so we do not duplicate
   YAML files beside each source.

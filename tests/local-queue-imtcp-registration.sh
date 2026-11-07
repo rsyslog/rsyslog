@@ -1,11 +1,12 @@
 #!/bin/bash
-# Verify the lifetime FE-registration bound falls back to BE.  imtcp creates a
-# two-worker execution pool and the first local callback is held by a FIFO.  The
-# oracle does not identify a connection as a producer: it requires the runtime's
-# actual-producer counters to show one registered FE plus a positive
-# capacity-exhausted BE route.  Exact IDs after release prove that fallback did
-# not lose or duplicate a whole submitted batch. The reserved bound stays
-# B+N*(F+D)=1024+1*(8+4)=1036 while extra producers fall back.
+# Verify the lifetime FE-registration bound falls back to BE. Two independent
+# imtcp listeners each own one actual worker context. The first listener claims
+# the sole FE and its callback is held by a FIFO before the second listener is
+# given input. Thus the second producer must exhaust the registration bound,
+# independent of how a shared worker pool would schedule TCP connections.
+# Require one registered/started FE and a positive capacity-exhausted BE route;
+# exact IDs after release prove fallback neither lost nor duplicated a batch.
+# The reserved bound stays B+N*(F+D)=1024+1*(8+4)=1036.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -25,7 +26,9 @@ module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.sys
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
 input(type="imtcp" address="127.0.0.1" port="0"
-	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="2")
+	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
+input(type="imtcp" address="127.0.0.1" port="0"
+	listenPortFileName="'$RSYSLOG_DYNNAME'.second_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="1024"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="4"
 	queue.local.frontendSize="8" queue.local.maxFrontends="1" queue.local.frontendStats="on")
@@ -36,9 +39,11 @@ if ($msg contains "msgnum:") then
 		asyncWriting="off" flushOnTXEnd="on")
 '
 startup
-tcpflood -c2 -m200 -i0
+tcpflood -m1 -i0
 wait_file_lines "$ENTERFILE" 1
-tcpflood -c2 -m200 -i200
+localq_wait_stats "$STATSFILE" "main Q.local" "fe.registered=1" "fe.started=1"
+assign_tcpflood_port "${RSYSLOG_DYNNAME}.second_port"
+tcpflood -m399 -i1
 localq_wait_stats_regex "$STATSFILE" "main Q.local" \
 	"fe.registered=1" "fe.started=1" "route.be.reason.capacity_exhausted.messages=[1-9][0-9]*" \
 	"resource.reserved.messages=1036" "resource.be.capacity.messages=1024" \

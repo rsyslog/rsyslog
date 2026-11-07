@@ -35,6 +35,7 @@ rsyslogd_SOURCES = \
 	smtradfwd.h \
 	iminternal.c \
 	iminternal.h \
+	iminternal-lock.h \
 	\
 	../runtime/dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)

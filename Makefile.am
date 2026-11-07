@@ -4,6 +4,7 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
+	devtools/gather-check-logs.sh \
 	devtools/record-container-validation.py \
 	README.md \
 	platform/README \
