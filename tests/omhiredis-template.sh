@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # added 2023-04-20 by Théo Bertin, released under ASL 2.0
+# Verify template commands create a string counter and increment it to nine.
+# Observe TYPE only after synchronized shutdown drains the three queued writes;
+# message injection alone does not prove the output action has run. The exact
+# none/string/9 response remains the semantic oracle, including under Valgrind.
 ## Uncomment for debugging
 # export RS_REDIR=-d
 
@@ -36,11 +40,12 @@ startup
 # Inject 3 messages
 injectmsg 1 3
 
-# Should get 'string'
-redis_command "TYPE counter" >> $RSYSLOG_OUT_LOG
-
+# Drain the queued commands before inspecting the resulting Redis type.
 shutdown_when_empty
 wait_shutdown
+
+# Should get 'string'
+redis_command "TYPE counter" >> $RSYSLOG_OUT_LOG
 
 # Should get '9'
 redis_command "GET counter" >> $RSYSLOG_OUT_LOG
