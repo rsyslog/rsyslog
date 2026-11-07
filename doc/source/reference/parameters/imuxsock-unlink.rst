@@ -31,6 +31,10 @@ If turned on (default), the socket is unlinked and re-created when opened
 and also unlinked when finally closed. Set it to off if you handle socket
 creation yourself.
 
+Only an existing socket or symbolic link at the socket path is removed. If the
+path names any other kind of file, such as a regular file, rsyslog leaves it in
+place, logs an error, and does not create that socket.
+
 ``Unlink="off"`` is for sockets whose lifecycle is managed outside rsyslog.
 If rsyslog should create the socket path, leave ``Unlink`` at its default
 ``on`` value. In particular, ``CreatePath="on"`` cannot be combined with
