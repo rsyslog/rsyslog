@@ -13,9 +13,9 @@ generate_conf
 add_conf 'module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
 input(type="imuxsock" socket="'"$RSYSLOG_DYNNAME"'-pri.sock" useSpecialParser="off")
 template(name="outfmt" type="string" string="%rawmsg%\n")
-action(type="omfile" file="'"$RSYSLOG_OUT_LOG"'" template="outfmt")'
+if $inputname == "imuxsock" then action(type="omfile" file="'"$RSYSLOG_OUT_LOG"'" template="outfmt")'
 startup
-python3 - "$RSYSLOG_DYNNAME-pri.sock" <<'PY'
+python3 - "$RSYSLOG_DYNNAME-pri.sock" <<'PY' || error_exit 1
 import socket
 import sys
 
@@ -25,7 +25,7 @@ with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as client:
 PY
 shutdown_when_empty
 wait_shutdown
-python3 - "$RSYSLOG_OUT_LOG" <<'PY'
+python3 - "$RSYSLOG_OUT_LOG" <<'PY' || error_exit 1
 import pathlib
 import sys
 
