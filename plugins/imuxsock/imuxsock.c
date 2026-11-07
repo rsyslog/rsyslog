@@ -1141,14 +1141,20 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         pMsg->msgFlags = pLstn->flags;
     }
 
-    if (pLstn->bUseSpecialParser) {
+    if (pLstn->bUseSpecialParser && priValid) {
         /* this is the legacy "log socket" parser which was written on the assumption
          * that the log socket format would be fixed. While many folks said so, it
          * seems to be different in practice, and this is why we now have choices...
          * rgerhards, 2015-03-03
          */
-        parser.SanitizeMsg(pMsg);
-        lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
+        CHKiRet(parser.SanitizeMsg(pMsg));
+        /* Sanitizing may shorten the raw message. Never reuse a PRI cursor
+         * outside the current representation. */
+        if (offs >= pMsg->iLenRawMsg) {
+            pMsg->msgFlags |= NEEDS_PARSING;
+            goto submit;
+        }
+        lenMsg = pMsg->iLenRawMsg - offs;
         parse = pMsg->pszRawMsg + offs;
         msgSetPRI(pMsg, pri);
         MsgSetAfterPRIOffs(pMsg, priValid ? offs + 1 : 0);
@@ -1172,15 +1178,15 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
                 }
             }
         } else { /* if we pulled the time from the system, we need to update the message text */
-            uchar *tmpParse = parse; /* just to check correctness of TS */
-            if (datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
-                datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING,
-                                            NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-                /* We modify the message only if it contained a valid timestamp,
-                otherwise we do not touch it at all. */
+            uchar *tmpParse = parse;
+            const int lenAvail = lenMsg;
+            if ((datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
+                 datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING,
+                                             NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) &&
+                lenAvail >= 16) {
+                /* The fixed-width rewrite must fit in the remaining raw message. */
                 datetime.formatTimestamp3164(&st, (char *)parse, 0);
-                parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
-                /* update "counters" to reflect processed timestamp */
+                parse[15] = ' ';
                 parse += 16;
             }
         }
@@ -1200,6 +1206,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         pMsg->msgFlags |= NEEDS_PARSING;
     }
 
+submit:
     MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
     MsgSetRuleset(pMsg, pLstn->pRuleset);
