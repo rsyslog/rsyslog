@@ -4,3 +4,26 @@ Libfaketime 0.99.7 has a bug that can cause segfaults during testbench
 runs. If you experience them, either use --disable-libfaketime configure
 switch or go back to an older version.
 see also: https://github.com/rsyslog/rsyslog/issues/2099
+
+Solaris CI is best effort only. The Solaris 11 x64 buildbot builder is slow,
+so its "gmake -j2 check" cannot finish the whole testbench within its time
+limit and only the important core components are covered; coverage there is
+deliberately low. Tests that cannot work on Solaris are skipped with
+skip_platform "SunOS" and listed below.
+
+On Solaris 11 x64 (SunStudio build), tests/segmented-da-tcp-spill-exact.sh
+passes when run alone (about 100 s) but fails inside the full parallel
+"gmake -j2 check": omfwd's connect() to the test's deliberately non-reading
+receiver (minitcpsrv) hangs for minutes, so the disk-assisted spill is never
+reached and tcpflood later reports "CLOSED REMOTELY (Broken pipe)". The test
+is therefore load/concurrency sensitive on Solaris; no rsyslog data loss was
+observed. It is skipped on SunOS until the cause of the connect() stall under
+load is understood.
+see also: https://github.com/rsyslog/rsyslog/issues/7917
+
+On Solaris 11 x64 (SunStudio build), tests/imrelp-tls-chainedcert.sh,
+tests/imrelp-tls-mixed-chainedcert.sh and tests/imrelp-tls-mixed-chainedcert2.sh fail: imrelp with tls.authmode="certvalid"
+rejects the client certificate file that contains a chain ("certificate verify
+failed" in the server handshake), while the unchained imrelp TLS tests pass.
+They are skipped on SunOS. The root cause (librelp/OpenSSL version on the
+builder) has not been analysed; remove the skips once it is understood.

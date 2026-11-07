@@ -3,6 +3,10 @@
 # addd 2020-08-25 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_relpEngineVersion "1.7.0"
+# Intent: imrelp with TLS (openssl) and certvalid must accept chained certificates
+# (mixed chain variant 2). Skipped on SunOS like its chainedcert siblings: the
+# Solaris 11 builder rejects chained certificates in the TLS handshake, see KNOWN_ISSUES.
+skip_platform "SunOS" "chained certificate is rejected by the Solaris builder's librelp/OpenSSL, see KNOWN_ISSUES"
 export NUMMESSAGES=1000
 
 # uncomment for debugging support:
