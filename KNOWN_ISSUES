@@ -5,9 +5,9 @@ runs. If you experience them, either use --disable-libfaketime configure
 switch or go back to an older version.
 see also: https://github.com/rsyslog/rsyslog/issues/2099
 
-On Solaris 11 x64 (SunStudio build), several disk-assisted (DA) queue tests
-hang at shutdown until the 580 s abort timeout: segmented-da-tcp-spill-exact,
-segmented-da-idle-timeout-values, and the ruleset/action scenarios of
-classic-da-behavior and segmented-da-behavior. They are skipped on SunOS.
-The root cause is not yet known; remove the skips once it is fixed.
+On Solaris 11 x64 (SunStudio build), tests/segmented-da-tcp-spill-exact.sh
+fails: tcpflood reports "CLOSED REMOTELY (Broken pipe)" after about 64
+messages per connection while imtcp feeds a segmented disk-assisted main
+queue under backpressure. It is skipped on SunOS. The root cause is not yet
+known; remove the skip once it is fixed.
 see also: https://github.com/rsyslog/rsyslog/issues/7917
