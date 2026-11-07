@@ -1,0 +1,14 @@
+tests/imuxsock-pri-digit-limit.sh
+  h_95716f3de0caf5 16,18,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa07ad1b129f3c92e6de3379ee180bf57ac859ab",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
