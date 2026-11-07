@@ -199,11 +199,12 @@ skip_platform() {
 # Solaris builder runs only a reduced test subset (best-effort CI, see
 # tests/solaris-subset.list): tests matching a "skip" glob there exit with 77.
 # RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1 runs everything; for checking the
-# filter on another OS set RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1.
+# filter on another OS set RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1. Both flags are
+# only active with the value 1.
 # $1 is the test script's basename.
 solaris_subset_skip() {
-	[ -z "$RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL" ] || return 0
-	if [ "$(uname)" != "SunOS" ] && [ -z "$RSYSLOG_TESTBENCH_SOLARIS_SUBSET" ]; then
+	[ "$RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL" != "1" ] || return 0
+	if [ "$(uname)" != "SunOS" ] && [ "$RSYSLOG_TESTBENCH_SOLARIS_SUBSET" != "1" ]; then
 		return 0
 	fi
 	local list="${srcdir:-.}/solaris-subset.list" action glob rest skipglob=""

@@ -104,6 +104,17 @@ gdb ../tools/rsyslogd <rsyslogd-pid>
 After continuing in GDB, terminate the `sleep` with `pkill -f 54321` (or locate
 the PID via `ps -ef | grep 54321`).
 
+## Solaris test subset
+
+Solaris CI is best effort and deliberately covers only core components, because
+the Solaris builder cannot finish the whole suite within its time limit. On
+SunOS, `diag.sh` skips (exit status 77) the tests selected by `skip` globs in
+`tests/solaris-subset.list`; `keep` globs override `skip`. Set
+`RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1` to run the complete suite on Solaris,
+or `RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1` to apply the filter on another OS and
+check which tests it would skip. Both variables are only active with the value
+`1`.
+
 ## Core dump analysis
 
 Core files are best-effort diagnostics, not the test oracle. The harness tries
