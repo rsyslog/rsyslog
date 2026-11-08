@@ -74,10 +74,12 @@ there on 2026-11-08:
   change to the script needs a new pin on the infrastructure side.
 - Workflow settings per migrated target: `ARCHIVE_BACKEND=ssh`,
   `ARCHIVE_SSH_TARGET=rsyslog-archive@packages.rsyslog.com`,
-  `ARCHIVE_PREFIX=<prefix>`, `ARCHIVE_SSH_KEY` (secret in the
-  `debian-daily-stable` environment) and `ARCHIVE_SSH_KNOWN_HOSTS` (the line
-  the infrastructure side hands over).  The prefixes stay the same as on
-  Spaces.
+  `ARCHIVE_PREFIX=<prefix>`, `ARCHIVE_SSH_KEY` and `ARCHIVE_SSH_KNOWN_HOSTS`.
+  The last two are paths to runner-local files: the job writes the private
+  key from the `ARCHIVE_SSH_KEY` secret in the `debian-daily-stable`
+  environment to a mode 0600 file, and the `known_hosts` line the
+  infrastructure side hands over to another file.  The prefixes stay the
+  same as on Spaces.
 - Debian 13 goes first with `ARCHIVE_PREFIX=apt/daily-stable/debian/13`.
   The other targets follow one at a time, only after Debian has run cleanly
   for a few nights.
@@ -110,9 +112,11 @@ there on 2026-11-08:
   receive a long lifetime.  CDN metadata refresh is expected and must not be
   blocked by an object policy that prevents required updates or deletes.
 - Retention is the publisher's job and is expressed in the signed indexes:
-  daily-stable package versions and snapshots are kept for 7 days during the
-  proof of concept and for 90 days in production; scheduled-stable releases
-  are kept indefinitely.  Pruning (not automated yet) must drop old versions
+  daily-stable package versions and snapshots are kept for 7 days while the
+  archive is a proof of concept and for 90 days once it is declared
+  production (which also requires replacing the PoC signing key);
+  scheduled-stable releases are kept indefinitely.  The per-target documents
+  refer to this rule instead of repeating a period.  Pruning (not automated yet) must drop old versions
   from the indexes before their pool files and snapshots are removed.  GitHub Actions artifacts are only a
   short-lived transport between jobs, not the archive of record.
 - A package build alone is not success.  Every published target must verify

@@ -40,7 +40,7 @@ snapshots/YYYY-MM-DD/PACKAGE_VERSION/aarch64/
 Each APK is built and installed on a native runner of the matching
 architecture.
 
-APK files and snapshots are immutable and retained for 90 days (see the retention rule in
+APK files and snapshots are immutable and retained for the retention period (see the retention rule in
 DAILY_STABLE_PACKAGE_ARCHIVE.md).
 The workflow merges the previous signed index with each new package set so
 older daily versions remain installable until pruned. Only the small mutable APK index and
