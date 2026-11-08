@@ -1,0 +1,21 @@
+tests/imuxsock-timestamp-rewrite.py
+  h_95716f3de0caf5 3,20-22,34,50-56,62,67-70,73-75
+  h_95716f3de0caf5 23,57-61
+plugins/AGENTS.md
+  h_95716f3de0caf5 135-136
+plugins/imuxsock/imuxsock.c
+  h_95716f3de0caf5 1182-1194
+tests/imuxsock-timestamp-rewrite.sh
+  h_95716f3de0caf5 4-6,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6ad9aed23743d256af7e88044674262370bb2212",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
