@@ -2719,6 +2719,13 @@ rsRetVal addAction(action_t **ppAction,
                          "the SQL option (option.sql=\"on\") in your template!\n");
                 ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
             }
+            if ((iTplOpts & OMSR_RQD_TPL_OPT_SQL_BACKSLASH) &&
+                (pAction->ppTpl[i]->pStrgen != NULL || pAction->ppTpl[i]->bHaveSubtree)) {
+                errno = 0;
+                LogError(0, RS_RET_RQD_TPLOPT_MISSING,
+                         "Action disabled. Backslash-aware SQL escaping requires a string or list template!\n");
+                ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+            }
             tplNoteUse(pAction->ppTpl[i], iTplOpts & OMSR_TPL_AS_DYNAFILE);
         }
 

@@ -33,7 +33,9 @@ string needs to be a valid INSERT Query, otherwise ClickHouse will return an
 error. Custom INSERT templates must enable ``option.sql="on"`` in RainerScript.
 ClickHouse accepts backslash escape sequences inside string literals, so
 ``option.stdsql="on"`` is not safe for this module. These are template-level
-options, not ``omclickhouse`` action parameters. Defaults to:
+options, not ``omclickhouse`` action parameters. Only string and list
+templates apply SQL escaping to rendered fields; plugin and subtree templates
+are rejected for this action even if they declare ``option.sql="on"``. Defaults to:
 
 .. note::
 

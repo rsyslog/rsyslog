@@ -1257,6 +1257,8 @@ TESTS_CLICKHOUSE_LIBYAML = yaml-omclickhouse-template-escaping.sh
 TESTS_CLICKHOUSE = \
 	clickhouse-template-option-sql.sh \
 	clickhouse-template-option-stdsql.sh \
+	clickhouse-template-type-plugin.sh \
+	clickhouse-template-type-subtree.sh \
 	clickhouse-http-status-error.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
