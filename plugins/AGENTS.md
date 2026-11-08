@@ -167,5 +167,5 @@ arithmetic in the receive path.
 ## imuxsock timestamp rewrite coverage
 
 `tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
-companion exercise malformed PRI and short timestamps at raw-buffer boundaries
-through real Unix sockets, checking raw-message preservation and full-width controls.
+companion exercise malformed PRI and short/variable-width timestamps through
+real Unix sockets, checking raw-message preservation and tag/body cursors.

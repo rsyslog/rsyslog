@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Exercise the real Unix-socket receive path with malformed PRI runs, short
-# timestamps at EOF, including inline and heap buffer boundaries.
-# Exact raw-message checks detect unwanted rewrites. A final message from every socket and the harness
+# timestamps at EOF, and variable-width timestamps followed by tag/body data.
+# Exact raw-message checks detect unwanted rewrites; tag/body checks detect
+# cursor/length disagreement. A final message from every socket and the harness
 # termination marker prove processing and clean shutdown. The -vg wrapper also
 # detects heap accesses that ordinary output checks cannot observe.
 . "${srcdir:=.}/diag.sh" init
@@ -15,7 +16,7 @@ if ! grep -q '^#define HAVE_SCM_CREDENTIALS 1$' ../config.h ||
     exit 77
 fi
 
-export NUMMESSAGES=105
+export NUMMESSAGES=135
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 if [ "${IMUXSOCK_TEST_YAML:-no}" = yes ]; then
     require_yaml_support

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Send deterministic datagrams and check the reported rewrite boundary."""
+"""Send deterministic datagrams and check real-daemon raw/tag/body output."""
 import collections
 import pathlib
 import socket
@@ -17,6 +17,10 @@ def cases():
                 "no-pri", "<1>Jan 1 ::",
                 "<1>0-1-1T::Z", "<1>Jan  1 00:00:00"):
         yield raw, None
+    for stamp in ("Jan 1 ::", "Jan 1 1:2:3", "Jan  1 00:00:00",
+                  "2020-01-01T00:00:00.123456+01:00", "0-1-1T::Z"):
+        yield "<13>" + stamp + " guard: preserved-body", (stamp, "guard:", " preserved-body")
+    yield "<13>Jan 1 :: " + "A" * 100, ("Jan 1 ::", "A" * 100, "")
     for ending in ("\0", "\n", "\r"):
         yield "<" + "0" * 100 + ">Jan 1 ::" + ending, None
     # This is the synchronized final control for every listener.
@@ -27,7 +31,7 @@ def main():
     operation, prefix = sys.argv[1:3]
     modes = ("default", "trusted", "annotated", "nosystime", "chain")
     inputs = list(cases())
-    assert len(inputs) == 21
+    assert len(inputs) == 27
     if operation == "send":
         for mode in modes:
             with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as client:
@@ -43,16 +47,32 @@ def main():
     for raw, fields in inputs:
         if fields is None and not raw.endswith(("\0", "\n", "\r")):
             assert raws[raw] >= 4, ("raw message changed", repr(raw), raws[raw])
-    controls = [line for line in lines if "sentinel: done" in line]
+    # Short timestamp spans must not overwrite the tag even when spare bytes
+    # exist in the same allocation. Long RFC3339 must use the returned cursor.
+    for stamp in ("Jan 1 ::", "Jan 1 1:2:3", "0-1-1T::Z"):
+        raw = "<13>" + stamp + " guard: preserved-body"
+        assert raws[raw] >= 4, ("short timestamp overwrote suffix", raw, raws[raw])
+    long_stamp = "<13>2020-01-01T00:00:00.123456+01:00 guard: preserved-body"
+    assert raws[long_stamp] >= 4, ("long timestamp partially rewritten", raws[long_stamp])
+    long_tag_raw = "<13>Jan 1 :: " + "A" * 100
+    assert raws[long_tag_raw] >= 4, ("long TAG raw message changed", raws[long_tag_raw])
+    long_tag_lines = [line for line in lines if line.startswith(long_tag_raw + "|")]
+    assert sum(line.split("|", 2)[1:] == ["A" * 100, ""]
+               for line in long_tag_lines) >= 2, long_tag_lines
+    controls = [line for line in lines if "guard: preserved-body" in line or "sentinel: done" in line]
     for line in controls:
         raw, tag, body = line.split("|", 2)
         if " @[" in raw:
             continue  # Trusted text annotation intentionally extends the body.
-        assert (tag, body) == ("sentinel:", " done"), line
+        if "guard: preserved-body" in raw:
+            assert (tag, body) == ("guard:", " preserved-body"), line
+        else:
+            assert (tag, body) == ("sentinel:", " done"), line
     # At least the two system-timestamp special-parser listeners must rewrite
     # the ordinary full-width controls to the current receive timestamp.
-    original = "<13>Jan  1 00:00:00 sentinel: done"
-    assert raws[original] == 2, ("full-width timestamp was not rewritten", original, raws[original])
+    for suffix in ("guard: preserved-body", "sentinel: done"):
+        original = "<13>Jan  1 00:00:00 " + suffix
+        assert raws[original] == 2, ("full-width timestamp was not rewritten", original, raws[original])
     print("checked", len(lines), "real-daemon datagrams across", len(modes), "listener modes")
 
 

@@ -1179,15 +1179,19 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
             }
         } else { /* if we pulled the time from the system, we need to update the message text */
             uchar *tmpParse = parse;
-            const int lenAvail = lenMsg;
-            if ((datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
-                 datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING,
-                                             NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) &&
-                lenAvail >= 16) {
-                /* The fixed-width rewrite must fit in the remaining raw message. */
-                datetime.formatTimestamp3164(&st, (char *)parse, 0);
-                parse[15] = ' ';
-                parse += 16;
+            int remaining = lenMsg;
+            if (datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &remaining) == RS_RET_OK ||
+                datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &remaining, NO_PARSE3164_TZSTRING,
+                                            NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+                /* The permissive parsers accept timestamps shorter than the fixed
+                 * replacement. Only overwrite bytes belonging to the timestamp,
+                 * and keep the parser's cursor paired with its remaining length. */
+                if (tmpParse - parse == 16) {
+                    datetime.formatTimestamp3164(&st, (char *)parse, 0);
+                    parse[15] = ' '; /* replace the formatter's terminating NUL */
+                }
+                parse = tmpParse;
+                lenMsg = remaining;
             }
         }
 
