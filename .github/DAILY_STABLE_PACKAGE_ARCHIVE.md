@@ -53,6 +53,52 @@ It warns when the key expires within 60 days.  Extend the key or replace it
 before that, then update the private key secret and, for a new key, the
 `DEBIAN_DAILY_STABLE_GPG_FINGERPRINT` variable.
 
+## Move to packages.rsyslog.com
+
+The archive is moving from Spaces to `packages.rsyslog.com`, a read-only
+nginx tenant on the shared Docker edge of vserverweb5.adiscon.com.  The
+hosting side is maintained in the private `Adiscon/infrastructure`
+repository (`deploy/vserverweb5/`, runbook
+`docs/runbooks/rsyslog-packages-onboarding.md`).  The two projects
+coordinate only through `Adiscon/infrastructure` issue 17.  Decisions agreed
+there on 2026-11-08:
+
+- Storage goes through `devtools/release/archive-store.sh` with
+  `ARCHIVE_BACKEND=ssh`.  Uploads never pass through Docker: they reach host
+  sshd as user `rsyslog-archive`, whose key is bound to the forced command
+  `archive-store-server.sh /home/otherweb/importdata/packages`.  That key can
+  only `get`, `put-immutable` and `put-metadata`; it cannot delete.
+- The installed server script is pinned at rsyslog commit
+  `3969e63d080bcdd7cc7a7fd9ccb95cb64c3831a1`; its SHA-256 is
+  `98230496b1265b453ac3b8f97cbb666d02aaf58424f8c282e910e147ec5ed1f1`.  A
+  change to the script needs a new pin on the infrastructure side.
+- Workflow settings per migrated target: `ARCHIVE_BACKEND=ssh`,
+  `ARCHIVE_SSH_TARGET=rsyslog-archive@packages.rsyslog.com`,
+  `ARCHIVE_PREFIX=<prefix>`, `ARCHIVE_SSH_KEY` (secret in the
+  `debian-daily-stable` environment) and `ARCHIVE_SSH_KNOWN_HOSTS` (the line
+  the infrastructure side hands over).  The prefixes stay the same as on
+  Spaces.
+- Debian 13 goes first with `ARCHIVE_PREFIX=apt/daily-stable/debian/13`.
+  The other targets follow one at a time, only after Debian has run cleanly
+  for a few nights.
+- There is no dual publication.  Per target, a reviewed PR switches the
+  publish job to the ssh backend and the public repository URL to
+  `https://packages.rsyslog.com/<prefix>`.  Spaces stays untouched as a
+  fallback until all targets are verified on the new host, then it is
+  retired.
+- The host only collects garbage.  A planned
+  `devtools/release/archive-prune.sh <archive-root>`, run from a host timer
+  and pinned like the server script, will delete pool files that no current
+  index references and that are older than a grace period (default 3 days).
+  It must parse APT `Packages`/`Sources` (including `by-hash`), RPM
+  `repomd.xml` and the files it references, `APKINDEX.tar.gz`, and the dated
+  snapshot indexes, so that no file a retained snapshot references is
+  removed.  It offers a dry-run mode, logs every deletion and never touches
+  metadata.  Until it exists, nothing is pruned.
+- Verification per target stays with this project: signed metadata from a
+  clean container, exact-version install and smoke test against
+  `https://packages.rsyslog.com/<prefix>`, reported in issue 17.
+
 ## Publication invariants
 
 - Build artifacts, package-pool objects, and dated snapshots are immutable.
@@ -63,10 +109,11 @@ before that, then update the private key secret and, for a new key, the
 - Metadata receives a short cache lifetime; immutable packages and snapshots
   receive a long lifetime.  CDN metadata refresh is expected and must not be
   blocked by an object policy that prevents required updates or deletes.
-- Keep daily-stable package versions and snapshots for 90 days after
-  publication; scheduled-stable releases are kept indefinitely.  Pruning
-  (not automated yet) must drop old versions from the indexes before it
-  removes their pool files and snapshots.  GitHub Actions artifacts are only a
+- Retention is the publisher's job and is expressed in the signed indexes:
+  daily-stable package versions and snapshots are kept for 7 days during the
+  proof of concept and for 90 days in production; scheduled-stable releases
+  are kept indefinitely.  Pruning (not automated yet) must drop old versions
+  from the indexes before their pool files and snapshots are removed.  GitHub Actions artifacts are only a
   short-lived transport between jobs, not the archive of record.
 - A package build alone is not success.  Every published target must verify
   public signed metadata from a clean matching environment, install the exact
