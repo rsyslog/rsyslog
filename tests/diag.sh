@@ -196,6 +196,33 @@ skip_platform() {
 
 }
 
+# Solaris builder runs only a reduced test subset (best-effort CI, see
+# tests/solaris-subset.list): tests matching a "skip" glob there exit with 77.
+# RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1 runs everything; for checking the
+# filter on another OS set RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1. Both flags are
+# only active with the value 1.
+# $1 is the test script's basename.
+solaris_subset_skip() {
+	[ "$RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL" != "1" ] || return 0
+	if [ "$(uname)" != "SunOS" ] && [ "$RSYSLOG_TESTBENCH_SOLARIS_SUBSET" != "1" ]; then
+		return 0
+	fi
+	local list="${srcdir:-.}/solaris-subset.list" action glob rest skipglob=""
+	[ -r "$list" ] || return 0
+	while read -r action glob rest; do
+		case "$action" in
+		keep)
+			case "$1" in $glob) return 0 ;; esac ;;
+		skip)
+			case "$1" in $glob) skipglob="$glob" ;; esac ;;
+		esac
+	done < "$list"
+	if [ -n "$skipglob" ]; then
+		printf 'test "%s" is not part of the reduced Solaris test subset (skip %s in solaris-subset.list)\n' "$1" "$skipglob"
+		exit 77
+	fi
+}
+
 # Skip runtime local-queue tests where queue_local.c builds only its
 # fail-closed stubs: Darwin lacks POSIX monotonic condition variables, and
 # builds without 64-bit atomic builtins (e.g. Solaris Studio) lack the
@@ -5754,6 +5781,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 
 		# Extra Variables for Test statistic reporting
                 export RSYSLOG_TESTNAME=$(basename $0)
+                solaris_subset_skip "$RSYSLOG_TESTNAME"
 
                 # we create one file with the test name, so that we know what was
                 # left over if "make distcheck" complains

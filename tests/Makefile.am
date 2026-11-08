@@ -4482,6 +4482,7 @@ EXTRA_DIST += \
 	sndrcv_drvr.sh \
 	sndrcv_drvr_noexit.sh \
 	diag.sh \
+	solaris-subset.list \
 	testsuites/mmexternal-SegFault-mm-python.py \
 	testsuites/mmexternal-hang-no-reply.sh \
 	testsuites/mmexternal-no-output.sh \
