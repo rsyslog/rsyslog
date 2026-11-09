@@ -1,0 +1,19 @@
+tests/imbatchreport_structdata_nokeys.sh
+  s_a34965ae26dfa8::t_f8bc5dda5751b9 19-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79eea511997592f325ae2bea3da3edc7ba1f645e",
+  "prompts": {},
+  "sessions": {
+    "s_a34965ae26dfa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fdc49b8b-ddd2-56ff-8943-87022a158291",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
