@@ -208,8 +208,8 @@ BEGINcheckCnf
             pModConf->bUseSyslogAPI = 0;
         }
     }
-    if (pModConf->iMarkMessagePeriod == 0) {
-        LogError(0, NO_ERRCODE, "immark: mark message period must not be 0, can not run");
+    if (pModConf->iMarkMessagePeriod <= 0) {
+        LogError(0, NO_ERRCODE, "immark: mark message period must be greater than 0, can not run");
         ABORT_FINALIZE(RS_RET_NO_RUN); /* we can not run with this error */
     }
 finalize_it:

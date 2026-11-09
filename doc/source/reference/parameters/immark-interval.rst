@@ -23,6 +23,9 @@ This parameter applies to :doc:`../../configuration/modules/immark`.
 :Type: integer (seconds)
 :Default: module=1200 (seconds)
 :Required?: no
+
+The interval must be greater than zero. Configuration validation rejects zero
+and negative values.
 :Introduced: 3.0.0
 
 Module usage
