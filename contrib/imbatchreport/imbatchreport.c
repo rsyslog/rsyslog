@@ -227,7 +227,7 @@ static rsRetVal readAndSendFile(instanceConf_t *pInst, char *filename, char *fpa
     size_t file_len, read_len = 0, sd_buf_l, msg_len = 0, idx = 0;
     int last_is_space = 0;
     struct timeval tvm;
-    uchar sd_buffer[SRUCTDATA_BUFFER_LEN];
+    uchar sd_buffer[SRUCTDATA_BUFFER_LEN + 1]; /* +1: always NUL-terminated after read */
     uchar read_buffer[READ_BUFFER_LEN];
 
     DEFiRet;
@@ -259,6 +259,12 @@ static rsRetVal readAndSendFile(instanceConf_t *pInst, char *filename, char *fpa
             LogError(0, RS_RET_READ_ERR, "read end of file for structured data failed (%zu / %zu)", t, sd_buf_l);
             return RS_RET_READ_ERR;
         }
+        /* The structured-data scan below uses strstr()/strchr() and a digit loop
+         * that walk forward until a NUL. The file tail carries no terminator, so
+         * provide one; otherwise a tail without the configured keys makes those
+         * scans read past the end of this stack buffer.
+         */
+        sd_buffer[sd_buf_l] = '\0';
 
         /* let's trim the end */
         for (; sdp > sd_buffer && (*sdp == '\n' || *sdp == '\t' || *sdp == ' '); sdp--, sd_buf_l--) file_len--;

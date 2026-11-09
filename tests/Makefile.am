@@ -2625,6 +2625,7 @@ TESTS_IMBATCHREPORT = \
 	imbatchreport_errmsg_rename_params.sh \
 	imbatchreport_delete_success.sh \
 	imbatchreport_delete_structdata.sh \
+	imbatchreport_structdata_nokeys.sh \
 	imbatchreport_rename_success.sh \
 	imbatchreport_delete_toolarge.sh \
 	imbatchreport_rename_toolarge.sh
