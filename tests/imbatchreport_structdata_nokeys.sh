@@ -16,6 +16,8 @@
 # with the file's structured data, the mtime-derived timestamp and the body,
 # showing the no-key path completes normally.
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=1
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 global(maxmessagesize="820")
