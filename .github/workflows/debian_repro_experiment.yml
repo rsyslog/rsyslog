@@ -47,7 +47,9 @@ jobs:
           {
             sudo apt-get update
             sudo apt-get install -y --no-install-recommends \
-              devscripts sbuild mmdebstrap uidmap debian-archive-keyring ca-certificates
+              devscripts sbuild mmdebstrap uidmap debian-archive-keyring ca-certificates \
+              libstring-shellquote-perl python3-pycurl python3-requests python3-debian \
+              equivs apt-utils debian-keyring
           } 2>&1 | tee ".ci/debian-repro-$DEBIAN_ARCH/bootstrap.log"
       - name: Replay original Debian buildinfo
         env:
