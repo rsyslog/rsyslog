@@ -44,7 +44,10 @@ cmd_version() {
 	printf '%s\n' "$attempt" | grep -Eq '^[0-9]+$' ||
 		die "GITHUB_RUN_ATTEMPT must be numeric"
 	[ "$attempt" -le 99 ] || die "GITHUB_RUN_ATTEMPT exceeds two digits"
-	serial="$(printf '%s%010d%02d' "$date" "$run" "$attempt")"
+	# Keep the serial well below 2^63: newer apk-tools reject longer numeric
+	# version components ("is not a valid version").
+	[ "$run" -le 99999 ] || die "GITHUB_RUN_NUMBER exceeds five digits"
+	serial="$(printf '%s%05d%02d' "$date" "$run" "$attempt")"
 	pkgver="${base}_p${serial}"
 	expected_version="${pkgver}-r0"
 
