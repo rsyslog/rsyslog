@@ -29,6 +29,17 @@ make check
 the entire suite, including the unit tests sourced from `tests/unit/`. Use
 <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop an ongoing run.
 
+## Worker lifecycle fault injection
+
+`wtp-exiting-worker-restart.sh` opts into two bounded delays for a selected
+worker pool. `RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL` matches the pool debug
+header; `RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS` delays after the worker loop.
+`RSYSLOG_TESTBENCH_WORKER_CLEANUP_DELAY_MS` instead widens the existing unlocked
+terminal batch-disposal window. Both delays are testbench-only and stop when
+the pool enters shutdown. The cleanup delay requires a nonempty deferred batch
+and does not affect ordinary dequeue/minimum-batch waits. The exact recovered
+message-ID set is the regression oracle; the delays only select the schedule.
+
 ## Running individual scenarios
 
 ```
