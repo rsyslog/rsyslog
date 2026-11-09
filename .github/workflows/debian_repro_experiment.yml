@@ -67,6 +67,19 @@ jobs:
               d1f0913cdbcc1f62d8bae39924a65c4a9102abf6fa021a02685607d764d4cecd \
               "$package" | sha256sum --check
             dpkg-deb --extract "$package" "$bootstrap/package"
+            # Ubuntu 22.04 predates the Debian release keys used by this snapshot.
+            keyring_package="$bootstrap/debian-archive-keyring.deb"
+            curl --fail --location --retry 3 \
+              https://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb \
+              --output "$keyring_package"
+            printf '%s  %s\n' \
+              9ea7778e443144ca490668737a8ab22dd3e748bb99e805e22ec055abeb3c7fac \
+              "$keyring_package" | sha256sum --check
+            dpkg-deb --extract "$keyring_package" "$bootstrap/keyring"
+            sudo install -m 0644 \
+              "$bootstrap/keyring/usr/share/keyrings/debian-archive-keyring.gpg" \
+              /usr/share/keyrings/debian-archive-keyring.gpg
+            sha256sum /usr/share/keyrings/debian-archive-keyring.gpg
             # Expand these variables when the generated wrapper runs.
             # shellcheck disable=SC2016
             printf '%s\n' '#!/usr/bin/env bash' \
