@@ -1714,6 +1714,7 @@ TESTS_OMHIREDIS = \
 	omhiredis-set.sh \
 	omhiredis-setex.sh \
 	omhiredis-template.sh \
+	omhiredis-template-percent.sh \
 	omhiredis-withpass.sh \
 	omhiredis-wrongpass.sh \
 	omhiredis-stream-ack.sh \
