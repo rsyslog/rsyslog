@@ -1,0 +1,19 @@
+runtime/tcpsrv.c
+  s_b3a84b787ce0a4::t_22794a2c650f21 707,716-717
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a95f24de5b58ef04e042ed063f2f3c2c4574eb7a",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

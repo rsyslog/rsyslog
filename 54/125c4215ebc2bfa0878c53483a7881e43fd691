@@ -1,0 +1,22 @@
+tests/local-queue-imtcp-tiered.sh
+  s_f8a738e4bdfaee::t_6ac2f8e842357a 11,90-98
+  s_f8a738e4bdfaee::t_88cc32832fefeb 75
+  s_f8a738e4bdfaee::t_f5b3da716a50dc 12-13,48-74,76-80,84-89,105-123
+  s_f8a738e4bdfaee::t_9060eb80463255 2-8,99-101,124,131-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54125c4215ebc2bfa0878c53483a7881e43fd691",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

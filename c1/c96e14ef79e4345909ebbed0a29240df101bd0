@@ -1,0 +1,71 @@
+devtools/collect-flake-evidence.py
+  s_7312f75ac57855::t_59c5330df567f7 1-162
+.github/workflows/actionlint.yml
+  s_d41298c6e29859::t_97f9fef7fcd452 23-24
+.github/workflows/daily_focused_tests.yml
+  s_d41298c6e29859::t_dd2535029de00a 377-380,403,407,409
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_d41298c6e29859::t_d230d65d32c328 42-50
+.github/workflows/run_distro_daily.yml
+  s_d41298c6e29859::t_c44af44da2079a 91,120,124,126
+.github/workflows/collect_flake_evidence.yml
+  s_d41298c6e29859::t_3167ea7d8d50ee 1-71
+.github/workflows/run_checks.yml
+  s_2211d00224abdf::t_b95d95566a282f 497-498,659,663,665,1005-1007,1028,1061,1106,1113,1115-1116,1193,1212-1217,1266,1294-1299,1423-1424,1446-1451,1690-1691,1694-1699,1838-1839,1842-1847
+.github/workflows/run_macos_weekly.yml
+  s_d41298c6e29859::t_db27c3b06c5a54 102-104,118,121,140,142,144-145
+AGENTS.md
+  s_d41298c6e29859::t_02c7b54ddbacfe 294-306
+.github/workflows/impstats_push_victoriametrics.yml
+  s_d41298c6e29859::t_47cd446087e039 70,93-94,174-179
+.github/workflows/imbeats.yml
+  s_d41298c6e29859::t_3cf779b4923fe2 67,115-120
+devtools/ci-flake-phase.sh
+  s_d41298c6e29859::t_a585f914db8baa 1-79
+.github/workflows/run_cross_arch_weekly.yml
+  s_d41298c6e29859::t_0b69795ba010cb 133-135,144,146,148
+devtools/run-ci.sh
+  s_2f89000869a42c::t_0e640262c68b20 19-20,23-24,41-45,48-49,51-52,81
+devtools/tests/test_flake_evidence.py
+  s_7312f75ac57855::t_4bd8fd5abdbcf9 1-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "c1c96e14ef79e4345909ebbed0a29240df101bd0",
+  "prompts": {},
+  "sessions": {
+    "s_2211d00224abdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7fc9-8e30-7130-b847-6b5dc1a62abb",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_2f89000869a42c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f89d2-7002-7821-8550-0d33e8527d33",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_7312f75ac57855": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f89cd-a229-71a0-a9b4-c9e8840bd4bc",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

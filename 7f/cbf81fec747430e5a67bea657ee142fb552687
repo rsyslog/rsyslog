@@ -1,0 +1,23 @@
+runtime/wtp.h
+  s_0e13bafe0bf506::t_3b0b2df64e1022 91,98-99
+runtime/wti.c
+  s_0e13bafe0bf506::t_47e78a3cd05c08 360,364,386,391
+runtime/queue.c
+  s_0e13bafe0bf506::t_b155a94b5c836e 713-714,722,732,2403,2408,4048,4291,4583-4586,4668,4718
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "7fcbf81fec747430e5a67bea657ee142fb552687",
+  "prompts": {},
+  "sessions": {
+    "s_0e13bafe0bf506": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a062d6-a2e9-7590-884e-edace947c0df",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

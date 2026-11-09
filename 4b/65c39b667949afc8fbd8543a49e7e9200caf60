@@ -1,0 +1,19 @@
+doc/ai/transactional_reload_recovery_ledger.md
+  s_f558368e8cde26::t_1467e09704f248 380-420
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b65c39b667949afc8fbd8543a49e7e9200caf60",
+  "prompts": {},
+  "sessions": {
+    "s_f558368e8cde26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bc-a08c-7d92-bb04-8ab8fa22637e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

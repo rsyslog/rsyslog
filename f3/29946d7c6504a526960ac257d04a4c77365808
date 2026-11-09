@@ -1,0 +1,25 @@
+Makefile.am
+  s_5e773934876cb4::t_c14785b151df05 7
+devtools/gather-check-logs.sh
+  s_5e773934876cb4::t_3786b19a0da515 7-10,12
+tests/Makefile.am
+  s_5e773934876cb4::t_e7ecf1d882cc7a 21-23
+tests/gather-check-logs.sh
+  s_5e773934876cb4::t_9b902aa5a8c05b 1-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f329946d7c6504a526960ac257d04a4c77365808",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

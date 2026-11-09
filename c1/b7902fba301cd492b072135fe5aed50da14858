@@ -1,0 +1,19 @@
+doc/source/reference/templates/templates-statement-property.rst
+  s_958aa1d5056522::t_3f19dc2e17ed8c 66-70,127-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c1b7902fba301cd492b072135fe5aed50da14858",
+  "prompts": {},
+  "sessions": {
+    "s_958aa1d5056522": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ffa1a-f132-76d3-bd7c-a44b20b1f7f0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

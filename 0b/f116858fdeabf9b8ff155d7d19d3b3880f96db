@@ -1,0 +1,25 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_a5a1d95b84e844 185
+tests/template-missing-jsonvars-queue.sh
+  s_6224eda96fc0da::t_91f9a99d04d65c 48
+  s_6224eda96fc0da::t_a5a1d95b84e844 1-47,49-50
+runtime/template.c
+  s_6224eda96fc0da::t_a660a8dd6ffd60 921-925
+  s_6224eda96fc0da::t_a5a1d95b84e844 926
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0bf116858fdeabf9b8ff155d7d19d3b3880f96db",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

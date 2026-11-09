@@ -1,0 +1,16 @@
+runtime/tcpsrv.c
+  h_95716f3de0caf5 533-542,553,575,601-603,853,921,1584,1617-1621,1623,1663-1668,1675-1676,1818,1916
+runtime/tcpsrv.h
+  h_95716f3de0caf5 208-209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "aa4204ab1ac5672e5657da506c7beb2391f546e2",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

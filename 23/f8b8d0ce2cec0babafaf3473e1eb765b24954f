@@ -1,0 +1,47 @@
+tests/local-queue-s6-slowdown.sh
+  s_142ee1fa291d22::t_48b630cf621f96 10
+tests/local-queue-s5-persistence.sh
+  s_142ee1fa291d22::t_48b630cf621f96 15
+tests/queue-benchmark-latency-oracle.sh
+  s_142ee1fa291d22::t_99d3359a46a3c5 3-6,15-51
+  s_142ee1fa291d22::t_8af96437264b2f 52
+tests/local-queue-s6-discard.sh
+  s_142ee1fa291d22::t_48b630cf621f96 9
+tests/local-queue-s4-graph.sh
+  s_142ee1fa291d22::t_48b630cf621f96 11
+tests/local-queue-omfile-cancel.sh
+  s_142ee1fa291d22::t_dfb4a05a557041 10,27-34,36
+  s_142ee1fa291d22::t_f208a7150654fb 24-26
+tests/local-queue-s4-config.sh
+  s_142ee1fa291d22::t_48b630cf621f96 8
+tests/local-queue-s6-linkedlist-oom.sh
+  s_142ee1fa291d22::t_48b630cf621f96 9
+tests/local-queue-s5-store-failure.sh
+  s_142ee1fa291d22::t_48b630cf621f96 10
+benchmarks/queue-contention/compare-latency.py
+  s_142ee1fa291d22::t_99d3359a46a3c5 11,66-72,74,76-84
+doc/source/rainerscript/queue_parameters.rst
+  s_142ee1fa291d22::t_1fb4e9d562b1ba 65-69
+tests/local-queue-common.sh
+  s_142ee1fa291d22::t_67e6b3c0644be3 5-9,163
+tests/local-queue-omfile-hup.sh
+  s_142ee1fa291d22::t_aed60521bed51d 13,28
+tests/local-queue-startup-failure.sh
+  s_142ee1fa291d22::t_6edc04bded1469 11-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "23f8b8d0ce2cec0babafaf3473e1eb765b24954f",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

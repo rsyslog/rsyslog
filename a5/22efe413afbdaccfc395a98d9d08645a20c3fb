@@ -1,0 +1,30 @@
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_8b4bb1cd04d12b 341,1824,1832-1837,1843-1844
+doc/source/reference/parameters/imtcp-ratelimit-name.rst
+  s_f2c089be484e12::t_6365da8153f3eb 41-42
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_5a592487a06567 6,249-271,276,284
+  s_f2c089be484e12::t_99dceb5db41e64 7-8
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_6365da8153f3eb 327-329
+  s_f2c089be484e12::t_a87b49a97dd821 325-326
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_99dceb5db41e64 8-9
+  s_f2c089be484e12::t_5a592487a06567 7,237-260,272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a522efe413afbdaccfc395a98d9d08645a20c3fb",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

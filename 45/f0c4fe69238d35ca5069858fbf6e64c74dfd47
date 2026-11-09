@@ -1,0 +1,19 @@
+tests/Makefile.am
+  s_f31e60e1211a64::t_97570ccbc9978b 1794
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45f0c4fe69238d35ca5069858fbf6e64c74dfd47",
+  "prompts": {},
+  "sessions": {
+    "s_f31e60e1211a64": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a114f8-31ad-7b51-aaec-fa4772324b64",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_950f42da96d49a 2973
+tests/unit/iminternal_contention_test.c
+  s_5e773934876cb4::t_f242a355014627 2-4
+tools/AGENTS.md
+  s_5e773934876cb4::t_94bf906e40b122 21-27
+tools/iminternal.c
+  s_5e773934876cb4::t_3d124fe04a6e63 79,88-89,136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c2b0bf3f15cbdaaa7869107f1ab29b5f1dbdd89",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

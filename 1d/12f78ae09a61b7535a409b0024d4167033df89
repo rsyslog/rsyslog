@@ -1,0 +1,26 @@
+tests/codex-pre-push-container-gate.sh
+  s_c54d3f9b31c8fc::t_f8a4ae38e57da4 6,10-12,30,89-92,94-100,105
+  s_c54d3f9b31c8fc::t_48e72b7c14e712 7-9,13-14,101-104
+  s_c54d3f9b31c8fc::t_435903ae60bf4c 15-16,106-111
+  s_c54d3f9b31c8fc::t_001f4922518f0b 93
+.codex/pre_push_container_gate.sh
+  s_c54d3f9b31c8fc::t_d21b4dcb980ca9 255,272,276
+  s_c54d3f9b31c8fc::t_48e72b7c14e712 250-254,258,273
+  s_c54d3f9b31c8fc::t_f8a4ae38e57da4 256-257,259-271,274-275,277-279
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1d12f78ae09a61b7535a409b0024d4167033df89",
+  "prompts": {},
+  "sessions": {
+    "s_c54d3f9b31c8fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06658-99e7-76c1-96cd-422e9b578afc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

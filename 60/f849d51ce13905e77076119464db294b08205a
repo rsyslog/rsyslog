@@ -1,0 +1,21 @@
+doc/Makefile.am
+  s_b3a84b787ce0a4::t_06d6cd31000128 746
+doc/source/reference/parameters/imtcp-failonbinderror.rst
+  s_b3a84b787ce0a4::t_06d6cd31000128 3-6,42,54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60f849d51ce13905e77076119464db294b08205a",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+tests/unit/linkedlist_test.c
+  s_f2c089be484e12::t_ec7d31a126697e 71,77-104,128-130,159,166-168,187-189,224-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ed954ed1f0fae4452b24c57393dcfa3664f2cc6b",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

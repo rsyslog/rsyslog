@@ -1,0 +1,27 @@
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_d609a1d52d1132 36-49
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_47768ff7433964 39-51,238,253,259-263,425-433,456-458
+  s_f2c089be484e12::t_649d97b8d581e3 52-53
+doc/source/configuration/modules/imtcp.rst
+  s_f2c089be484e12::t_d609a1d52d1132 167,213,215-240,242-249,255-273
+  s_f2c089be484e12::t_5b414fa0262ff9 168,214
+  s_f2c089be484e12::t_649d97b8d581e3 241,250-254
+  s_f2c089be484e12::t_0a2f883a73e7a9 274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "75f8c832cb6901f0b642cad878b393fec858815b",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

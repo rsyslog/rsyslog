@@ -1,0 +1,39 @@
+devtools/tests/test_flake_evidence.py
+  s_5e773934876cb4::t_84fa8cef121641 140-182
+tests/flake-evidence-statuses.sh
+  s_5e773934876cb4::t_288ee7fe779557 1-22
+devtools/collect-flake-evidence.py
+  s_5e773934876cb4::t_9de3f7049e084c 40
+Makefile.am
+  s_5e773934876cb4::t_38589dc41ac2c1 28-30
+  s_5e773934876cb4::t_ddd0a244c84164 27,31-32
+devtools/prepare-flake-evidence.py
+  s_5e773934876cb4::t_1766f140e1770b 31
+tests/Makefile.am
+  s_3174538268dd29::t_930ce91fdc57b1 71
+  s_5e773934876cb4::t_9ab716e33bc23f 69-70,3151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "920bae62552bea6fdecb5832db5c7a525325ead7",
+  "prompts": {},
+  "sessions": {
+    "s_3174538268dd29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f38-e8ea-7fb2-a855-adec6d97f99c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

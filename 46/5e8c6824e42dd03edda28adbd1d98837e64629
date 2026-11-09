@@ -1,0 +1,49 @@
+doc/source/configuration/modules/omfile.rst
+  s_6224eda96fc0da::t_bcf3626b9af22a 86,151-154,294-297
+doc/Makefile.am
+  s_6224eda96fc0da::t_dc940d12b18699 1018
+tools/omfile.c
+  s_6224eda96fc0da::t_1206c03df9929a 206,269,647,1069,1141,1361,1612
+  s_6224eda96fc0da::t_9de88ca1337623 639-646,648-659,702-708,733,758
+  s_6224eda96fc0da::t_a88f81d7e5d23c 1068,1360,1362-1364
+  s_6224eda96fc0da::t_aaf10a4c6b1a02 50,205,268,295,323
+  s_6224eda96fc0da::t_1fdab6eab208ba 1139-1140,1610-1611
+tests/Makefile.am
+  s_6224eda96fc0da::t_bcf3626b9af22a 170,636
+tests/omfile-followsymlinks.sh
+  s_6224eda96fc0da::t_b5feacb55da5f0 41
+  s_6224eda96fc0da::t_bcf3626b9af22a 1-40,42-58,60-62
+  s_6224eda96fc0da::t_bad699cbfd3f7e 59
+doc/source/reference/parameters/omfile-followsymlinks.rst
+  s_6224eda96fc0da::t_bcf3626b9af22a 1-66
+tests/yaml-omfile-followsymlinks.sh
+  s_6224eda96fc0da::t_7258ac4ced3333 24-33
+  s_6224eda96fc0da::t_bcf3626b9af22a 1-23,34-45,47-54,56-57
+  s_6224eda96fc0da::t_6c583702baeb4c 46
+  s_6224eda96fc0da::t_b5feacb55da5f0 55
+runtime/stream.h
+  s_6224eda96fc0da::t_2c0df95674397a 235,243
+  s_6224eda96fc0da::t_c091c9edaf434d 177,213
+  s_6224eda96fc0da::t_ba9cb48e49dbf4 256
+runtime/stream.c
+  s_6224eda96fc0da::t_c091c9edaf434d 282,284-286,2034-2042,2249,2421
+  s_6224eda96fc0da::t_fd04610f2379ca 283
+runtime/queue.c
+  s_6224eda96fc0da::t_d5978d772399c5 1548,1581,1678,1691,1705,3622
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "465e8c6824e42dd03edda28adbd1d98837e64629",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

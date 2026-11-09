@@ -1,0 +1,34 @@
+plugins/omtesting/Makefile.am
+  s_de358a5d0a4803::t_12a6244fcbce2f 5-7
+plugins/omtesting/omtesting.c
+  s_de358a5d0a4803::t_12a6244fcbce2f 613
+tests/queue-discardseverity-name.sh
+  s_de358a5d0a4803::t_431753235b7178 1-3,10-38,40-47,50-59,62-63,66-67
+  s_de358a5d0a4803::t_4c3733181db940 7-8,61
+  s_de358a5d0a4803::t_e96fd3e0921604 9,39,48-49
+  s_de358a5d0a4803::t_1a19803562862b 64
+  s_de358a5d0a4803::t_b04878e3c6ac01 65
+  s_de358a5d0a4803::t_32c44c33c84f89 4-6,60
+doc/source/rainerscript/queue_parameters.rst
+  s_de358a5d0a4803::t_12a6244fcbce2f 454-456
+runtime/queue.c
+  s_de358a5d0a4803::t_12a6244fcbce2f 296,6263
+tests/Makefile.am
+  s_de358a5d0a4803::t_431753235b7178 94-96,3106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "caa6396eb046a962233b51491acfd7c2cfb565bd",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

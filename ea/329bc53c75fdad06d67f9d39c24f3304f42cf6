@@ -1,0 +1,19 @@
+tests/imtcp-stream-always-zlib-fragmented-ratio.sh
+  s_6224eda96fc0da::t_0edf870ca18559 34-35,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "ea329bc53c75fdad06d67f9d39c24f3304f42cf6",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

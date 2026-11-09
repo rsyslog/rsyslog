@@ -1,0 +1,19 @@
+tests/prifilt-trailing-separator-vg.sh
+  s_6bc2ac41753eb9::t_40e46b3e19f5ed 4-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2ebc65e98f9afda7cf6a5cfe43763ba2a2dbfca3",
+  "prompts": {},
+  "sessions": {
+    "s_6bc2ac41753eb9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0569f-287d-7d31-89ea-bad7fcbfe92f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

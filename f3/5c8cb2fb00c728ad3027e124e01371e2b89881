@@ -1,0 +1,25 @@
+tests/Makefile.am
+  s_142ee1fa291d22::t_2573ed76e59ee6 192
+tests/local-queue-common.sh
+  s_142ee1fa291d22::t_951212acb34999 34-61
+tests/local-queue-helping.sh
+  s_142ee1fa291d22::t_b60a0e65620c7d 59-64,67
+tests/local-queue-imtcp-internal.sh
+  s_142ee1fa291d22::t_a5166bb9f91d34 2-9,28,42-47,49-51,54-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f35c8cb2fb00c728ad3027e124e01371e2b89881",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

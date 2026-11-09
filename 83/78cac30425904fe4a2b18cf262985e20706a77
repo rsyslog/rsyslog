@@ -1,0 +1,25 @@
+runtime/datetime.c
+  s_5e773934876cb4::t_321398aa2231f8 1166-1177
+tests/Makefile.am
+  s_5e773934876cb4::t_33748f5a7985f5 383,991
+tests/timestamp-unixtimestamp-offset.sh
+  s_5e773934876cb4::t_02640b90e565f3 1-73
+tests/yaml-timestamp-unixtimestamp-offset.sh
+  s_5e773934876cb4::t_83c50495796bd6 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8378cac30425904fe4a2b18cf262985e20706a77",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

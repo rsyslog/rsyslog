@@ -1,0 +1,36 @@
+runtime/tcps_sess.c
+  s_a9719629ed5597::t_afeacf35f1bce3 945-955
+  s_a9719629ed5597::t_18589e1a160ad1 909-918
+  s_a9719629ed5597::t_41504086502253 902
+  s_a9719629ed5597::t_8e67a3494458c8 903-908
+  s_a9719629ed5597::t_65f5f6981d238c 919-921
+  s_6224eda96fc0da::t_eec6701b379337 922-924
+tests/Makefile.am
+  s_a9719629ed5597::t_b31cf45ff94237 733,1992-1993
+tests/imtcp-stream-always-zstd-window-guard.sh
+  s_a9719629ed5597::t_5e91485380ce07 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b4fbe94caf860584852d1b36322a7c11ba3dad8e",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

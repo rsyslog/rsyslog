@@ -1,0 +1,19 @@
+tests/imtcp-shutdown-pending-accepts.sh
+  s_30421e054f7af1::t_147b54625e8f7e 83-85,87-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ea51e2f864c0ea42ba13abe16b6393aed9714376",
+  "prompts": {},
+  "sessions": {
+    "s_30421e054f7af1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f56-743b-74b0-a007-68cda17ac9bc",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

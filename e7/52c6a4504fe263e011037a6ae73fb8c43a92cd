@@ -1,0 +1,61 @@
+tests/global-reloadonhup-imtcp-add-yaml.sh
+  s_f2c089be484e12::t_b2e66de4786930 2-3,5-7,49-64,77,98-100,111-122
+tests/global-reloadonhup-imtcp-add-plain-yaml.sh
+  s_f2c089be484e12::t_f306d3d1f24d02 1-6
+tests/global-reloadonhup-imtcp-add-plain-validate-rainerscript.sh
+  s_f2c089be484e12::t_f306d3d1f24d02 1-6
+tests/global-reloadonhup-imtcp-add-plain-rainerscript.sh
+  s_f2c089be484e12::t_bd7a127d1ebbee 29-37,40,53-54,66-67,74-75,81,84-85
+  s_f2c089be484e12::t_0bb514cf0a81cd 240-270
+  s_f2c089be484e12::t_53587da61b33ec 22-23,91-116,153-156,180-186,191-218,231,344-352
+  s_f2c089be484e12::t_dcc8e94751ecb3 80
+  s_f2c089be484e12::t_7dee21fe7ede15 187-190,221
+  s_f2c089be484e12::t_71bea4f043be72 1-10,17-21,25-28,38-39,41-52,55-65,68-73,76-79,82-83,86-90,157-179,219-220,222-230,232-239,271-342,353-370
+  s_f2c089be484e12::t_ec65ae9499699f 343
+  s_f2c089be484e12::t_044425facf8472 13-16,117-152
+  s_f2c089be484e12::t_8abf34053f911f 11-12,24
+tests/Makefile.am
+  s_f2c089be484e12::t_ee3a80e9cbceb3 48,924-925,1786-1787
+doc/source/configuration/modules/imtcp.rst
+  s_f2c089be484e12::t_b8eca55835b2a4 165-194
+tests/helpers/reload_tcp_port_reserver.py
+  s_f2c089be484e12::t_6bf6f319c1753b 15,22-23,35-37,39
+  s_f2c089be484e12::t_7e9ec0fad5115e 1-14,16-21,24-34,38,40-47
+tests/global-reloadonhup-imtcp-replace-yaml.sh
+  s_f2c089be484e12::t_3ca282afcbb007 2-3
+tests/global-reloadonhup-imtcp-add-plain-validate-yaml.sh
+  s_f2c089be484e12::t_f306d3d1f24d02 1-7
+tests/global-reloadonhup-imtcp-add-rainerscript.sh
+  s_f2c089be484e12::t_3ca282afcbb007 2-3,5-7,33-48,61,70-72,75-86
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_6c59a2ac4b813f 68
+tests/global-reloadonhup-imtcp-replace-rainerscript.sh
+  s_f2c089be484e12::t_3ca282afcbb007 2-3
+tests/global-reloadonhup-imtcp-add-validate-yaml.sh
+  s_f2c089be484e12::t_3ca282afcbb007 2-5
+tests/global-reloadonhup-imtcp-add-validate-rainerscript.sh
+  s_f2c089be484e12::t_3ca282afcbb007 2-5
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_9b042070d4786e 2266
+  s_f2c089be484e12::t_8b2f00d721bc62 2603-2605
+  s_f2c089be484e12::t_83e7cd75dcdf01 2262,2267-2268
+  s_f2c089be484e12::t_c70a27e63c5ff8 108-112,2348-2350
+  s_f2c089be484e12::t_ffb2e2541dc933 2254-2261,2263-2265,2269-2271,2321-2323,2336-2347,2695-2699
+  s_f2c089be484e12::t_4e631d8bf52781 2354,2602,2694
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e752c6a4504fe263e011037a6ae73fb8c43a92cd",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

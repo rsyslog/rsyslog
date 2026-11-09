@@ -1,0 +1,23 @@
+plugins/omtesting/omtesting.c
+  s_52daf9b39e2b17::t_f0b08250591fe0 80-82,84,106,194,198-203,205-206,211,252,293,377-379
+tests/action-reporting-concurrency-tsan.sh
+  s_52daf9b39e2b17::t_f0b08250591fe0 3-6
+tests/tsan.supp
+  s_52daf9b39e2b17::t_f0b08250591fe0 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "17a8b5f3833380f381e34524bf1664d909ecb1e9",
+  "prompts": {},
+  "sessions": {
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

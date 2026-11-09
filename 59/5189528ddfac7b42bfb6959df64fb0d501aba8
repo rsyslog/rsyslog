@@ -1,0 +1,110 @@
+tests/global-reloadonhup-spacelf-yaml.sh
+  s_f2c089be484e12::t_88ef05df79b5af 1-77
+tests/global-reloadonhup-escapetab-yaml.sh
+  s_f2c089be484e12::t_e341e7c0df9319 1-77
+tests/global-reloadonhup-escapeprefix-yaml.sh
+  s_f2c089be484e12::t_a22a159896f1f8 5
+  s_f2c089be484e12::t_b45b1b3dad41da 65
+  s_f2c089be484e12::t_00bac19fd59014 1-4,6-57,72-90
+  s_f2c089be484e12::t_db776358360d1c 58-64,66-71
+tests/global-reloadonhup-escapecontrol-yaml.sh
+  s_f2c089be484e12::t_82800e177c44dc 1-78
+tests/global-reloadonhup-escapecstyle-yaml.sh
+  s_f2c089be484e12::t_08fbdf6de56550 1-79
+tests/global-reloadonhup-spacelf-rainerscript.sh
+  s_f2c089be484e12::t_ecb710dcada2bc 1-60
+tools/Makefile.am
+  s_f2c089be484e12::t_6a57b866e21bc2 92,94
+  s_f2c089be484e12::t_51f988ce298111 13
+tests/global-reloadonhup-permitslash-yaml.sh
+  s_f2c089be484e12::t_415c9716e470e8 1-75
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_b45b1b3dad41da 17
+tests/global-reloadonhup-escapeprefix-rainerscript.sh
+  s_f2c089be484e12::t_b45b1b3dad41da 48
+  s_f2c089be484e12::t_a22a159896f1f8 6
+  s_f2c089be484e12::t_69359b9a4f8c2f 1-5,7-40,55-72
+  s_f2c089be484e12::t_db776358360d1c 41-47,49-54
+tests/global-reloadonhup-escapecstyle-rainerscript.sh
+  s_f2c089be484e12::t_96d4c8ad53d71b 1-62
+tools/shadow_reload_policy.h
+  s_f2c089be484e12::t_51f988ce298111 1-21
+  s_f2c089be484e12::t_ef0afe7c061cf9 22-24
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_51f988ce298111 144
+  s_f2c089be484e12::t_b45b1b3dad41da 129-134,151-155
+  s_f2c089be484e12::t_a429c1fa366db7 156
+tests/Makefile.am
+  s_f2c089be484e12::t_b45b1b3dad41da 1029-1035,1139-1145
+tests/global-reloadonhup-escape8bit-yaml.sh
+  s_f2c089be484e12::t_08e64fa2b35918 1-80
+tests/global-reloadonhup-escapecontrol-rainerscript.sh
+  s_f2c089be484e12::t_6e89ea0fa7654a 1-61
+tests/global-reloadonhup-escape8bit-rainerscript.sh
+  s_f2c089be484e12::t_1ab493650dea17 1-63
+tools/shadow_reload.c
+  s_f2c089be484e12::t_703f6115f07e2b 99-100,511,629-649,994,1008,1353-1354
+  s_f2c089be484e12::t_51f988ce298111 35,776-777
+  s_f2c089be484e12::t_fef7ad90d6e73e 109-110,516,733-753,999,1013,1362-1363
+  s_f2c089be484e12::t_3d8e9657d35111 111-112
+  s_f2c089be484e12::t_069166c485089e 754-774,778,781
+  s_f2c089be484e12::t_88d907b6f0681b 1364-1365
+  s_f2c089be484e12::t_32deb8a4a5748a 1000
+  s_f2c089be484e12::t_258839bd10142c 101-102,512,650-670,995,1009,1355
+  s_f2c089be484e12::t_5259164cabe71c 107-108,515,712-732,998,1012,1360-1361
+  s_f2c089be484e12::t_616829afd3f70b 103-104,513,671-690,996,1010,1356-1357
+  s_f2c089be484e12::t_fef9159a93de21 1014
+  s_f2c089be484e12::t_c17f1791922118 105-106,514,691-711,997,1011,1358-1359
+  s_f2c089be484e12::t_4bd1946913ba32 517
+runtime/rsconf.h
+  s_f2c089be484e12::t_ce786dea2c86b0 85
+tests/global-reloadonhup-permitslash-rainerscript.sh
+  s_f2c089be484e12::t_4acb61364d9a2c 1-57
+tests/unit/parser_policy_test.c
+  s_f2c089be484e12::t_518467a4b41941 208-214,216-227,237-242
+  s_f2c089be484e12::t_51f988ce298111 19,142-146,195-202
+  s_f2c089be484e12::t_3ca45dbdc66d3b 137-141,147-149
+  s_f2c089be484e12::t_6a57b866e21bc2 27-35
+  s_f2c089be484e12::t_497cf4593367cf 45-67,267
+  s_f2c089be484e12::t_6b21555cafc059 243
+runtime/glbl.c
+  s_f2c089be484e12::t_f0ce6276514874 1365,1367-1368
+  s_f2c089be484e12::t_9697524da80f2e 666,684,690,696,702,1362,1366,1369,1681
+  s_f2c089be484e12::t_73b4a51de30099 112-118,314-342,983-1052,1924-1930,1954-1960
+  s_f2c089be484e12::t_866b60ed1ca1d0 1053
+runtime/msg.c
+  s_f2c089be484e12::t_6a57b866e21bc2 1482-1492,1500-1507
+  s_f2c089be484e12::t_50bd689c0466a5 1509
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_0f8a0210bb04b7 380-383
+  s_f2c089be484e12::t_bb3bd19dcf13bb 411-414
+  s_f2c089be484e12::t_5f9c2d3f5149ef 441-445
+  s_f2c089be484e12::t_51f988ce298111 43
+  s_f2c089be484e12::t_e8e39dcf5d7bce 367-370
+  s_f2c089be484e12::t_6cab9839aeb792 458-466
+  s_f2c089be484e12::t_b45b1b3dad41da 44-46
+  s_f2c089be484e12::t_6cf6fcb384df9d 392-395
+  s_f2c089be484e12::t_ec8849876fb2cb 467-474
+runtime/rsconf.c
+  s_f2c089be484e12::t_8956db7b0e40c0 411,414-419
+tests/global-reloadonhup-escapetab-rainerscript.sh
+  s_f2c089be484e12::t_cdf9234454de48 1-60
+runtime/glbl.h
+  s_f2c089be484e12::t_4891fbd587cf2f 142-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "595189528ddfac7b42bfb6959df64fb0d501aba8",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

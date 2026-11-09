@@ -1,0 +1,30 @@
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_d1da210eda780d 480,508
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_d1da210eda780d 481,509
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_f1f281ca3f3e5c 401-403,409-410,412,416-426,429-432,438,440
+  s_2dc01c7e3d2940::t_b6e15fbce562c5 364,387-400,404-408,411,413-415,433-437,439,441-449
+  s_2dc01c7e3d2940::t_9f46f4d22fa14a 427-428
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_d4fcd4ed7973d3 417,436
+  s_2dc01c7e3d2940::t_b6e15fbce562c5 487
+.github/DEBIAN_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_d4fcd4ed7973d3 54-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c2edd46a1869834ed4f563ce94aad4e4f10d99a5",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

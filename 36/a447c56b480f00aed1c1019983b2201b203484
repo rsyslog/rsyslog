@@ -1,0 +1,26 @@
+devtools/release/package-feature-overlay.py
+  s_2dc01c7e3d2940::t_2b11d499a1bfb6 171
+.github/workflows/alpine324_daily_stable.yml
+  s_2dc01c7e3d2940::t_0427f6d5f77838 529,532-536,540
+  s_2dc01c7e3d2940::t_4e10c884dc09d5 530-531,537-539
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_9f7edcf6b9e051 504,517,527,609
+devtools/release/alpine-daily-stable.sh
+  s_2dc01c7e3d2940::t_4e10c884dc09d5 12,163-220,301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "36a447c56b480f00aed1c1019983b2201b203484",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

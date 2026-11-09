@@ -1,0 +1,74 @@
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_7407b893b76463 2441,2446-2468,2627,2958-2959,3036,3070,3525
+  s_f2c089be484e12::t_dcb53c1410a943 110-112,178-179,2275-2283,2333-2336,2345-2349,2364-2366,2628,2636,2648,3049,3056-3062,3069
+tests/global-reloadonhup-imtcp-retire-validate-rainerscript.sh
+  s_f2c089be484e12::t_0cd1f424afb8c0 1-5
+tests/global-reloadonhup-imtcp-add-rainerscript.sh
+  s_f2c089be484e12::t_de779a79788c3f 92
+  s_f2c089be484e12::t_fdc521239e8b03 2-9,69-70,72
+  s_f2c089be484e12::t_545d8c9bf36303 66,71,78,103
+tests/global-reloadonhup-imtcp-replace-plain-rainerscript.sh
+  s_f2c089be484e12::t_f1f2150da321d7 1-18,22-117,120-121,124-147,149-150,152-163,165-166,168-200,202-214,216-222,226-232,234,237-238,244-250,252-273,275-279,282-292
+  s_f2c089be484e12::t_171f35d2517da3 280-281
+  s_f2c089be484e12::t_633034e15908b0 122-123
+  s_f2c089be484e12::t_4ff2e2dc7ee77d 19-21
+  s_f2c089be484e12::t_7b797f69c9ffc0 201,215,233,251,274
+  s_f2c089be484e12::t_58325f82af4dac 223-225,235-236,239-243
+  s_f2c089be484e12::t_14658356b1a1e6 118-119,148,151,164,167
+tests/global-reloadonhup-imtcp-retire-yaml.sh
+  s_f2c089be484e12::t_0cd1f424afb8c0 1-5
+tests/global-reloadonhup-imtcp-replace-plain-validate-yaml.sh
+  s_f2c089be484e12::t_de3793ba12bcbc 1-6
+tests/global-reloadonhup-imtcp-replace-plain-yaml.sh
+  s_f2c089be484e12::t_de3793ba12bcbc 1-5
+tests/global-reloadonhup-imtcp-replace-plain-validate-rainerscript.sh
+  s_f2c089be484e12::t_de3793ba12bcbc 1-5
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_9710ca46958898 678-682,684-688,691-698,700
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_748cb09fb8bffd 68-69
+tests/global-reloadonhup-imtcp-retire-validate-yaml.sh
+  s_f2c089be484e12::t_0cd1f424afb8c0 1-6
+doc/source/configuration/modules/imtcp.rst
+  s_f2c089be484e12::t_1f9d1f9f19a6ad 180-198
+tests/global-reloadonhup-imtcp-add-yaml.sh
+  s_f2c089be484e12::t_6354f265e54529 90,104,119
+  s_f2c089be484e12::t_e6ab5a9ba7c521 144
+  s_f2c089be484e12::t_2fad25b608ce31 2-9,93,95-102,105
+  s_f2c089be484e12::t_de779a79788c3f 133
+tests/global-reloadonhup-imtcp-retire-rainerscript.sh
+  s_f2c089be484e12::t_379a2159d02e5c 15,17,19,100
+  s_f2c089be484e12::t_3651445e5fcfe4 76,232,237
+  s_f2c089be484e12::t_80701c26aa13e7 11,43-48,63,73,110-125,154-160,163,167,206,223-227,235
+  s_f2c089be484e12::t_5060e25f38291e 131-144
+  s_f2c089be484e12::t_8cd6d061c00cf7 71
+  s_f2c089be484e12::t_1cfce72e6e45e5 12-13
+  s_f2c089be484e12::t_11a910095344d1 6-8,195-198,200-205
+  s_f2c089be484e12::t_60876c2fc45e8d 82-83,145,147,168,170,210
+  s_f2c089be484e12::t_58c7b4d8306e80 186,215
+  s_f2c089be484e12::t_0edaa163ecf8ec 199
+  s_f2c089be484e12::t_4ff2e2dc7ee77d 228
+  s_f2c089be484e12::t_633034e15908b0 78-81
+  s_f2c089be484e12::t_7ffd9030428e7a 1-5,9-10,14,16,18,20-42,49-62,64-70,72,74-75,77,84-99,101-109,126-130,146,148-153,161-162,164-166,169,171-185,187-194,207-209,211-214,216-220,222,229-231,233-234,236,238-241
+  s_f2c089be484e12::t_d440868b9030c2 221
+tests/Makefile.am
+  s_f2c089be484e12::t_eeff1836cc686d 926-929,1792-1795
+tests/helpers/reload_tcp_port_reserver.py
+  s_f2c089be484e12::t_67f072d474da9e 21-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0740179c9d738d2feb691871cb9fff78b745038b",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

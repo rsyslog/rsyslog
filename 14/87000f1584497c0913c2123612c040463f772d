@@ -1,0 +1,16 @@
+.github/workflows/run_checks.yml
+  h_95716f3de0caf5 1649,1679-1683
+devtools/ci/Dockerfile.arm
+  h_95716f3de0caf5 2,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1487000f1584497c0913c2123612c040463f772d",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

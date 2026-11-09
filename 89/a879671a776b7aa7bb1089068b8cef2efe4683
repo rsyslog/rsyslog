@@ -1,0 +1,67 @@
+runtime/wti.h
+  s_a92b7e9f815247::t_95f6421ec3c094 103
+  s_a92b7e9f815247::t_46f15b81f70537 101
+runtime/queue.c
+  s_a92b7e9f815247::t_ee30cb066d72cd 506,511
+runtime/wtp.c
+  s_cf144905ab59ed::t_05638d3528affb 203,227,229,282,285,351,466,479,516,519,528,532,563,566,570
+runtime/atomic.h
+  s_cf144905ab59ed::t_c8aaa774c5befe 112-114,116-117,119-122,124-127
+  s_cf144905ab59ed::t_4c306e552e1571 115,118,123
+contrib/impcap/impcap.c
+  s_cf144905ab59ed::t_881a3555eee2a0 589
+plugins/imdiag/imdiag.c
+  s_cf144905ab59ed::t_3e8eef4bbb153e 542,566
+plugins/imkafka/imkafka.c
+  s_cf144905ab59ed::t_80c790989ab0ad 1177,1225,1398,1416,1419
+plugins/imptcp/imptcp.c
+  s_cf144905ab59ed::t_b8ab629e093ad5 2196
+plugins/imrelp/imrelp.c
+  s_cf144905ab59ed::t_ba2c4e14841b38 876
+plugins/omkafka/omkafka.c
+  s_cf144905ab59ed::t_39b0ae1a6d0fef 312,336,353,1836
+plugins/omrelp/omrelp.c
+  s_cf144905ab59ed::t_536376852ebc0e 238,638,681,746
+plugins/omsendertrack/omsendertrack.c
+  s_cf144905ab59ed::t_aead4604e3ae2d 557,559,671
+runtime/action.c
+  s_cf144905ab59ed::t_81170334a5adc3 1023,1041
+runtime/action.h
+  s_cf144905ab59ed::t_2f7d358f2fd5ba 123,128,130
+runtime/dynstats.c
+  s_cf144905ab59ed::t_c619a89959209d 1041,1175
+runtime/glbl.c
+  s_cf144905ab59ed::t_65b756a87957ae 304,312
+runtime/tcpsrv.c
+  s_cf144905ab59ed::t_06560e4bf36e9d 219,1009-1010
+runtime/threads.h
+  s_cf144905ab59ed::t_46635013e38718 42,46
+runtime/wti.c
+  s_cf144905ab59ed::t_aca29ad1e08bb3 79,119
+tools/omfwd.c
+  s_cf144905ab59ed::t_84821701c25117 1575,1633,1728,1961
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "89a879671a776b7aa7bb1089068b8cef2efe4683",
+  "prompts": {},
+  "sessions": {
+    "s_a92b7e9f815247": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f180c-aa86-7951-8a7f-c99bdfa6a3ee",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

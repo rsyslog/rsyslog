@@ -1,0 +1,90 @@
+doc/Makefile.am
+  s_06d4859f6aa529::t_9c2ea657800b48 273,970-979
+doc/source/reference/parameters/omkinesis-partition_key_template.rst
+  s_06d4859f6aa529::t_9c2ea657800b48 1-32
+plugins/omkinesis/MODULE_METADATA.yaml
+  s_06d4859f6aa529::t_aef474f40ce931 1-16
+tests/Makefile.am
+  s_06d4859f6aa529::t_61933b2b08b62f 1369-1370,1373-1374,3479-3480
+  s_06d4859f6aa529::t_1deda6ade7384b 1371-1372,2560,3481-3482
+  s_d7272bc53775bd::t_20d0507eb0ae9c 3483-3485
+tests/omkinesis-mock.sh
+  s_06d4859f6aa529::t_61933b2b08b62f 1-2,4
+  s_06d4859f6aa529::t_0a5fed2cde328c 3
+configure.ac
+  s_06d4859f6aa529::t_543b32f4f66a8f 3162-3163,3172,3174,3763,3885
+  s_06d4859f6aa529::t_99b1a43d3a3543 3164-3171,3173
+ChangeLog
+  s_06d4859f6aa529::t_8a2fa2e4cedd4c 4-7
+doc/source/reference/parameters/omkinesis-timeout.rst
+  s_06d4859f6aa529::t_88c334b9db277f 1-30
+tests/omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh
+  s_06d4859f6aa529::t_359603ed2d93b8 6-7,83
+plugins/omkinesis/omkinesis.c
+  s_06d4859f6aa529::t_ac01e21b71ec7f 249-252
+  s_06d4859f6aa529::t_9c2ea657800b48 149,339
+  s_06d4859f6aa529::t_1deda6ade7384b 50-54,69-78,144,155,164-165,194-195,207-209,306-311,314-323,334,341,344,363-364
+  s_06d4859f6aa529::t_aef474f40ce931 1-12,14-32,34-49,55,61-68,79-138,140-143,145-148,154,156-160,162-163,166-193,196-202,210-248,253-257,259-279,283-305,324-333,342-343,346-360,362,365,370-392
+  s_06d4859f6aa529::t_fd84e27033b500 33,56-60,139,150-153,161,203-206,258,280-282,312-313,335-338,340,345,361,366-369
+  s_06d4859f6aa529::t_543b32f4f66a8f 13
+doc/source/configuration/modules/omkinesis.rst
+  s_06d4859f6aa529::t_99b1a43d3a3543 18-19
+  s_06d4859f6aa529::t_1deda6ade7384b 1-17,24-45,47-60,62,64-75,79-84,86-89
+  s_06d4859f6aa529::t_9c2ea657800b48 20-23,46,61,63,76-78,85
+tests/yaml-omkinesis-mock.sh
+  s_06d4859f6aa529::t_0a5fed2cde328c 3
+  s_06d4859f6aa529::t_61933b2b08b62f 1-2,4
+Makefile.am
+  s_06d4859f6aa529::t_543b32f4f66a8f 251-254,618-620
+  s_d7272bc53775bd::t_2b53d6c6318e50 621
+tests/omkinesis-mock-common.sh
+  s_06d4859f6aa529::t_61933b2b08b62f 1-3,6-13,15-28,32-37,39-45,47-79
+  s_06d4859f6aa529::t_fd84e27033b500 4-5,14,29-31,38
+  s_06d4859f6aa529::t_18c3c75086d021 46
+doc/source/reference/parameters/omkinesis-partition_key.rst
+  s_06d4859f6aa529::t_9c2ea657800b48 1-31
+plugins/omkinesis/Makefile.am
+  s_06d4859f6aa529::t_aef474f40ce931 1-6
+tests/omkinesis-mock-server.py
+  s_06d4859f6aa529::t_61933b2b08b62f 1-27
+doc/ai/module_map.yaml
+  s_06d4859f6aa529::t_4b324bce68da14 142-147
+doc/source/reference/parameters/omkinesis-access_key.rst
+  s_06d4859f6aa529::t_c19f148eef1c39 1-30
+doc/source/reference/parameters/omkinesis-endpoint.rst
+  s_06d4859f6aa529::t_6f794b57760aed 1-30
+doc/source/reference/parameters/omkinesis-region.rst
+  s_06d4859f6aa529::t_42ad63f3989dd2 1-30
+doc/source/reference/parameters/omkinesis-secret_key.rst
+  s_06d4859f6aa529::t_8e97d95d87a9b9 1-30
+doc/source/reference/parameters/omkinesis-session_token.rst
+  s_06d4859f6aa529::t_40ed7d32cf537e 1-30
+doc/source/reference/parameters/omkinesis-stream.rst
+  s_06d4859f6aa529::t_d6e1dfc7c9f2a1 1-30
+doc/source/reference/parameters/omkinesis-template.rst
+  s_06d4859f6aa529::t_1a109180f920af 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "01d3d0b99a11b364cf4a05d6174879fd18e6f30e",
+  "prompts": {},
+  "sessions": {
+    "s_06d4859f6aa529": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10303-0be9-7c63-8e16-059a5d94d3e0",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

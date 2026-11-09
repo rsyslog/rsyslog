@@ -1,0 +1,34 @@
+runtime/wti.c
+  s_142ee1fa291d22::t_53a539468c34f9 296-297
+runtime/wti.h
+  s_142ee1fa291d22::t_b0a8f44c62e13f 33,86-89
+tests/queue-fixedarray-outoforder.sh
+  s_142ee1fa291d22::t_b0a8f44c62e13f 17,36
+  s_142ee1fa291d22::t_8d407f8ea0bb13 37
+tests/unit/queue_lease_test.c
+  s_142ee1fa291d22::t_b0a8f44c62e13f 1-59
+runtime/queue_lease.h
+  s_142ee1fa291d22::t_b0a8f44c62e13f 1-48
+tests/Makefile.am
+  s_142ee1fa291d22::t_b0a8f44c62e13f 2689,2692,2719-2721,2804-2805,2817
+runtime/queue.c
+  s_142ee1fa291d22::t_b849ea34d7d4ab 208,680-683,687-688,691-692,3115,3208-3210,3655-3658,3665-3667,3671,3699,3705-3715,3768
+  s_142ee1fa291d22::t_4ddf2a28b3aad8 684-686,3668-3669
+  s_142ee1fa291d22::t_860e442235727b 689-690,3148,3174,3670
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "38ad7c085bedc97d066cce4f965eedc40f39ea29",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

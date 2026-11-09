@@ -1,0 +1,20 @@
+.github/debian-daily-stable-13-policy.yml
+  s_cce3b9500aefdc::t_ef4980ba6fe6b2 10-13
+  s_cce3b9500aefdc::t_731488baec721d 14-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c8feaed7555d574882a5c4baeeb9ede48d66b471",
+  "prompts": {},
+  "sessions": {
+    "s_cce3b9500aefdc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a968-2537-78b0-9442-1cdf99f1ade2",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

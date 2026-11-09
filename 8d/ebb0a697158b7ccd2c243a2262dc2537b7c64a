@@ -1,0 +1,25 @@
+doc/ai/README.md
+  s_142ee1fa291d22::t_8414b08268e3ff 25-36
+doc/ai/designs/local-queue-frontends.md
+  s_142ee1fa291d22::t_0e0a4ae12c118d 1-1134
+doc/ai/designs/local-queue-implementation-plan.md
+  s_142ee1fa291d22::t_2b671332b0e9bf 1-799
+doc/ai/designs/local-queue-related-work.md
+  s_142ee1fa291d22::t_e1219eb736c092 1-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8debb0a697158b7ccd2c243a2262dc2537b7c64a",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

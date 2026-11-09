@@ -1,0 +1,19 @@
+runtime/modules.c
+  s_738bf53f23f264::t_2603dae225bebb 403-404,424-427
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f96337c2c58d15c68497cebb579d4b8beaae90d8",
+  "prompts": {},
+  "sessions": {
+    "s_738bf53f23f264": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0301e-9183-71e3-a983-4e4e0bc9e84a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

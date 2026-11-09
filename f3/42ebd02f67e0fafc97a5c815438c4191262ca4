@@ -1,0 +1,21 @@
+.codex/pre_push_container_gate.sh
+  s_8d234cfc584863::t_dc101b8a44baf4 125-135,148-161,181-188,217-224
+tests/codex-pre-push-container-gate.sh
+  s_8d234cfc584863::t_dc101b8a44baf4 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f342ebd02f67e0fafc97a5c815438c4191262ca4",
+  "prompts": {},
+  "sessions": {
+    "s_8d234cfc584863": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f57-e3fb-7241-8e0c-23cd8057a43f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

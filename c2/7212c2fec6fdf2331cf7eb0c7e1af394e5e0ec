@@ -1,0 +1,23 @@
+tools/rsyslogd.c
+  s_316e24de471f59::t_01013f8d7b6e92 1018,1020
+runtime/wti.c
+  s_316e24de471f59::t_01013f8d7b6e92 276-278
+runtime/wti.h
+  s_316e24de471f59::t_01013f8d7b6e92 83-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "c27212c2fec6fdf2331cf7eb0c7e1af394e5e0ec",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

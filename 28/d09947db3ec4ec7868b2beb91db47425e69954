@@ -1,0 +1,19 @@
+tests/override_fstat.c
+  s_323eb1b5ab2bea::t_7d5d62ec966a0a 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "28d09947db3ec4ec7868b2beb91db47425e69954",
+  "prompts": {},
+  "sessions": {
+    "s_323eb1b5ab2bea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16a2b-8b14-74b0-a036-4167d813eab2",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

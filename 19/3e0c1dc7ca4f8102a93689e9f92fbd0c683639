@@ -1,0 +1,25 @@
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_b02ae41319ff46 250,261
+tests/local-queue-omfile-activation.sh
+  s_142ee1fa291d22::t_c29e4e573481ff 58,78,90,94,106-107
+tests/local-queue-s4-config.sh
+  s_142ee1fa291d22::t_297a6d35f837fe 50
+tests/local-queue-startup-failure.sh
+  s_142ee1fa291d22::t_92792ae5c87681 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "193e0c1dc7ca4f8102a93689e9f92fbd0c683639",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

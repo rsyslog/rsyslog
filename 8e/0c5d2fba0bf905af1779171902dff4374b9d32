@@ -1,0 +1,58 @@
+tests/imbeats-basic.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 47
+tests/imbeats-compressed.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 49
+tests/imbeats-seq-cumulative-two-windows.sh
+  s_d41298c6e29859::t_6139918b7d7bea 51
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-filebeat-omelasticsearch-docker.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-seq-cumulative-after-multi-event-window.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 52
+tests/imbeats-compressed-window-overflow.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-compressed-malformed.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-limits.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 96
+tests/imbeats-maxsessions.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 85
+tests/Makefile.am
+  s_d41298c6e29859::t_8f045d8451f6c4 1350-1355,2392,3285-3287,4026
+tests/imbeats-seq-reset-rejected.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 56
+tests/imbeats-metadata-collision.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 58
+tests/imbeats-multiplex-idle-sessions.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 67
+tests/yaml-imbeats-basic.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 52
+tests/imbeats-elastic-agent-windows-fixture.sh
+  s_d41298c6e29859::t_6139918b7d7bea 99
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8e0c5d2fba0bf905af1779171902dff4374b9d32",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

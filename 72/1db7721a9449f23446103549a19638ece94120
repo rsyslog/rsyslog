@@ -1,0 +1,25 @@
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_b09aa7fafa4267::t_007508eeb1e4df 12-29
+.github/debian-daily-stable-13-policy.yml
+  s_b09aa7fafa4267::t_cc12de83437460 10-25
+.github/el10-daily-stable-policy.yml
+  s_b09aa7fafa4267::t_4ecb20d01ef7d0 28-33
+.github/ubuntu-daily-stable-26.04-policy.yml
+  s_b09aa7fafa4267::t_012253f6ca4927 26-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "721db7721a9449f23446103549a19638ece94120",
+  "prompts": {},
+  "sessions": {
+    "s_b09aa7fafa4267": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "55783f72-320b-455b-bfb1-5335303c2de6",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

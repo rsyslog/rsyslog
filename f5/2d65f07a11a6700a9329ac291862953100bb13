@@ -1,0 +1,23 @@
+runtime/stream.c
+  s_142ee1fa291d22::t_3ecdce7792ee21 288-290,445-469,1444-1446,1725-1728
+runtime/stream.h
+  s_142ee1fa291d22::t_37641e4de6359b 126,248-251
+tools/omfile.c
+  s_142ee1fa291d22::t_6cb49ac2b3f414 85,166,1008,1358-1359,1634-1646,1658,1683,2215,2233,2240,2244-2257,2261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f52d65f07a11a6700a9329ac291862953100bb13",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

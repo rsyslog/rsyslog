@@ -1,0 +1,19 @@
+doc/source/rainerscript/functions/rs-get_property.rst
+  s_5e773934876cb4::t_5337c501e1e1a2 3-6,16-17,19-21,30,33,47-49,51,53,56-57,61,63-65,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b876cc15a99bb2bed6837359534b3eef6d4541aa",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

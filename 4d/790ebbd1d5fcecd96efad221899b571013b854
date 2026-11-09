@@ -1,0 +1,42 @@
+runtime/tcpsrv-fence.c
+  s_f2c089be484e12::t_35c1e89b5051b3 268-283
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_c46328841fee7b 1983,2192,2195-2199,2269-2307,2324-2331,2535-2536,2539-2540,2704-2710
+  s_f2c089be484e12::t_218a2328f1389a 2714
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_093921578d6cb8 5-6,8-10,17-18,108-109,113,115-127,129-134,136-150
+  s_f2c089be484e12::t_b060e2e43c7753 151-174
+  s_f2c089be484e12::t_43184b52f595eb 135
+  s_f2c089be484e12::t_9d5d6dde9b16b1 7,110-112,114,128
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_f578811d0f6130 311-316,334-335
+doc/source/reference/parameters/imtcp-ratelimit-name.rst
+  s_f2c089be484e12::t_f578811d0f6130 32-38
+tests/unit/tcpsrv_fence_test.c
+  s_f2c089be484e12::t_fcc0705d1a4ad3 6-8,313-314,317-331,333-335,482
+  s_f2c089be484e12::t_3038598a1ee339 315-316,332
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_24e4a8cf556f88 115,451-453,456,532-536
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_24e4a8cf556f88 2386-2387,2846
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_b060e2e43c7753 163-185
+  s_f2c089be484e12::t_093921578d6cb8 4-5,7-8,21-27,121,125,127-140,142-162
+  s_f2c089be484e12::t_9d5d6dde9b16b1 6,122-124,126,141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4d790ebbd1d5fcecd96efad221899b571013b854",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

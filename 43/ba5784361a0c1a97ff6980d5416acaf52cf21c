@@ -1,0 +1,21 @@
+tests/rpm-baseline-patch-policy.sh
+  s_2dc01c7e3d2940::t_484a43a916e735 103-126
+devtools/release/validate-rpm-baseline-patches.py
+  s_2dc01c7e3d2940::t_484a43a916e735 121-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "43ba5784361a0c1a97ff6980d5416acaf52cf21c",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

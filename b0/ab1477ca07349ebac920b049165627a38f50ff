@@ -1,0 +1,71 @@
+doc/ai/module_map.yaml
+  s_f8a738e4bdfaee::t_386b0616895e8a 197,201-211
+doc/source/configuration/yaml_config.rst
+  s_f8a738e4bdfaee::t_1963e31db0e3e0 802-816
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_5ed8e5ab80be93 7,18-19,461,638-639,649,661-728
+doc/source/rainerscript/global.rst
+  s_f8a738e4bdfaee::t_09671d9061c08d 35-45
+grammar/reload-ruleset-materializer.c
+  s_f8a738e4bdfaee::t_cae1c5669422f8 18,31,68,512-519,540-544,546,576,610,642-658,679,733,826-827,839-847,849-857,859-866,872-882,906,913-916,928,933-941,943-944,947-948
+grammar/reload-ruleset-materializer.h
+  s_f8a738e4bdfaee::t_c0d03de4f4309c 50-58,72-74,77-79,81-82
+plugins/omtesting/omtesting.c
+  s_f8a738e4bdfaee::t_defadd501298e9 73-80,657-695,702
+runtime/Makefile.am
+  s_f8a738e4bdfaee::t_acccf7eab4524d 65-66
+runtime/parser.c
+  s_f8a738e4bdfaee::t_68271547a109c8 33-41,54-127,780-782,867-869
+runtime/parser.h
+  s_f8a738e4bdfaee::t_cb2f9652e9c6a4 77-80
+runtime/queue-barrier.c
+  s_f8a738e4bdfaee::t_13d8e6274d30f2 19,31-32,119,121,134,136,143-194,204
+runtime/queue.h
+  s_f8a738e4bdfaee::t_b19d70b642d39b 363-368
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_0c7dd9de68baf7 1848-1936,1943-1944,1952-1958,1983-1985
+runtime/reload-candidate.h
+  s_f8a738e4bdfaee::t_eba13f997b5018 122-138,213-214
+runtime/reload-parser-assignment.c
+  s_f8a738e4bdfaee::t_b082d85821897d 1-162
+runtime/reload-parser-assignment.h
+  s_f8a738e4bdfaee::t_4f020dc6a9ff7d 1-32
+runtime/rsconf.c
+  s_f8a738e4bdfaee::t_ec9860cf8b4ae4 1887-1889
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_664cb915a0d6f6 4982-5006
+tests/global-reloadonhup-parser-assignment-rainerscript.sh
+  s_f8a738e4bdfaee::t_a79d5bc7c4a266 1-262
+tests/global-reloadonhup-parser-assignment-yaml.sh
+  s_f8a738e4bdfaee::t_78d3b1e1a4322c 1-6
+tests/omtesting-modern-file-barrier.sh
+  s_f8a738e4bdfaee::t_1d1e116fbc4e9b 1-48
+tests/unit/reload_callgraph_fence_test.c
+  s_f8a738e4bdfaee::t_6243ec46703846 8-11,18-19,77-94,183-186,189,206-210,215-257,261,263,267-269,286-307,311,313-314,325,468-487,500-512,517-559
+tests/unit/reload_parser_assignment_test.c
+  s_f8a738e4bdfaee::t_e70929c3c05286 1-302
+tests/unit/wtp_quiesce_test.c
+  s_f8a738e4bdfaee::t_0a9fe76e657449 874-941,943
+tools/Makefile.am
+  s_f8a738e4bdfaee::t_71e68cf2df9dfa 13
+tools/shadow_reload.c
+  s_f8a738e4bdfaee::t_cf137275f702eb 35-38,93,173,1067,1154-1170,1183-1188,1222-1229,1462,1465,1509,1516,1622-1629
+tools/shadow_reload_parser_eligibility.h
+  s_f8a738e4bdfaee::t_61c6fff882e748 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b0ab1477ca07349ebac920b049165627a38f50ff",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

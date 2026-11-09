@@ -1,0 +1,24 @@
+tests/known_issues.supp
+  s_cf144905ab59ed::t_598bbd35c33ed3 84-98
+tools/rsyslogd.c
+  s_cf144905ab59ed::t_ccca636c177125 271,1420,1429,2236,2381-2382,2386-2387
+runtime/dynstats.c
+  s_cf144905ab59ed::t_17515bb1967eb1 533,537,570-571,622-623
+  s_cf144905ab59ed::t_19b98966b72a6f 624
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "d77a838d5c3cc243879710239e636ae4145971b0",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,63 @@
+benchmarks/ratelimit-port-keys/run.sh
+  s_008ef65e7b10ec::t_62a886215ed2a5 1-3
+benchmarks/ratelimit-port-keys/README.md
+  s_008ef65e7b10ec::t_9fd7f714e70dde 7-11
+  s_008ef65e7b10ec::t_0087b39e0e20d8 20-21,27-31
+  s_008ef65e7b10ec::t_f4029953d36548 6
+  s_008ef65e7b10ec::t_62a886215ed2a5 1-5,12-19,22-26
+benchmarks/ratelimit-port-keys/runner.py
+  s_008ef65e7b10ec::t_b61aa1dfba424c 39-40,43-44,46-47
+  s_008ef65e7b10ec::t_62a886215ed2a5 1-7,10-22,24-36,41-42,52-58,115-150,155-160,166-169
+  s_008ef65e7b10ec::t_0087b39e0e20d8 8-9,23,37-38,59-100,103-114,151-154,161-165
+  s_008ef65e7b10ec::t_423a76cb5c9d42 101-102
+  s_008ef65e7b10ec::t_067f6d30d2a9e4 45,48-51
+benchmarks/ratelimit-port-keys/.gitignore
+  s_008ef65e7b10ec::t_62a886215ed2a5 1
+tests/Makefile.am
+  s_008ef65e7b10ec::t_5b6c1290830012 904-905,2310
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 897-898,901-902,2311,3321
+  s_008ef65e7b10ec::t_a29c7dab915742 903
+tests/imptcp-persource-port-keys.sh
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 1-4
+tests/imtcp-persource-port-keys.sh
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 1-4
+runtime/ratelimit.h
+  s_008ef65e7b10ec::t_43d174db908233 50,52
+tests/imptcp-fromhost-port.sh
+  s_008ef65e7b10ec::t_dde19330f7c932 22-23,25
+  s_008ef65e7b10ec::t_5b6c1290830012 1-21,24,26
+runtime/ratelimit.c
+  s_008ef65e7b10ec::t_43d174db908233 164,193-197,221,2712-2714,2720
+benchmarks/ratelimit-port-keys/RESULTS.md
+  s_008ef65e7b10ec::t_3a10e74a853865 1-52
+plugins/imptcp/imptcp.c
+  s_008ef65e7b10ec::t_d9483405642335 1671-1672,1682,1709,2118,2128,2142,2147
+  s_008ef65e7b10ec::t_b61aa1dfba424c 907-908,2124-2127,2134-2136
+  s_008ef65e7b10ec::t_cfc8b509cff5cb 321,415,743-744,748,756,771-772,812-814,820,898,927,947,1010
+tests/ratelimit-persource-port-keys-common.sh
+  s_008ef65e7b10ec::t_a9c5a311eceba5 3-5,72,74-77,84,89-90
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 1-2,8-71,73,78-83,85-88,91-93,95-98,100-108
+  s_008ef65e7b10ec::t_8c9f46144c49e4 99
+  s_008ef65e7b10ec::t_c7355b9a1525dd 6-7,94
+benchmarks/ratelimit-port-keys/trial.sh
+  s_008ef65e7b10ec::t_9fd7f714e70dde 57
+  s_008ef65e7b10ec::t_62a886215ed2a5 1-30,32-56,58-60,63-70
+  s_008ef65e7b10ec::t_db3a226e06df03 61-62
+  s_008ef65e7b10ec::t_f4029953d36548 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0a79d4465c5ed1d595f568d80ca067b00c8ae06d",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

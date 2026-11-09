@@ -1,0 +1,26 @@
+plugins/omelasticsearch/omelasticsearch.c
+  s_83566911eeff21::t_37861bec8c7989 1444
+  s_83566911eeff21::t_67c89ce7cffbac 1436-1441,1443
+  s_83566911eeff21::t_ba3cf8ce449f0c 1427-1429,1442
+tests/es-bulk-response-errors.sh
+  s_83566911eeff21::t_db29bf40c56fb9 1-29,31-70
+  s_83566911eeff21::t_781c1be3a04ed7 30
+tests/Makefile.am
+  s_83566911eeff21::t_db29bf40c56fb9 205,2902-2903
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2c135401feedcc83337c208b276bbb3de3015d90",
+  "prompts": {},
+  "sessions": {
+    "s_83566911eeff21": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a044c1-9e07-7e21-b6ec-b07c7ffff0a8",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,23 @@
+plugins/AGENTS.md
+  s_5e773934876cb4::t_f8b472309b1e32 119-120
+plugins/omsnmp/omsnmp.c
+  s_5e773934876cb4::t_37b896c51f4847 453
+tests/omsnmp-traptype-range.sh
+  s_5e773934876cb4::t_4563d41b965935 4-5,19,43,46-52,60,67,98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b651a4709b6deaa8d490387ef171b500d455ac2",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

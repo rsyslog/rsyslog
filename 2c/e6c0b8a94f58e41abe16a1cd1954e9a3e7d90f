@@ -1,0 +1,19 @@
+devtools/release/package-feature-overlay.py
+  s_2dc01c7e3d2940::t_75abb64dee0d10 16-17,19,33-35,39-68,80-84,154-158,198-202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "2ce6c0b8a94f58e41abe16a1cd1954e9a3e7d90f",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

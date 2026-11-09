@@ -1,0 +1,49 @@
+grammar/reload-ruleset-materializer.h
+  s_f2c089be484e12::t_2c6dea049bf699 23-25
+tools/shadow_reload.h
+  s_f2c089be484e12::t_40889599179b0f 52-56
+devtools/check-test-antipatterns.sh
+  s_f2c089be484e12::t_7d7bafebc07eca 66-69,86-168,178
+tools/shadow_reload.c
+  s_f2c089be484e12::t_e7ecc06b0db4c5 142,1083,1085-1086
+  s_f2c089be484e12::t_40889599179b0f 76-77,127-132,143-145,531,545,594,596,960-962,971-991
+  s_f2c089be484e12::t_04729bcb54d5f8 992
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_2c6dea049bf699 195-197
+tests/global-reloadonhup-imtcp-add-yaml.sh
+  s_f2c089be484e12::t_5175af7f7d5ccc 6-8,66-70,72-84,91-92,104
+  s_f2c089be484e12::t_2debeb8ff578b8 71,106-109,115-116
+  s_f2c089be484e12::t_607edb635e116a 113
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_2c6dea049bf699 5-7,47-49
+tools/rsyslogd.c
+  s_f2c089be484e12::t_e7ecc06b0db4c5 2272-2273
+  s_f2c089be484e12::t_40889599179b0f 2274,2474
+  s_f2c089be484e12::t_02867d61c25c66 2475
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_2c6dea049bf699 5,52-54
+tests/global-reloadonhup-imtcp-add-rainerscript.sh
+  s_f2c089be484e12::t_607edb635e116a 103
+  s_f2c089be484e12::t_5175af7f7d5ccc 9-12,81-82,94
+  s_f2c089be484e12::t_2debeb8ff578b8 96-99,105-106
+runtime/nsd_ptcp.c
+  s_f2c089be484e12::t_40889599179b0f 607,645,659-661,811,825
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_40889599179b0f 2074-2083
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "336001e21c936b1884887095558e9139d1cd7c15",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

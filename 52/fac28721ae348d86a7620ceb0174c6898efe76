@@ -1,0 +1,28 @@
+runtime/tcpsrv-poll.h
+  s_f2c089be484e12::t_67fe1b3eebaa57 1-27
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_6b3b9cc9a1e3cf 307-309,321,1768-1769
+  s_f2c089be484e12::t_67fe1b3eebaa57 296,1742-1743,1776
+runtime/Makefile.am
+  s_f2c089be484e12::t_67fe1b3eebaa57 343
+tests/unit/tcpsrv_fence_test.c
+  s_f2c089be484e12::t_67fe1b3eebaa57 9-10,25,527-537,542-543,553-554,556-559,561
+  s_f2c089be484e12::t_334e66eaec986e 538-541,547-548,551-552
+  s_f2c089be484e12::t_a7594f18f82aaa 544-546,549-550,555
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52fac28721ae348d86a7620ceb0174c6898efe76",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

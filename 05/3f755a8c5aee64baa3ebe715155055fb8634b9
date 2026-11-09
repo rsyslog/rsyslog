@@ -1,0 +1,34 @@
+tests/local-queue-submit-batches.sh
+  s_142ee1fa291d22::t_948564cb1ae2c2 1-53,55-72
+  s_142ee1fa291d22::t_8f738c4f23a16e 54
+tests/Makefile.am
+  s_142ee1fa291d22::t_c570cbaaeb7a68 171-172
+  s_142ee1fa291d22::t_948564cb1ae2c2 168
+plugins/imdiag/imdiag.c
+  s_142ee1fa291d22::t_6c3161c80102a5 839-855,859-862,865-872,874,876,878,884,889,891,949-950
+  s_142ee1fa291d22::t_50b49e48343ab4 756,778,785-787
+  s_142ee1fa291d22::t_12549c352c613d 65,67,691,741-755,757-777,779-784,788-826,829-838,888,890,947-948
+  s_142ee1fa291d22::t_e5e75daa7f2813 66,827-828,873,880
+  s_142ee1fa291d22::t_8f738c4f23a16e 856-858,863-864,875,877,879,881-883,885-886
+  s_142ee1fa291d22::t_2a0ff60eefb02e 887
+tests/local-queue-redirect-publication.sh
+  s_142ee1fa291d22::t_8f738c4f23a16e 5-7,29
+  s_142ee1fa291d22::t_c570cbaaeb7a68 1-4,8-10,12-28,30-35
+  s_142ee1fa291d22::t_f0b8677650b113 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "053f755a8c5aee64baa3ebe715155055fb8634b9",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

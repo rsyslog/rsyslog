@@ -1,0 +1,21 @@
+.github/workflows/run_checks.yml
+  s_740842903ba389::t_431a23b6fc6aaf 882-883
+devtools/run-rpm-build.sh
+  s_740842903ba389::t_ab03ebb4680b54 104-106,122-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db9955f7659a073928c1915f0bf90bc65469a503",
+  "prompts": {},
+  "sessions": {
+    "s_740842903ba389": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15ec6-688b-72a1-a4e7-9fde9dac7ba1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,131 @@
+grammar/rainerscript.c
+  s_6303b89c4410f1::t_eafd387f62ba57 1
+grammar/testdriver.c
+  s_6303b89c4410f1::t_9c77143aa35c32 1
+plugins/imgssapi/imgssapi.c
+  s_6303b89c4410f1::t_2f06e607fdb3fa 1
+plugins/imudp/imudp.c
+  s_6303b89c4410f1::t_d4f160a17d1a16 1
+plugins/imuxsock/imuxsock.c
+  s_6303b89c4410f1::t_2b51b388038775 1
+plugins/mmnormalize/mmnormalize.c
+  s_6303b89c4410f1::t_9c344f78586ceb 1
+plugins/mmsnmptrapd/mmsnmptrapd.c
+  s_6303b89c4410f1::t_12af2be7df09ee 1
+plugins/omgssapi/omgssapi.c
+  s_6303b89c4410f1::t_2d5dcf445d18da 1
+plugins/ompgsql/ompgsql.c
+  s_6303b89c4410f1::t_9844d2f06e0e09 1
+plugins/omudpspoof/omudpspoof.c
+  s_6303b89c4410f1::t_4402784dd4c11a 1
+runtime/action.c
+  s_6303b89c4410f1::t_bc2e0c240ff061 1
+runtime/batch.h
+  s_6303b89c4410f1::t_bad401faec7335 1
+runtime/gss-misc.c
+  s_6303b89c4410f1::t_b006849c4e34bb 1
+runtime/im-helper.h
+  s_6303b89c4410f1::t_c29cb0565f0bef 1
+runtime/modules.c
+  s_6303b89c4410f1::t_1e9107a747ad50 1
+runtime/modules.h
+  s_6303b89c4410f1::t_3aefb3fed38dd8 1
+runtime/msg.c
+  s_6303b89c4410f1::t_b86dfe9f413468 1
+runtime/msg.h
+  s_6303b89c4410f1::t_85ce5047be1cd8 1
+runtime/net.h
+  s_6303b89c4410f1::t_26120778c15387 1
+runtime/net_ossl.h
+  s_6303b89c4410f1::t_77a6d9e0851950 1
+runtime/netstrm.c
+  s_6303b89c4410f1::t_98dd222b739ae5 1
+runtime/netstrm.h
+  s_6303b89c4410f1::t_ac824b244f1940 1
+runtime/netstrms.c
+  s_6303b89c4410f1::t_d3d4677f7cf24a 1
+runtime/netstrms.h
+  s_6303b89c4410f1::t_7330440ce5ddfb 1
+runtime/nsd_gtls.c
+  s_6303b89c4410f1::t_15cd710b7729c5 1
+runtime/nsd_mbedtls.c
+  s_6303b89c4410f1::t_90ac31f3a1ed7d 1
+runtime/nsd_ossl.c
+  s_6303b89c4410f1::t_8c99096dd439c1 1
+runtime/nsd_ptcp.c
+  s_6303b89c4410f1::t_fa98d5902a61b7 1
+runtime/parser.c
+  s_6303b89c4410f1::t_8c8635e1eba63c 1
+runtime/queue.c
+  s_6303b89c4410f1::t_69fc8e0410616a 1
+runtime/queue.h
+  s_6303b89c4410f1::t_8a8092946c6554 1
+runtime/rsconf.h
+  s_6303b89c4410f1::t_d484ad5fc40d74 1
+runtime/rsyslog.c
+  s_6303b89c4410f1::t_544cce1f307074 1
+runtime/rsyslog.h
+  s_6303b89c4410f1::t_12df1b25225497 1
+runtime/srutils.c
+  s_6303b89c4410f1::t_73a245f3771c74 1
+runtime/stream.c
+  s_6303b89c4410f1::t_41c9dd38013a6f 1
+runtime/stream.h
+  s_6303b89c4410f1::t_f743a841eff964 1
+runtime/strgen.c
+  s_6303b89c4410f1::t_e7a6ffffb82747 1
+runtime/strgen.h
+  s_6303b89c4410f1::t_8c417d12aa2c73 1
+runtime/typedefs.h
+  s_6303b89c4410f1::t_08e8a093120c6e 1
+runtime/var.c
+  s_6303b89c4410f1::t_b8a8d932a3c578 1
+runtime/wtp.c
+  s_6303b89c4410f1::t_2a7f636516a792 1
+tests/cfg.sh
+  s_6303b89c4410f1::t_95779b7b4dfbb2 2
+tests/chkseq.c
+  s_6303b89c4410f1::t_e3c13e3c35dd69 1
+tests/diagtalker.c
+  s_6303b89c4410f1::t_680233e65e66e5 1
+tests/filewriter.c
+  s_6303b89c4410f1::t_e86c8a723e4416 1
+tests/getline.c
+  s_6303b89c4410f1::t_4e8325e16d155e 1
+tests/msleep.c
+  s_6303b89c4410f1::t_e389681bc485c6 1
+tests/openssl_mtls_server.c
+  s_6303b89c4410f1::t_1debcd1637f92b 1
+tests/ourtail.c
+  s_6303b89c4410f1::t_a74f41715d64b2 1
+tests/randomgen.c
+  s_6303b89c4410f1::t_f7dab0d2785b33 1
+tests/rscript.c
+  s_6303b89c4410f1::t_aa84894ea961a5 1
+tests/rt-init.c
+  s_6303b89c4410f1::t_12b9bd535ac9c9 1
+tests/runtime-dummy.c
+  s_6303b89c4410f1::t_0191b1cc11b189 1
+tests/testbench.h
+  s_6303b89c4410f1::t_5204bd5ecf2e6b 1
+tests/uxsockrcvr.c
+  s_6303b89c4410f1::t_c2a8e71d167a34 1
+tools/syslogd.c
+  s_6303b89c4410f1::t_b492f7f0962ca6 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6687608f54f382f1cce714c6385a7051e084eec4",
+  "prompts": {},
+  "sessions": {
+    "s_6303b89c4410f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a111ee-0153-7182-be29-038ea2732d1e",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

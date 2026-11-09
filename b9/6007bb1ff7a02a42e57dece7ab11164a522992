@@ -1,0 +1,51 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_dde0eec6042224 245
+  s_f2c089be484e12::t_bc279dfee99d07 206-207,352-354,415-418,431
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_970ff04d9d9138 969-973,979-984,986-987
+  s_f2c089be484e12::t_79d5f009501783 999
+  s_f2c089be484e12::t_9c0cf30d5dff62 997-998,1000-1001,1003,1005,1011,1013-1019,1021,1023,1031-1034,1039-1050,1284
+  s_f2c089be484e12::t_fc0de3327ebdcc 1004
+  s_f2c089be484e12::t_4a497947e4f657 2457,2459,2463
+tests/global-reloadonhup-imtcp-allowedsender-rainerscript.sh
+  s_f2c089be484e12::t_d5d69d84031f5c 49-52,56-57,61
+  s_f2c089be484e12::t_3a59ec0ecf2783 45
+  s_f2c089be484e12::t_f1b8d77cc41351 75
+  s_f2c089be484e12::t_52206daf7ca311 42-44,47-48,54-55,58-59
+  s_f2c089be484e12::t_0506c0ced0db9d 93-95
+  s_f2c089be484e12::t_44700b5506833e 46,53
+  s_f2c089be484e12::t_34f6807f485e3d 2-9,17,28-30,35,38-39,41,60,62-67,72,77-78,82,84,87-89
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_4a497947e4f657 2892
+runtime/tcps_sess.h
+  s_f2c089be484e12::t_1910a26d2a3a41 32,123-127
+tests/global-reloadonhup-imtcp-allowedsender-yaml.sh
+  s_f2c089be484e12::t_f1b8d77cc41351 86
+  s_f2c089be484e12::t_34f6807f485e3d 2-6,17,41-43,48,51-52,54,73,75-78,83,88-89,93,95,98-100
+  s_f2c089be484e12::t_d5d69d84031f5c 62-65,69-70,74
+  s_f2c089be484e12::t_52206daf7ca311 55-57,60-61,67-68,71-72
+  s_f2c089be484e12::t_3a59ec0ecf2783 58
+  s_f2c089be484e12::t_44700b5506833e 59,66
+  s_f2c089be484e12::t_0506c0ced0db9d 104-106
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_5f7f9c8b718c9c 536
+  s_f2c089be484e12::t_5abe7d1146b229 456
+  s_f2c089be484e12::t_1910a26d2a3a41 457,469
+  s_f2c089be484e12::t_1a516fac7d25f1 537
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b96007bb1ff7a02a42e57dece7ab11164a522992",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

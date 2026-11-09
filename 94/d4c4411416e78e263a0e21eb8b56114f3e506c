@@ -1,0 +1,115 @@
+tests/queue-benchmark-throughput-config.sh
+  s_142ee1fa291d22::t_a0173787de08f1 10-11,23
+tests/local-queue-submit-batches.sh
+  s_142ee1fa291d22::t_5df3459dae8e08 13
+  s_142ee1fa291d22::t_a1ab041bf1d19b 18
+tests/local-queue-omfile-hup.sh
+  s_142ee1fa291d22::t_5df3459dae8e08 11,29-32
+  s_142ee1fa291d22::t_a1ab041bf1d19b 28
+tests/Makefile.am
+  s_142ee1fa291d22::t_8cd24f225598cb 17-18,225-237,239,243-245,2946-2948,3005,3008-3015,3023-3028
+  s_142ee1fa291d22::t_7330bba6bd9a8c 20
+  s_142ee1fa291d22::t_f6a5f24871e8aa 251,253-254,3018,3145,3148-3149,3151
+tests/local-queue-startup-failure.sh
+  s_142ee1fa291d22::t_a1ab041bf1d19b 9,37
+  s_142ee1fa291d22::t_8cd24f225598cb 10-11
+benchmarks/queue-contention/latency-observer-selftest.py
+  s_142ee1fa291d22::t_fd8c37fbe3aeba 5,8-9,61-69,73-74,76-77
+  s_142ee1fa291d22::t_a30e9489897446 108
+  s_142ee1fa291d22::t_a0173787de08f1 55,57-60,113-115
+  s_142ee1fa291d22::t_4dcd1a52cb4120 75
+benchmarks/queue-contention/compare-latency.py
+  s_142ee1fa291d22::t_fd8c37fbe3aeba 112
+  s_142ee1fa291d22::t_a0173787de08f1 6,34-35,37-45,54-74,90,92-93,114,120-121,137-143
+tests/local-queue-omfile-activation.sh
+  s_142ee1fa291d22::t_8cd24f225598cb 10-11
+  s_142ee1fa291d22::t_a1ab041bf1d19b 9,55,71,75,87-88,91,103-104
+  s_142ee1fa291d22::t_5df3459dae8e08 7,72-73,84-85,89-90
+benchmarks/queue-contention/latency-observer.py
+  s_142ee1fa291d22::t_a0173787de08f1 95-96,118-119,250-251,260-261
+tests/local-queue-omfile-cancel.sh
+  s_142ee1fa291d22::t_5df3459dae8e08 8,20-23
+  s_142ee1fa291d22::t_a1ab041bf1d19b 19
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_8cd24f225598cb 24-25
+  s_142ee1fa291d22::t_a1ab041bf1d19b 17-23,247,258
+benchmarks/queue-contention/compare.py
+  s_142ee1fa291d22::t_a0173787de08f1 53-54,81-82,96-102,166-168
+  s_142ee1fa291d22::t_7814001a727de2 169
+tests/local-queue-imtcp-internal.sh
+  s_142ee1fa291d22::t_5df3459dae8e08 10
+  s_142ee1fa291d22::t_a1ab041bf1d19b 61-63
+  s_142ee1fa291d22::t_6355bfd65515ac 25,37
+tests/local-queue-s4-config.sh
+  s_142ee1fa291d22::t_5df3459dae8e08 6
+  s_142ee1fa291d22::t_8cd24f225598cb 9-10
+  s_142ee1fa291d22::t_a1ab041bf1d19b 8,46
+benchmarks/queue-contention/README.md
+  s_142ee1fa291d22::t_61d374bd9da449 229-232
+benchmarks/queue-contention/trial-latency.sh
+  s_142ee1fa291d22::t_9783579ace3235 15,64-65
+doc/Makefile.am
+  s_142ee1fa291d22::t_645e0908ca2c95 1393-1402
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_08f9e4dc8b8759 1107-1110
+doc/ai/designs/local-queue-frontends.md
+  s_142ee1fa291d22::t_85d3d3fc113f7f 202-203
+doc/ai/designs/local-queue-s2-integration-notes.md
+  s_142ee1fa291d22::t_57dc8b053a310e 139,143-146
+doc/source/concepts/queues.rst
+  s_142ee1fa291d22::t_8311bfff218f95 682-683
+runtime/action.c
+  s_142ee1fa291d22::t_4364b07ccd91fb 136
+runtime/queue.c
+  s_142ee1fa291d22::t_a1f8fbda350dd9 5001-5004
+runtime/queue_local.c
+  s_142ee1fa291d22::t_2bf19b2d5e6c2c 765
+runtime/queue_spsc.c
+  s_142ee1fa291d22::t_0bc5818567e53a 1-15,28,55-56
+runtime/rsconf.c
+  s_142ee1fa291d22::t_82ef5831f31188 488-489
+runtime/statsobj.c
+  s_142ee1fa291d22::t_92c58558da2d40 188,191-192
+runtime/stream.h
+  s_142ee1fa291d22::t_f378b07e27ca84 180
+tests/local-queue-imtcp-shutdown-multi-fe.sh
+  s_142ee1fa291d22::t_7411ffe042fee7 2-3
+tests/local-queue-omfile-cancel-preload.c
+  s_142ee1fa291d22::t_f69755df9c88ce 23-25,31,46,64,72-73,90,99,102,111
+tests/local-queue-s4-graph.sh
+  s_142ee1fa291d22::t_0a4308ac12f397 2-3
+tests/local-queue-s4-output-tcp-recovery.sh
+  s_142ee1fa291d22::t_e8d0ecf43421d2 2-3
+tests/local-queue-s4-output-tcp.sh
+  s_142ee1fa291d22::t_bb9b9d507b4efe 2-3
+tests/local-queue-s5-graph-shutdown.sh
+  s_142ee1fa291d22::t_e007d26fa47636 6-8,73,75-76
+tests/local-queue-s6-linkedlist-oom.sh
+  s_142ee1fa291d22::t_449e11a06cc12c 2-3
+tests/local-queue-s6-slowdown.sh
+  s_142ee1fa291d22::t_fb66a0901b88d5 2-3
+tests/local-queue-stats-reconciliation.sh
+  s_142ee1fa291d22::t_68503c5eb86b59 53-56,59-60,62-64
+tests/queue-benchmark-latency-oracle.sh
+  s_142ee1fa291d22::t_8bb184a13525a8 10,16
+tools/omfile.c
+  s_142ee1fa291d22::t_81a018ffef181c 1643-1644
+tools/rsyslogd.c
+  s_142ee1fa291d22::t_5072eff014ffc8 1871
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "94d4c4411416e78e263a0e21eb8b56114f3e506c",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

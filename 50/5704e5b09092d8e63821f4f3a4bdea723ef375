@@ -1,0 +1,19 @@
+tests/Makefile.am
+  s_ef2cd5721368ca::t_586d18fb6d89ec 72-74,2990,3039
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "505704e5b09092d8e63821f4f3a4bdea723ef375",
+  "prompts": {},
+  "sessions": {
+    "s_ef2cd5721368ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0859f-a54b-7e31-b09a-6a6b7f23ad6a",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

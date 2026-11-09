@@ -1,0 +1,29 @@
+plugins/imtcp/imtcp.c
+  s_5e773934876cb4::t_039d7b705dd27c 703-707
+tests/omfile-legacy-dynafile-programname.sh
+  s_5e773934876cb4::t_979ed8799eacf0 9
+  s_5e773934876cb4::t_746af0a1792615 8,10,32-34,41,69-70
+  s_5e773934876cb4::t_921072ed7a5b45 6-7,19,27-28,40,63-67
+  s_5e773934876cb4::t_28b1e0fd03ec04 68
+  s_5e773934876cb4::t_0efb40945e1842 5,48-56
+runtime/ratelimit.c
+  s_5e773934876cb4::t_039d7b705dd27c 2405-2411,2424-2425,2467-2470,2493,2606-2608,2621-2633
+  s_5e773934876cb4::t_0efb40945e1842 2419-2422
+  s_5e773934876cb4::t_268f6c3a08050c 2412
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1410ba7235e6f740771410fb0b740fac4cb32d95",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

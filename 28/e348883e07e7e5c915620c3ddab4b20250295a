@@ -1,0 +1,23 @@
+tests/segmented-da-tcp-spill-exact.sh
+  s_d41298c6e29859::t_a96c85a9a291db 72-74,77
+runtime/queue.c
+  s_d41298c6e29859::t_425a721110772d 2596-2597,2599-2604
+tests/testsuites/segmented-da-idle-crash-driver.sh
+  s_d41298c6e29859::t_aee47bcd1178d9 14,22,34-37,41-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "28e348883e07e7e5c915620c3ddab4b20250295a",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

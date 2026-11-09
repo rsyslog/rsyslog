@@ -1,0 +1,26 @@
+runtime/queue_local_stats.c
+  s_142ee1fa291d22::t_f262fae5870397 1-28,32,34-35,41-49,53-59,61-68,70-78,80-110,114,116-117,123-131,135-142,144-151,153-161,164-181,187-188,194-202,206-216,218-226,228-235,238-328
+  s_142ee1fa291d22::t_b0ddcbc71363e7 29-31,33,36-40,50-52,60,69,79,111-113,115,118-122,132-134,143,152,162,182-184,186,189-193,203-205,217,227,236-237
+  s_142ee1fa291d22::t_b3667c11d0fa17 163
+  s_142ee1fa291d22::t_8bede696fa07c3 185
+  s_142ee1fa291d22::t_dfde2bb7dd0142 329-334
+runtime/queue_local_stats.h
+  s_142ee1fa291d22::t_0439141076f5d0 14
+  s_142ee1fa291d22::t_f262fae5870397 1-13,15-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4c7b87d44b92daea3cc3bfeb67b88f6ab64e0efd",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

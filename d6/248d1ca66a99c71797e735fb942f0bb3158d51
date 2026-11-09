@@ -1,0 +1,28 @@
+doc/source/reference/parameters/imfile-persiststateaftersubmission.rst
+  s_5e773934876cb4::t_0b219bc6396bd6 16,31-36
+  s_5e773934876cb4::t_91af71bd9a372f 38-41
+  s_5e773934876cb4::t_9c03dade7d5163 37
+doc/source/reference/parameters/imfile-persiststateinterval.rst
+  s_5e773934876cb4::t_87638917c0e8f6 38-39
+  s_5e773934876cb4::t_0b219bc6396bd6 46-48
+  s_5e773934876cb4::t_91af71bd9a372f 31-37,40-44
+  s_5e773934876cb4::t_61b10b0feefcb6 45
+doc/source/configuration/modules/imfile.rst
+  s_5e773934876cb4::t_0b219bc6396bd6 281-284
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d6248d1ca66a99c71797e735fb942f0bb3158d51",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

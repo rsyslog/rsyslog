@@ -1,0 +1,19 @@
+AGENTS.md
+  s_70c1b127a24bce::t_dbb67d9f52a190 119-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "db160b37913cd4bc957ed073f60f1c7a30c6a1eb",
+  "prompts": {},
+  "sessions": {
+    "s_70c1b127a24bce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085a6-4f7a-7802-96f0-28e97b06eeb1",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

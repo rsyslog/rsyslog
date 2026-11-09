@@ -1,0 +1,40 @@
+plugins/imdiag/imdiag.c
+  s_de358a5d0a4803::t_579d59e727634a 982-984,991-998,1001,1141-1142
+tests/local-queue-startup-failure.sh
+  s_de358a5d0a4803::t_579d59e727634a 11-12,24,95,98
+tools/rsyslogd.c
+  s_de358a5d0a4803::t_579d59e727634a 1018,1024-1025
+  s_de358a5d0a4803::t_a03b7d7ccce745 1019-1020
+runtime/action.c
+  s_de358a5d0a4803::t_6c36965ac7b510 2064
+runtime/queue.c
+  s_de358a5d0a4803::t_7fdc3a3be53598 4258,4267-4268,4600,4604,4824,4837,4840,4845,5086
+runtime/queue.h
+  s_de358a5d0a4803::t_f871157feda4c3 126-127
+runtime/queue_local.c
+  s_de358a5d0a4803::t_2c8df5f4ef8b24 338,809,814-815,1182
+runtime/wti.c
+  s_de358a5d0a4803::t_a223578540f22f 297
+runtime/wti.h
+  s_de358a5d0a4803::t_815f945fe346f0 91
+runtime/wtp.c
+  s_de358a5d0a4803::t_deadcb4edd27db 165,289,346,383,399,420,732
+runtime/wtp.h
+  s_de358a5d0a4803::t_ec6ae1423b7423 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57aa8f25ada3faeff145252646ce080274a8402d",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

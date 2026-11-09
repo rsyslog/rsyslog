@@ -1,0 +1,27 @@
+runtime/action.h
+  s_5e773934876cb4::t_308846e9209904 80
+runtime/action.c
+  s_5e773934876cb4::t_308846e9209904 962-967,986-987,992,1001-1004,1012,1093,1096,1275-1278,1290-1293
+tests/Makefile.am
+  s_5e773934876cb4::t_aeececaafbaf8b 1241
+tests/action-retry-clock-jump.sh
+  s_5e773934876cb4::t_92c5c04012eeff 6-9,48-50,54
+  s_5e773934876cb4::t_f2fff1ceb5bcdd 40
+  s_5e773934876cb4::t_aeececaafbaf8b 1-5,10-39,41-47,51-53,55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2837131eb9002eeabb5082ef2e038725fefd4258",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

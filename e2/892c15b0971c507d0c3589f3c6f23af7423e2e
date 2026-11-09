@@ -1,0 +1,19 @@
+tests/segmented-diskqueue-ruleset-fallback.sh
+  s_5e773934876cb4::t_a763d4f25076ad 8-10,15-23,30,50,54-59,68,88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e2892c15b0971c507d0c3589f3c6f23af7423e2e",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

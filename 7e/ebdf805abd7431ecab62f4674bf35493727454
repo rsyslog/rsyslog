@@ -1,0 +1,31 @@
+grammar/rainerscript.c
+  s_5e773934876cb4::t_b704278b6f99ba 1934-1937
+  s_5e773934876cb4::t_2a3f024311dbe2 1921-1928
+tests/rscript_parse_json.sh
+  s_5e773934876cb4::t_0c54bb1e03382f 4-6,16-27,37
+tests/mysql-reconnect-timeout.sh
+  s_5e773934876cb4::t_5ccff28b91ab74 13-14,16,19-23,25,34,45,47,57,95
+tests/Makefile.am
+  s_5e773934876cb4::t_5ccff28b91ab74 366
+tests/mysql-reconnect-relevance.sh
+  s_5e773934876cb4::t_46969aa5018b82 1-4,8-9,11-19,26-29,33-44,48-50,55-63,68-71
+  s_5e773934876cb4::t_11459a3974c516 5-7,10,20-25,30-32,45,47,51-54,64-67,76,81
+  s_5e773934876cb4::t_12ba7858959290 72-75,77-80,82-84
+  s_5e773934876cb4::t_05b01eabbda1f5 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7eebdf805abd7431ecab62f4674bf35493727454",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

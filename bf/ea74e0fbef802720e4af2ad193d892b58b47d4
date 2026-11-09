@@ -1,0 +1,24 @@
+runtime/atomic.h
+  s_cf144905ab59ed::t_df9e675e4a1c05 299-302,326-327
+  s_cf144905ab59ed::t_cf6f9d29dc3cd9 328
+runtime/statsobj.h
+  s_cf144905ab59ed::t_f60bb8562684f8 285-286,288,291,294,301
+runtime/statsobj.c
+  s_cf144905ab59ed::t_a9027519b091eb 818
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "bfea74e0fbef802720e4af2ad193d892b58b47d4",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

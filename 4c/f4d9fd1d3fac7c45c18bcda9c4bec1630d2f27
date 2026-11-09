@@ -1,0 +1,25 @@
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_e4b5c0d72beb41 73-74,1385-1386
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_e4b5c0d72beb41 6-8,368,370,445,458,461,466,468-469,471,510,789,801,811,816,819,826,830-833
+  s_f2c089be484e12::t_8ca3ab6f4a418b 366-367,369,805-807,837,839
+  s_f2c089be484e12::t_52efe0e367e5f9 75-76
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_e4b5c0d72beb41 34-36,38-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4cf4d9fd1d3fac7c45c18bcda9c4bec1630d2f27",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

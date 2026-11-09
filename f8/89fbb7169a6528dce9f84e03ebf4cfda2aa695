@@ -1,0 +1,23 @@
+tests/imtcp-stream-always-zstd-secure-defaults.sh
+  s_11817263318fdf::t_b4a853662aff25 51,55
+tests/yaml-imtcp-stream-always-zstd-secure-defaults.sh
+  s_11817263318fdf::t_b4a853662aff25 63,67,72
+tests/imtcp-stream-always-zstd-window-budget.sh
+  s_11817263318fdf::t_b4a853662aff25 6-10,15,140-148,222,227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f889fbb7169a6528dce9f84e03ebf4cfda2aa695",
+  "prompts": {},
+  "sessions": {
+    "s_11817263318fdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0248d-e47f-7c23-a7d5-b0f7d1503b73",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

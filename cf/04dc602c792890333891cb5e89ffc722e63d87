@@ -1,0 +1,73 @@
+contrib/imhiredis/imhiredis.c
+  s_b3a84b787ce0a4::t_46ae68603e86df 123,697-701,705-709,712,805,828
+  s_b3a84b787ce0a4::t_58ce1720011a05 837
+plugins/imptcp/imptcp.c
+  s_b3a84b787ce0a4::t_3afc33ec05d477 809,811,2193,2208
+  s_b3a84b787ce0a4::t_d8f6373ef700f9 2218
+  s_b3a84b787ce0a4::t_f4d93b6453a8a3 602,606-608
+  s_b3a84b787ce0a4::t_8a494f4a61880c 530,548,592,596-597,599,629,742-743,2217
+plugins/imudp/imudp.c
+  s_b3a84b787ce0a4::t_8a494f4a61880c 1359-1360,1487
+  s_b3a84b787ce0a4::t_5b37aef050a1ec 528-540,1371,1531
+  s_b3a84b787ce0a4::t_05e1c8c0caeef4 541
+tests/imptcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_796b345d45c596 34-42,106,122,134,153
+tests/imtcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_85d29418282b85 6,219-234
+  s_b3a84b787ce0a4::t_4fbad78774fbd7 235
+tests/imczmq-startup-failure.sh
+  s_b3a84b787ce0a4::t_8f4ee016ade26c 32-35,37-45
+plugins/imuxsock/imuxsock.c
+  s_b3a84b787ce0a4::t_3fda5dec0bc1c4 1371-1384
+tests/imbeats-bind-failure.sh
+  s_b3a84b787ce0a4::t_0b2636bd68a222 20,148,152,158
+  s_b3a84b787ce0a4::t_faa87e445cb504 9-10
+  s_b3a84b787ce0a4::t_7c2028821c3dc3 34-42
+tests/imfifo-startup-failure.sh
+  s_b3a84b787ce0a4::t_8f4ee016ade26c 32-35,37-45
+runtime/net.c
+  s_b3a84b787ce0a4::t_843b189f08d700 1533-1540
+plugins/imdtls/imdtls.c
+  s_b3a84b787ce0a4::t_d0c2df65fb2bc3 1118,1121-1122
+  s_b3a84b787ce0a4::t_bc0a445cf31021 1096-1100
+  s_b3a84b787ce0a4::t_e6bb061b162a2f 121,205,442-447,900,1005
+  s_b3a84b787ce0a4::t_8a494f4a61880c 1117
+  s_b3a84b787ce0a4::t_3ca225dd0061cd 1101,1123,1195
+runtime/tcpsrv.c
+  s_b3a84b787ce0a4::t_d0c2df65fb2bc3 503
+doc/source/rainerscript/global.rst
+  s_b3a84b787ce0a4::t_89733112e0777b 625-628
+runtime/rsconf.c
+  s_b3a84b787ce0a4::t_d8f6373ef700f9 1128,1137-1139,1293
+tests/imudp-bind-failure.sh
+  s_b3a84b787ce0a4::t_81639eef69fbce 151-179,181-182
+  s_b3a84b787ce0a4::t_aba8c27f8f6f75 15
+  s_b3a84b787ce0a4::t_6a871cae31ca8c 180
+  s_b3a84b787ce0a4::t_7c2028821c3dc3 39-47
+  s_b3a84b787ce0a4::t_95c3cdddb1c0e1 5-6
+plugins/imbeats/imbeats.c
+  s_b3a84b787ce0a4::t_caa4b0f8b95b0c 1634-1641,1643,1657
+  s_b3a84b787ce0a4::t_7ef91ab81476e6 134-138,1548,1550-1555,1564,1574,1585,1669-1672,1707-1708,1927-1928,1948-1951,1974-1977
+runtime/threads.c
+  s_b3a84b787ce0a4::t_8d9172d929a621 53,57,263
+runtime/threads.h
+  s_b3a84b787ce0a4::t_d6ed5731f776e7 54-55
+tools/rsyslogd.c
+  s_b3a84b787ce0a4::t_8569d9d631717f 2701
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf04dc602c792890333891cb5e89ffc722e63d87",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

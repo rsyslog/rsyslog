@@ -1,0 +1,25 @@
+tests/diskqueue-final-symlink.sh
+  s_12493d1d1488ca::t_c6dcb9cfebe907 1,12-15,17,22,24-27,30-32,34-37,42,48,64-66,69-72
+  s_12493d1d1488ca::t_4c3955e2ab1415 6,10-11,16,18-21,23,28-29,33,38-41,43,45-47,52-55,57,60-63,67
+  s_12493d1d1488ca::t_35b33cbd8ca93a 7-9
+  s_12493d1d1488ca::t_4031e17b724f4b 2-5,49-51,56,58-59,68
+  s_12493d1d1488ca::t_6e13d921aa30da 44
+tests/Makefile.am
+  s_12493d1d1488ca::t_c6dcb9cfebe907 369
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "ff582436519db2c61dadc1f6b64f1b64a6f53658",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

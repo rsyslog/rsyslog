@@ -1,0 +1,21 @@
+doc/ai/module_map.yaml
+  s_142ee1fa291d22::t_a0f5d42811dd39 11-15
+runtime/queue.c
+  s_142ee1fa291d22::t_ab8810d6eab17f 4651-4652
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0eed8b7d11d18f617ca7d0ba6fc1a1bb2aaebdc1",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

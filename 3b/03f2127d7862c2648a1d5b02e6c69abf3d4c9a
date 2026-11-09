@@ -1,0 +1,19 @@
+tests/unit/imdiag_reader_live_test.c
+  s_f8a738e4bdfaee::t_eceef7bc62f6e1 357-361,367
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b03f2127d7862c2648a1d5b02e6c69abf3d4c9a",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

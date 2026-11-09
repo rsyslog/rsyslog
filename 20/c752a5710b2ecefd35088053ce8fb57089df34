@@ -1,0 +1,53 @@
+runtime/Makefile.am
+  s_f67b54b127aca7::t_8b259a64c7dbf3 111-112
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_cb09e65bcf668a 20,33
+  s_f67b54b127aca7::t_bc5c6c5afa5358 21
+  s_f67b54b127aca7::t_e8ce71b882f79b 1,4,6-9,15-18,32,34-37,43-53,55-57,59-61
+  s_f67b54b127aca7::t_228e18f2d5ceb3 30
+tests/Makefile.am
+  s_f67b54b127aca7::t_da3d6aa313e625 2342,2345,2360-2362,2411-2412,2421,2429
+runtime/rshash.c
+  s_f67b54b127aca7::t_9d9f0b0d605d30 20-23,98-109,113,115-116,118-120
+  s_f67b54b127aca7::t_a47efcb55d45d3 1-19,24-31,36-44,46,50-54,56-59,61-66,69,72-81,84,88-97,114,117,121-122,153-160,163-198,200-223,225-306,311-346,350-360
+  s_f67b54b127aca7::t_7fead19faebb0c 83,110-112,123-152,307-310
+  s_f67b54b127aca7::t_a1dcc87172b402 347-348
+  s_f67b54b127aca7::t_8e6f717bb10217 45,47,49,55,60,67-68,70-71,82,85-87,161
+  s_f67b54b127aca7::t_4724934b119ada 32-35,199,224
+  s_f67b54b127aca7::t_c864ecfe34dba9 162,349
+  s_f67b54b127aca7::t_8db6b79ab21064 48
+runtime/rshash.h
+  s_f67b54b127aca7::t_120f5999135987 19
+  s_f67b54b127aca7::t_0605a1c7afdf73 1-18,20-30
+runtime/hashtable/hashtable_utility.c
+  s_f67b54b127aca7::t_cbb4fa068b5033 6,20-23
+runtime/hashtable_itr.c
+  s_f67b54b127aca7::t_5dcfe2f7dcb055 103-106
+  s_f67b54b127aca7::t_a21b1630444fe8 19,22-23,55,68,95,98,102,127,130,132,140
+runtime/hashtable.c
+  s_f67b54b127aca7::t_6131a4adec0cbc 1-4,6,18,21-22,25-27,29-30,34
+  s_f67b54b127aca7::t_3dcc94235c767e 14
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_b1336c6f3d8215 63,83-86,118,120-122,129,153-156
+  s_f67b54b127aca7::t_d47e2e9a97207c 91-92,119
+  s_f67b54b127aca7::t_a680f044f364fa 24,107-108
+  s_f67b54b127aca7::t_93f155496dccb3 73
+  s_f67b54b127aca7::t_aab09280c7a2bb 1-23,25-62,64-72,74-82,87-90,93-106,109-117,123-128,130-152,157-203
+  s_f67b54b127aca7::t_dc4d254daaf637 204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "20c752a5710b2ecefd35088053ce8fb57089df34",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

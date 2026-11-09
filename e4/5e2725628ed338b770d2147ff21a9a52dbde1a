@@ -1,0 +1,37 @@
+tests/CI/ubuntu20.04.supp
+  s_d49cbcdfe645b0::t_e109159734c455 61-76
+tests/imtcp-tls-gtls-certinfo-long-names-vg.sh
+  s_d49cbcdfe645b0::t_79008fa31e0fe9 1-7
+tests/imtcp-tls-gtls-certinfo-long-names.sh
+  s_d49cbcdfe645b0::t_d8b2fe240c0027 1-101
+runtime/AGENTS.md
+  s_44bfc910592dc7::t_67e684265efe74 54-56
+runtime/nsd_gtls.c
+  s_d49cbcdfe645b0::t_c49533271fd08a 369-391,407,424,443-446,448-455,459-466,475-478,505,1372-1387,1399,1487,1500,1513,1518,1522
+tests/Makefile.am
+  s_44bfc910592dc7::t_1eaa9fb7372cd4 2075-2080,2787-2788,4049-4052
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e45e2725628ed338b770d2147ff21a9a52dbde1a",
+  "prompts": {},
+  "sessions": {
+    "s_44bfc910592dc7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_44bfc910592dc7",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_d49cbcdfe645b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_d49cbcdfe645b0",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

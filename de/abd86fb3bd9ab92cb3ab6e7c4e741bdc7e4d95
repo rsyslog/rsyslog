@@ -1,0 +1,19 @@
+runtime/net_ossl.c
+  s_70c1b127a24bce::t_06e55d3b3cbd1e 1143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "deabd86fb3bd9ab92cb3ab6e7c4e741bdc7e4d95",
+  "prompts": {},
+  "sessions": {
+    "s_70c1b127a24bce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085a6-4f7a-7802-96f0-28e97b06eeb1",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

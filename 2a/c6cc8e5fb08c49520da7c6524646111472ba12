@@ -1,0 +1,46 @@
+tests/libmaxmindb.supp
+  s_6224eda96fc0da::t_b4594288172f2b 9,29,50,60
+runtime/action.c
+  s_6224eda96fc0da::t_5c76580a70cc8a 1683
+  s_6224eda96fc0da::t_9fcd2e69c19601 1668-1672
+  s_6224eda96fc0da::t_96b250326bfabd 866-868,913-915
+  s_6224eda96fc0da::t_a1dbda835880d6 1764,1766
+  s_6224eda96fc0da::t_c38b9bdb7f5d9d 1791-1792,1799-1800
+  s_6224eda96fc0da::t_0bfecabdfcd4a9 1631-1632
+  s_6224eda96fc0da::t_27fb138f400b12 1673-1675
+  s_6224eda96fc0da::t_1f74cc856ac09b 1534,1633-1647,1711,1782-1784
+  s_6224eda96fc0da::t_69b0bc67beb67f 1752-1753
+  s_6224eda96fc0da::t_1efef3543d7f18 859
+  s_6224eda96fc0da::t_7f8735ac6c2c3e 1785
+  s_6224eda96fc0da::t_237eb7f8146dc5 1073,1100,1122-1124,1133,1169-1172,1474-1478,1482,1529-1533
+  s_6224eda96fc0da::t_0c8907d759e4b6 1652-1653,1661-1663,1762-1763,1765
+tests/Makefile.am
+  s_6224eda96fc0da::t_d0a905417af9e4 1001,3609
+tests/testsuites/omprog-resume-interval-bin.sh
+  s_6224eda96fc0da::t_40ecd1a8953cfa 4
+  s_6224eda96fc0da::t_dab007cbfd2e42 1-2,5-15,19-21,23-30,33-36,38-43,45-49
+  s_6224eda96fc0da::t_3a922d42fc3e45 3,17
+  s_6224eda96fc0da::t_1bbd145a4e6ab3 16,18,22,31-32,37,44
+tests/omprog-resume-interval.sh
+  s_6224eda96fc0da::t_dab007cbfd2e42 1-5,11-28,30-38,42-45,48,50-54
+  s_6224eda96fc0da::t_4e09ba6a96aa3a 6-10,39
+  s_6224eda96fc0da::t_40ecd1a8953cfa 29
+  s_6224eda96fc0da::t_7e8e2b672e3df1 47,49
+  s_6224eda96fc0da::t_859c75f73b4c03 40-41,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "2ac6cc8e5fb08c49520da7c6524646111472ba12",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

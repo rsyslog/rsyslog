@@ -1,0 +1,19 @@
+runtime/queue.c
+  s_a0f294548b1424::t_6682592109d459 3668-3670,3674
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "5210452806ef9eb36a67a179a32d34759bacedd0",
+  "prompts": {},
+  "sessions": {
+    "s_a0f294548b1424": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08100-da83-7962-baa3-f54a7edf2e86",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

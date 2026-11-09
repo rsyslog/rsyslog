@@ -1,0 +1,21 @@
+.github/workflows/alpine324_daily_stable.yml
+  s_8768f69f136360::t_f6b71961d379e3 153,165,167-171
+  s_8768f69f136360::t_5124bbb71f402f 154,160,166
+  s_8768f69f136360::t_e3b1f3fe593ca4 155-159,161-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "59871733a2818f26d1c1675da1ee5d8eae32d759",
+  "prompts": {},
+  "sessions": {
+    "s_8768f69f136360": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04d90-4fb2-7670-8e76-44840adb0f11",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

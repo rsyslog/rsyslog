@@ -1,0 +1,19 @@
+devtools/release/debian-daily-staging.sh
+  s_6cd9c239d726e4::t_b6f128675f7b26 30-42,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "764575050706f00d7aad28fa0fe7ef5a82118efd",
+  "prompts": {},
+  "sessions": {
+    "s_6cd9c239d726e4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eed8d-dc2d-7ff2-b233-55590b3b18b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

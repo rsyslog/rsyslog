@@ -1,0 +1,29 @@
+Makefile.am
+  s_5e773934876cb4::t_8feadea6632693 7
+sidecar/rsyslog_exporter.py
+  s_5e773934876cb4::t_cc744a0db8bba7 66,314-316,318-319,323-329
+sidecar/tests/run-validate.sh
+  s_5e773934876cb4::t_2d47b4b870ad65 8,22-25
+tests/Makefile.am
+  s_5e773934876cb4::t_e40a8dac66ee6d 20-22,3132
+tests/sidecar-prometheus-labels.py
+  s_5e773934876cb4::t_779414b9a394ad 1-91
+tests/sidecar-prometheus-labels.sh
+  s_5e773934876cb4::t_35b5cb27e97f03 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "132a2e95f39e5c27b520eef8e5bcbf8206296713",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

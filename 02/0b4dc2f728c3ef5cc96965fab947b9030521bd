@@ -1,0 +1,31 @@
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_b6cfa891cac973 18
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_df850ee8f28091 1-147,164-437
+  s_2dc01c7e3d2940::t_10e738a57fb8db 148-163
+.github/el10-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_df850ee8f28091 1-18,29-30
+  s_2dc01c7e3d2940::t_10e738a57fb8db 19-23,28
+  s_2dc01c7e3d2940::t_a997de32a39554 24-27
+devtools/check-flake-evidence-coverage.py
+  s_2dc01c7e3d2940::t_559ef21f286ae3 38
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_7ab3a2accb8e33 247-250,255-256
+  s_2dc01c7e3d2940::t_34f2b4c137c2d2 1-246,251-254,257-603
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "020b4dc2f728c3ef5cc96965fab947b9030521bd",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

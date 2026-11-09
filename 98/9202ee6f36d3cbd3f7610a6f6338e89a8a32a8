@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_d7272bc53775bd::t_8393fe2b567680 1747-1749,2596,3662
+runtime/msg.c
+  s_d7272bc53775bd::t_b817db4278c266 1623,1626,1628
+tests/rawmsg-after-pri-short-json.sh
+  s_d7272bc53775bd::t_ecda077e797fed 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "989202ee6f36d3cbd3f7610a6f6338e89a8a32a8",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+runtime/AGENTS.md
+  s_f558368e8cde26::t_9259a616b0818f 52-54
+runtime/queue.c
+  s_f558368e8cde26::t_b28613c23e8140 2221-2225
+tests/Makefile.am
+  s_f558368e8cde26::t_0fd1b39671ee31 17-19,3010-3016
+tests/diskqueue-serializer-abi.sh
+  s_f558368e8cde26::t_a7eefe8085e964 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3d116ecd20b8e7913f781f8fe86e6bdabeb76a23",
+  "prompts": {},
+  "sessions": {
+    "s_f558368e8cde26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bc-a08c-7d92-bb04-8ab8fa22637e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

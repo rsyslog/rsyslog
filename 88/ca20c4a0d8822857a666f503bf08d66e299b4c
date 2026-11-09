@@ -1,0 +1,30 @@
+tests/Makefile.am
+  s_4c74d293a6f4b0::t_9cfa28d4e7f0f5 62-65,2849,3073
+plugins/imudp/imudp.c
+  s_4c74d293a6f4b0::t_d488469fbc81b8 30-31,166-168,656-657,743,1256-1260,1262,1335,1337-1352,1363,1389,1396
+doc/source/reference/parameters/imudp-batchsize.rst
+  s_4c74d293a6f4b0::t_59506ead60235c 30-31
+  s_4c74d293a6f4b0::t_cdef43372b2a12 32-38
+tests/imudp-batchsize-range.sh
+  s_4c74d293a6f4b0::t_2c83c91709c149 1-64
+tests/imudp-batchsize-runtime.sh
+  s_4c74d293a6f4b0::t_80fb780104bd21 1-39
+tests/yaml-imudp-batchsize-range.sh
+  s_4c74d293a6f4b0::t_0882d19428788f 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88ca20c4a0d8822857a666f503bf08d66e299b4c",
+  "prompts": {},
+  "sessions": {
+    "s_4c74d293a6f4b0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10cc9-a22a-7fc2-a6fb-beb8733f0db4",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

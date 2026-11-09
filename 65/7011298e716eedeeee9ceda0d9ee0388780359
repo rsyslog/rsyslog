@@ -1,0 +1,31 @@
+tests/diag.sh
+  s_21a8eefcb5d3df::t_62a231f35314a6 3323,3331,3370,3379-3381,3387,3394,3399
+  s_21a8eefcb5d3df::t_d704272481666b 3321,3375-3377
+  s_21a8eefcb5d3df::t_7b0c89db695cba 3378
+  s_21a8eefcb5d3df::t_4c158b2569c4c3 3318-3320
+  s_21a8eefcb5d3df::t_1be1bb173bb842 3322
+  s_21a8eefcb5d3df::t_60852b15683adf 3324-3326,3328-3330
+  s_21a8eefcb5d3df::t_81ddc50acfc7c5 3332-3334
+  s_21a8eefcb5d3df::t_10c4458eb9da79 3367-3369
+  s_21a8eefcb5d3df::t_d9d02481d7fd08 3371-3374
+  s_21a8eefcb5d3df::t_6d06c7237605cc 3382-3386
+  s_21a8eefcb5d3df::t_548f06ef1ad638 3388
+  s_21a8eefcb5d3df::t_88b00b62b3409c 3391-3393
+  s_21a8eefcb5d3df::t_b8fc3818600d37 3395-3398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "657011298e716eedeeee9ceda0d9ee0388780359",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

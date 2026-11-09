@@ -1,0 +1,29 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_5f8a1b601858a0 78-81,3085-3087
+tests/omfwd-udp-source-socket-failure-vg.sh
+  s_5e773934876cb4::t_12302f126d00f3 1-7
+tests/omfwd-udp-source-socket-failure.sh
+  s_5e773934876cb4::t_638c5557739402 1-83
+tests/yaml-omfwd-udp-source-socket-failure.sh
+  s_5e773934876cb4::t_c2a414eb1dde14 1-6
+tools/AGENTS.md
+  s_5e773934876cb4::t_742c84165ec1e8 37-48
+tools/omfwd.c
+  s_5e773934876cb4::t_4a6fb882eea5ce 1825
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e791ab52db108577b0f421ee52df701638a9acef",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

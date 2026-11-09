@@ -1,0 +1,18 @@
+plugins/mmnormalize/MODULE_METADATA.yaml
+  h_95716f3de0caf5 1-12
+plugins/pmnormalize/MODULE_METADATA.yaml
+  h_95716f3de0caf5 1-12
+tests/Makefile.am
+  h_95716f3de0caf5 1671-1673,1694-1696,2457,2461,3473-3477,3491-3497
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e3805ea506c23e461cebcd843fb5ffc66606e4db",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

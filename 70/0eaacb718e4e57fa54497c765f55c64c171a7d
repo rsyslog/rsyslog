@@ -1,0 +1,23 @@
+tests/imczmq-startup-failure.sh
+  s_b3a84b787ce0a4::t_da06d21467c5f1 24,29,34-36
+tests/imfifo-startup-failure.sh
+  s_b3a84b787ce0a4::t_da06d21467c5f1 24,29,34-36
+runtime/threads.c
+  s_b3a84b787ce0a4::t_26ef817e2c42b1 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "700eaacb718e4e57fa54497c765f55c64c171a7d",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

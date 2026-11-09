@@ -1,0 +1,45 @@
+doc/ai/module_map.yaml
+  s_f8a738e4bdfaee::t_93ea996afdf2eb 424-438
+doc/ai/transactional_reload_stack_ledger.md
+  s_f8a738e4bdfaee::t_7edd06f7657ece 91-118
+plugins/imdiag/Makefile.am
+  s_f8a738e4bdfaee::t_b1710775b4a419 3
+plugins/imdiag/imdiag-fixture-join.h
+  s_f8a738e4bdfaee::t_41ba19bd6b6f07 1-20
+plugins/imdiag/imdiag-reader-gate.h
+  s_f8a738e4bdfaee::t_6c427e24ad3909 1-150
+plugins/imdiag/imdiag-reader-test.h
+  s_f8a738e4bdfaee::t_e0f8117eeb9aeb 1-25
+plugins/imdiag/imdiag.c
+  s_f8a738e4bdfaee::t_50396039b87795 10-14,82-92,160,308-310,315-318,328-330,333-337,389-411,420,426,438,453,460,464-477,1153,1158,1380,1434,1465-1514,1517,1519,1522-1523,1532,1539-1552,1596-1598,1662-1663,1718-1724,2015,2075,2105-2113,2117,2193-2267,2271-2274
+runtime/ratelimit.c
+  s_f8a738e4bdfaee::t_a6b1801d09f1f3 2562-2566,2589-2591,2628-2630
+runtime/tcpsrv.c
+  s_f8a738e4bdfaee::t_7a84cbed05f7be 252-255,2317-2322,2471-2486
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_8aa159b1f2b4b2 4884-4912
+tests/helpers/imdiag_reader_daemon_link.c
+  s_f8a738e4bdfaee::t_6247d2a3957c3f 1-27
+tests/unit/imdiag_reader_live_test.c
+  s_f8a738e4bdfaee::t_2ea5566667711d 1-476
+tests/unit/imdiag_reader_test.c
+  s_f8a738e4bdfaee::t_0134bf9d43952d 1-135
+tests/unit/tcpsrv_prepared_backend_test.c
+  s_f8a738e4bdfaee::t_0411ca6f1284e6 359-432,440,458-462,533,1007-1013
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9db5a8c488f85379ddf50aaebe07e14389f6fcd5",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

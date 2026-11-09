@@ -1,0 +1,19 @@
+benchmarks/segmented-diskqueue/results/schema-v1.json
+  s_1331110881c407::t_86bc8ba55a963a 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "69a4163ff91d4a791b23f1aa8c609a880e04c8bc",
+  "prompts": {},
+  "sessions": {
+    "s_1331110881c407": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f69bd-85cb-7551-9925-b0202b9462b7",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+plugins/omsendertrack/omsendertrack.c
+  s_f67b54b127aca7::t_b7c41629d1c432 54,420-438,440,449
+runtime/perctile_stats.c
+  s_f67b54b127aca7::t_ca560e19a178b4 389-393,395-403,405-409,411-415,417,419-423,425-445,450
+  s_f67b54b127aca7::t_021668eaafee04 30,121-125,141,199-205,208
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_370bcdfe392908 3-4,66
+runtime/dynstats.c
+  s_f67b54b127aca7::t_8fe2d47acb21b0 35,944-961,972,994-996
+runtime/rshash.h
+  s_f67b54b127aca7::t_003cbf852e08bc 15-16,29-32,34-37
+contrib/mmkubernetes/mmkubernetes.c
+  s_f67b54b127aca7::t_1ae5775869c6ba 58,1111-1133,1136,1147
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_3542ce5a56e840 32-40,138-162,165-177,228
+runtime/hashtable.h
+  s_f67b54b127aca7::t_72803e38302a4a 1,3,5-6,8,11-12,15-21,25,30,35
+  s_f67b54b127aca7::t_78a8770b9400ee 38-41,43
+plugins/imuxsock/imuxsock.c
+  s_f67b54b127aca7::t_8dfb739c4deecc 69,696-706,708,714-715,717-720,722-726,730,737-738,742-743
+plugins/omhdfs/omhdfs.c
+  s_f67b54b127aca7::t_3905eeb47c6303 55,464-469,475
+contrib/imdocker/imdocker.c
+  s_f67b54b127aca7::t_0d2cce15abdae6 56,792-798,806,872-883
+  s_f67b54b127aca7::t_f98d4f31893a95 884-886,889,896
+tests/diag.sh
+  s_f67b54b127aca7::t_370bcdfe392908 2855
+runtime/statsobj.c
+  s_f67b54b127aca7::t_c898e7c056065d 62,570,915,919
+  s_f67b54b127aca7::t_6d6abcc41915f6 530-556,565,888-894,897-914
+runtime/regexp.c
+  s_f67b54b127aca7::t_35c45a3350a744 38,180-191,198,212
+  s_f67b54b127aca7::t_9fc0313e94f5f2 193-196,222
+  s_f67b54b127aca7::t_7827366c293f8e 192
+runtime/ratelimit.c
+  s_f67b54b127aca7::t_0cdcde62323c3a 2295-2296,2298-2305
+  s_f67b54b127aca7::t_9837e64cd80952 51,230-234
+  s_f67b54b127aca7::t_3e43392cb12317 1052-1074
+  s_f67b54b127aca7::t_949880f76db622 235-236,244,1075-1076,1089,1098,2306-2307,2318
+runtime/rshash.c
+  s_f67b54b127aca7::t_00e9d96c4d2e2a 178,256
+  s_f67b54b127aca7::t_75a5c9d3376503 342-370,372-389
+  s_f67b54b127aca7::t_9642913c760fca 371
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "ed9a48058b4206e40f700d9727ca36232e0f170c",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

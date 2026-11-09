@@ -1,0 +1,44 @@
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_17f19a2581bf39 438
+  s_f2c089be484e12::t_8696da377b8698 99-104,134,441,500
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_4bb18f78ca87b5 317-322
+tools/shadow_reload.c
+  s_f2c089be484e12::t_aaa135023f094f 845-846
+tests/global-reloadonhup-imtcp-regex-rainerscript.sh
+  s_f2c089be484e12::t_4bb18f78ca87b5 1-50,72-76
+  s_f2c089be484e12::t_8e812ad94add81 51-53,55-71
+  s_f2c089be484e12::t_ff9d06c5716501 54
+tests/global-reloadonhup-imtcp-regex-yaml.sh
+  s_f2c089be484e12::t_ff9d06c5716501 58
+  s_f2c089be484e12::t_4bb18f78ca87b5 1-54,76-80
+  s_f2c089be484e12::t_8e812ad94add81 55-57,59-75
+runtime/tcps_sess.c
+  s_f2c089be484e12::t_8696da377b8698 198-205,368-385,392,1361
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_491e15ba490356 2400-2418
+  s_f2c089be484e12::t_8696da377b8698 486,537,700,2395
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_491e15ba490356 2716
+  s_f2c089be484e12::t_5171f4d87c71da 1838,2053,2065-2100,2237-2239,2265,2299,2377,2382,2403,2430
+runtime/tcps_sess.h
+  s_f2c089be484e12::t_8696da377b8698 116-120
+tests/Makefile.am
+  s_f2c089be484e12::t_4bb18f78ca87b5 473,1721
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "01bcfe82f33815dce7b0cfd5c83acdd37f9532bf",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

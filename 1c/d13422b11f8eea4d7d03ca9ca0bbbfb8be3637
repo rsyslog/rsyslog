@@ -1,0 +1,29 @@
+doc/source/configuration/modules/ompipe.rst
+  s_5e773934876cb4::t_4a30dec330e94a 18-20,27
+tests/Makefile.am
+  s_5e773934876cb4::t_a42697797f0158 119-121,954,3295
+tests/ompipe-default-template.sh
+  s_5e773934876cb4::t_b2bf41434eec32 1-6
+tests/ompipe-module-template.sh
+  s_5e773934876cb4::t_4614d0ceea7cd8 1-109
+tests/yaml-ompipe-module-template.sh
+  s_5e773934876cb4::t_3b6c045d22cd29 1-6
+tools/ompipe.c
+  s_5e773934876cb4::t_8985c7152b2ed9 363
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1cd13422b11f8eea4d7d03ca9ca0bbbfb8be3637",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

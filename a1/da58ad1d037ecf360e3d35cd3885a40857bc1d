@@ -1,0 +1,19 @@
+tests/miniamqpsrvr.c
+  s_8be71769dc6a1b::t_125faa0653d712 493,594-597
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1da58ad1d037ecf360e3d35cd3885a40857bc1d",
+  "prompts": {},
+  "sessions": {
+    "s_8be71769dc6a1b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13a28-1e1d-7660-a116-4252ae9e95c6",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

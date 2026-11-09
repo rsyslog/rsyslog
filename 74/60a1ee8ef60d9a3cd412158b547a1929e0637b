@@ -1,0 +1,22 @@
+runtime/ratelimit.h
+  s_52daf9b39e2b17::t_7162551a8132f7 117,119,137-140,143-148
+runtime/ratelimit.c
+  s_52daf9b39e2b17::t_7162551a8132f7 2267-2273,2302,2327-2347,2377,2435,2483,2856-2859,2875-2876,2886-2891,2903-2906,2918-2920,2923-2927,2950
+  s_52daf9b39e2b17::t_1fdf6b2d959e9a 2525,2556
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "7460a1ee8ef60d9a3cd412158b547a1929e0637b",
+  "prompts": {},
+  "sessions": {
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

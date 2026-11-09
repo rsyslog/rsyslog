@@ -1,0 +1,29 @@
+tests/diag.sh
+  s_f2c089be484e12::t_cb5d4286227592 2664-2668,2670-2675,2679-2685,2726-2729,5758-5760
+  s_f2c089be484e12::t_3bb14dd99acb13 2286-2302,2505,2512-2527,2529-2530
+  s_f2c089be484e12::t_8b68ca4348ad4f 2282-2284
+runtime/dirty.h
+  s_f2c089be484e12::t_3bb14dd99acb13 48
+tests/Makefile.am
+  s_f2c089be484e12::t_cb5d4286227592 2630
+tools/rsyslogd.c
+  s_f2c089be484e12::t_3bb14dd99acb13 224,280-285,2421
+plugins/imdiag/imdiag.c
+  s_f2c089be484e12::t_3bb14dd99acb13 456-458,465,468-484,729-731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5d0c5387d71ba1e1bb7aa87a2cd3023043989b79",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

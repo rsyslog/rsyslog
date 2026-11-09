@@ -1,0 +1,27 @@
+tests/omelasticsearch-bulk-readonly-retry.sh
+  s_6224eda96fc0da::t_51ac51409af242 1-4,10-59,78-123,125-127,131
+  s_6224eda96fc0da::t_c31f41116d9e46 5-6,60-77,124
+  s_6224eda96fc0da::t_abdc6a953b24c9 7-9,128-130
+tests/Makefile.am
+  s_6224eda96fc0da::t_51ac51409af242 290
+plugins/omelasticsearch/omelasticsearch.c
+  s_6224eda96fc0da::t_f3371466ee7761 1293-1309,1345-1347,1405-1415,1425-1428,1458-1469
+  s_6224eda96fc0da::t_abdc6a953b24c9 1404,1424
+  s_6224eda96fc0da::t_4db4d76fbe84a6 1975-1976,1978
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "6631aae3e6dd0b82f8d001a211d087f295173acf",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+runtime/queue.h
+  s_142ee1fa291d22::t_a120c2b0532b18 98-105,294,300
+tools/omfile.c
+  s_142ee1fa291d22::t_2524a9b70671bb 45,164,557,1412-1414,1682,1898-1901,2208-2221,2224
+runtime/rsyslog.h
+  s_142ee1fa291d22::t_54c650e38e7de7 744-745
+runtime/action.c
+  s_142ee1fa291d22::t_6a8798eb3093f2 63,2431-2434
+runtime/cfsysline.c
+  s_142ee1fa291d22::t_e16d30f8d8fcb9 31,260-263
+grammar/rainerscript.h
+  s_142ee1fa291d22::t_8705e3cc5fd3e2 391-392
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_ae5be54cbed7ea 1-6,11-18,22-27,82-91,95-96,100-107,118-131,133-136,141-146,148-149,161,182,184-191,193-207
+  s_142ee1fa291d22::t_3c399a5ccc03be 7-10,19-21,28-49,54-81,92-94,97-99,108-117,132,137-140,147,150-160,162-168,170-181,183,192
+  s_142ee1fa291d22::t_1419b038d8b6b8 50-53,169
+runtime/rsconf.h
+  s_142ee1fa291d22::t_47ce611e45ff4e 274-278
+runtime/ruleset.h
+  s_142ee1fa291d22::t_d979e45242fe1e 102
+runtime/ruleset.c
+  s_142ee1fa291d22::t_fa9b3c6c283062 43,49,162-166,171,929-1070
+tests/local-queue-config-yaml.sh
+  s_142ee1fa291d22::t_ae5be54cbed7ea 1-5
+plugins/impstats/impstats.c
+  s_142ee1fa291d22::t_3dc288096dc328 832-844,847
+tests/Makefile.am
+  s_142ee1fa291d22::t_adf2f80a5f1cd4 160-163,2882-2885
+runtime/queue.c
+  s_142ee1fa291d22::t_1ed7693a590031 313-317,3913-3919,4802-4820,4830,5061-5145,5157-5158,5169-5173,5175-5206,5347-5348,5428-5433
+tools/rsyslogd.c
+  s_142ee1fa291d22::t_c5f037453d5a1c 1000-1002,1016,1019,1761-1764
+grammar/rainerscript.c
+  s_142ee1fa291d22::t_2a815a15291477 4517-4600,5489
+plugins/omtesting/omtesting.c
+  s_142ee1fa291d22::t_940d4d787ea7a6 397-419,422
+runtime/rsconf.c
+  s_142ee1fa291d22::t_04a05579ea510a 793,813,823,1760,1778-1783
+runtime/action.h
+  s_142ee1fa291d22::t_f884fff4fab6f2 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "75cd5e0f7c39adfd2d48ef21ee818a14d327fbe2",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

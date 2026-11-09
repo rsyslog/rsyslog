@@ -1,0 +1,31 @@
+tests/local-queue-imtcp-shutdown-multi-fe.sh
+  s_142ee1fa291d22::t_afb9a857e6239a 1-21,23-24,26-40,42-70
+  s_142ee1fa291d22::t_2da4fbddb5787d 22,25,41
+plugins/omtesting/omtesting.c
+  s_142ee1fa291d22::t_534126e7651d96 256-259
+  s_142ee1fa291d22::t_73ebeb0c6a8d09 85-86,103-106,241-255,260-282,284-286,290-293,302-308,403,422-423,449,470-472,589-595,628-635
+  s_142ee1fa291d22::t_a55e3a9337e0f7 19,283,287-289,294-301
+  s_142ee1fa291d22::t_1326815642ee45 636
+tests/Makefile.am
+  s_142ee1fa291d22::t_69a646f636db99 169
+plugins/imdiag/imdiag.c
+  s_142ee1fa291d22::t_f5c283344ea456 709-716,718-733,790-791
+  s_142ee1fa291d22::t_d7a60b518dc70c 717
+  s_142ee1fa291d22::t_764d2305a9419f 706-708
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e0219328e215104f585832a859e99fc97581f147",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

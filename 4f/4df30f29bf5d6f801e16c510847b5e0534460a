@@ -1,0 +1,20 @@
+doc/ai/module_map.yaml
+  s_70c1b127a24bce::t_1c6545e6314603 20-24
+  s_70c1b127a24bce::t_cabf64a3759b30 19,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4f4df30f29bf5d6f801e16c510847b5e0534460a",
+  "prompts": {},
+  "sessions": {
+    "s_70c1b127a24bce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085a6-4f7a-7802-96f0-28e97b06eeb1",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

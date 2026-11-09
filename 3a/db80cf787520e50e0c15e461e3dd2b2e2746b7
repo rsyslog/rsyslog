@@ -1,0 +1,35 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_f3b901a1cf5209 78-81,3083,3094-3099,3357
+tests/omfwd-udp-source-address.sh
+  s_5e773934876cb4::t_fccd6a998b1dd1 1-34
+tests/omfwd-udp-source-family-dual-local.sh
+  s_5e773934876cb4::t_4efaa547e92d94 1-8
+tests/omfwd-udp-source-family-sendall.sh
+  s_5e773934876cb4::t_c36a1752fc0fa8 1-6
+tests/omfwd-udp-source-family.sh
+  s_5e773934876cb4::t_3ba3ebf96534a7 1-110
+tests/override_omfwd_udp_family.c
+  s_5e773934876cb4::t_2e31e8340c2f1e 1-113
+tests/yaml-omfwd-udp-source-family-sendall.sh
+  s_5e773934876cb4::t_61fce709fd1c6c 1-7
+tests/yaml-omfwd-udp-source-family.sh
+  s_5e773934876cb4::t_033ca6008dfe3e 1-6
+tools/omfwd.c
+  s_5e773934876cb4::t_0df6fc79bdb3be 178,837-838,1158-1159,1161,1826-1852,1872-1874
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3adb80cf787520e50e0c15e461e3dd2b2e2746b7",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

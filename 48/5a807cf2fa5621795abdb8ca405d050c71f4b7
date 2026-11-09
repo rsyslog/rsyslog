@@ -1,0 +1,49 @@
+doc/source/reference/parameters/imdiag-properterminationfile.rst
+  s_e1bc3bab0b4eb3::t_9842a310dcd333 1-63
+tools/rsyslogd.c
+  s_e1bc3bab0b4eb3::t_e3debe3ccdac8e 53,214,2428-2512,2689
+tests/Makefile.am
+  s_e1bc3bab0b4eb3::t_673d2d741940ed 311
+tests/imdiag-proper-termination-timeoutguard.sh
+  s_e1bc3bab0b4eb3::t_878a98c188ab89 1-39
+plugins/imdiag/imdiag.c
+  s_e1bc3bab0b4eb3::t_ec8d63a9527eb2 107-111,121,135,823-826,828-833,843,848-856,873-876,878-889,930,959-960,1026-1028,1062,1148-1160
+doc/source/development/dev_testbench.rst
+  s_6224eda96fc0da::t_3943e076a97e26 94-113
+tests/AGENTS.md
+  s_6224eda96fc0da::t_7f8858c9aaef1b 60-68
+tests/diag.sh
+  s_2e888d0bafbab5::t_309b31bdb136d8 444-445,469-470,490-491,524-574,2039-2047
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "485a807cf2fa5621795abdb8ca405d050c71f4b7",
+  "prompts": {},
+  "sessions": {
+    "s_2e888d0bafbab5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f02dd-92ae-7020-8310-99dd6e196029",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_e1bc3bab0b4eb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eff87-c605-7251-88e6-f834c8ca0205",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+runtime/ruleset.c
+  s_142ee1fa291d22::t_833f7364c8ef42 1033-1034
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_17d7472cabaebb 58,112-115,176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4b22c62ee1574e7a00a77a63bcca75f2a1476fa6",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

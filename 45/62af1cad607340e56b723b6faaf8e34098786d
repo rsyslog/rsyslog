@@ -1,0 +1,37 @@
+plugins/imdtls/imdtls.c
+  s_b3a84b787ce0a4::t_37c4d91fabaae3 109,288,1125-1131
+  s_b3a84b787ce0a4::t_8e2833f720e782 196
+contrib/imhiredis/imhiredis.c
+  s_b3a84b787ce0a4::t_37c4d91fabaae3 123,712,805,828
+runtime/rsconf.c
+  s_b3a84b787ce0a4::t_1b2b99c54e0e6d 1139-1142
+runtime/threads.c
+  s_b3a84b787ce0a4::t_1b2b99c54e0e6d 286-288,300,302-303,305-306,308,310-314,316,319-329
+plugins/imuxsock/imuxsock.c
+  s_b3a84b787ce0a4::t_37c4d91fabaae3 160,523,544-547,1381,1383-1384
+  s_b3a84b787ce0a4::t_b03aadd1f4017c 559
+tests/imtcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_a8c07b63d8081d 219-224,227,230-235,242
+  s_b3a84b787ce0a4::t_ecd48b7a487ca4 236-241
+plugins/imudp/imudp.c
+  s_b3a84b787ce0a4::t_37c4d91fabaae3 528
+  s_b3a84b787ce0a4::t_1b2b99c54e0e6d 1371,1531
+plugins/imptcp/imptcp.c
+  s_b3a84b787ce0a4::t_37c4d91fabaae3 807-808
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4562af1cad607340e56b723b6faaf8e34098786d",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

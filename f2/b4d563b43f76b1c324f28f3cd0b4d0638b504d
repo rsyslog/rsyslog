@@ -1,0 +1,32 @@
+tests/global-reloadonhup-imtcp-reorder-yaml.sh
+  s_f2c089be484e12::t_977867d47a5001 1-76,92-96
+  s_f2c089be484e12::t_17b04f52f667ca 77-91
+tests/Makefile.am
+  s_f2c089be484e12::t_23ed3ef0873efc 475
+  s_f2c089be484e12::t_977867d47a5001 1723
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_11586cd3fd7471 1766-1805,1812-1868,1876,1878-1883,1888-1905,1909,1914-1917,1970-1981,2009-2012
+  s_f2c089be484e12::t_3bffc0de566df4 1806-1811,2013
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_1bef8c26a58125 275-283
+tests/global-reloadonhup-imtcp-reorder-rainerscript.sh
+  s_f2c089be484e12::t_23ed3ef0873efc 1-34,36-40,42-51,53-60,76-80
+  s_f2c089be484e12::t_613b3b52c14caf 35,41,52
+  s_f2c089be484e12::t_17b04f52f667ca 61-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "f2b4d563b43f76b1c324f28f3cd0b4d0638b504d",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

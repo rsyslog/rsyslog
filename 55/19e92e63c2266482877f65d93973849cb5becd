@@ -1,0 +1,21 @@
+runtime/statsobj.c
+  s_142ee1fa291d22::t_f574ce11f878ce 163-164,181-194,836-838,881-883,945-947,1148
+runtime/statsobj.h
+  s_142ee1fa291d22::t_f574ce11f878ce 142-150,177-185,248,258,332
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5519e92e63c2266482877f65d93973849cb5becd",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

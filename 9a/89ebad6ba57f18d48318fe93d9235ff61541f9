@@ -1,0 +1,68 @@
+.github/workflows/ci_codestyle_check.yml
+  s_c4e7938e7d7f5a::t_07e2062dad6ebc 8,28
+  s_c4e7938e7d7f5a::t_9779aa32b73089 16
+.github/workflows/actionlint.yml
+  s_c4e7938e7d7f5a::t_07ee0496bba295 12
+.github/workflows/spellcheck.yml
+  s_c4e7938e7d7f5a::t_3c5f2000aefa04 12
+  s_c4e7938e7d7f5a::t_dbd525e516f6f4 17-20
+.github/workflows/python_style.yml
+  s_c4e7938e7d7f5a::t_c5fad615147c85 17
+  s_c4e7938e7d7f5a::t_68068d19df5668 9,29
+  s_c4e7938e7d7f5a::t_df7591da3b7dfe 35-40
+.github/workflows/doc_build.yml
+  s_cf144905ab59ed::t_ccfccdd457ce56 189-190,203-204
+  s_c4e7938e7d7f5a::t_265d7f8fd624f8 25,38,259,265
+  s_c4e7938e7d7f5a::t_abf388009dfe8b 15
+.github/workflows/repo-policy-focus-review.yml
+  s_c4e7938e7d7f5a::t_8d7b2a3668e291 31
+.github/workflows/run_checks.yml
+  s_c4e7938e7d7f5a::t_2b8127ab8a319a 1796,1807
+  s_c4e7938e7d7f5a::t_265d7f8fd624f8 42,46,65,76,87,107,128,150,171,188,233,248,321,325,340,392,453-454,475,486,693-694,712,723,783-784,806,818,887,890,924,1194,1265-1266,1287,1355-1356,1369,1452,1506-1507,1518,1529,1627,1630,1642,1653,1784-1785
+.github/workflows/impstats_push_victoriametrics.yml
+  s_c4e7938e7d7f5a::t_fe80e56d66f1ac 39
+.github/workflows/container_build.yml
+  s_c4e7938e7d7f5a::t_8d012a49a3321b 27
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_c4e7938e7d7f5a::t_d740024a7fa243 24
+.github/workflows/imbeats.yml
+  s_c4e7938e7d7f5a::t_6705fa74937124 39
+.github/workflows/collect_flake_evidence.yml
+  s_c4e7938e7d7f5a::t_e1462652bec4a7 48
+.github/workflows/yaml_lint.yml
+  s_c4e7938e7d7f5a::t_4175facb16f37e 33
+  s_c4e7938e7d7f5a::t_71725f5e9380c3 25,45
+  s_c4e7938e7d7f5a::t_5d00103a6d4c27 52-57
+.github/workflows/syslog_parser_fuzz.yml
+  s_c4e7938e7d7f5a::t_5e1c0d27be76a6 61,119
+.github/workflows/imtcp_session_fuzz.yml
+  s_c4e7938e7d7f5a::t_59d542a7de1508 47,114
+.github/workflows/codeql.yml
+  s_c4e7938e7d7f5a::t_0c6d1d80dba3eb 29
+.github/workflows/zizmor.yml
+  s_c4e7938e7d7f5a::t_67b076d5a2321b 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a89ebad6ba57f18d48318fe93d9235ff61541f9",
+  "prompts": {},
+  "sessions": {
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

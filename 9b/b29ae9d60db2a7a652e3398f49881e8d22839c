@@ -1,0 +1,36 @@
+runtime/wti.h
+  s_0e13bafe0bf506::t_c9b473889abd0d 87-91
+runtime/wtp.h
+  s_0e13bafe0bf506::t_4b3ea3f9327798 26
+  s_0e13bafe0bf506::t_c9b473889abd0d 56-57,95-97,104-105
+  s_0e13bafe0bf506::t_954ce1a4a679f7 72-73,94
+runtime/wtp.c
+  s_0e13bafe0bf506::t_6e6cc5c9cd353f 575
+  s_0e13bafe0bf506::t_7fd899bf6603d1 608
+  s_0e13bafe0bf506::t_002a77b4d5d552 544-555,557-573,576-588,590-598,600-605,607,609,611,614-615
+  s_0e13bafe0bf506::t_61046921c74df4 457-459,610,617,621
+runtime/queue.c
+  s_0e13bafe0bf506::t_c1a5310fb45379 713-721,725-726,731-732,742-745,747,752,755
+  s_0e13bafe0bf506::t_203a8c8e0aea5e 2424,2429-2431,4307,4319-4323,4616-4621,4623
+  s_0e13bafe0bf506::t_bdc659edfb11fd 3881,4072-4074,4690,4706,4741,4758
+  s_0e13bafe0bf506::t_5ec65ce5f56605 3649,3651
+  s_0e13bafe0bf506::t_954ce1a4a679f7 749-751,753-754,4075,4324,4622,4710,4762
+runtime/wti.c
+  s_0e13bafe0bf506::t_5ec65ce5f56605 343-346,348,363,385,390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "9bb29ae9d60db2a7a652e3398f49881e8d22839c",
+  "prompts": {},
+  "sessions": {
+    "s_0e13bafe0bf506": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a062d6-a2e9-7590-884e-edace947c0df",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+tests/omfile-dynafile-template-type-override.sh
+  s_958aa1d5056522::t_7a8e3de79f4e78 2,17-23
+  s_958aa1d5056522::t_f5cf71e5c2a9aa 24
+tests/omfile-dynafile-template-type-invalid.sh
+  s_958aa1d5056522::t_7a8e3de79f4e78 2,7-8
+tools/omfile.c
+  s_958aa1d5056522::t_b1b712c8502c53 364-365
+  s_958aa1d5056522::t_25f58ea7f1f28b 507-515,620,1409,1894-1898
+  s_958aa1d5056522::t_7a8e3de79f4e78 167,497-498,1335
+tests/dynfile_invld_sync.sh
+  s_958aa1d5056522::t_b1b712c8502c53 12-13
+doc/source/reference/parameters/omfile-dynafile.rst
+  s_958aa1d5056522::t_27fa2008296202 46-67
+doc/source/reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
+  s_958aa1d5056522::t_27fa2008296202 25,27,29,41-52,68-77
+  s_958aa1d5056522::t_439c32fd25cfd8 78
+doc/source/reference/parameters/omfile-dynafile-restricttemplatetype.rst
+  s_958aa1d5056522::t_b1b712c8502c53 41-46
+  s_958aa1d5056522::t_7a8e3de79f4e78 8,17-18,27,29,36-40,55
+doc/source/configuration/modules/omfile.rst
+  s_958aa1d5056522::t_6753067e05cd70 251-254
+tests/omfile-dynafile-traversal-default-template.sh
+  s_958aa1d5056522::t_80d0bcff400edf 7,10,25-30,41-46
+tests/omfile-dynafile-traversal-permit-escape.sh
+  s_958aa1d5056522::t_cbac9532564682 9,11,15,19,23-25,28-35,48-52
+tests/yaml-omfile-dynafile-traversal-list-template.sh
+  s_958aa1d5056522::t_0aba717ed8e5d9 9,11,39-51,60-63,84-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "69c9b1492606345fe3cce257dc81ae9c9dce4f07",
+  "prompts": {},
+  "sessions": {
+    "s_958aa1d5056522": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ffa1a-f132-76d3-bd7c-a44b20b1f7f0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

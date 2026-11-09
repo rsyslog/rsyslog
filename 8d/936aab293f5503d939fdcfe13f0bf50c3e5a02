@@ -1,0 +1,19 @@
+ChangeLog
+  s_8f24f0dbd9f825::t_267df2426ac3a9 2,9-20,27-52,57-120,126-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8d936aab293f5503d939fdcfe13f0bf50c3e5a02",
+  "prompts": {},
+  "sessions": {
+    "s_8f24f0dbd9f825": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1599a-9357-7481-951a-c57f9ac9bfd4",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

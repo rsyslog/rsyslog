@@ -1,0 +1,14 @@
+contrib/impcap/impcap.c
+  h_95716f3de0caf5 588-591,648
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d55e57129e43ba36f67048ec95db82b65247afaf",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

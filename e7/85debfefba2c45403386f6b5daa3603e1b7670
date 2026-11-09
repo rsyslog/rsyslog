@@ -1,0 +1,25 @@
+contrib/imhiredis/imhiredis.c
+  s_5e773934876cb4::t_861aa3836ae969 623
+tests/Makefile.am
+  s_5e773934876cb4::t_5f051b0a9accb7 1898-1900,2656,3868-3870
+tests/imhiredis-queue-lpop.sh
+  s_5e773934876cb4::t_5196c299945658 4-7,14,16-18,29,43,49-53
+tests/yaml-imhiredis-default-server-port.sh
+  s_5e773934876cb4::t_a7412489ddbd27 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e785debfefba2c45403386f6b5daa3603e1b7670",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

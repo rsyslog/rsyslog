@@ -1,0 +1,55 @@
+plugins/mmaitag/ai_provider.h
+  s_d7272bc53775bd::t_217f4339aaf382 18
+  s_d7272bc53775bd::t_89c29bc76e8175 19-28,70
+tests/mmaitag-basic.sh
+  s_d7272bc53775bd::t_2b5089cb15a40e 16-21
+tests/unit/mmaitag_gemini_response_test.c
+  s_d7272bc53775bd::t_89c29bc76e8175 2-12,52-56
+tests/Makefile.am
+  s_d7272bc53775bd::t_2b5089cb15a40e 1024-1025
+doc/Makefile.am
+  s_d7272bc53775bd::t_39f835aaa28960 841-845
+doc/source/configuration/modules/mmaitag.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 32-40,103-122,134-138
+plugins/mmaitag/ai_provider_gemini_response.h
+  s_d7272bc53775bd::t_ee8c57381b9fbd 32
+  s_d7272bc53775bd::t_89c29bc76e8175 2-12,28-31
+tests/mmaitag-transfer-limits-invalid.sh
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-39
+doc/source/reference/parameters/mmaitag-request-timeoutms.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+doc/source/reference/parameters/mmaitag-request-lowspeedtime.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+plugins/mmaitag/mmaitag.c
+  s_d7272bc53775bd::t_cba18bc973aa7b 33
+  s_d7272bc53775bd::t_89c29bc76e8175 35,66,128-132,201-209,211-234,238-242,269
+  s_d7272bc53775bd::t_3a16ba69237306 43-54,210
+plugins/mmaitag/ai_provider_gemini_response.c
+  s_d7272bc53775bd::t_89c29bc76e8175 2-12
+doc/source/reference/parameters/mmaitag-response-maxbytes.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+plugins/mmaitag/ai_provider_gemini.c
+  s_d7272bc53775bd::t_7ba655969a32a8 103,138,152
+  s_d7272bc53775bd::t_89c29bc76e8175 92,99
+  s_d7272bc53775bd::t_3508c3b9439301 98,101-102,233
+doc/source/reference/parameters/mmaitag-request-lowspeedlimit.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+doc/source/reference/parameters/mmaitag-request-connecttimeoutms.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c75f035da61288ffa86e423133bfdef87d7e6b95",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

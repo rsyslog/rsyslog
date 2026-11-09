@@ -1,0 +1,19 @@
+.github/workflows/run_checks.yml
+  s_740842903ba389::t_e4d275f21fd680 843-859,861-862,868,879,881
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "52ab2848651102751cac1e100166c4b5e429fc73",
+  "prompts": {},
+  "sessions": {
+    "s_740842903ba389": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15ec6-688b-72a1-a4e7-9fde9dac7ba1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

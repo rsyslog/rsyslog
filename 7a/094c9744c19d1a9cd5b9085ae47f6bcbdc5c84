@@ -1,0 +1,27 @@
+doc/source/configuration/modules/omsendertrack.rst
+  s_5e773934876cb4::t_fe5ca5d7fbb8a0 282,284,378,390-391,396,407,419
+doc/source/reference/parameters/omsendertrack-cmdfile.rst
+  s_5e773934876cb4::t_3462b17a3d9c98 46,48
+doc/source/reference/parameters/omsendertrack-interval.rst
+  s_5e773934876cb4::t_601ac999b0868f 3-6,27,29,44-45,51,53
+doc/source/reference/parameters/omsendertrack-senderid.rst
+  s_5e773934876cb4::t_e78c16ca1f5d8c 3-6,27,29,35-38,41-43,56-57,63,65
+doc/source/reference/parameters/omsendertrack-statefile.rst
+  s_5e773934876cb4::t_7cd3cb6db374ba 70,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a094c9744c19d1a9cd5b9085ae47f6bcbdc5c84",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

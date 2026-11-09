@@ -1,0 +1,27 @@
+plugins/impstats/Makefile.am
+  s_5e773934876cb4::t_5f37df1597173c 56-57
+plugins/impstats/statslog-analyzer.py
+  s_5e773934876cb4::t_4ecbac4b44d1d0 382
+tests/Makefile.am
+  s_5e773934876cb4::t_78eec7d5aa38fc 17-19,3157
+tests/helpers/statslog-evicted-percent.sh
+  s_5e773934876cb4::t_b76c620c44777f 1-115
+tests/statslog-evicted-percent.sh
+  s_5e773934876cb4::t_44be37c41d29b5 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "25a3d69d22498d90ec778bd328df22f9f6c75fdb",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

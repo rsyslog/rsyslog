@@ -1,0 +1,43 @@
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_6a4101cee76792 58-69
+.github/workflows/run_checks.yml
+  s_f67b54b127aca7::t_4a70afddad9d6e 1642-1643
+.github/workflows/run_cross_arch_weekly.yml
+  s_f67b54b127aca7::t_4fb60ffe4c0be5 133-135
+tests/Makefile.am
+  s_f67b54b127aca7::t_a86bc769d9d92a 2342,2345,2363-2365,2419,2432,2442
+  s_f67b54b127aca7::t_b011382ad8b4b5 2368,2420,2422
+  s_f67b54b127aca7::t_49ff124e9bf0a0 2366-2367,2421,2433,2443
+runtime/rshash.c
+  s_f67b54b127aca7::t_5564380f59b677 650-653,655-657,659-661,664-670
+  s_f67b54b127aca7::t_12a1fbe9310007 662-663
+  s_f67b54b127aca7::t_1054ba94eabf29 190-192,334,336,412,589-591,636-640
+  s_f67b54b127aca7::t_708a74e1762925 31,37-126
+  s_f67b54b127aca7::t_9cef8f4c61752f 654,658
+  s_f67b54b127aca7::t_008d20c98e0d4d 32-36
+tests/hashtable_stress_test.c
+  s_f67b54b127aca7::t_870d58ecbfb227 1-9,16-379
+  s_f67b54b127aca7::t_0d115bd66ac414 10-15
+tests/unit/hashtable_hooks_test.c
+  s_f67b54b127aca7::t_bf5dac9e6b4081 8-12
+  s_f67b54b127aca7::t_4d4772dd574d3a 179-180,184,190-191,321
+  s_f67b54b127aca7::t_b755ebf04e3309 193,197
+  s_f67b54b127aca7::t_4753e768537760 1-7,13-149,151-178,181-183,185-189,192,194-196,198-320,322-331
+  s_f67b54b127aca7::t_53fd7b64ab0bd1 150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "70bd8183d15048296241b4b5ff052977bf8170da",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

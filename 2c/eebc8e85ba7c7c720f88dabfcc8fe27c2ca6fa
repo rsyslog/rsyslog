@@ -1,0 +1,19 @@
+doc/source/configuration/modules/imkmsg.rst
+  s_5e773934876cb4::t_e22bb3bf9a90af 7-10,21-22,26-27,48-49,56,194-198,203-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ceebc8e85ba7c7c720f88dabfcc8fe27c2ca6fa",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

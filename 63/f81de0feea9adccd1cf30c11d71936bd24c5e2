@@ -1,0 +1,111 @@
+.github/PACKAGING_IMPLEMENTATION.md
+  s_0d5683fb5e1727::t_ba4ef288fe63c8 5,29-74,156-161
+Makefile.am
+  s_0d5683fb5e1727::t_2c0424e05abeb4 22
+devtools/release/candidate-kinesis/README.md
+  s_0d5683fb5e1727::t_1ceaa69d3f7f05 1-56
+devtools/release/candidate-kinesis/VALIDATION.md
+  s_0d5683fb5e1727::t_c89918b3477e0f 1-124
+devtools/release/candidate-kinesis/debian/README.md
+  s_0d5683fb5e1727::t_b0fc2d7b09101d 1-122
+devtools/release/candidate-kinesis/debian/build-next.sh
+  s_0d5683fb5e1727::t_d22984085dadb6 1-20
+devtools/release/candidate-kinesis/debian/build.sh
+  s_0d5683fb5e1727::t_77f9adb768e2fd 1-68
+devtools/release/candidate-kinesis/debian/collect-results.py
+  s_0d5683fb5e1727::t_1987607ca6bd76 1-71
+devtools/release/candidate-kinesis/debian/prepare.sh
+  s_0d5683fb5e1727::t_e1b2132991566f 1-12
+devtools/release/candidate-kinesis/debian/results.json
+  s_0d5683fb5e1727::t_205b46c199aa84 1-1094
+devtools/release/candidate-kinesis/debian/run.sh
+  s_0d5683fb5e1727::t_8f2cbe61708eac 1-40
+devtools/release/candidate-kinesis/debian/test-install.sh
+  s_0d5683fb5e1727::t_cb320d1015d1ad 1-55
+devtools/release/candidate-kinesis/debian/test-next-return.sh
+  s_0d5683fb5e1727::t_9779842ee7d5a8 1-60
+devtools/release/candidate-kinesis/debian/verify-packages.py
+  s_0d5683fb5e1727::t_b700f830754d30 1-43
+devtools/release/candidate-kinesis/debian/wrong-channel.sh
+  s_0d5683fb5e1727::t_cd969fa9baf3e2 1-26
+devtools/release/candidate-kinesis/default-overlay-equivalence.json
+  s_0d5683fb5e1727::t_a34abf52c13a90 1-47
+devtools/release/candidate-kinesis/prepare-inputs.py
+  s_c4e7938e7d7f5a::t_3d10b9b4a2689e 1-74
+devtools/release/candidate-kinesis/rpm/README.md
+  s_0d5683fb5e1727::t_0172dc9e6fffef 1-62
+devtools/release/candidate-kinesis/rpm/REPORT.md
+  s_0d5683fb5e1727::t_455b05fd1713e0 1-114
+devtools/release/candidate-kinesis/rpm/assert-removals.py
+  s_0d5683fb5e1727::t_47625676fd2153 1-14
+devtools/release/candidate-kinesis/rpm/bootstrap.sh
+  s_5e773934876cb4::t_e2c9aff9056723 1-11
+devtools/release/candidate-kinesis/rpm/build.sh
+  s_0d5683fb5e1727::t_f1772db632e078 1-33
+devtools/release/candidate-kinesis/rpm/competitor.sh
+  s_0d5683fb5e1727::t_02085662d9b9f6 1-26
+devtools/release/candidate-kinesis/rpm/final-first-inventory.json
+  s_0d5683fb5e1727::t_f94ea12ae41f03 1-3472
+devtools/release/candidate-kinesis/rpm/final-next-inventory.json
+  s_0d5683fb5e1727::t_be537309995f6a 1-3464
+devtools/release/candidate-kinesis/rpm/fixture-epoch.py
+  s_5e773934876cb4::t_f9709656ae835c 1-10
+devtools/release/candidate-kinesis/rpm/inspect-artifacts.py
+  s_0d5683fb5e1727::t_81c985c3886d58 1-48
+devtools/release/candidate-kinesis/rpm/inspect-competitor.py
+  s_5e773934876cb4::t_fcc461a5d341f8 1-29
+devtools/release/candidate-kinesis/rpm/results.json
+  s_0d5683fb5e1727::t_143e20b9f50a76 1-301
+devtools/release/candidate-kinesis/rpm/sign-repo.sh
+  s_0d5683fb5e1727::t_ea11a8c1cca7eb 1-45
+devtools/release/candidate-kinesis/rpm/test-install.sh
+  s_0d5683fb5e1727::t_dfc0577e85dd19 1-64
+devtools/release/candidate-kinesis/rpm/test-narrow-return.sh
+  s_0d5683fb5e1727::t_675972ff31367a 1-64
+devtools/release/candidate-kinesis/rpm/test-next-return.sh
+  s_0d5683fb5e1727::t_b38c60c642e436 1-68
+devtools/release/candidate-kinesis/rpm/test-selection.sh
+  s_0d5683fb5e1727::t_5da7851c4b7739 1-46
+devtools/release/candidate-kinesis/source-provenance.json
+  s_0d5683fb5e1727::t_a31f78c005754b 1-14
+devtools/release/candidate-kinesis/verify-kinesis.py
+  s_0d5683fb5e1727::t_2ce9cdb3e040e2 1-123
+devtools/release/package-feature-overlay.py
+  s_0d5683fb5e1727::t_0d8a960754bb22 36-46,112-116,122,173-182,223-225,229,277-284
+tests/Makefile.am
+  s_0d5683fb5e1727::t_b88ccae713400d 29
+tests/package-feature-runtime-dependencies.sh
+  s_0d5683fb5e1727::t_665a94099f7c32 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63f81de0feea9adccd1cf30c11d71936bd24c5e2",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

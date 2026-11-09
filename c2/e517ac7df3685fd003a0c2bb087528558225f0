@@ -1,0 +1,19 @@
+doc/source/reference/parameters/omsendertrack-statefile.rst
+  s_debe127c3dbc4c::t_81eb6a38341fbb 47-50,53-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "c2e517ac7df3685fd003a0c2bb087528558225f0",
+  "prompts": {},
+  "sessions": {
+    "s_debe127c3dbc4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02d9b-0263-7be2-bd1f-e337b5c159a2",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

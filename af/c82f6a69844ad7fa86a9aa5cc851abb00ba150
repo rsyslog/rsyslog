@@ -1,0 +1,32 @@
+tests/imtcp-tls-ossl-input-basic.sh
+  s_12493d1d1488ca::t_4c2b7b36d4e64f 6-10,48-49,57-59,64-65
+  s_12493d1d1488ca::t_c973ea7c4ef5d3 24
+  s_12493d1d1488ca::t_a3630d137a8bf2 13
+  s_12493d1d1488ca::t_b3869c78b41872 27-28,47,63
+  s_12493d1d1488ca::t_4f24cc329a85f4 18-19,37,56
+  s_12493d1d1488ca::t_fbb7db77801b3d 5,12,14-15,20-22,36,52-55
+tests/Makefile.am
+  s_12493d1d1488ca::t_da9fc5e26b3a6a 3099
+  278677c8c6e88086 3100-3101
+  s_12493d1d1488ca::t_187e9768643ab0 2786,3093-3098
+tests/override_ossl_shared_curve.c
+  s_12493d1d1488ca::t_613a45deb4dea3 14,22,24,30-34,59
+  s_12493d1d1488ca::t_b6516bd30163b6 1-13,15-21,23,25-29,35-53,57-58,60-61
+  s_12493d1d1488ca::t_376862f9c76392 54-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "afc82f6a69844ad7fa86a9aa5cc851abb00ba150",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": null
+    }
+  }
+}

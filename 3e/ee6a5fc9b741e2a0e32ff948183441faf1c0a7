@@ -1,0 +1,113 @@
+tests/concurrent-array-bbq-action.sh
+  s_316e24de471f59::t_935574e78eb9b3 2-4,6-8
+  s_316e24de471f59::t_4155e7ff89e8f6 1,5,9-10
+tests/yaml-concurrent-array-queue.sh
+  s_316e24de471f59::t_367810b626ecba 8,23,55,64,83,88
+tests/concurrent-array-config.sh
+  s_316e24de471f59::t_e00289b1ec82a0 67,100-101,142,147,149,209,213,215,229
+  s_316e24de471f59::t_a91d5967a803cf 74-87
+runtime/queue.h
+  s_316e24de471f59::t_e3d8fc808317a1 329
+  s_316e24de471f59::t_b05d4eb476958a 121-122
+tests/concurrent-array-action-oom.sh
+  s_316e24de471f59::t_b80fadc941d417 2,30,35,38,42,48
+runtime/concurrent_array_sparse_lanes.c
+  s_316e24de471f59::t_cb0494416a3006 2253,2255-2256,2258
+  s_316e24de471f59::t_66cbbf2caa306e 2251,2424
+tests/concurrent-array-native-multi.sh
+  s_316e24de471f59::t_df6edfbade4f7f 12,21,49,85,112,143
+tests/concurrent-array-bbq-routing.sh
+  s_316e24de471f59::t_4155e7ff89e8f6 1,5,9-11
+  s_316e24de471f59::t_935574e78eb9b3 2-4,6-8
+tests/testsuites/da-engine-persist-driver.sh
+  s_316e24de471f59::t_367810b626ecba 18
+  s_316e24de471f59::t_04caab0821a159 25
+runtime/concurrent_array_internal.h
+  s_316e24de471f59::t_66cbbf2caa306e 47
+tests/concurrent-array-routing-subsets.sh
+  s_316e24de471f59::t_6c2bb542c612a6 7,12,15,18
+tests/concurrent-array-action-retry.sh
+  s_316e24de471f59::t_06f2ac34cef114 2,8,15,20
+tests/segmented-da-maxdiskspace.sh
+  s_316e24de471f59::t_110b67b23d5cdc 15,18
+tests/yaml-concurrent-array-bbq.sh
+  s_316e24de471f59::t_4155e7ff89e8f6 1-9
+tests/concurrent-array-routing-retry.sh
+  s_316e24de471f59::t_6c2bb542c612a6 8,19,22,50,53,78,100,103,131
+tests/Makefile.am
+  s_316e24de471f59::t_4155e7ff89e8f6 60-61,69-70
+tests/testsuites/da-engine-behavior-driver.sh
+  s_316e24de471f59::t_367810b626ecba 19
+  s_316e24de471f59::t_04caab0821a159 55,58
+tests/concurrent-array-action-transaction.sh
+  s_316e24de471f59::t_b80fadc941d417 20,36,48,58,61
+runtime/ruleset.c
+  s_316e24de471f59::t_e3d8fc808317a1 158,169,192
+  s_316e24de471f59::t_2d6e727832f0a4 193,201,220
+runtime/concurrent_array.c
+  s_316e24de471f59::t_66cbbf2caa306e 195-198
+runtime/queue.c
+  s_316e24de471f59::t_e3d8fc808317a1 254-283,2514-2517,4536-4537,4540-4541,4543,4546-4548,5602-5606,5609,6480-6481,6483,6486-6489,6499,6501,6504
+tests/concurrent-array-reserved-pressure.sh
+  s_316e24de471f59::t_6c2bb542c612a6 7,11,19,23
+tests/concurrent-array-da.sh
+  s_316e24de471f59::t_04caab0821a159 4-6
+tests/concurrent-array-reserved-batch.sh
+  s_316e24de471f59::t_df6edfbade4f7f 10,15,18,22
+tests/yaml-concurrent-array-da.sh
+  s_316e24de471f59::t_367810b626ecba 2,6,26
+tests/concurrent-array-da-maxdiskspace.sh
+  s_316e24de471f59::t_017bac37cf2e96 2-3
+runtime/concurrent_array.h
+  s_316e24de471f59::t_b5477ef1840539 243-245
+tests/concurrent-array-routing-fanout.sh
+  s_316e24de471f59::t_06f2ac34cef114 7,13,20
+runtime/concurrent_array_bbq.c
+  s_316e24de471f59::t_f86d99d9306b18 56-57,1855,1860
+  s_316e24de471f59::t_caf598a548e120 1761
+  s_316e24de471f59::t_8b284c55956011 937-940,1200-1203
+  s_316e24de471f59::t_0bdc4e37b8df71 1577,1614
+  s_316e24de471f59::t_7593168f3bbb7a 161,163,531,539,836-837,936,941,1199,1204,1760,1762,1868,1870-1873
+  s_316e24de471f59::t_4d964e4b626730 532-538,540
+  s_316e24de471f59::t_8edf1e55170ec6 162
+  s_316e24de471f59::t_0312d6d7dec411 2030
+  s_316e24de471f59::t_d86f7f216362c4 1867,1869,1874-1875
+tests/concurrent-array-bbq-da.sh
+  s_316e24de471f59::t_935574e78eb9b3 3-5,7
+  s_316e24de471f59::t_4155e7ff89e8f6 1-2,6,8-9
+runtime/action.c
+  s_316e24de471f59::t_e3d8fc808317a1 138
+tests/concurrent-array-da-persist.sh
+  s_316e24de471f59::t_04caab0821a159 4-5
+tests/concurrent-array-queue.sh
+  s_316e24de471f59::t_6c2bb542c612a6 2,10,40,75,99,126,128
+tests/concurrent-array-bbq-queue.sh
+  s_316e24de471f59::t_935574e78eb9b3 3-4,6-8
+  s_316e24de471f59::t_4155e7ff89e8f6 1-2,5
+tests/concurrent-array-routing-identity.sh
+  s_316e24de471f59::t_df6edfbade4f7f 3,13,25,28,75,78
+tests/concurrent-array-routing-discard.sh
+  s_316e24de471f59::t_df6edfbade4f7f 8,20,23
+tests/concurrent-array-action.sh
+  s_316e24de471f59::t_06f2ac34cef114 5,17,21,28,35
+tests/concurrent-array-action-suspend.sh
+  s_316e24de471f59::t_b80fadc941d417 3,22,35,52,55
+tests/concurrent-array-action-shutdown.sh
+  s_316e24de471f59::t_06f2ac34cef114 9,18,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "3eee6a5fc9b741e2a0e32ff948183441faf1c0a7",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

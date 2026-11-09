@@ -1,0 +1,284 @@
+tests/Makefile.am
+  s_0eedf0d0f806c9::t_05f4f467ef8eca 2398
+  s_f2c089be484e12::t_3426c139805c76 1708-1710
+  s_f2c089be484e12::t_c3072e4666b2b0 467
+  s_f2c089be484e12::t_aafff8da5e0ce3 164,2677-2678,2680-2681,2711-2713,2790
+  s_f2c089be484e12::t_d36716218a21d9 468
+  s_f2c089be484e12::t_b34d1f9a5a9697 469,805
+  s_f2c089be484e12::t_96c244597b13f5 2800
+  s_f2c089be484e12::t_431eb6abe9fce2 2791
+tests/tsan.supp
+  s_52daf9b39e2b17::t_f0b08250591fe0 9
+plugins/omsendertrack/omsendertrack.c
+  s_debe127c3dbc4c::t_42ce1b03069865 412-413
+  s_debe127c3dbc4c::t_ecd656d4c32502 765
+runtime/module-template.h
+  s_f2c089be484e12::t_aafff8da5e0ce3 543-548,552-553
+  s_f2c089be484e12::t_f8f6b07f7fd96a 549-551
+tests/unit/module_reload_test.c
+  s_f2c089be484e12::t_96c244597b13f5 13-15
+  s_f2c089be484e12::t_d13a2930318461 65-66
+  s_f2c089be484e12::t_514ab4d9ef5489 24-25,31-32,38-39,45,47-50
+  s_f2c089be484e12::t_3cb80acc987821 40-44
+  s_f2c089be484e12::t_ba2bf336d5d4a8 67-68
+  s_f2c089be484e12::t_42052b4988d9f7 69-70
+  s_f2c089be484e12::t_aafff8da5e0ce3 1-9,11-12,16-23,26-30,33-37,46,51-57,59-60,71-73,75-79
+  s_f2c089be484e12::t_556c75bcf385c6 10
+  s_f2c089be484e12::t_f8f6b07f7fd96a 58,61-64,74
+runtime/module-reload.c
+  s_f2c089be484e12::t_96c244597b13f5 1-14,20,27-31,34-44
+  s_f2c089be484e12::t_f8f6b07f7fd96a 33
+  s_f2c089be484e12::t_d13a2930318461 15-19,21-26,32
+runtime/modules.c
+  s_f2c089be484e12::t_aafff8da5e0ce3 577-581,598-599
+  s_f2c089be484e12::t_f8f6b07f7fd96a 582,584-586,588-592,594,596-597
+  s_f2c089be484e12::t_d13a2930318461 583,587,593
+  s_f2c089be484e12::t_8dfc0a8454cc53 403-405,595
+  s_f2c089be484e12::t_8d5a57f9bcb2c9 100
+tools/rsyslogd.c
+  s_f2c089be484e12::t_a0642841fa91b6 71,1432,2129,2131
+  s_f2c089be484e12::t_424ec3c89496e1 229-230,920-923,949,952-953,955,961,965,972-973,975,978,980-981,983,985-989,991,993,995-996,998
+  s_f2c089be484e12::t_c4b2376c04fd3a 773-774
+  s_f2c089be484e12::t_4f588a486fcfd2 1949
+  s_f2c089be484e12::t_4bd46c4138d1ae 2411
+  s_f2c089be484e12::t_af5642ab50c686 2566
+  s_f2c089be484e12::t_34a657423c8356 1144,1178-1182,1188,1769,1948,2109,2119-2120
+  s_f2c089be484e12::t_334c2faa778628 1950,2130,2404-2407
+  s_f2c089be484e12::t_84ac90a252a4c9 999-1000,1171-1173
+  s_f2c089be484e12::t_164dfef6206df5 2408
+runtime/modules.h
+  s_f2c089be484e12::t_8d5a57f9bcb2c9 239,248
+  s_f2c089be484e12::t_f17fe93b689f78 122-124,126-127
+  s_f2c089be484e12::t_d13a2930318461 133-139,143,240
+  s_f2c089be484e12::t_f8f6b07f7fd96a 140-142,144-151,231
+  s_f2c089be484e12::t_aafff8da5e0ce3 95-104,108-111,118-121,125,152,234-238,241-247
+  s_f2c089be484e12::t_514ab4d9ef5489 112-115,128-132
+  s_f2c089be484e12::t_3cb80acc987821 116-117
+  s_f2c089be484e12::t_ad0ffc2966c9ce 105-107,230
+  s_f2c089be484e12::t_d4adbb59417534 249
+tests/global-reloadonhup-off-hup.sh
+  s_f2c089be484e12::t_c3072e4666b2b0 1-28
+benchmarks/imtcp-ruleset-reload/compare.py
+  s_f2c089be484e12::t_4527e4ff9b33eb 73
+  s_f2c089be484e12::t_8076bfbdd76f34 1,3-4,6-10,24,27-35,38,41,43-45,58-59,66,68-70,86,90,168-169,178,181-182
+  s_f2c089be484e12::t_f0a94923dcb24d 14-15,18,129-140,143-144
+  s_f2c089be484e12::t_ba47d04042f00b 26,60-63,67,161,177
+  s_f2c089be484e12::t_d6435505173fa6 71-72,94-96,162-164,166-167,173-176
+  s_f2c089be484e12::t_274919d1cb27d3 93
+  s_f2c089be484e12::t_22c98ef040f7e3 97
+  s_f2c089be484e12::t_707c4ae6486897 85,88,106,153,179,183-184
+  s_f2c089be484e12::t_54670247984523 165
+  s_f2c089be484e12::t_2f025875c385d6 2,5,11-13,16-17,19-23,25,36-37,39-40,42,46-57,64-65,74-84,87,89,91-92,98-105,107-128,141-142,145-152,154-160,170-172,180
+doc/Makefile.am
+  s_f2c089be484e12::t_f08a8097623380 374
+runtime/lookup.c
+  s_f2c089be484e12::t_56f84f0be628be 326,328-329,334-335
+runtime/perctile_stats.h
+  s_f2c089be484e12::t_56f84f0be628be 84
+tools/shadow_reload.h
+  s_f2c089be484e12::t_334c2faa778628 13,18-24,26,31
+  s_f2c089be484e12::t_f244e98f3087f2 3-7
+  s_f2c089be484e12::t_a0642841fa91b6 1-2,8-12,14,25,32-34
+  s_f2c089be484e12::t_c4b2376c04fd3a 15-17
+  s_f2c089be484e12::t_0362342276fab2 27-28
+  s_f2c089be484e12::t_f37e9e441ca0a7 29-30
+runtime/glbl.h
+  s_f2c089be484e12::t_22a6588d26ad21 152-153
+benchmarks/imtcp-ruleset-reload/trial.sh
+  s_f2c089be484e12::t_567b458956c991 1-2,5-11,13-15,19-23,25,29,31,33-40,57-61,84-86,93,95-99,107-109,118-146,151
+  s_f2c089be484e12::t_54670247984523 30,32,49,53
+  s_f2c089be484e12::t_d993778398b271 73-78,90-92
+  s_f2c089be484e12::t_4527e4ff9b33eb 41,50,100
+  s_f2c089be484e12::t_f956cdac225e2a 44
+  s_f2c089be484e12::t_ad78aaf88c2c58 101-106
+  s_f2c089be484e12::t_99b7c304986476 12,24,54-55,80-83,88-89
+  s_f2c089be484e12::t_a455ca6166ac6f 79,87,94,149
+  s_f2c089be484e12::t_dd856178d68a46 3-4,16-18,42-43,45-48,51-52,56,62-72,110-117,147-148,150
+  s_f2c089be484e12::t_41265424d452dc 26-28
+runtime/glbl.c
+  s_f2c089be484e12::t_22a6588d26ad21 254-262,1215,1217-1218,1224,1227,1235,1237-1238,1240-1241,1250,1255,1264-1265,1269-1270,1272,1278,1280-1281,1295-1296,1307,1309-1312,1320
+  s_f2c089be484e12::t_b34d1f9a5a9697 1562-1570
+  s_f2c089be484e12::t_f27194de1a6832 80,176,1316-1319,1321,1376,1571-1575
+benchmarks/imtcp-ruleset-reload/.gitignore
+  s_f2c089be484e12::t_567b458956c991 1-2
+benchmarks/imtcp-ruleset-reload/README.md
+  s_f2c089be484e12::t_a87bfe51f6a639 43-50
+  s_f2c089be484e12::t_f0a94923dcb24d 35-39
+  s_f2c089be484e12::t_29e13e9bf7b07b 2,10,18,25-28,30-33,57
+  s_f2c089be484e12::t_4d0d48c1025ea4 1
+  s_f2c089be484e12::t_9f31335e3f6e08 3-9,11-17,19-24,29,34,40-42,51-56,58-63
+tests/global-reloadonhup-yaml.sh
+  s_f2c089be484e12::t_b34d1f9a5a9697 1,6,8-42,45-46
+  s_f2c089be484e12::t_c3072e4666b2b0 7
+  s_f2c089be484e12::t_3dd8e1984bce2d 2-5,43-44
+tests/global-reloadonhup-validate-yaml.sh
+  s_f2c089be484e12::t_07ae53fc53d56c 9
+  s_f2c089be484e12::t_749d6597e6b945 34
+  s_f2c089be484e12::t_d36716218a21d9 1,5-6,22,27,29-31,35
+  s_f2c089be484e12::t_16d1d1848a3424 2-4,7-8,10-21,23-26,28,32-33
+runtime/errmsg.c
+  s_f2c089be484e12::t_3eb3eb59ce07ef 195,218,220,228
+runtime/rsconf.h
+  s_f2c089be484e12::t_22a6588d26ad21 301-309
+  s_f2c089be484e12::t_b34d1f9a5a9697 48-53,123,332
+runtime/outchannel.h
+  s_f2c089be484e12::t_56f84f0be628be 36
+benchmarks/imtcp-ruleset-reload/selftest.py
+  s_f2c089be484e12::t_5720e597828e7c 54-62,80-81,84-85
+  s_f2c089be484e12::t_d07acc0fb3eb3b 1,3-14,16,34,47-53,63-68,70-74,86,94-98
+  s_f2c089be484e12::t_7829c2c44d18e7 91-92
+  s_f2c089be484e12::t_d6435505173fa6 35-41,77-78,82-83,89-90
+  s_f2c089be484e12::t_7c34e2d84ef081 2,15,17-33,42-46,69,75-76,79,87-88,93
+doc/source/development/index.rst
+  s_f2c089be484e12::t_f08a8097623380 8
+tests/global-reloadonhup-rainerscript.sh
+  s_f2c089be484e12::t_b34d1f9a5a9697 1,6-38,55-56
+  s_f2c089be484e12::t_c3072e4666b2b0 2-5,41-54
+  s_f2c089be484e12::t_3dd8e1984bce2d 39-40
+tools/shadow_reload.c
+  s_f2c089be484e12::t_730d2bd7c3fe78 31-33,37,121,127,133,148,167,169-170,172-173,175-176,178
+  s_f2c089be484e12::t_36e0f7bf563618 92
+  s_f2c089be484e12::t_c4b2376c04fd3a 18,20,22-24,44,93-99,109-111,134-143
+  s_f2c089be484e12::t_a5a23a8fc66529 112,114,116,119,123,125,129-132,200-201,207-208
+  s_f2c089be484e12::t_334c2faa778628 1,3-7,11-12,14-16,21,25-29,41,55-65,68-72,74-76,80-82,144-147,150,154-155,184-188,190-191,193-194,196,198,202-203,205,209-210
+  s_f2c089be484e12::t_f37e9e441ca0a7 13,158-162,164-165,180-181,183
+  s_f2c089be484e12::t_1054b65e177bfb 83-86,89-91
+  s_f2c089be484e12::t_a0642841fa91b6 2,8-10,17,19,151-153,156-157,182
+  s_f2c089be484e12::t_24b2a3862b215c 30,34-36,38-40,42-43,66-67,77-79,87-88,149,163,179,197,204
+  s_f2c089be484e12::t_3610513004123a 45-54,100-108,113,115,117-118,120,122,124,126,128,166,168,171,174,177,189,192,195,199,206
+  s_f2c089be484e12::t_65211d02c5a2ae 73
+runtime/Makefile.am
+  s_f2c089be484e12::t_96c244597b13f5 60
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_07ae53fc53d56c 9
+  s_f2c089be484e12::t_749d6597e6b945 34
+  s_f2c089be484e12::t_16d1d1848a3424 1-8,10-33,35
+runtime/outchannel.c
+  s_f2c089be484e12::t_56f84f0be628be 243,246,256-257
+tests/global-reloadonhup-off-yaml.sh
+  s_f2c089be484e12::t_d36716218a21d9 1,5-6,22,26,28-30,33
+  s_f2c089be484e12::t_16d1d1848a3424 2-4,7-8,10-21,23-25,27,31-32
+  s_f2c089be484e12::t_07ae53fc53d56c 9
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_d36716218a21d9 1-22
+runtime/perctile_stats.c
+  s_f2c089be484e12::t_56f84f0be628be 158,181
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_58870693151a90 170-179,292-318
+  s_f2c089be484e12::t_f08a8097623380 1-11,15-41,84-139,142-145,152-169,181-194,214-223,227-231,246-262,265-266,271-272,276-277,283-284,288-291,319-333
+  s_f2c089be484e12::t_3194172b7e7997 72-83
+  s_f2c089be484e12::t_e378b7fedcf2a9 12-14,42-71,140-141,146-151,180,195-213,224-226,232-245,263-264,267-270,273-275,278-282,285-287
+runtime/rsconf.c
+  s_f2c089be484e12::t_b34d1f9a5a9697 129-132,304
+  s_f2c089be484e12::t_b954b471d3371f 421-423
+  s_f2c089be484e12::t_22a6588d26ad21 496,1196
+  s_f2c089be484e12::t_56f84f0be628be 500-501,519
+tools/Makefile.am
+  s_f2c089be484e12::t_a0642841fa91b6 11-12
+benchmarks/imtcp-ruleset-reload/acceptance.py
+  s_f2c089be484e12::t_8076bfbdd76f34 1,3-10,13,15,20,22,46,57,59-61
+  s_f2c089be484e12::t_a530107e3fbf34 2,14,17,30-37,47-48,53-55
+  s_f2c089be484e12::t_1c2118d1f5bee2 11-12,18-19,21,38-45,56
+  s_f2c089be484e12::t_d07acc0fb3eb3b 25-29,51-52,58
+  s_f2c089be484e12::t_204d6f2df65d53 16,23-24,49-50,62-63
+runtime/lookup.h
+  s_f2c089be484e12::t_56f84f0be628be 130
+benchmarks/imtcp-ruleset-reload/runner.py
+  s_f2c089be484e12::t_dfbddaa72e1bae 188-190
+  s_f2c089be484e12::t_99b7c304986476 55-56,166
+  s_f2c089be484e12::t_d6435505173fa6 59-60,108-109
+  s_f2c089be484e12::t_8076bfbdd76f34 161
+  s_f2c089be484e12::t_a455ca6166ac6f 139-140,142-148,221
+  s_f2c089be484e12::t_d993778398b271 44-45,66-67
+  s_f2c089be484e12::t_28f006bca2c96e 2,21-30,58,73-75,107,110-111,122-135,141,155-157,162-163,172-174,177,216,225-228
+  s_f2c089be484e12::t_4527e4ff9b33eb 84,88-95,209-210
+  s_f2c089be484e12::t_567b458956c991 1,3-20,31-43,46-54,57,61-62,64,68-72,76-83,85-87,96-106,112-121,136-138,149-154,158-160,164-165,167-171,175-176,178-187,191-208,211-215,217-220,222-224,229-234
+  s_f2c089be484e12::t_f0a94923dcb24d 63,65
+benchmarks/imtcp-ruleset-reload/run.sh
+  s_f2c089be484e12::t_567b458956c991 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ea7d4213df3ae2caf7ff24d567ea6866d11ad967",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_0eedf0d0f806c9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a013c0-2e97-7571-a432-55326dc57bdd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_13e1c8e6617026": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01eaf-46a4-7633-84b6-02aad8903bed",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_30421e054f7af1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f56-743b-74b0-a007-68cda17ac9bc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_3174538268dd29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f38-e8ea-7fb2-a855-adec6d97f99c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_404d68867328c1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e3e-eef5-7611-a093-616e53fe00dc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_debe127c3dbc4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02d9b-0263-7be2-bd1f-e337b5c159a2",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

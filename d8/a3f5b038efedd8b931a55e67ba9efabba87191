@@ -1,0 +1,32 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_c63702752eb839 951
+tests/imjournal-namespace-remote-conflict.sh
+  s_6224eda96fc0da::t_cbb42dec570e97 1-24,26-27
+  s_6224eda96fc0da::t_200e924caab8af 25
+plugins/imjournal/imjournal.c
+  s_6224eda96fc0da::t_2f1c5f12ec55c4 112,134,300-312,320-326,949,951,1379,1406-1421,1541,1660-1662
+doc/source/reference/parameters/imjournal-namespace.rst
+  s_6224eda96fc0da::t_a69c188d3d703d 1-53
+configure.ac
+  s_6224eda96fc0da::t_48d867e160cd09 777-782
+doc/source/configuration/modules/imjournal.rst
+  s_6224eda96fc0da::t_0448888e807977 125-128,169
+doc/Makefile.am
+  s_6224eda96fc0da::t_b837507b5965c8 596
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "d8a3f5b038efedd8b931a55e67ba9efabba87191",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

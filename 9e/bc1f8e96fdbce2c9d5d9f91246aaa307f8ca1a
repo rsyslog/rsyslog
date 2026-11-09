@@ -1,0 +1,25 @@
+tests/local-queue-force-term-actions.sh
+  s_142ee1fa291d22::t_767efa13d9fb81 11-12,45,63,81
+tests/local-queue-imtcp-internal.sh
+  s_142ee1fa291d22::t_d58873b4fef4fa 31
+tests/local-queue-imtcp-shutdown-multi-fe.sh
+  s_142ee1fa291d22::t_5fe487e8a4ee8e 48,55,63
+tests/local-queue-imtcp-shutdown.sh
+  s_142ee1fa291d22::t_b596b770b315e8 33-34,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9ebc1f8e96fdbce2c9d5d9f91246aaa307f8ca1a",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

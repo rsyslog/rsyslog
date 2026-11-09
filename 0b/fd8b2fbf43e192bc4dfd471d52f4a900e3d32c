@@ -1,0 +1,50 @@
+tests/solaris/prep-libfastjson.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1
+tests/omfile-addlf.sh
+  s_21a8eefcb5d3df::t_804d9aa045fe59 1
+tests/diag.sh
+  s_21a8eefcb5d3df::t_61b36b1c2ddc09 3137
+  s_21a8eefcb5d3df::t_a15607869c4d7c 1397,3792-3793
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 3145
+  s_21a8eefcb5d3df::t_c30d4153bbd1e1 3306,3337,3367
+  s_21a8eefcb5d3df::t_7b0c89db695cba 548,569,681,705,1499,1515,1557,1565,1924,1932,2674,2697,2712,2802,3123,3169,3187,3235,3383,3388,3397,3439,3444,3455,3462,3473,3482,3500,3776,3839,3845,3854,3858,3861,3864,3868,3893,3940,3942,4711,4758,4914,4976,4993
+  s_21a8eefcb5d3df::t_0878a2d8d68265 1692,3091-3099,3106,3108-3115,4563,4569,4924,4960
+tests/testsuites/omprog-defaults-bin.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 5
+tests/testsuites/omprog-feedback-bin.sh
+  s_21a8eefcb5d3df::t_e503073a03f251 17
+packaging/docker/appliance/alpine/internal/build-config
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 7
+tests/imfile-statefile-directory.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 24
+tests/CI/interactive_exec_test_hook.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1-4
+tests/testsuites/omprog-feedback-mt-bin.sh
+  s_21a8eefcb5d3df::t_e503073a03f251 14
+doc/tools/buildenv/starter.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 2
+tests/testsuites/omprog-transactions-bin.sh
+  s_21a8eefcb5d3df::t_e503073a03f251 43
+tests/solaris/prep-librelp.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1
+packaging/docker/appliance/alpine/starter.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 2-3,14,43,47
+tests/uxsock_multiple_netns.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 107-108,117-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "0bfd8b2fbf43e192bc4dfd471d52f4a900e3d32c",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

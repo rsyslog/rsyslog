@@ -1,0 +1,62 @@
+devtools/release/debian-daily-stable.sh
+  s_2dc01c7e3d2940::t_8b1ac81fa208ab 569-581
+  s_2dc01c7e3d2940::t_d3e6313a829f10 568,591-594
+  s_2dc01c7e3d2940::t_fe15be265d6c51 380-382,408,514,521,525,560-562,564,567,583-584,586
+  s_2dc01c7e3d2940::t_e15a0fed947139 582
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_fe15be265d6c51 11,214,240
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_a38217ccf40ec7 174-175
+  s_2dc01c7e3d2940::t_db42d26dd9609d 38,98,101-111,115-117,197,221-222,256
+  s_2dc01c7e3d2940::t_7d6601b434f248 504,507,512-516,533
+  s_2dc01c7e3d2940::t_130ea399c6d079 329-335,338-339,343-345,378-382,387-388,398-405,413-425,474-475,492
+  s_2dc01c7e3d2940::t_57cfaa82ec7921 162-173,177-179
+.github/AMAZONLINUX_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_3f3950c493e421 4,36-37,46-47,50-52,97-98
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_a38217ccf40ec7 162-163
+  s_2dc01c7e3d2940::t_43423968b42412 38,98,101-109,113-114,230,272,342,345-352,356-358,391-395,400-401,411-418,426-438,487-488,505,517,520-528,537
+  s_2dc01c7e3d2940::t_eec859d72e568a 188-189
+  s_2dc01c7e3d2940::t_57cfaa82ec7921 150-161,165-167
+.github/DEBIAN_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_3f3950c493e421 3-4,30-31,36-37,40-42
+  s_2dc01c7e3d2940::t_8fabc90751c823 43
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_3efc5d421affad 48,110,113-121,128-129,307,387,390-397,401-403,416-418,443-446,452-459,468-475,566,572-580,592
+.github/workflows/alpine324_daily_stable.yml
+  s_2dc01c7e3d2940::t_a38217ccf40ec7 174-175
+  s_2dc01c7e3d2940::t_03b0e9495ff139 39,99,102-110,115-116,299,355-361,364-365,369-371,376-390,400-416,425-433,470-471,488-490,493,496-504,513
+  s_2dc01c7e3d2940::t_57cfaa82ec7921 162-173,177-179
+.github/OPENSUSE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_3f3950c493e421 4,45-46,55-56,59-61,107-108
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_7b48934efe9fd9 38,98,101-109,113-114,199-200,248,290,360,363-370,374-376,409-413,418-419,429-436,444-456,506-507,524,536,539-547,556
+  s_2dc01c7e3d2940::t_57cfaa82ec7921 150-161,165-167
+  s_2dc01c7e3d2940::t_a38217ccf40ec7 162-163
+.github/ALPINE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_3f3950c493e421 4,23,28-29,36-37,40-42,90-92
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_3efc5d421affad 48,111,114-122,129-130,308,388,391-398,402-404,417-419,444-447,453-460,469-476,567,573-581,593
+.github/FEDORA_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_3f3950c493e421 4,35-36,45-46,49-51,96-97
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_57cfaa82ec7921 150-161,165-167
+  s_2dc01c7e3d2940::t_a38217ccf40ec7 162-163
+  s_2dc01c7e3d2940::t_5152b219fefd72 38,98,101-109,113-114,188-189,229,271,341,344-351,355-357,390-394,399-400,410-417,425-437,486-487,504,516,519-527,536
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "bda383e37e5ad55dcbb016ebbe12fe3a62beb0bc",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

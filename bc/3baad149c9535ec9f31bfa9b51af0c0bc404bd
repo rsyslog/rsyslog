@@ -1,0 +1,37 @@
+doc/source/reference/parameters/imptcp-failonbinderror.rst
+  s_b3a84b787ce0a4::t_091a071a707395 1-57
+doc/Makefile.am
+  s_b3a84b787ce0a4::t_81107bf6d5afe6 679
+plugins/imptcp/imptcp.c
+  s_b3a84b787ce0a4::t_2624adaf276cdd 47,190,627,737,740-741,796,807,2718-2719
+  s_b3a84b787ce0a4::t_c500f4ad836a71 529-604,607-611
+  s_b3a84b787ce0a4::t_a38aa5a566e451 738-739
+  s_b3a84b787ce0a4::t_ba0177fa95ad38 198-201,605-606,808-809,2202,2204-2205
+  s_b3a84b787ce0a4::t_f3c8c5f363e43b 2180,2193,2195-2196
+doc/source/configuration/modules/imptcp.rst
+  s_b3a84b787ce0a4::t_9268e6c9599c8c 63-66
+tests/imptcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_64aa1c8a0c85f5 13
+  s_b3a84b787ce0a4::t_096b741e628509 7-9,130
+  s_b3a84b787ce0a4::t_92ef1e9d5412ba 145
+  s_b3a84b787ce0a4::t_a781b5d42fe7c6 5-6,111-113,125
+  s_b3a84b787ce0a4::t_f9aed1814c825f 1-4,10-12,14-110,114-124,126-129,131-144,146-155
+tests/Makefile.am
+  s_b3a84b787ce0a4::t_9268e6c9599c8c 1596
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc3baad149c9535ec9f31bfa9b51af0c0bc404bd",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

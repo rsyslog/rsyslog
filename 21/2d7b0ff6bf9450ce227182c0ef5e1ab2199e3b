@@ -1,0 +1,30 @@
+.github/el10-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_a997de32a39554 24-27
+  s_2dc01c7e3d2940::t_df850ee8f28091 1-18,29-30
+  s_2dc01c7e3d2940::t_10e738a57fb8db 19-23,28
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_df850ee8f28091 1-147,164-437
+  s_2dc01c7e3d2940::t_10e738a57fb8db 148-163
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_b6cfa891cac973 18
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_34f2b4c137c2d2 1-597
+devtools/check-flake-evidence-coverage.py
+  s_2dc01c7e3d2940::t_559ef21f286ae3 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "212d7b0ff6bf9450ce227182c0ef5e1ab2199e3b",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

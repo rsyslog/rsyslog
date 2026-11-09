@@ -1,0 +1,34 @@
+plugins/omazuredce/Makefile.am
+  s_2f89000869a42c::t_a3eff66eb392ae 3
+tests/unit/omazuredce_utils_test.c
+  s_2f89000869a42c::t_54ae07fdec0914 29,51-55,86,92,134-140,149
+  s_2f89000869a42c::t_a3eff66eb392ae 1-4,8-26,28,30-50,56-67,73-85,88-91,93-106,113,127-130,132-133,141-148,150-168
+  s_2f89000869a42c::t_68b0a387f3fd19 5-7,27,68-72,87,107-112,114-126,131
+plugins/omazuredce/omazuredce.c
+  s_2f89000869a42c::t_d1698dc6ae588e 565-566,573-578,621-622,790,798,805-808,817,821
+  s_2f89000869a42c::t_57b44ba83c9e95 94,528-529,767,775
+  s_2f89000869a42c::t_a3eff66eb392ae 44,567-568,571,1109
+  s_2f89000869a42c::t_e18c3779a4b4b7 95,450,471-472,564,572,736-738,741,745-762,764,768-772,774,776-789,791-797,799-804,809-816,818,820,822,824-825,880,883,1035-1036,1064,1079-1081,1121
+plugins/omazuredce/omazuredce_utils.c
+  s_2f89000869a42c::t_a3eff66eb392ae 1-16
+tests/Makefile.am
+  s_2f89000869a42c::t_a3eff66eb392ae 125,2515,2517,2540-2548,4021
+plugins/omazuredce/omazuredce_utils.h
+  s_2f89000869a42c::t_a3eff66eb392ae 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "2dc3f832053ce40510df45cfb3ca5de3eead97e9",
+  "prompts": {},
+  "sessions": {
+    "s_2f89000869a42c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f89d2-7002-7821-8550-0d33e8527d33",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

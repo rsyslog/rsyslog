@@ -1,0 +1,19 @@
+plugins/omkafka/omkafka.c
+  s_cf144905ab59ed::t_012d4a1b9db16c 312,336,353,1836
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "152e3da7766ae74f0a1724cb4f9afe533753a18f",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

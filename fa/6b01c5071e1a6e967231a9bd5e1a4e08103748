@@ -1,0 +1,29 @@
+doc/ai/module_map.yaml
+  s_5e773934876cb4::t_4ac392334e121c 356-367
+runtime/net.c
+  s_5e773934876cb4::t_ca6adec74bfaa5 250-251,266-269,278-282,363-365
+runtime/net.h
+  s_5e773934876cb4::t_c01b9782dd7f70 137
+tests/Makefile.am
+  s_5e773934876cb4::t_ed8a60f7d1012e 2153
+tests/imtcp-tls-ossl-manycon-wildcard.sh
+  s_5e773934876cb4::t_52e86583cf5679 1-7
+tests/imtcp-tls-ossl-manycon.sh
+  s_5e773934876cb4::t_6f53c8e03ef29c 4-6,10,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa6b01c5071e1a6e967231a9bd5e1a4e08103748",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

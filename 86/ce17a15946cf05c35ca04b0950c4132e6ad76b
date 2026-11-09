@@ -1,0 +1,56 @@
+doc/source/reference/parameters/omclickhouse-template.rst
+  h_95716f3de0caf5 31-34,59
+plugins/omclickhouse/omclickhouse.c
+  h_95716f3de0caf5 860
+runtime/action.c
+  h_95716f3de0caf5 2562-2569
+runtime/objomsr.c
+  h_95716f3de0caf5 143-144
+runtime/objomsr.h
+  h_95716f3de0caf5 36-38
+runtime/rsconf.c
+  h_95716f3de0caf5 254
+tests/Makefile.am
+  h_95716f3de0caf5 1065,1071,3216-3217
+tests/clickhouse-basic.sh
+  h_95716f3de0caf5 9
+tests/clickhouse-bulk-load.sh
+  h_95716f3de0caf5 10
+tests/clickhouse-bulk.sh
+  h_95716f3de0caf5 9
+tests/clickhouse-errorfile.sh
+  h_95716f3de0caf5 12
+tests/clickhouse-http-status-error.sh
+  h_95716f3de0caf5 24
+tests/clickhouse-limited-batch.sh
+  h_95716f3de0caf5 10
+tests/clickhouse-load.sh
+  h_95716f3de0caf5 10
+tests/clickhouse-retry-error.sh
+  h_95716f3de0caf5 9
+tests/clickhouse-select.sh
+  h_95716f3de0caf5 9
+tests/clickhouse-sql-escape.sh
+  h_95716f3de0caf5 1-30
+tests/clickhouse-template-option-sql.sh
+  h_95716f3de0caf5 1-28
+tests/clickhouse-template-option-stdsql.sh
+  h_95716f3de0caf5 2-4,25-27
+tests/clickhouse-wrong-insert-syntax.sh
+  h_95716f3de0caf5 11
+tests/clickhouse-wrong-quotation-marks.sh
+  h_95716f3de0caf5 11,29
+tests/clickhouse-wrong-template-option.sh
+  h_95716f3de0caf5 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "86ce17a15946cf05c35ca04b0950c4132e6ad76b",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

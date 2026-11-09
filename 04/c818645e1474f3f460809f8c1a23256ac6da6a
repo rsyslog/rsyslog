@@ -1,0 +1,19 @@
+plugins/imdiag/imdiag.c
+  s_f8a738e4bdfaee::t_4f64a5b7f22cb8 1325-1328,1331-1333
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04c818645e1474f3f460809f8c1a23256ac6da6a",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

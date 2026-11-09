@@ -1,0 +1,40 @@
+tests/testsuites/yaml-omudpspoof-module-template-default.yaml
+  s_5e773934876cb4::t_5784ca06a0927d 2-17,19-20,22-26
+  s_5e773934876cb4::t_2e10fc04688e3f 18,21
+  s_5e773934876cb4::t_7b5fd1e739dcdd 1
+tests/yaml-omudpspoof-module-template-default.sh
+  s_5e773934876cb4::t_5784ca06a0927d 1-4,11-26,28-42,44-52
+  s_5e773934876cb4::t_a957e58b964f5f 9-10
+  s_5e773934876cb4::t_e55e836530ac56 7-8,27,43
+  s_5e773934876cb4::t_9eaf2cb0978212 5
+  s_5e773934876cb4::t_381f246a31e071 6
+tests/omudpspoof-module-template-default.sh
+  s_5e773934876cb4::t_5784ca06a0927d 1-7,13-28,30-48,51,53,57-59,61-68,70
+  s_5e773934876cb4::t_e55e836530ac56 8-9,29
+  s_5e773934876cb4::t_9eaf2cb0978212 56
+  s_5e773934876cb4::t_a957e58b964f5f 10-12
+  s_5e773934876cb4::t_92c94a84119d72 69
+  s_5e773934876cb4::t_c081fbb756072d 49-50,52,54-55,60
+tests/Makefile.am
+  s_5e773934876cb4::t_995927e6fc8553 82-86
+  s_5e773934876cb4::t_7b5fd1e739dcdd 4192
+  s_5e773934876cb4::t_5784ca06a0927d 4193-4195
+plugins/omudpspoof/omudpspoof.c
+  s_5e773934876cb4::t_62d7ca02724692 707
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "109b5725d87c1af8e83acd54965af249aaded57b",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

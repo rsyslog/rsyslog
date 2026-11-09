@@ -1,0 +1,26 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_1a3d9faa59e62a 703,771
+tests/imtcp-spacelf-escape.sh
+  s_6224eda96fc0da::t_caba43bfc04b78 30-39
+runtime/parser.c
+  s_6224eda96fc0da::t_caba43bfc04b78 442-446
+  s_6224eda96fc0da::t_1a3d9faa59e62a 339,390,397,404-407,415
+tests/yaml-imtcp-spacelf-escape.sh
+  s_6224eda96fc0da::t_caba43bfc04b78 42-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "4f55eaee47143200fe5122b6253bf11655da95c9",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

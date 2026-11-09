@@ -1,0 +1,29 @@
+doc/source/configuration/yaml_config.rst
+  s_f8a738e4bdfaee::t_00b71a5ae91092 392-398
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_7a106808d9868d 645-648
+grammar/grammar.y
+  s_f8a738e4bdfaee::t_9a41aba960f1e8 33,196-209
+runtime/yamlconf.c
+  s_f8a738e4bdfaee::t_4821311bb1307d 187
+tests/unit/reload_parser_profile_frontend_test.c
+  s_f8a738e4bdfaee::t_bd56ca2d6c87bd 82-83,172,196-215,217-228
+tests/yaml-parser-empty-array.sh
+  s_f8a738e4bdfaee::t_a0a45beea6e4a3 3-7,19-22,32-41,43-52,61-64,69-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24022b658e4b26e254d288cc68b41d9226732136",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+tools/shadow_reload.c
+  s_f2c089be484e12::t_8d8b5734be503f 407,616-617,692,695-699
+runtime/tcps_sess.c
+  s_f2c089be484e12::t_8d8b5734be503f 341,1346
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_8d8b5734be503f 823
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_8d8b5734be503f 113
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_d90b047e5a7463 477-479,505
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "7609945fb253a858c6f203550b3529b79df4a890",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

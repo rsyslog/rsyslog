@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_f89e0afa044c2c 364
+tests/diag.sh
+  s_5e773934876cb4::t_de4dbde379235f 3905
+tests/kafka-dependency-download-cache.sh
+  s_5e773934876cb4::t_635369f9b39cab 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36270a792f975f5bec10b03313bebc79039510ea",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

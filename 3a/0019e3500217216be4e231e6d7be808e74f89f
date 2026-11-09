@@ -1,0 +1,19 @@
+plugins/imdiag/imdiag.c
+  s_b3a84b787ce0a4::t_f5dcf97191ff28 523,525,575-576,580-586,591,595,1374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a0019e3500217216be4e231e6d7be808e74f89f",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

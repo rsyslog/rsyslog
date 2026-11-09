@@ -1,0 +1,173 @@
+runtime/queue.h
+  s_f2c089be484e12::t_133933c3385344 80-87,335-339
+plugins/imdiag/imdiag.c
+  s_f2c089be484e12::t_807f80bf4580aa 540,578
+runtime/wtp-quiesce.c
+  s_8e8a0dfde2b1ab::t_4efbd8d2655d8d 1-75
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_0e6c45bf341275 7-8,33,43-46,49,53-54
+  s_f2c089be484e12::t_6ebb21a8b93489 51-52
+  s_f2c089be484e12::t_8f1b3e5894fd69 55-57
+  s_f2c089be484e12::t_2c0dd31f1ca681 42
+  s_f2c089be484e12::t_ba8d043c4a11ef 3-6,27-32,61,65-74,89-140,150,154,159-162
+  s_f2c089be484e12::t_534b0f9e2c3783 37-40
+  s_f2c089be484e12::t_c8d4f4c030bd94 36
+  s_f2c089be484e12::t_f5d15448af4fd6 13,41
+  s_f2c089be484e12::t_97a4b1803ce7a5 64
+  s_f2c089be484e12::t_7ed93cbf4b14be 75-88
+  s_f2c089be484e12::t_55e74d956d37e5 14-16,34
+  s_f2c089be484e12::t_fd17743ac7c013 35
+  s_f2c089be484e12::t_d4d64be5d5b0a1 47-48,50
+tests/global-reloadonhup-closed-dequeue-window.sh
+  s_f2c089be484e12::t_22895b03f37d95 1-49
+runtime/ruleset.c
+  s_f2c089be484e12::t_630d87968762f0 87,89,101,104-105,108-109,112-115,118,131-132,145-146,166-296
+tools/rsyslogd.c
+  s_f2c089be484e12::t_7c88bf05d6b321 282-285,2163-2165,2186-2200,2481
+grammar/reload-syntax-clone.c
+  s_8e8a0dfde2b1ab::t_ad9d5cc4d6936a 1-51,55-230
+  s_f2c089be484e12::t_6e40e778124e7f 52-54
+grammar/rainerscript.h
+  s_f2c089be484e12::t_1f8834c0aae8d7 428-432,445,462,470
+  s_f2c089be484e12::t_603c6319ae254d 135-138,141
+grammar/rainerscript.c
+  s_f2c089be484e12::t_f46261b29a71e7 4841-4844,5262-5265,5269-5270,5272-5275,5348,5355,5359,5571,5639-5652,6410-6414,6568-6569,6571,6574-6575,6577-6580,6585-6601,6605-6613,6616-6619,6624-6627,6687-6694,6699-6706,6721,6725-6732,6742,6764,6881-6891,6893,6895,6897
+  s_f2c089be484e12::t_2a548cf9fb2636 5282
+  s_f2c089be484e12::t_603c6319ae254d 5317
+runtime/wtp.h
+  s_f2c089be484e12::t_2229d61fff664c 42-44,65-66,75,99-105,126
+tests/global-reloadonhup-rainerscript.sh
+  s_f2c089be484e12::t_3fc1b5919ae45a 50-56,59-60,63,74,125-140,159,167,192
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_113b87ed263023 18,20-24,29-33,46-47
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_5f4aefad1b02af 30-37,45-48,54-57,60
+  s_f2c089be484e12::t_97a4b1803ce7a5 49-53
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_e043dc1de379a9 1118
+  s_f2c089be484e12::t_943d4160f2a7db 1123
+  s_f2c089be484e12::t_6e40e778124e7f 1117,1119-1120
+  s_f2c089be484e12::t_1f6f24769fe7e7 1377
+  s_f2c089be484e12::t_6cdb90f73ae9ef 609,616,989,1003,1006,1017-1044,1115-1116,1124,1378-1433
+runtime/queue-barrier.c
+  s_8e8a0dfde2b1ab::t_5e3e69006798ef 1-48,50-99
+  s_f2c089be484e12::t_606798fe27cadf 49
+grammar/Makefile.am
+  s_f2c089be484e12::t_752c115232f387 11-12
+runtime/msg.c
+  s_f2c089be484e12::t_ee78e0f641ec1c 5530-5532,5632
+grammar/lexer.l
+  s_f2c089be484e12::t_e47154749173c4 486-495,660-661
+runtime/Makefile.am
+  s_f2c089be484e12::t_0c6db2d775cc3d 63,86,98
+grammar/grammar.y
+  s_8e8a0dfde2b1ab::t_7476889f00f823 132,160-167,267-272,277-282
+runtime/wtp.c
+  s_f2c089be484e12::t_20c29df660b8e1 98,203,260-272,464,500,503,606-609,771
+  s_f2c089be484e12::t_b918b6e1a321f7 499,502
+runtime/queue.c
+  s_8e8a0dfde2b1ab::t_1b85ee66a712ad 252,3882,3955-3956,3958-3968,4720
+  s_f2c089be484e12::t_b918b6e1a321f7 3878-3879
+tests/Makefile.am
+  s_f2c089be484e12::t_b64123e755b79a 294,604,2862,2866,2919-2924,3028-3031,3047-3048
+  s_f2c089be484e12::t_7ed93cbf4b14be 607-608,1881-1882
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_0e6c45bf341275 6-7,25,30,34-35,55-68
+  s_f2c089be484e12::t_d36716218a21d9 91
+  s_f2c089be484e12::t_ba8d043c4a11ef 3-5,9,18-23,40-43,45-54,69-74,77-78,81-90,93-94,97-126,135,139-140,156,163-168,171-174
+  s_f2c089be484e12::t_dfe490381a12fa 141-155,157-159,170
+  s_f2c089be484e12::t_97a4b1803ce7a5 44
+  s_f2c089be484e12::t_c8d4f4c030bd94 27
+  s_f2c089be484e12::t_55e74d956d37e5 12-14
+  s_f2c089be484e12::t_8f1b3e5894fd69 36-38
+  s_f2c089be484e12::t_6ebb21a8b93489 32-33
+  s_f2c089be484e12::t_d4d64be5d5b0a1 29,31
+  s_f2c089be484e12::t_74a7165017e66a 92,95-96
+  s_f2c089be484e12::t_f5d15448af4fd6 11,26,28
+runtime/dirty.h
+  s_f2c089be484e12::t_8cec38d06c29e8 48
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_e043dc1de379a9 8-10,739-747
+  s_f2c089be484e12::t_71329f4d6ab2ab 125,130-138,156,158-159,161-162,250-284,460-536
+  s_f2c089be484e12::t_6e40e778124e7f 736-738,748-756
+runtime/rsyslog.h
+  s_f2c089be484e12::t_17692d0d995d60 758-759
+tests/global-reloadonhup-on-mixed-yaml.sh
+  s_f2c089be484e12::t_7ed93cbf4b14be 1-5
+tools/shadow_reload.h
+  s_f2c089be484e12::t_fd160eac19a6d6 7-8,28-31,45-47
+runtime/yamlconf.h
+  s_f2c089be484e12::t_5c10b975708ef2 38-42
+tests/global-reloadonhup-on-local-rainerscript.sh
+  s_f2c089be484e12::t_7ed93cbf4b14be 1-5
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_97a4b1803ce7a5 30-32
+  s_f2c089be484e12::t_f002f3cafa0e8e 26-29,33,35
+runtime/queue_local.h
+  s_f2c089be484e12::t_b918b6e1a321f7 95
+runtime/reload-ruleset-materializer.c
+  s_8e8a0dfde2b1ab::t_067f0255afa498 1-292,302-542
+  s_f2c089be484e12::t_606798fe27cadf 293-295
+  s_f2c089be484e12::t_0e6c45bf341275 297-301
+  s_f2c089be484e12::t_11fbb2c7d86fa5 296
+runtime/ruleset.h
+  s_f2c089be484e12::t_a8fbfe804c8494 83-91
+tests/unit/wtp_quiesce_test.c
+  s_8e8a0dfde2b1ab::t_e64cc2c176416c 1-480
+tests/unit/reload_syntax_clone_test.c
+  s_8e8a0dfde2b1ab::t_97b8cb3508fb15 1-7,11-169,178,180-303,307-534
+  s_f2c089be484e12::t_6e40e778124e7f 8-10,170-177,179,304-306
+runtime/reload-ruleset-materializer.h
+  s_8e8a0dfde2b1ab::t_d4b6727a1350f3 1-42
+tools/shadow_reload.c
+  s_c7fd29f004e3b9::t_6c25e54725d9b9 6-9,24,28,51-52,63-66,82,100-101,126-127,156-172,190-191,213-216,230-232,255-260,303,324-330,369-371,397,415-421,444-446,449,457-459,468,476,481-482,490-491,494-505,507-508,514-518,529-534,593,596-602,616-617,646-681,683-692,695-701,705,718-735,738-744,746-747,776-778
+  s_f2c089be484e12::t_dac7bf4e135fce 693-694
+  s_f2c089be484e12::t_6e40e778124e7f 736-737
+tests/include-abort-if-missing.sh
+  s_f2c089be484e12::t_d1169e9d15560c 20
+tests/global-reloadonhup-on-local-yaml.sh
+  s_f2c089be484e12::t_7ed93cbf4b14be 1-5
+tests/global-reloadonhup-on-mixed-rainerscript.sh
+  s_f2c089be484e12::t_7ed93cbf4b14be 1-5
+runtime/yamlconf.c
+  s_f2c089be484e12::t_407fe81d90d338 1652-1653,1943-1947
+runtime/wti.c
+  s_8e8a0dfde2b1ab::t_5e02c0fc15e6a8 523,528-533,560-563,565
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2925e6dabd7b58ca867352cda00cb02877aed730",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_8e8a0dfde2b1ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13e42-1dc5-7bd0-9fee-153eab5769dd",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_c7fd29f004e3b9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13e2c-bba4-7df0-8bfb-56fd6ae3c9e0",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}

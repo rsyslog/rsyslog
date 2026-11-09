@@ -1,0 +1,31 @@
+devtools/test-imhttp-prometheus-scrape.sh
+  s_41b995fcc6f588::t_41d1b13bc73b5f 81
+runtime/statsobj.h
+  s_41b995fcc6f588::t_eefb92295715ba 174-180,313
+plugins/impstats/impstats_push.c
+  s_41b995fcc6f588::t_eefb92295715ba 264-265,269-270,274,490
+runtime/statsobj.c
+  s_41b995fcc6f588::t_eefb92295715ba 674-677,757-761,764-772,777-778,1162
+doc/source/reference/parameters/impstats-format.rst
+  s_41b995fcc6f588::t_41d1b13bc73b5f 69
+tests/stats-prometheus-escaping.sh
+  s_41b995fcc6f588::t_41d1b13bc73b5f 31
+tests/Makefile.am
+  s_41b995fcc6f588::t_41d1b13bc73b5f 3982
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "7c9ee8821a3ec9d25b8c130cbf9f5dd1a6b40cf6",
+  "prompts": {},
+  "sessions": {
+    "s_41b995fcc6f588": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6691-5cc5-7943-b583-9f0e7f26659a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

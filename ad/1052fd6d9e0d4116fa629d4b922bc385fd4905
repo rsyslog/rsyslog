@@ -1,0 +1,24 @@
+runtime/tcps_sess.h
+  s_f2c089be484e12::t_32ecec7e1c30b5 95-116
+runtime/tcps_sess.c
+  s_f2c089be484e12::t_197309a4bce8dc 534,742-743,749-750,761-762,769-770
+  s_f2c089be484e12::t_0aba718d8299ec 117,283,288,345-346,348-360,417-419,427,599,647-648,650,681,685,718-719,764
+  s_f2c089be484e12::t_88674618351404 347
+  s_f2c089be484e12::t_b8440f5939e576 1345-1346
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ad1052fd6d9e0d4116fa629d4b922bc385fd4905",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+tests/Makefile.am
+  s_142ee1fa291d22::t_3bec7212b7e914 966-967,2531,3225-3228
+runtime/tcpsrv.c
+  s_142ee1fa291d22::t_4b3600b0fa6bcd 1773,1775
+  s_142ee1fa291d22::t_80f77aacec66db 1622-1624
+  s_142ee1fa291d22::t_468c2dd4566282 1774,1776-1779
+  s_142ee1fa291d22::t_ab581cd522e6de 1621,1625,1671,1677,1682,1684-1688,1690-1693,1696-1699,1701-1708,1710
+  s_142ee1fa291d22::t_3bec7212b7e914 1672-1676,1678-1680,1683,1689,1694-1695,1700,1709
+tests/imtcp-poll-shutdown-workset.sh
+  s_142ee1fa291d22::t_ab581cd522e6de 5-6
+  s_142ee1fa291d22::t_3bec7212b7e914 1-4,7-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "55118815f50fa6993b95146f763fc1293f69363e",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

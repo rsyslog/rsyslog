@@ -1,0 +1,19 @@
+runtime/translate.c
+  s_9fbf41743eab76::t_74c5388cb685a2 37,51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "7e185a8340202ee4e3a962a6b65835a2520d5ded",
+  "prompts": {},
+  "sessions": {
+    "s_9fbf41743eab76": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0301c-e321-7a43-abac-373b652df544",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_6b3ce6ae1465bb 298,309-310
+  s_f2c089be484e12::t_a4290e353d3baa 299-302
+runtime/glbl.h
+  s_f2c089be484e12::t_f7658af9951805 127
+  s_f2c089be484e12::t_6694b529ef9f20 126
+tests/global-reloadonhup-droptrailingcr-yaml.sh
+  s_f2c089be484e12::t_a4290e353d3baa 2-4,14-32
+  s_f2c089be484e12::t_5e01be2deb8927 1,5-13,33-75
+tests/global-reloadonhup-droptrailingcr-rainerscript.sh
+  s_f2c089be484e12::t_5e01be2deb8927 1-58
+runtime/glbl.c
+  s_f2c089be484e12::t_6694b529ef9f20 111,311,313-314,956-958,1777,1795
+  s_f2c089be484e12::t_f7658af9951805 312,959-964
+  s_316e24de471f59::t_d4475d19cf2f4c 965
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_6b3ce6ae1465bb 280-284
+tests/Makefile.am
+  s_f2c089be484e12::t_5e01be2deb8927 223,814
+tools/shadow_reload.c
+  s_f2c089be484e12::t_f7658af9951805 590,816,1173
+  s_f2c089be484e12::t_6694b529ef9f20 95-96,497,567-586,588-589,591,593,822
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "947551176dd125d861620982c3e1ccb9b274af69",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

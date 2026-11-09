@@ -1,0 +1,23 @@
+.github/actions/upload-flake-evidence/action.yml
+  s_c4e7938e7d7f5a::t_3e9be5c89bc689 12
+  s_c4e7938e7d7f5a::t_c08e4373bdba00 15,34
+.github/workflows/collect_flake_evidence.yml
+  s_c4e7938e7d7f5a::t_3e9be5c89bc689 44
+  s_c4e7938e7d7f5a::t_c08e4373bdba00 46-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "550d48e737bc0acedef96a404f6946be2a90419f",
+  "prompts": {},
+  "sessions": {
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

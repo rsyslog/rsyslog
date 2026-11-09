@@ -1,0 +1,37 @@
+runtime/wtp.h
+  s_0e13bafe0bf506::t_c9b473889abd0d 56-57,95-97,104-105
+  s_0e13bafe0bf506::t_954ce1a4a679f7 72-73,94
+  s_0e13bafe0bf506::t_4b3ea3f9327798 26
+runtime/queue.c
+  s_0e13bafe0bf506::t_c1a5310fb45379 713-721,725-726,731-732,742-745,747,752,755
+  s_0e13bafe0bf506::t_954ce1a4a679f7 749-751,753-754,4338,4636,4723,4775
+  s_0e13bafe0bf506::t_203a8c8e0aea5e 2434,2439-2441,4321,4333-4337,4630-4635,4637
+  s_0e13bafe0bf506::t_78bf41f903bb85 934,971-979,4082-4089
+  s_0e13bafe0bf506::t_5ec65ce5f56605 3659,3661
+  s_0e13bafe0bf506::t_bdc659edfb11fd 3891,4704,4720,4755,4772
+runtime/wti.h
+  s_0e13bafe0bf506::t_c9b473889abd0d 87-91
+runtime/wti.c
+  s_0e13bafe0bf506::t_5ec65ce5f56605 343-346,348,363,385,390
+runtime/wtp.c
+  s_0e13bafe0bf506::t_6e6cc5c9cd353f 575
+  s_0e13bafe0bf506::t_7fd899bf6603d1 608
+  s_0e13bafe0bf506::t_002a77b4d5d552 544-555,557-573,576-588,590-598,600-605,607,609,611,614-615
+  s_0e13bafe0bf506::t_61046921c74df4 457-459,610,617,621
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "eb6e15af49f16c5e0670b81c334234eb3b5d2dbd",
+  "prompts": {},
+  "sessions": {
+    "s_0e13bafe0bf506": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a062d6-a2e9-7590-884e-edace947c0df",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,90 @@
+tests/Makefile.am
+  s_958aa1d5056522::t_783ae049fe3260 285
+  s_36b1dbeb2adb2f::t_3ef1291a81d2d0 282-284,286-288,782
+tests/omfile-dynafile-traversal-default-template.sh
+  s_958aa1d5056522::t_80d0bcff400edf 7-46
+  s_36b1dbeb2adb2f::t_8921a09623e283 1-6,47-48
+doc/source/reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
+  s_958aa1d5056522::t_27fa2008296202 25-77
+  s_958aa1d5056522::t_439c32fd25cfd8 78
+  s_36b1dbeb2adb2f::t_1a35e52dd9b7f4 1-24,79-84
+tools/omfile.c
+  s_958aa1d5056522::t_56da0124d1ab92 60,84-88,165,233-357,371-473,488,490,500-501,503-504,1087-1088,1521,1550-1561,1627,2135
+  s_958aa1d5056522::t_7a8e3de79f4e78 167,497-498,1335
+  s_958aa1d5056522::t_25f58ea7f1f28b 505,507-515,557-558,584-585,620,1409-1410,1894-1898
+  s_958aa1d5056522::t_b1b712c8502c53 364-365
+  s_36b1dbeb2adb2f::t_2b56da3ce89297 166,358-363,366-370,474-487,489,491-496,499,502,506,1083-1086,1334,1406-1408,1411-1412,1628-1629
+tests/omfile-dynafile-traversal-permit-escape.sh
+  s_958aa1d5056522::t_cbac9532564682 9-52
+  s_36b1dbeb2adb2f::t_e2475cd570831e 1-8,53-54
+tests/yaml-omfile-dynafile-traversal-list-template.sh
+  s_958aa1d5056522::t_0aba717ed8e5d9 9-89
+  s_36b1dbeb2adb2f::t_b6a5d31ce6d752 1-8,90-91
+tests/omfile-dynafile-template-type-invalid.sh
+  s_958aa1d5056522::t_7a8e3de79f4e78 2-8
+  s_36b1dbeb2adb2f::t_01db90c9aadddc 1,9-33
+doc/source/reference/parameters/omfile-dynafile-restricttemplatetype.rst
+  s_958aa1d5056522::t_7a8e3de79f4e78 8-40,55
+  s_958aa1d5056522::t_b1b712c8502c53 41-46
+  s_36b1dbeb2adb2f::t_2417be4b74007c 1-7,47-54,56-61
+doc/source/configuration/modules/omfile.rst
+  s_958aa1d5056522::t_6753067e05cd70 172-175,178-179,251-254
+  s_36b1dbeb2adb2f::t_cd39c26f646be1 77,79,176-177
+tests/omfile-dynafile-template-type-override.sh
+  s_958aa1d5056522::t_7a8e3de79f4e78 2-23
+  s_958aa1d5056522::t_f5cf71e5c2a9aa 24
+  s_36b1dbeb2adb2f::t_607781f2278648 1,25-30
+doc/source/reference/parameters/omfile-dynafile.rst
+  s_958aa1d5056522::t_27fa2008296202 46-67
+  s_36b1dbeb2adb2f::t_cca1067267a8af 38-45,68-79
+tests/dynfile_invld_sync.sh
+  s_958aa1d5056522::t_b1b712c8502c53 12-13
+tests/omfile-dynafile-traversal-repro.sh
+  s_958aa1d5056522::t_f2130930cd012b 30-31,34
+  s_958aa1d5056522::t_19a07c269c306e 1-29,33,35-37
+  s_36b1dbeb2adb2f::t_00db2b42c85d71 32
+doc/Makefile.am
+  s_36b1dbeb2adb2f::t_311fd613cb0e07 1047,1049
+doc/source/configuration/actions.rst
+  s_36b1dbeb2adb2f::t_5e0bbf3c8fd040 335-343
+doc/source/configuration/property_replacer.rst
+  s_36b1dbeb2adb2f::t_003395476a8836 349-352,355-358
+doc/source/configuration/templates.rst
+  s_36b1dbeb2adb2f::t_8744699ae504a3 133-146
+doc/source/configuration/yaml_config.rst
+  s_36b1dbeb2adb2f::t_ae544df3c2d61d 212-218
+doc/source/reference/templates/templates-examples.rst
+  s_36b1dbeb2adb2f::t_4f607c17ebee7b 146-153
+doc/source/reference/templates/templates-statement-property.rst
+  s_36b1dbeb2adb2f::t_2ae7fd2f3347df 66-70,127-144
+doc/source/reference/templates/templates-type-string.rst
+  s_36b1dbeb2adb2f::t_46838364adfbe4 29-40
+tests/omfile-dynafile-template-type-list-default.sh
+  s_36b1dbeb2adb2f::t_cc4e17b7a66aaf 1-29
+tests/omfile-dynafile-traversal-list-template.sh
+  s_36b1dbeb2adb2f::t_d0e7d24f629ba4 1-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "bdb381c047329cf6285e1ea589a77eeef2b4de18",
+  "prompts": {},
+  "sessions": {
+    "s_36b1dbeb2adb2f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00103-5ff8-7210-881c-1092915f7ffe",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_958aa1d5056522": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ffa1a-f132-76d3-bd7c-a44b20b1f7f0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

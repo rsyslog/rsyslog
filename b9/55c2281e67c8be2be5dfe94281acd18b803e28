@@ -1,0 +1,19 @@
+runtime/queue.c
+  s_53c9354de38ddb::t_28779709acd4b7 2953-2961,3002-3004
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "b955c2281e67c8be2be5dfe94281acd18b803e28",
+  "prompts": {},
+  "sessions": {
+    "s_53c9354de38ddb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070da-a4a3-71b1-83ca-215b48a880c1",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+runtime/queue_local.c
+  s_142ee1fa291d22::t_7fb676f7b21ad8 1-669,677,682,686,689-690
+  s_142ee1fa291d22::t_d32d4a3933c5d3 670-676,678-681,683-685,687-688,691-909
+runtime/wtp.h
+  s_142ee1fa291d22::t_8392de9f4e85dd 62,105-109
+runtime/queue_local.h
+  s_142ee1fa291d22::t_7fb676f7b21ad8 55-58
+  s_142ee1fa291d22::t_8392de9f4e85dd 1-54,59-68
+  s_142ee1fa291d22::t_454cafc5120070 69-86
+doc/ai/module_map.yaml
+  s_142ee1fa291d22::t_7159a062370e24 9-10,19-30
+runtime/Makefile.am
+  s_142ee1fa291d22::t_3c2f3ea522bdab 81-84
+runtime/queue.c
+  s_142ee1fa291d22::t_877c543cb880ff 208-209,1011-1016,2417-2418,3121-3154,3171,3255,3983-3988,4176,4294-4299,4304-4305,4484-4495,4510-4513,4600,4674,4703-4704,4761,4807-4809,4831-4930,4951,4999-5000
+runtime/tcpsrv.c
+  s_142ee1fa291d22::t_5a5d3e96055d90 72,1232-1237,1244,1453,1561-1572,1803,1843-1853
+runtime/wti.c
+  s_142ee1fa291d22::t_550d1918f3b8c8 52,336-369,395-403,572
+runtime/wtp.c
+  s_142ee1fa291d22::t_86bec7892a0e77 132,168-172,333-382,434-436,438-439
+runtime/queue.h
+  s_142ee1fa291d22::t_4a423b6f2951f6 98-100,104-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7a490aa5209c99fa84da3216b0d0d7f1e67c577e",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

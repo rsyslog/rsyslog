@@ -1,0 +1,41 @@
+tests/imdtls-sessionbreak.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 60
+packaging/docker/dev_env/centos/pkg_base/8/extra/sync_remote.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7
+tests/privdrop_common.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 8,29
+tests/imtcp-persource-ratelimit.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 40
+packaging/docker/dev_env/common/setup-projects.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7-8
+tests/omrabbitmq_data_1server.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 11-12
+tests/sndrcv_relp_tls_chainedcert.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 51
+tests/sndrcv_relp_tls_certvalid.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 46
+tests/omrabbitmq_data_2servers.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 11-12
+packaging/docker/dev_env/suse/base/tumbleweed/setup-projects.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7-8
+packaging/docker/dev_env/centos/pkg_base/7/extra/sync_remote.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7
+tests/ratelimit_hup.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "5b70ea35a0c1e8c0ca535568f772011d79ce48cc",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

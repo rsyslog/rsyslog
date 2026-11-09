@@ -1,0 +1,14 @@
+tests/mmnormalize-turbo-hup-tsan.sh
+  h_95716f3de0caf5 86-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "02319b1f72e153037f1f776b6d66271312b8e34e",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_f07f8263d73262 302-304,316-319
+tools/shadow_reload.c
+  s_f2c089be484e12::t_f07f8263d73262 105-106,512,685-705,707-709,712,940,951,1309-1310
+runtime/glbl.h
+  s_f2c089be484e12::t_f07f8263d73262 136-137
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_f07f8263d73262 338-341
+tests/Makefile.am
+  s_f2c089be484e12::t_f07f8263d73262 223,819
+tests/global-reloadonhup-escapetab-rainerscript.sh
+  s_f2c089be484e12::t_ca57d2d7265ea5 1-59
+runtime/glbl.c
+  s_f2c089be484e12::t_f07f8263d73262 116,331-334,1026-1035,1852,1870
+tests/global-reloadonhup-escapetab-yaml.sh
+  s_f2c089be484e12::t_ca57d2d7265ea5 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "c1326ffdb0e2926d7a75203f96d636e7ea3a3aa9",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

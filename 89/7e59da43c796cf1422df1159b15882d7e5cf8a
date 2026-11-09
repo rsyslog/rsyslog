@@ -1,0 +1,72 @@
+tests/rscript-if-chain-snapshot.sh
+  s_6b340ae08e941b::t_0df0970c34e7b7 1,6-38
+  s_6b340ae08e941b::t_d7723f77348c97 2-5
+grammar/rainerscript.c
+  s_6b340ae08e941b::t_2885fb049d7a6d 3793,5884-5889,5897-5906,5908-5944,5979-5988,5990-5994,6003-6005,6059
+  s_6b340ae08e941b::t_097f715a9f68f4 3794
+  s_6b340ae08e941b::t_1449a40732006d 5945-5952,5955-5978,5996,5999
+  s_6b340ae08e941b::t_d123f1995c3565 5997-5998,6000-6001
+  s_6b340ae08e941b::t_4987f299b6b7d8 4201
+  s_6b340ae08e941b::t_7e314bf77cb0d2 5890-5896
+  s_6b340ae08e941b::t_d7723f77348c97 3782,3787,5104,5115,5907,5953-5954,5989,5995,6002
+  s_6b340ae08e941b::t_f6ba63d14efb70 3710-3712,3762-3781,3783-3786,3788-3792
+doc/source/rainerscript/control_structures.rst
+  s_6b340ae08e941b::t_70746cc6d28a60 42-54
+runtime/ruleset.c
+  s_6b340ae08e941b::t_d7723f77348c97 304,309-310,329
+  s_6b340ae08e941b::t_ac9083ff9569b9 298-301,303,305-307,311-328,330-333,335,337
+tests/rscript-if-chain-snapshot-vg.sh
+  s_6b340ae08e941b::t_8f07f966b7673e 1,6-8
+  s_6b340ae08e941b::t_d7723f77348c97 2-5
+  s_6b340ae08e941b::t_efcdc496cc132c 9
+runtime/wti.h
+  s_6b340ae08e941b::t_11996294d328f8 157
+  s_6b340ae08e941b::t_29210a610ecdc8 32-33,98
+tests/Makefile.am
+  s_6b340ae08e941b::t_0df0970c34e7b7 539
+  s_6b340ae08e941b::t_8f07f966b7673e 743
+grammar/rainerscript.h
+  s_6b340ae08e941b::t_d7723f77348c97 139,209,219
+  s_6b340ae08e941b::t_ebdc11d489da5d 221
+  s_6b340ae08e941b::t_29210a610ecdc8 212-218,220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "897e59da43c796cf1422df1159b15882d7e5cf8a",
+  "prompts": {},
+  "sessions": {
+    "s_06c5a5c0173a0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a061b7-b567-7e63-b994-07007aa4c899",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6b340ae08e941b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a048bc-a478-75f3-9438-60a4c05c4b69",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    },
+    "s_923c67e7c3d373": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05dfd-c5e9-7a01-b239-97b748984633",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_a1907ce932db7f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05db5-6dd0-73f0-a1f1-ca1f64608bbf",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

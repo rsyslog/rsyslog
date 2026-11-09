@@ -1,0 +1,77 @@
+runtime/queue.c
+  s_316e24de471f59::t_aa5afc92bde58f 4787-4788
+  s_316e24de471f59::t_487f0579948751 4058-4074,4304,4737-4771,4777-4781,4785-4786,4823-4834,4836-4840,4853-4857,4860,4862-4863,4885-4886,4890-4891,4893-4894,4896,4898-4903,4905-4906
+doc/ai/reserved_batch_egress.md
+  s_316e24de471f59::t_64904c504e5ea3 92-181,199-220
+  s_316e24de471f59::t_3c644efb3859b6 182-198
+tests/reserved-egress-crossed-targets-immediate.sh
+  s_316e24de471f59::t_596d72a878facc 13
+tests/reserved-egress-batching-stats.sh
+  s_316e24de471f59::t_d78e93b64c6e51 12-14,21,57-63
+tests/Makefile.am
+  s_316e24de471f59::t_18db0f008bbff2 19,32-37,41,2982,2984-2985
+tests/reserved-egress-yaml.sh
+  s_316e24de471f59::t_e8b016168e1f16 6-8,11-29
+tests/reserved-egress-crossed-targets.sh
+  s_316e24de471f59::t_596d72a878facc 14
+tests/reserved-egress-immediate-tail.sh
+  s_316e24de471f59::t_596d72a878facc 15
+tests/reserved-egress-oom.sh
+  s_316e24de471f59::t_596d72a878facc 26,28,31,41,43
+runtime/wti.c
+  s_316e24de471f59::t_94ca3204744f4b 303-305,313-321,372-390,393-394,396-409,442-446,452
+tests/reserved-egress-credit-crossed-pressure.sh
+  s_316e24de471f59::t_f962b3715d1620 1-18,22-32,35-42,45-56
+  s_316e24de471f59::t_55507b511efd6e 19-21,33-34,43-44
+tests/reserved-egress-basic.sh
+  s_316e24de471f59::t_596d72a878facc 8-9
+runtime/wti.h
+  s_316e24de471f59::t_099fb196c19fed 76-80,93-94
+runtime/queue.h
+  s_316e24de471f59::t_aa5afc92bde58f 90
+  s_316e24de471f59::t_099fb196c19fed 284-292,308-326
+tests/reserved-egress-credit-fixed-wrap.sh
+  s_316e24de471f59::t_f962b3715d1620 1-67
+configure.ac
+  s_316e24de471f59::t_099fb196c19fed 2232-2250
+tests/reserved-egress-credit-control.sh
+  s_316e24de471f59::t_d78e93b64c6e51 1-73
+tests/reserved-egress-credit-discard.sh
+  s_316e24de471f59::t_f962b3715d1620 1-6,28-39,41-45,55-56,58,61,64-70,73-74,76-84,91
+  s_316e24de471f59::t_5e4e9635e86112 15-24
+  s_316e24de471f59::t_6902c8e63d92c8 7-8,14,25-27,40,57,59-60,62-63,71-72,75,85-86,90
+  s_316e24de471f59::t_428f395e6fe257 87-89
+  s_316e24de471f59::t_0fca8582e69869 9-13,46-54
+runtime/glbl.c
+  s_316e24de471f59::t_099fb196c19fed 208,1177,1429-1435
+tests/diag.sh
+  s_316e24de471f59::t_e8b016168e1f16 534-536
+  s_316e24de471f59::t_596d72a878facc 460,467-469,475
+runtime/rsconf.h
+  s_316e24de471f59::t_099fb196c19fed 296
+tests/reserved-egress-immediate.sh
+  s_316e24de471f59::t_596d72a878facc 6,8-10,14,16
+tests/reserved-egress-unsupported.sh
+  s_316e24de471f59::t_8bf6c6f99ae833 54
+  s_316e24de471f59::t_e8b016168e1f16 8-10,19,52-53,55-62
+tests/reserved-egress-credit-large.sh
+  s_316e24de471f59::t_d78e93b64c6e51 1-88
+tests/reserved-egress-concurrent.sh
+  s_316e24de471f59::t_596d72a878facc 6-9,13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bed862d174843944f2acb3fd783ea058cddb4d6c",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

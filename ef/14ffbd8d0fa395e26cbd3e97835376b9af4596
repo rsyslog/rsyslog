@@ -1,0 +1,22 @@
+tests/unit/reload_report_test.c
+  s_f2c089be484e12::t_62e4f8dcb4ebf5 21-22,26-27,52-58,266-271
+  s_f2c089be484e12::t_ec23dd4686001c 33-34
+tests/unit/reload_normalized_graph_test.c
+  s_f2c089be484e12::t_62e4f8dcb4ebf5 25-26,30-31,40-43,119-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ef14ffbd8d0fa395e26cbd3e97835376b9af4596",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+tests/package-candidate-plan.sh
+  s_0d5683fb5e1727::t_faefb31725175f 1-8,10-12,14-18,22-35,53,88-90,92-93,98-115
+  s_0d5683fb5e1727::t_b85db9fb4c1003 9,13,19-21,36-52,54-87,91,94-97
+devtools/release/package-candidate-plan.py
+  s_0d5683fb5e1727::t_c86c0cabb9a410 43-44
+  s_0d5683fb5e1727::t_05346fbe1f311d 1-31,34-42,45-124
+  s_0d5683fb5e1727::t_9f06ba1b98eabf 32-33
+  s_0d5683fb5e1727::t_dc566f595be4c9 125
+.github/PACKAGING_FOUNDATION.md
+  s_0d5683fb5e1727::t_9bc5de08ee1a9f 1-201
+.github/PACKAGING_IMPLEMENTATION.md
+  s_0d5683fb5e1727::t_6d616419412436 8-79,85
+.github/PACKAGING_STRATEGY.md
+  s_0d5683fb5e1727::t_04f8d0f6d4fae9 12-13,16-19
+.github/packaging-targets.json
+  s_0d5683fb5e1727::t_003059dbfa5959 5,733-737
+.github/workflows/packaging_candidates.yml
+  s_0d5683fb5e1727::t_27d0e2bb5392bc 1-128
+AGENTS.md
+  s_0d5683fb5e1727::t_557f553b6cb8d4 69-76
+Makefile.am
+  s_0d5683fb5e1727::t_7bdd07a6b0955e 23-24
+tests/Makefile.am
+  s_0d5683fb5e1727::t_7656c5a2684a81 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a56b7d0ac5d6fb99d9116a76b51f832bca9526a6",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

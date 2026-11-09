@@ -1,0 +1,21 @@
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_3edb066e93849f 239-252,276-288,460-461
+  s_f67b54b127aca7::t_3542ce5a56e840 289-290
+  s_f67b54b127aca7::t_d56101bbb6a8c1 46-49,152-238,260-265,295,308-309,457-459
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "05543a4d3de33668702433732245daec03f9b050",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,25 @@
+tests/AGENTS.md
+  s_5e773934876cb4::t_041990967fc1f1 41-61
+tests/imudp_error_msg.sh
+  s_5e773934876cb4::t_9eec7b04034d31 3-5
+tests/sndrcv_omudpspoof.sh
+  s_5e773934876cb4::t_3d423ea8fbbc8e 7-11
+tests/sndrcv_relp_dflt_pt.sh
+  s_5e773934876cb4::t_c5a57701fe4e57 6-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6a85da25331cbb718d8183b22d2bc399d75fab7",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+doc/source/rainerscript/queue_parameters.rst
+  s_c54d3f9b31c8fc::t_8e5f50bf093d3f 616
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "33ef012579f6e4a8b3b7e7e3a6811d225076475e",
+  "prompts": {},
+  "sessions": {
+    "s_c54d3f9b31c8fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06658-99e7-76c1-96cd-422e9b578afc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

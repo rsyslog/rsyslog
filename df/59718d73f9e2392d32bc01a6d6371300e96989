@@ -1,0 +1,59 @@
+benchmarks/variable-json/runner.py
+  s_8ccd817957438e::t_0e00f09e8885d0 18-24,26-29,31-32,35-40,51-52,64-67,71-72,120-121,125-127,129,136-137,144-146,160,165-166,169-170
+  s_8ccd817957438e::t_4f5ae216c6914e 88-117,148
+  s_8ccd817957438e::t_bc70f17d2614fd 68,70
+  s_8ccd817957438e::t_134e99d2460154 139-140,162-164
+  s_8ccd817957438e::t_cf6887ea97ae7d 153-154
+  s_8ccd817957438e::t_5cd9d11c7c2934 62-63,69
+  s_8ccd817957438e::t_0ae91831322ee5 142,147,152,155,158,161
+  s_8ccd817957438e::t_f534c2ef1c414b 1-17,30,33-34,41-50,53-61,73-82,85-87,118-119,122-124,133-135,138,141,143,149-151,156-157,159,167-168
+  s_8ccd817957438e::t_7027ab5a721134 25,128,130-132
+  s_8ccd817957438e::t_718798b0d513e1 83-84
+benchmarks/variable-json/results/2026-08-26-libfastjson-master.md
+  s_8ccd817957438e::t_071541791a8c7c 1-55
+benchmarks/variable-json/trial.sh
+  s_8ccd817957438e::t_49f6cd1401ad6a 24,34
+  s_8ccd817957438e::t_f1aab33a2c8814 1,3-10,12,14-15,22-23,26-33,36,51-53,59,66,68
+  s_8ccd817957438e::t_9a493496d21f22 25
+  s_8ccd817957438e::t_8f78eb167a93d9 2
+  s_8ccd817957438e::t_43316a97b50a4a 11
+  s_8ccd817957438e::t_466c488c4323d8 35
+  s_8ccd817957438e::t_718798b0d513e1 47-48,67
+  s_8ccd817957438e::t_0e00f09e8885d0 40,42-46
+  s_8ccd817957438e::t_9277cb12c0fbf3 37-39,49-50,57-58
+  s_8ccd817957438e::t_63b871b09c108c 41,54-56,60-65
+  s_8ccd817957438e::t_df76bd56814359 13,16-21
+benchmarks/variable-json/run.sh
+  s_8ccd817957438e::t_f1aab33a2c8814 1-4
+benchmarks/variable-json/compare.py
+  s_8ccd817957438e::t_cf6887ea97ae7d 15-16,24-35,38-39,59-62,68,71-74,77-78
+  s_8ccd817957438e::t_3310d7f8e88dbc 44,46
+  s_8ccd817957438e::t_4f928608fadc52 63-64
+  s_8ccd817957438e::t_64a0cb608aa71f 53-55,65,67,69-70
+  s_8ccd817957438e::t_907084e0736879 1-14,17-23,36-37,40-43,48-52,56-58,66,75-76
+  s_8ccd817957438e::t_3960d8842eb800 45,47
+benchmarks/variable-json/README.md
+  s_8ccd817957438e::t_1d0cecad1299ed 1-12,15,18-31,35-40
+  s_8ccd817957438e::t_5c1abab46fa1f8 13-14,16-17,32-34
+benchmarks/variable-json/.gitignore
+  s_8ccd817957438e::t_f1aab33a2c8814 1-2
+benchmarks/variable-json/selftest.py
+  s_8ccd817957438e::t_907084e0736879 1-13,22-23,29-32
+  s_8ccd817957438e::t_cf6887ea97ae7d 14-21,24-28,33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "df59718d73f9e2392d32bc01a6d6371300e96989",
+  "prompts": {},
+  "sessions": {
+    "s_8ccd817957438e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03e2f-56bf-79c3-bebd-11e13d3cca67",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

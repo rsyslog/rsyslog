@@ -1,0 +1,25 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_3708b3e931c901 17-20,3158,3161
+runtime/msg.c
+  s_5e773934876cb4::t_fbf2506080737f 3725-3731
+tests/jsonf-auto-leading-zero.sh
+  s_5e773934876cb4::t_a00f1bc19541fb 1-120
+tests/yaml-jsonf-auto-leading-zero.sh
+  s_5e773934876cb4::t_90ec0d4da92919 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f80643c58fa6056bfdf02021fd5ecfe7d2a84689",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

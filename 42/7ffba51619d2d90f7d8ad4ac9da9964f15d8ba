@@ -1,0 +1,26 @@
+tests/omfile-dynafile-traversal-root-base.sh
+  s_30421e054f7af1::t_54adc14a7ff0ad 1-44
+tools/omfile.c
+  s_30421e054f7af1::t_54adc14a7ff0ad 234,352-354
+tests/Makefile.am
+  s_30421e054f7af1::t_54adc14a7ff0ad 286
+doc/source/reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
+  s_30421e054f7af1::t_54adc14a7ff0ad 2,26,28,42-43,68-69
+  s_30421e054f7af1::t_768832b05b3179 44-45,60-67,70-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "427ffba51619d2d90f7d8ad4ac9da9964f15d8ba",
+  "prompts": {},
+  "sessions": {
+    "s_30421e054f7af1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f56-743b-74b0-a007-68cda17ac9bc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

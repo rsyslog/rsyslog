@@ -1,0 +1,34 @@
+tests/ratelimit-many-named-configs.sh
+  s_6d266762f4c57a::t_c2f4deafc2dd43 1-46
+runtime/rsconf.c
+  s_6d266762f4c57a::t_c80473a04f6b31 314
+tests/Makefile.am
+  s_6d266762f4c57a::t_412ae5432ad60d 3621
+  s_6d266762f4c57a::t_f34211e4d429c7 661
+runtime/ratelimit.c
+  s_6d266762f4c57a::t_cdb50a7ada7762 211,230-236
+  s_6d266762f4c57a::t_62db8ddb5caeab 84-89,208-209,212-218,220-222,224-229,237-246,256-257
+  s_6d266762f4c57a::t_55aab7dfacfdaa 1653,1750-1751,1753,1757,1802-1803,1812,1818,1866,1872-1874,1876,1881,1885
+  s_6d266762f4c57a::t_c95d44f486facd 2533-2558,2560,2562-2568,2570-2576,2578-2579,2581-2583,2588-2595,2597-2598,2600,2604-2616,2618
+  s_6d266762f4c57a::t_dab88ade93575b 2559,2561,2569,2577,2580,2584-2587
+runtime/ratelimit.h
+  s_6d266762f4c57a::t_a9cd448b23309d 105-107,109,111-114,143
+doc/ai/module_map.yaml
+  s_6d266762f4c57a::t_756dd146b1982e 11-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c28c523cf1f70e23d3de3265d83b545912411b14",
+  "prompts": {},
+  "sessions": {
+    "s_6d266762f4c57a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1229-1f28-7223-8f9d-3dabc84a84b8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

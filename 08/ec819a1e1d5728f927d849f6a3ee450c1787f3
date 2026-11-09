@@ -1,0 +1,22 @@
+runtime/queue.c
+  s_5e773934876cb4::t_d295ee169fcd22 2419-2421,3456-3466
+  s_5e773934876cb4::t_f9f84e20afd67b 2422,2453-2468,3450-3455,3467-3471
+tests/queue-shutdown-save-full-inflight.sh
+  s_5e773934876cb4::t_c48aff0f829950 5-8,17-21,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08ec819a1e1d5728f927d849f6a3ee450c1787f3",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

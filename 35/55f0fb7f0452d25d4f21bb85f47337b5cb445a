@@ -1,0 +1,45 @@
+tests/testsuites/omprog-feedback-bin.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 17
+tests/testsuites/omprog-feedback-mt-bin.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 14
+tests/imfile-statefile-directory.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 24
+tests/CI/interactive_exec_test_hook.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1-4
+tests/solaris/prep-libfastjson.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1
+tests/diag.sh
+  s_21a8eefcb5d3df::t_61b36b1c2ddc09 3159
+  s_21a8eefcb5d3df::t_c30d4153bbd1e1 3328,3359,3389
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 3167
+tests/solaris/prep-librelp.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1
+tests/uxsock_multiple_netns.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 107-108,117-119
+tests/testsuites/omprog-defaults-bin.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 5
+packaging/docker/appliance/alpine/internal/build-config
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 7
+tests/testsuites/omprog-transactions-bin.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 43
+packaging/docker/appliance/alpine/starter.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 2-3,14,43,47
+doc/tools/buildenv/starter.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "3555f0fb7f0452d25d4f21bb85f47337b5cb445a",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

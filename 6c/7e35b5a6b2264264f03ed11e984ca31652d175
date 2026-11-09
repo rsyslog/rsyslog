@@ -1,0 +1,25 @@
+tests/imfile-delay-message.sh
+  s_12493d1d1488ca::t_e498366a5468e0 1-28
+doc/source/reference/parameters/imfile-delay-message.rst
+  s_12493d1d1488ca::t_e498366a5468e0 46-48
+plugins/imfile/imfile.c
+  s_12493d1d1488ca::t_edff80e9bd8f8e 1651,1658
+tests/Makefile.am
+  s_12493d1d1488ca::t_e498366a5468e0 2045
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6c7e35b5a6b2264264f03ed11e984ca31652d175",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+tests/template-property-timereceived.sh
+  s_6224eda96fc0da::t_cfbd047eb39263 1-39
+doc/source/configuration/properties.rst
+  s_6224eda96fc0da::t_cfbd047eb39263 118-121,176-177,184-186,304
+runtime/msg.c
+  s_6224eda96fc0da::t_cfbd047eb39263 445
+tests/Makefile.am
+  s_6224eda96fc0da::t_cfbd047eb39263 869
+doc/Makefile.am
+  s_6224eda96fc0da::t_cfbd047eb39263 1238
+doc/source/reference/properties/message-timereceived.rst
+  s_6224eda96fc0da::t_cfbd047eb39263 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "6ee31515c02e4e15edb8e713f23a3a35b16c196b",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

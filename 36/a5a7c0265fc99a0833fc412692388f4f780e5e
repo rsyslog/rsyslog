@@ -1,0 +1,29 @@
+plugins/pmnull/pmnull.c
+  s_5e773934876cb4::t_a2b2b335098abf 107
+tests/Makefile.am
+  s_5e773934876cb4::t_2b498dfababfcf 1884-1892,2774-2776,3973,3975-3985
+tests/pmnull-basic-vg.sh
+  s_5e773934876cb4::t_8a37b98cddeef0 1-5
+tests/pmnull-basic.sh
+  s_5e773934876cb4::t_cba8314efc6403 4-9,11-53,56-66,69,71-76,79-82
+tests/yaml-pmnull-basic-vg.sh
+  s_5e773934876cb4::t_26217f2d2ec6ed 1-5
+tests/yaml-pmnull-basic.sh
+  s_5e773934876cb4::t_8fdc3a876b7084 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36a5a7c0265fc99a0833fc412692388f4f780e5e",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

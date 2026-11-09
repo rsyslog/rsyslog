@@ -1,0 +1,39 @@
+benchmarks/queue-contention/README.md
+  s_142ee1fa291d22::t_98c730edb28f32 98-112
+benchmarks/queue-contention/compare.py
+  s_142ee1fa291d22::t_ae49eca94ba77a 164-165
+benchmarks/queue-contention/selftest.sh
+  s_142ee1fa291d22::t_ec008245e7e68d 19
+benchmarks/queue-contention/trial-multi.sh
+  s_142ee1fa291d22::t_308a15bc63c2db 71,75,84-86,95
+benchmarks/queue-contention/trial.sh
+  s_142ee1fa291d22::t_8333f3bfe22f30 19,25-27
+doc/ai/README.md
+  s_142ee1fa291d22::t_be625a0bfb2740 53-58
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_1b32e91e08f04f 1-134
+doc/ai/designs/local-queue-s0-contracts.md
+  s_142ee1fa291d22::t_df5d45c76d1ad0 1-391
+doc/ai/designs/local-queue-s0-ownership.md
+  s_142ee1fa291d22::t_ebf0893096e007 64,134,196-217
+tests/Makefile.am
+  s_142ee1fa291d22::t_e7d39310c5608d 68-70,2988
+tests/queue-benchmark-oracle.sh
+  s_142ee1fa291d22::t_06cac8b5608151 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "62ecf480411f9d8eaedc2efa20bea077d84b4df7",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

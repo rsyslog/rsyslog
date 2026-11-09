@@ -1,0 +1,20 @@
+devtools/release/rpm-daily-stable.sh
+  s_dcd56d246bbfb5::t_a2301146e1216a 200
+  s_dcd56d246bbfb5::t_05a4aa1d6a1b03 187-199,201-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ad6b61c6074d77db76cc1d6c8b93a92ece58da69",
+  "prompts": {},
+  "sessions": {
+    "s_dcd56d246bbfb5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fff00-1ee1-74c1-845a-8954aff1df41",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

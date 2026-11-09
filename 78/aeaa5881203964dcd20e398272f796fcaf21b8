@@ -1,0 +1,24 @@
+plugins/imfile/imfile.c
+  s_6224eda96fc0da::t_6decf65ff25f48 2115-2116,2121-2130,2140-2141,2146
+  s_6224eda96fc0da::t_a74f142f78f707 2105-2114,2117-2120,2131-2139,2142-2145,2147-2151
+tests/imfile-duplicate-monitor-warning.sh
+  s_6224eda96fc0da::t_6605b179f3a1aa 1-45
+tests/Makefile.am
+  s_6224eda96fc0da::t_6605b179f3a1aa 1888
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "78aeaa5881203964dcd20e398272f796fcaf21b8",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

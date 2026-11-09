@@ -1,0 +1,29 @@
+tests/Makefile.am
+  s_142ee1fa291d22::t_31cc36e6881085 17-19,2868,2871-2873
+tests/local-queue-omfile-activation.sh
+  s_142ee1fa291d22::t_1d41a7a0f4b4b5 12-15,17-41,51,56-87,90-92,94,102
+tests/local-queue-omfile-cancel-preload.c
+  s_142ee1fa291d22::t_9ae791024fb07f 27-31,36-54,61,64-69,73-78,101
+tests/local-queue-omfile-cancel.sh
+  s_142ee1fa291d22::t_d0351e851ccf68 17-19,34
+tests/local-queue-omfile-hup.sh
+  s_142ee1fa291d22::t_ef0fa9e623a9a2 1-68
+tests/yaml-local-queue-omfile-activation.sh
+  s_142ee1fa291d22::t_058d4d4e12b49b 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a9166037d113fb67ee7ddc7bc1fa513cea415227",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

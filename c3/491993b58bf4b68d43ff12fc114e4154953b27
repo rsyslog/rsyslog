@@ -1,0 +1,33 @@
+plugins/ommysql/createDB.sql
+  s_5e773934876cb4::t_c7e1a041e68344 5,33-34
+tests/Makefile.am
+  s_0d5683fb5e1727::t_3be64f23d8c245 1287
+tests/diag.sh
+  s_5e773934876cb4::t_bc97aaf3172b82 5258
+tests/mysql-schema-range.sh
+  s_5e773934876cb4::t_6fd4262b80eb04 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3491993b58bf4b68d43ff12fc114e4154953b27",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

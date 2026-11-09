@@ -1,0 +1,64 @@
+runtime/wti.h
+  s_53c9354de38ddb::t_a2564f69797bd6 87-89
+tests/queue-fixedarray-outoforder.sh
+  s_53c9354de38ddb::t_91b84b3fb5b6e2 1-50
+tests/queue-deferred-idle-shutdown.sh
+  s_53c9354de38ddb::t_0d4cf2175a78fc 11,35
+  s_53c9354de38ddb::t_5c54b3f417b108 1-10,12-34,36-38
+tests/queue-deferred-idle-wakeup.sh
+  s_53c9354de38ddb::t_b0eb1a83a85d84 1-34,36-40
+  s_53c9354de38ddb::t_0d4cf2175a78fc 35
+runtime/wti.c
+  s_53c9354de38ddb::t_a1ff24dc4cb58c 454,474
+  s_53c9354de38ddb::t_a2564f69797bd6 281-282,324-325,347-350,352
+  s_53c9354de38ddb::t_5c54b3f417b108 470-473
+runtime/queue.c
+  s_f9e696d5e05e47::t_ae6da07635f424 3060-3093,3099-3100,3131,3157,3189,3421,3635,3641-3646,3670,3672,3684,3709,3737-3739,3761,3774,3809-3810
+benchmarks/queue-contention/compare.py
+  s_53c9354de38ddb::t_9cf44eb18d19e8 1-64
+tests/Makefile.am
+  s_53c9354de38ddb::t_2c1be623e81c1e 2827,2831-2832
+  s_53c9354de38ddb::t_058636f95bb49c 69-70,1216
+  s_53c9354de38ddb::t_5c54b3f417b108 68
+  s_53c9354de38ddb::t_05fc62efe71b4d 2828-2829
+  s_53c9354de38ddb::t_ebb9f9b0441e0f 2826
+  s_53c9354de38ddb::t_326c9cb3aff968 2830
+  s_f9e696d5e05e47::t_91d4aee433da85 2972
+benchmarks/queue-contention/trial-multi.sh
+  s_53c9354de38ddb::t_61e752ed4399e3 1-43
+benchmarks/queue-contention/trial.sh
+  s_53c9354de38ddb::t_2abc5870c1a4ea 1-26
+doc/ai/module_map.yaml
+  s_53c9354de38ddb::t_a1358791ea8573 11-12,19-20
+benchmarks/queue-contention/README.md
+  s_53c9354de38ddb::t_a7d2883367aa73 1-22,32-33,36
+  s_53c9354de38ddb::t_cb1d90aed7b8a6 23-31,34-35
+tests/override_queue_disposal.c
+  s_53c9354de38ddb::t_ead4d3b94f3c88 1-9,11-15,17-25,27,29-39,43-57,69-70
+  s_53c9354de38ddb::t_db3bcdb27bf1b4 26,28
+  s_53c9354de38ddb::t_0d4cf2175a78fc 10,16,40-42,58-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "454b340a17960acab0dc53dee0e093236b89b201",
+  "prompts": {},
+  "sessions": {
+    "s_53c9354de38ddb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070da-a4a3-71b1-83ca-215b48a880c1",
+        "model": "gpt-6-astra"
+      },
+      "human_author": null
+    },
+    "s_f9e696d5e05e47": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070e9-412b-7091-b916-4e23874d0480",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

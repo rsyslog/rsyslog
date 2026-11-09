@@ -1,0 +1,25 @@
+.github/debian-daily-stable-13-policy.yml
+  s_5e773934876cb4::t_d525ff8c0d3715 48-55
+.github/debian-patch-refreshes/dont-create-database.patch
+  s_5e773934876cb4::t_ac1e984feef467 1-41
+.github/scripts/debian_package_build.sh
+  s_5e773934876cb4::t_5241e6588159e3 50-63,391-436,450-463
+tests/daily-stable-package-drift.sh
+  s_5e773934876cb4::t_fce1124a95fe73 15-16,118-214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3e70c17ae056d1467ad6028e8b44fb6033609afb",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

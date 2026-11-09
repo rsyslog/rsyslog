@@ -1,0 +1,38 @@
+ChangeLog
+  s_2e888d0bafbab5::t_0d717c4a9e7620 268-271,273
+tests/incltest_dir_empty_wildcard.sh
+  s_2e888d0bafbab5::t_0d717c4a9e7620 2-5,13-15,18,23-25
+  s_2e888d0bafbab5::t_58d888ef66a673 10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "e0651c0196043dc2abba1e33cc0fa83baa485e6d",
+  "prompts": {},
+  "sessions": {
+    "s_2e888d0bafbab5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f02dd-92ae-7020-8310-99dd6e196029",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    },
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

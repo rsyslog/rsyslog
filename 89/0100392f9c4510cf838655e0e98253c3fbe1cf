@@ -1,0 +1,21 @@
+tests/local-queue-imtcp-producer-exit.sh
+  s_142ee1fa291d22::t_f3db62e98f546f 46
+tests/local-queue-imtcp-tls-failure.sh
+  s_142ee1fa291d22::t_9bd0e2335d328c 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "890100392f9c4510cf838655e0e98253c3fbe1cf",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

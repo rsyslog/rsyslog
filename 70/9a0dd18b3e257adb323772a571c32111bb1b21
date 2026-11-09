@@ -1,0 +1,36 @@
+tests/ratelimit-policy-persource-key-reload.sh
+  s_008ef65e7b10ec::t_f1c1001ef3090e 1-81
+runtime/ratelimit.c
+  s_008ef65e7b10ec::t_9f86f5f4539f27 264
+  s_008ef65e7b10ec::t_0099355033dafd 370-376,428-429,435
+  s_008ef65e7b10ec::t_0eea4ddedb3d0d 319-321,377-380,413-427,430-434,437-445,448-451
+  s_008ef65e7b10ec::t_8dee3897c83d87 322-323
+  s_008ef65e7b10ec::t_98515250415b7a 436,446-447
+  s_008ef65e7b10ec::t_01095745294398 1798,2047-2048,2170,2189-2190,2207,2247,2304,2687,2698-2699,2851,2920
+tests/Makefile.am
+  s_008ef65e7b10ec::t_f1c1001ef3090e 796
+runtime/ratelimit.h
+  s_008ef65e7b10ec::t_73b285f5f115d0 46-53
+  s_008ef65e7b10ec::t_0099355033dafd 90
+  s_008ef65e7b10ec::t_0eea4ddedb3d0d 87-88
+doc/ai/module_map.yaml
+  s_008ef65e7b10ec::t_e1046762b9d98f 30
+  s_008ef65e7b10ec::t_2f9349004eb828 21
+  s_008ef65e7b10ec::t_8dee3897c83d87 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "709a0dd18b3e257adb323772a571c32111bb1b21",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

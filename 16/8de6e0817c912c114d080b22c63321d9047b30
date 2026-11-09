@@ -1,0 +1,29 @@
+doc/source/configuration/modules/mmleefparse.rst
+  s_5e773934876cb4::t_52bddd792a9312 114-119
+plugins/AGENTS.md
+  s_5e773934876cb4::t_23b7632185e430 106-109
+plugins/mmleefparse/mmleefparse.c
+  s_5e773934876cb4::t_9b93b98a397f89 162-165
+tests/Makefile.am
+  s_5e773934876cb4::t_8e1a285d07466b 1968-1971,4030-4033
+tests/mmleefparse-delimiter-backslash.sh
+  s_5e773934876cb4::t_1a95a366c33626 1-98
+tests/yaml-mmleefparse-delimiter-backslash.sh
+  s_5e773934876cb4::t_cae519fd98cf90 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "168de6e0817c912c114d080b22c63321d9047b30",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

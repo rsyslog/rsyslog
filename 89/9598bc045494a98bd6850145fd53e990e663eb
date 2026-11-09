@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_9e230a354716b0 389
+tests/chkseq-duplicate-increments.sh
+  s_5e773934876cb4::t_163d15858e4529 1-44
+tests/chkseq.c
+  s_5e773934876cb4::t_99da1bb673773b 185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "899598bc045494a98bd6850145fd53e990e663eb",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+benchmarks/concurrent-array-fanout/runner.py
+  s_daa33b26269e69::t_8da14e7ab3d1cf 518,522-523,531,533-534,706,723,743,928-929,1016-1017
+  s_daa33b26269e69::t_107e671fad7316 676-681,683-693,816-817
+  s_daa33b26269e69::t_1e95ece172ade6 682
+  s_daa33b26269e69::t_bab7fb100fc468 867-876
+benchmarks/concurrent-array-fanout/README.md
+  s_daa33b26269e69::t_bab7fb100fc468 103-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bf1ba2f0fac88bb7751d887df894e8dd53124f43",
+  "prompts": {},
+  "sessions": {
+    "s_daa33b26269e69": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05bbb-f13d-7f81-83cd-f90383a7dd00",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

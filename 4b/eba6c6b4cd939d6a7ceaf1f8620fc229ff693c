@@ -1,0 +1,21 @@
+.github/workflows/imtcp_session_fuzz.yml
+  s_c4e7938e7d7f5a::t_ebd20d218d4119 20-27
+.github/workflows/syslog_parser_fuzz.yml
+  s_c4e7938e7d7f5a::t_ebd20d218d4119 25-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4beba6c6b4cd939d6a7ceaf1f8620fc229ff693c",
+  "prompts": {},
+  "sessions": {
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

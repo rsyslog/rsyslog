@@ -1,0 +1,75 @@
+runtime/reload-validate.c
+  s_f558368e8cde26::t_7f71ec3b11bcef 1-244
+  s_f558368e8cde26::t_d3ad7717c87f5d 245-292
+doc/ai/module_map.yaml
+  s_1291dd174b3975::t_3fc182da9f3e4d 343-361
+grammar/rainerscript.h
+  s_f558368e8cde26::t_3bfd29093dc568 125-129,178,288-290,403-411,426-427,435-440,448-468,503-511
+grammar/parserif.h
+  s_f558368e8cde26::t_f462ba92448e0a 22-30,35-41
+runtime/action.c
+  s_f558368e8cde26::t_30b6ab402b9afc 88,2647
+runtime/Makefile.am
+  s_f558368e8cde26::t_a72a320b4417ac 9-10,62-65
+runtime/reload-candidate.h
+  s_f558368e8cde26::t_331763613c7d49 1-116
+doc/source/rainerscript/global.rst
+  s_1291dd174b3975::t_530b8d5043ce5b 1-4,8-9,16-17,20-86
+  s_f558368e8cde26::t_f379056b63922e 87-91
+grammar/lexer.l
+  s_f558368e8cde26::t_b2c837c2767f1c 62-63,217-220,222-223,489-498,558-602,617,623,626,632-635,638-643,657-658,674,694,697-701,761-774
+runtime/rsconf.c
+  s_f558368e8cde26::t_6cb4330b518f87 75-76,754-755,769-776,792-801,805-808,871-881,890-896,912-918,933-940
+runtime/glbl.c
+  s_f558368e8cde26::t_48ab96fd74fa0f 119,1560-1561
+grammar/testdriver.c
+  s_f558368e8cde26::t_b4bb5c7aa3da4a 84-85
+grammar/rainerscript.c
+  s_f558368e8cde26::t_d34015c8d67c0d 65-66,75-76,78-80,354-356,532,580-639,722-730,845-848,1489-1495,4840-4848,5370-5372,5397-5399,5406-5408,5444-5445,5451-5465,5478,5598-5601,5622-5625,5658-5663,5689,5691-5697,5710,6532,6541,6544-6547,6550,6563,6590,6613-6634,6639,6763-6948,7040-7168
+tools/rsyslogd.c
+  s_f558368e8cde26::t_36c87c7b6c88ea 71,1774,2141,2606
+runtime/reload-candidate.c
+  s_1291dd174b3975::t_eefacbd1807244 1-1424
+runtime/reload-normalized-graph.c
+  s_f558368e8cde26::t_0a7ef87d790d4c 1-148
+runtime/yamlconf.c
+  s_980ce9d87b80d2::t_b5f38e6b3c4212 51-52,94-104,134,209-212,247-249,251-252,273-274,298-301,338,411-412,455,472-473,533,586-589,598-599,614-616,693-694,712-713,727-730,789,961-962,980-984,1094,1110-1111,1130-1131,1157-1158,1189-1190,1207-1208,1225-1226,1241-1242,1257-1258,1274-1275,1288-1289,1302-1305,1335-1336,1407-1408,1419-1420,1446-1449,1490-1491,1551-1552,1572-1573,1590-1593,1606-1607,1627-1628,1639-1640,1661-1664,1781-1782,1818-1819,1844-1845,1861-1865,1874-1875,1889-1890,1944,1993-1994,2006,2011,2040,2052-2056,2082-2083,2095-2098
+runtime/reload-validate.h
+  s_f558368e8cde26::t_11a900ebd4502b 1-22
+runtime/reload-normalized-graph.h
+  s_f558368e8cde26::t_8016709eb3c643 1-129
+grammar/grammar.y
+  s_f558368e8cde26::t_e63453bc478635 37-40,116-118,129-142,163,278-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "756a78159d91c8e980d322787c993255b70e9b41",
+  "prompts": {},
+  "sessions": {
+    "s_1291dd174b3975": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bd-b42c-7250-8670-4fe7846d1855",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_980ce9d87b80d2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bf-63a4-7ec1-a84e-116452e293b1",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f558368e8cde26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bc-a08c-7d92-bb04-8ab8fa22637e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+runtime/queue.c
+  s_0e13bafe0bf506::t_bdc659edfb11fd 3892,4705,4721,4756,4773
+  s_0e13bafe0bf506::t_c1a5310fb45379 713-721,725-726,731-732,742-745,747,752,755
+  s_0e13bafe0bf506::t_954ce1a4a679f7 749-751,753-754,4339,4637,4724,4776
+  s_0e13bafe0bf506::t_203a8c8e0aea5e 2434,2442,4322,4334-4338,4631-4636,4638
+  s_0e13bafe0bf506::t_4e27070f66208a 2439-2441
+  s_0e13bafe0bf506::t_78bf41f903bb85 934,971-979,4083-4090
+runtime/wtp.h
+  s_0e13bafe0bf506::t_4b3ea3f9327798 26
+  s_0e13bafe0bf506::t_c9b473889abd0d 56-57,95-97,104-105
+  s_0e13bafe0bf506::t_954ce1a4a679f7 94
+benchmarks/queue-worker-pool/run.sh
+  s_0e13bafe0bf506::t_c1acefaed58ca8 10
+  s_0e13bafe0bf506::t_e9b22314c5873d 42-48
+  s_0e13bafe0bf506::t_dfb66ae21ac437 1-9,11-41,49-75
+benchmarks/queue-worker-pool/trial.sh
+  s_0e13bafe0bf506::t_1dc7d360043daa 1-6,8-36,38-42
+  s_0e13bafe0bf506::t_e2a4612f0d6e4b 37
+  s_0e13bafe0bf506::t_c1acefaed58ca8 7
+tests/Makefile.am
+  s_0e13bafe0bf506::t_3e5109eb282ccd 870
+runtime/wtp.c
+  s_0e13bafe0bf506::t_61046921c74df4 457-459,615,622,626
+  s_0e13bafe0bf506::t_002a77b4d5d552 544-555,557-573,576-588,590-598,600-605,608,610,616,619-620
+  s_0e13bafe0bf506::t_7fd899bf6603d1 609
+  s_0e13bafe0bf506::t_53378e51eaef07 606,611-614,627
+  s_0e13bafe0bf506::t_6e6cc5c9cd353f 575
+tests/queue-worker-autoscale-wakeup.sh
+  s_0e13bafe0bf506::t_3e5109eb282ccd 1-34
+runtime/wti.h
+  s_0e13bafe0bf506::t_c9b473889abd0d 87-91
+benchmarks/queue-worker-pool/.gitignore
+  s_0e13bafe0bf506::t_1dc7d360043daa 1
+benchmarks/queue-worker-pool/README.md
+  s_0e13bafe0bf506::t_1dc7d360043daa 1-26
+runtime/wti.c
+  s_0e13bafe0bf506::t_5ec65ce5f56605 363,385,390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "265c8f9c6d4011b202e4a6ff40f2ddf8e4c5fb4f",
+  "prompts": {},
+  "sessions": {
+    "s_0e13bafe0bf506": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a062d6-a2e9-7590-884e-edace947c0df",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,26 @@
+.agent/skills/rsyslog_continuous_issue_session/references/ledger-template.md
+  s_6224eda96fc0da::t_aa6219e4728828 46-52
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 1-45,53-69
+AGENTS.md
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 27
+.agent/skills/rsyslog_continuous_issue_session/SKILL.md
+  s_6224eda96fc0da::t_99929e053bd51c 166
+  s_6224eda96fc0da::t_7fdbc0777b2639 136,141-161
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 1-135,137-140,162-165,167-195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2d94601ee2121d4e2fc68f601eda4effefd5c43b",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

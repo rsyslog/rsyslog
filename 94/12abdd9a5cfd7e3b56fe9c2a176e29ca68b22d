@@ -1,0 +1,130 @@
+tests/imptcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_4a4c434400a96d 1-153
+  s_b3a84b787ce0a4::t_64aa1c8a0c85f5 13
+  s_b3a84b787ce0a4::t_096b741e628509 7-9,128
+  s_b3a84b787ce0a4::t_92ef1e9d5412ba 143
+  s_b3a84b787ce0a4::t_a781b5d42fe7c6 109-111,123
+  s_b3a84b787ce0a4::t_f9aed1814c825f 1-4,10-12,14-90,92,95-101,103-104,105-108,112-119,122,124-127,129-142,144-153
+tools/rsyslogd.c
+  s_b3a84b787ce0a4::t_772efdc968ff07 1879-1880
+  s_b3a84b787ce0a4::t_cfafb49c2f85f7 1877-1878
+  s_b3a84b787ce0a4::t_8c211fe8ebf310 1881
+  s_b3a84b787ce0a4::t_2dc792c3e337cd 2701-2704
+  s_b3a84b787ce0a4::t_afac248613c127 1882
+runtime/rsconf.h
+  s_b3a84b787ce0a4::t_218170ae209009 110
+  s_b3a84b787ce0a4::t_15f55a77e53e56 111
+  s_b3a84b787ce0a4::t_b6adc9deddda35 112
+runtime/threads.h
+  s_b3a84b787ce0a4::t_2dc792c3e337cd 54
+  s_b3a84b787ce0a4::t_eb642d90337754 55
+plugins/imrelp/imrelp.c
+  s_b3a84b787ce0a4::t_367f27b60651ee 847-848
+  s_b3a84b787ce0a4::t_d28f8e7568be1c 390
+plugins/imkafka/imkafka.c
+  s_b3a84b787ce0a4::t_cd122e0f6071d1 1114
+runtime/threads.c
+  s_b3a84b787ce0a4::t_2dc792c3e337cd 34,51
+  s_b3a84b787ce0a4::t_eb642d90337754 53-62,263
+  s_b3a84b787ce0a4::t_112f07e2d02444 52
+runtime/tcpsrv.c
+  s_b3a84b787ce0a4::t_de9a1a50fd11f7 716
+contrib/imczmq/imczmq.c
+  s_b3a84b787ce0a4::t_5c981019d8298d 190,196,312,331-332,355,425,427
+tests/imczmq-startup-failure.sh
+  s_b3a84b787ce0a4::t_861c30456d937b 1-7,9-44
+  s_b3a84b787ce0a4::t_ca8506ddfb3dc9 8
+plugins/imbeats/imbeats.c
+  s_b3a84b787ce0a4::t_2cab4817a68ed4 1937,1960,1962-1965,1975-1977
+  s_b3a84b787ce0a4::t_3097dacc496b58 134-138,1548-1557,1564,1574,1585,1634,1665-1668,1703-1704,1923-1924,1938-1947,1966-1974
+runtime/glbl.c
+  s_b3a84b787ce0a4::t_218170ae209009 178,1563-1574
+runtime/rsconf.c
+  s_b3a84b787ce0a4::t_b6adc9deddda35 797,800,1044
+  s_b3a84b787ce0a4::t_9aa53c726ef5f1 1112
+  s_b3a84b787ce0a4::t_15f55a77e53e56 1025,1038,1045-1046,1765
+  s_b3a84b787ce0a4::t_218170ae209009 1085-1087
+  s_b3a84b787ce0a4::t_681260e56a1c89 1118,1151,1160-1161,1169,1285-1286
+runtime/im-helper.h
+  s_b3a84b787ce0a4::t_d069c800dffd33 52-58
+plugins/imptcp/imptcp.c
+  s_b3a84b787ce0a4::t_20fff44147f394 2786-2787
+  s_b3a84b787ce0a4::t_84b48f36e67c4b 358,2137,2139,2142,2148,2154-2160,2162,2173,2178-2179,2855
+  s_b3a84b787ce0a4::t_a5302f837edd9c 2865
+  s_b3a84b787ce0a4::t_de9a1a50fd11f7 47,527-609,625,735-739,794,805-807,2189,2202,2204-2205,2211,2213-2214
+  s_b3a84b787ce0a4::t_2624adaf276cdd 47,625,735,738-739,794
+  s_b3a84b787ce0a4::t_c500f4ad836a71 527-602,605-609
+  s_b3a84b787ce0a4::t_a38aa5a566e451 736-737
+  s_b3a84b787ce0a4::t_ba0177fa95ad38 603-604,806-807,2211,2214
+  s_b3a84b787ce0a4::t_f3c8c5f363e43b 2189,2202,2204-2205
+tests/Makefile.am
+  s_b3a84b787ce0a4::t_4f5ae2bfa68a89 160,3132
+  s_b3a84b787ce0a4::t_4fa726b720d9cb 449
+  s_b3a84b787ce0a4::t_861c30456d937b 1404
+  s_b3a84b787ce0a4::t_b77cb21006ea07 1441,1599
+  s_b3a84b787ce0a4::t_9268e6c9599c8c 1599
+doc/source/rainerscript/global.rst
+  s_b3a84b787ce0a4::t_374eb8360a36ba 625-627
+  s_b3a84b787ce0a4::t_9a3222ae5c9ce7 624
+  s_b3a84b787ce0a4::t_0a358684d67323 622-623
+  s_b3a84b787ce0a4::t_9e9eb4486b365f 617-621,628-630
+  s_b3a84b787ce0a4::t_a82dcbd40b6f86 631
+tests/imfifo-startup-failure.sh
+  s_b3a84b787ce0a4::t_4f5ae2bfa68a89 1-44
+plugins/imudp/imudp.c
+  s_b3a84b787ce0a4::t_367f27b60651ee 504,1345-1346
+  s_b3a84b787ce0a4::t_d13669eaa17aff 502-503
+  s_b3a84b787ce0a4::t_eb642d90337754 1472
+plugins/imfifo/imfifo.c
+  s_b3a84b787ce0a4::t_61dff5d70aba0f 300,316,326,333,341
+  s_b3a84b787ce0a4::t_8e3ed186ff65f7 450,483
+tests/imbeats-bind-failure.sh
+  s_b3a84b787ce0a4::t_c49422ed893337 123
+  s_b3a84b787ce0a4::t_b77cb21006ea07 1-8,11-122,124-134,152
+  s_b3a84b787ce0a4::t_68717c373215d1 9-10
+  s_b3a84b787ce0a4::t_b0914dc6fa240e 135-151
+plugins/imdtls/imdtls.c
+  s_b3a84b787ce0a4::t_367f27b60651ee 1104-1105,1107
+  s_b3a84b787ce0a4::t_84b48f36e67c4b 139,1174-1180,1192,1202,1204
+  s_b3a84b787ce0a4::t_ca4b07dc1ccdfc 360
+  s_b3a84b787ce0a4::t_98778a78d9c507 200
+  s_b3a84b787ce0a4::t_12acfef23725ea 361-362
+  s_b3a84b787ce0a4::t_17a243cc75919c 1206
+tests/imudp-bind-failure.sh
+  s_b3a84b787ce0a4::t_07bb5bc4148158 1-140
+plugins/imtcp/imtcp.c
+  s_b3a84b787ce0a4::t_d94c900b913e84 851-854,1359-1360
+plugins/imuxsock/imuxsock.c
+  s_b3a84b787ce0a4::t_96d5ee5b0743e1 1667-1668
+  s_b3a84b787ce0a4::t_b2bac4587ad625 1277,1351,1356-1357,1361
+  s_b3a84b787ce0a4::t_a196c0b61ea1f1 1362
+contrib/imhiredis/imhiredis.c
+  s_b3a84b787ce0a4::t_cd122e0f6071d1 697
+  s_b3a84b787ce0a4::t_6aea615838e72f 358
+  s_b3a84b787ce0a4::t_84b48f36e67c4b 146,779,822-828
+  s_b3a84b787ce0a4::t_13216d018ae183 829
+tests/imtcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_4723d798855d2d 150
+  s_b3a84b787ce0a4::t_9c1691265124b3 170,189-218
+  s_b3a84b787ce0a4::t_63f4a05612119d 6-7
+  s_b3a84b787ce0a4::t_204f096dddb2f6 172-188
+  s_b3a84b787ce0a4::t_7ac863aa9f8c32 84,86-87,95,110-111,142-149,151-169
+  s_b3a84b787ce0a4::t_516487ca814b7a 5
+  s_b3a84b787ce0a4::t_11d65838109c6b 171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9412abdd9a5cfd7e3b56fe9c2a176e29ca68b22d",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

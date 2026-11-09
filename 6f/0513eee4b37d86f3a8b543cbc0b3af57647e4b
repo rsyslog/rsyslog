@@ -1,0 +1,19 @@
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_2f12f6b18fad7e 487-489
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6f0513eee4b37d86f3a8b543cbc0b3af57647e4b",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

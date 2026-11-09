@@ -1,0 +1,32 @@
+devtools/release/debian-daily-stable.sh
+  s_2dc01c7e3d2940::t_45b479e6885298 88,97
+  s_2dc01c7e3d2940::t_22c374c009d4b6 524,535,555-556,560-561,563,568
+  s_2dc01c7e3d2940::t_402c51c11e6148 89,98,406
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_402c51c11e6148 1-726
+.github/ubuntu-daily-stable-26.04-policy.yml
+  s_2dc01c7e3d2940::t_402c51c11e6148 1-7,12-34
+  s_2dc01c7e3d2940::t_2e1cdda27d0ac4 8-11
+.github/scripts/debian_package_build.sh
+  s_2dc01c7e3d2940::t_22c374c009d4b6 93
+devtools/check-flake-evidence-coverage.py
+  s_2dc01c7e3d2940::t_402c51c11e6148 37
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_402c51c11e6148 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "59936b328855e6bd1b07403772d2846b706be6e5",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

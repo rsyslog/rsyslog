@@ -1,0 +1,19 @@
+tests/rscript-replace-result-limit.sh
+  s_bebe2c73456d0f::t_b6d32c8496ca28 10-11,16-19,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c20025d62a9409d0427719b1bc92c8792b92fbae",
+  "prompts": {},
+  "sessions": {
+    "s_bebe2c73456d0f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15928-b237-7fc3-a3ca-6613297f0683",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

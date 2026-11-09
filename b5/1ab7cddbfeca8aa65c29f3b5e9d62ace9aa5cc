@@ -1,0 +1,21 @@
+runtime/wti.h
+  s_1f14fd361171af::t_cc11cb9a837940 121-126,135-140,146-151,154-164,167-177,180-183,186-189,192-194
+tests/Makefile.am
+  s_1f14fd361171af::t_cc11cb9a837940 2786-2787,2796
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b51ab7cddbfeca8aa65c29f3b5e9d62ace9aa5cc",
+  "prompts": {},
+  "sessions": {
+    "s_1f14fd361171af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a062ca-24f0-7482-ab29-4de3deeb6cf1",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

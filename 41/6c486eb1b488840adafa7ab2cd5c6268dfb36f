@@ -1,0 +1,28 @@
+tests/Makefile.am
+  s_d41298c6e29859::t_6e953d1f435393 2456-2457
+  s_d41298c6e29859::t_90dd0ce775500b 2453
+doc/source/configuration/modules/imbeats.rst
+  s_d41298c6e29859::t_6e953d1f435393 164-166
+plugins/imbeats/imbeats.c
+  s_d41298c6e29859::t_90dd0ce775500b 1124-1125
+tests/unit/imbeats_parser_test.c
+  s_d41298c6e29859::t_90dd0ce775500b 19-23
+plugins/imbeats/lj_parser.c
+  s_d41298c6e29859::t_6e953d1f435393 249,252-256,318,320-322
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "416c486eb1b488840adafa7ab2cd5c6268dfb36f",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

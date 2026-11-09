@@ -1,0 +1,22 @@
+tests/rscript_ipv42num.sh
+  s_5e773934876cb4::t_5ed4951869dafa 44,54
+  s_5e773934876cb4::t_a88fe7481b8a92 4-6,31,40-43
+grammar/rainerscript.c
+  s_5e773934876cb4::t_0b865f2333b3cb 2440-2443
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "074bd60df3d7e3b6ecaf6c2c3d2c605d906af774",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

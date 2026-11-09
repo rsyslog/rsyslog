@@ -1,0 +1,27 @@
+runtime/action.c
+  s_142ee1fa291d22::t_32b27ac7591651 2345-2358,2389-2394
+runtime/queue.c
+  s_142ee1fa291d22::t_5d4897e944c09f 3851,3989
+runtime/queue_local.c
+  s_142ee1fa291d22::t_70322d3b4413af 96-99,141,156,161,300,452,454-461,520-531,930-932
+runtime/queue_local.h
+  s_142ee1fa291d22::t_ba89229a63a1a4 54-56
+runtime/wti.c
+  s_142ee1fa291d22::t_15a2f561ce9366 396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5e611f2fc97fd99b2e989991e0fd612afd827694",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

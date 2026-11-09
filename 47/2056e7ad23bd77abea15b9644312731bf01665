@@ -1,0 +1,27 @@
+tests/Makefile.am
+  s_f2c089be484e12::t_95fe6414cb9507 477,1728
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_dc391821643ec6 323-328
+tests/global-reloadonhup-imtcp-replace-yaml.sh
+  s_f2c089be484e12::t_95fe6414cb9507 1-37,43-105
+  s_f2c089be484e12::t_602008e927899b 38-42
+tests/global-reloadonhup-imtcp-replace-rainerscript.sh
+  s_f2c089be484e12::t_c4bb5853f1163f 26-27
+  s_f2c089be484e12::t_95fe6414cb9507 1-25,28-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "472056e7ad23bd77abea15b9644312731bf01665",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

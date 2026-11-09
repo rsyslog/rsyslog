@@ -1,0 +1,30 @@
+plugins/imfile/Makefile.am
+  s_12493d1d1488ca::t_7b4086f14253b6 9
+plugins/imfile/imfile.c
+  s_12493d1d1488ca::t_7b4086f14253b6 80,1058,1070-1073,1086
+tests/unit/imfile_path_test.c
+  s_12493d1d1488ca::t_7b4086f14253b6 1-41,47
+  s_12493d1d1488ca::t_8a7e14b3f4c272 43
+  s_12493d1d1488ca::t_66afbd816fe364 42,44-46
+tests/Makefile.am
+  s_12493d1d1488ca::t_7b4086f14253b6 2860-2861,2864-2865,2909-2911,3009-3011
+plugins/imfile/imfile_path.h
+  s_12493d1d1488ca::t_7b4086f14253b6 1-12,15-26
+  s_12493d1d1488ca::t_c3841e0135e8dd 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1af869e9b158cb85b4a643934d5e8491758631c4",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

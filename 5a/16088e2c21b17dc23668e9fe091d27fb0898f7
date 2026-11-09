@@ -1,0 +1,21 @@
+tests/imtcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_5f5ebb2da55be0 15,18-20,25,51,68,76
+  s_b3a84b787ce0a4::t_9786ff0ab66206 4-10,14,16-17,22-24,26-36,38,40-50,52,54-67,69-70,72-75,77-83,85,87-91,93-94,97,99,101-103
+  s_b3a84b787ce0a4::t_57d038ac2f2018 37,53,71,84,86,92,95-96,98,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a16088e2c21b17dc23668e9fe091d27fb0898f7",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

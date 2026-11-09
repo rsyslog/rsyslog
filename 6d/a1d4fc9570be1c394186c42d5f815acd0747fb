@@ -1,0 +1,25 @@
+tests/imfile-logrotate-async.sh
+  s_a761491addfc13::t_7e53313d12f905 180,184,188,192
+  s_a761491addfc13::t_5490aea4132bb3 3-6
+plugins/imfile/imfile.c
+  s_a761491addfc13::t_459539d1914428 2766
+  s_a761491addfc13::t_2a346eb9eb3266 598-600,2760,2765,2774-2775,2779
+  s_a761491addfc13::t_b7ca59e97b4b79 2772
+  s_a761491addfc13::t_5490aea4132bb3 2732-2733,2735-2748,2767-2771,2773
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "6da1d4fc9570be1c394186c42d5f815acd0747fb",
+  "prompts": {},
+  "sessions": {
+    "s_a761491addfc13": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03a67-daad-72c2-b6db-fc67f6564bce",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

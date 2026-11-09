@@ -1,0 +1,30 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_1d997e3f86cc4f 329-333
+tests/global-reloadonhup-imtcp-maxsessions-rainerscript.sh
+  s_f2c089be484e12::t_1d997e3f86cc4f 1-83
+tests/global-reloadonhup-imtcp-maxsessions-yaml.sh
+  s_f2c089be484e12::t_1d997e3f86cc4f 1-6,9-13,17-97
+  s_f2c089be484e12::t_779657c0b42e74 7-8
+  s_f2c089be484e12::t_f5bca89f197ff4 14-16
+tests/Makefile.am
+  s_f2c089be484e12::t_1d997e3f86cc4f 474,1726
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_27b91f89dce9ed 1786,1962-1967,2062-2064,2107-2110,2254-2262,2338-2347,2385-2389
+  s_f2c089be484e12::t_82373983ead3fb 2390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "70f8caf59dbf77b064f79a39285fb35f93a33766",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

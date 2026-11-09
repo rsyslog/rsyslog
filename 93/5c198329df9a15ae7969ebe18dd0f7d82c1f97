@@ -1,0 +1,45 @@
+tests/Makefile.am
+  s_b3a84b787ce0a4::t_0b0d957c8dff5f 884
+doc/source/reference/parameters/imtcp-failonbinderror.rst
+  s_b3a84b787ce0a4::t_2e6baa18da4f5f 1-50
+tests/imtcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_e5eaa17c696057 14,31-33
+  s_b3a84b787ce0a4::t_0b0d957c8dff5f 1-5,7-11,13,15-29,50-79
+  s_b3a84b787ce0a4::t_599e45cefaea3b 6,30,34,37-49
+  s_b3a84b787ce0a4::t_43e10d39e95ccc 12
+  s_b3a84b787ce0a4::t_a76f7f03168865 35-36
+doc/source/configuration/modules/imtcp.rst
+  s_b3a84b787ce0a4::t_2e6baa18da4f5f 241-244,331
+plugins/imtcp/imtcp.c
+  s_b3a84b787ce0a4::t_5311b1830a3f64 208,244,559,562-563,1150-1151
+runtime/rsconf.c
+  s_b3a84b787ce0a4::t_9e76868b41b4c2 1087-1088
+  s_b3a84b787ce0a4::t_5171a96422af7f 1081,1270
+runtime/tcpsrv.c
+  s_b3a84b787ce0a4::t_f964cdf77200c3 729
+  s_b3a84b787ce0a4::t_12c72b1dc92d14 1889-1890
+  s_b3a84b787ce0a4::t_c9df6fbc16a0bd 692,702
+runtime/nsd_ptcp.c
+  s_b3a84b787ce0a4::t_8e2e75cbde3f9a 132-152,815
+  s_b3a84b787ce0a4::t_b91b4349a3786a 41-44,64-76,78-112,116-130
+  s_b3a84b787ce0a4::t_7df588d992ed5d 812-814
+  s_b3a84b787ce0a4::t_1c5d24e1c25366 77,113-115
+  s_b3a84b787ce0a4::t_7b81f8341137dd 811
+  s_b3a84b787ce0a4::t_46e271cb205b4a 131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "935c198329df9a15ae7969ebe18dd0f7d82c1f97",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

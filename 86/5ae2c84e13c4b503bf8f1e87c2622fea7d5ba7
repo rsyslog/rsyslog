@@ -1,0 +1,23 @@
+doc/source/troubleshooting/index.rst
+  s_6224eda96fc0da::t_79354ed6ea6056 10
+doc/Makefile.am
+  s_6224eda96fc0da::t_79354ed6ea6056 1268
+doc/source/troubleshooting/queue_full.rst
+  s_6224eda96fc0da::t_79354ed6ea6056 1-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "865ae2c84e13c4b503bf8f1e87c2622fea7d5ba7",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

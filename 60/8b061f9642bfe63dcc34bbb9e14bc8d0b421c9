@@ -1,0 +1,19 @@
+runtime/action.c
+  s_6cd9c239d726e4::t_7e252790f4977c 797-814,825,840-841,843,849,859,927-928,1107,1121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "608b061f9642bfe63dcc34bbb9e14bc8d0b421c9",
+  "prompts": {},
+  "sessions": {
+    "s_6cd9c239d726e4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eed8d-dc2d-7ff2-b233-55590b3b18b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

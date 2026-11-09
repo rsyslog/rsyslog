@@ -1,0 +1,39 @@
+doc/source/tutorials/database.rst
+  s_cf144905ab59ed::t_75f3204adaad48 124-126
+doc/tools/test_validate_doc_samples.py
+  s_1088b5a9d7f155::t_c346daea9884e7 1-272
+devtools/local-validation-plan.sh
+  s_cf144905ab59ed::t_469294fa7f2227 274-275,433-477,645
+doc/source/reference/properties/message-msg.rst
+  s_cf144905ab59ed::t_1d308dfa4d37ea 31-32,39-40
+doc/tools/validate-doc-samples.py
+  s_1088b5a9d7f155::t_a3576af615217c 1-308
+doc/Makefile.am
+  s_cf144905ab59ed::t_aabe817ac934e2 1361-1362
+.github/workflows/doc_build.yml
+  s_cf144905ab59ed::t_ccfccdd457ce56 42-43,67,134-135,154,157-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8fe4a208d17ba3f87a33c766e12bb3c8367c3a4a",
+  "prompts": {},
+  "sessions": {
+    "s_1088b5a9d7f155": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f37fe-f8ed-72d2-a546-ba7db57a7708",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/ratelimit_duplicate.sh
+  s_6d266762f4c57a::t_2cc9f515c5c318 2-6,12,25,27,32
+tests/mmutf8fix_replacement_sequence_conflict.sh
+  s_6d266762f4c57a::t_2cc9f515c5c318 5-6,14-16,24,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1a3a7089dbd9e4d06bb91c38a8bf5c0586e2a468",
+  "prompts": {},
+  "sessions": {
+    "s_6d266762f4c57a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1229-1f28-7223-8f9d-3dabc84a84b8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

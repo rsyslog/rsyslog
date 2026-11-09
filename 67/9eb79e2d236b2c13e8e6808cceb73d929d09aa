@@ -1,0 +1,26 @@
+plugins/imbeats/imbeats.c
+  s_99f487444ebabc::t_f3b86be78839b3 1587-1589
+tests/Makefile.am
+  s_99f487444ebabc::t_0eb50c24bb8909 1380-1382,2493,3408-3410
+tests/imbeats-tls-listener-rearm.sh
+  s_99f487444ebabc::t_72840a5bc1cc3f 9,11-13,15,17
+  s_99f487444ebabc::t_f3619626c75906 39
+  s_99f487444ebabc::t_0eb50c24bb8909 1-8,10,14,16,18-38,40-52,54-55,59-64,77-80,82-96
+  s_99f487444ebabc::t_60d3478a12873d 53,56-58,65-76,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "679eb79e2d236b2c13e8e6808cceb73d929d09aa",
+  "prompts": {},
+  "sessions": {
+    "s_99f487444ebabc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a014bd-d476-7240-839c-8debc5867c26",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

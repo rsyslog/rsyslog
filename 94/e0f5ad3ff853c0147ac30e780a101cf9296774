@@ -1,0 +1,51 @@
+.github/workflows/doc_build.yml
+  s_c4e7938e7d7f5a::t_265d7f8fd624f8 25,257,263
+.github/workflows/collect_flake_evidence.yml
+  s_c4e7938e7d7f5a::t_e1462652bec4a7 48
+.github/workflows/run_checks.yml
+  s_c4e7938e7d7f5a::t_265d7f8fd624f8 42,321,392,454,694,784,887,1194,1266,1356,1452,1507,1627,1785
+.github/workflows/actionlint.yml
+  s_c4e7938e7d7f5a::t_07ee0496bba295 12
+.github/workflows/ci_codestyle_check.yml
+  s_c4e7938e7d7f5a::t_9779aa32b73089 16
+.github/workflows/codeql.yml
+  s_c4e7938e7d7f5a::t_0c6d1d80dba3eb 29
+.github/workflows/container_build.yml
+  s_c4e7938e7d7f5a::t_8d012a49a3321b 27
+.github/workflows/imbeats.yml
+  s_c4e7938e7d7f5a::t_6705fa74937124 39
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_c4e7938e7d7f5a::t_d740024a7fa243 24
+.github/workflows/impstats_push_victoriametrics.yml
+  s_c4e7938e7d7f5a::t_fe80e56d66f1ac 39
+.github/workflows/imtcp_session_fuzz.yml
+  s_c4e7938e7d7f5a::t_59d542a7de1508 47,114
+.github/workflows/python_style.yml
+  s_c4e7938e7d7f5a::t_c5fad615147c85 17
+.github/workflows/repo-policy-focus-review.yml
+  s_c4e7938e7d7f5a::t_8d7b2a3668e291 31
+.github/workflows/spellcheck.yml
+  s_c4e7938e7d7f5a::t_3c5f2000aefa04 12
+.github/workflows/syslog_parser_fuzz.yml
+  s_c4e7938e7d7f5a::t_5e1c0d27be76a6 61,119
+.github/workflows/yaml_lint.yml
+  s_c4e7938e7d7f5a::t_4175facb16f37e 33
+.github/workflows/zizmor.yml
+  s_c4e7938e7d7f5a::t_67b076d5a2321b 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "94e0f5ad3ff853c0147ac30e780a101cf9296774",
+  "prompts": {},
+  "sessions": {
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+tests/local-queue-imtcp-producer-exit.sh
+  s_142ee1fa291d22::t_8dc61e77813fe9 1-68
+tests/local-queue-imtcp-tls-failure.sh
+  s_142ee1fa291d22::t_5c2cea1eadb51c 1-52
+tests/Makefile.am
+  s_142ee1fa291d22::t_f9d2e3b8e92fdc 170-177,2934
+tests/local-queue-imtcp-cache-failure.sh
+  s_142ee1fa291d22::t_554c61131b05fd 1-5
+tests/local-queue-imtcp-worker-failure.sh
+  s_142ee1fa291d22::t_5a02d6df83e16d 1-5
+tests/local-queue-startup-failure.sh
+  s_142ee1fa291d22::t_0da1589815df66 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "198212f14c1dd0057831d72bfdbccf180097facb",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

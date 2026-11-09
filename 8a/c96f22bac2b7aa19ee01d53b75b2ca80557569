@@ -1,0 +1,25 @@
+doc/ai/transactional_reload_recovery_ledger.md
+  s_f558368e8cde26::t_4ce07e3425a560 421-458
+tests/reload-off-regression.sh
+  s_f558368e8cde26::t_3bb26e13f363fa 13-17,32-35,39
+tests/reload-validate-modes.sh
+  s_f558368e8cde26::t_791bb1d22e752b 12-14
+tests/reload-validate-only.sh
+  s_f558368e8cde26::t_d48b6a5945d1a9 10-13,16-19,23-29,91-94,99,104,106,111-113,127,132-139,158-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8ac96f22bac2b7aa19ee01d53b75b2ca80557569",
+  "prompts": {},
+  "sessions": {
+    "s_f558368e8cde26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bc-a08c-7d92-bb04-8ab8fa22637e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

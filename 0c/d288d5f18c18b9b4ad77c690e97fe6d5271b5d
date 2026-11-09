@@ -1,0 +1,83 @@
+ChangeLog
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 4
+  s_debe127c3dbc4c::t_ecd656d4c32502 5-8
+doc/source/configuration/modules/omsendertrack.rst
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 70-71,146-147,161,251,313
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 5-8,12-18,68-69,72-74,94-96,103-106,148-149,180,185-188,193,195-197,247-250,252
+tests/omsendertrack-statefile-recovery.sh
+  s_debe127c3dbc4c::t_370d7311567133 2-5,45-48,65
+  s_debe127c3dbc4c::t_89e10596acc6c9 37,69,78
+  s_debe127c3dbc4c::t_1157d0d9248970 43-44
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 20,74,79
+  s_debe127c3dbc4c::t_5e6e8208d51486 1,6-19,21-36,38-42,49-64,66-68,70,75-77,80-81
+  s_debe127c3dbc4c::t_18de3e57e56cbf 71-73
+tests/yaml-omsendertrack-statefile-recovery.sh
+  s_debe127c3dbc4c::t_ae793f7d1c085c 4,32-34
+  s_debe127c3dbc4c::t_70238309db1a14 12-15,40-41
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 2,25,46
+  s_debe127c3dbc4c::t_1b250ac08863c2 20-24
+  s_debe127c3dbc4c::t_18de3e57e56cbf 39
+  s_debe127c3dbc4c::t_5e6e8208d51486 1,3,5-11,16-19,26-31,35-38,42-45,47-52
+doc/source/reference/parameters/omsendertrack-cmdfile.rst
+  s_debe127c3dbc4c::t_0a9a60dee74558 17
+  s_debe127c3dbc4c::t_9c64cb9c9ef016 24,26
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 4-7,32-35
+doc/Makefile.am
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 1217
+doc/source/reference/parameters/omsendertrack-ignoreinvalidstatefile.rst
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 1-67
+tests/Makefile.am
+  s_debe127c3dbc4c::t_5e6e8208d51486 668-669,673-677,2415,2943-2945
+tests/omsendertrack-statefile-recovery-vg.sh
+  s_debe127c3dbc4c::t_5e6e8208d51486 1-3
+doc/source/reference/parameters/omsendertrack-statefile.rst
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 4-7,38-40,50-52
+  s_debe127c3dbc4c::t_9c64cb9c9ef016 25,27
+  s_debe127c3dbc4c::t_ecd656d4c32502 42-44
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 41
+  s_debe127c3dbc4c::t_0b9017a63a90f5 49
+plugins/omsendertrack/omsendertrack.c
+  s_debe127c3dbc4c::t_e9371606e56204 320-322,324-328,334-336,338-343,353,357-360
+  s_debe127c3dbc4c::t_a6e2ae436329b2 46-47,102
+  s_debe127c3dbc4c::t_ae2766b4453c82 1043
+  s_debe127c3dbc4c::t_ecd656d4c32502 474-481,746
+  s_debe127c3dbc4c::t_b11ee8a906e42b 717-718
+  s_debe127c3dbc4c::t_5da97303473cd6 209-217,308,312
+  s_debe127c3dbc4c::t_a39760291e4962 546,593-594
+  s_debe127c3dbc4c::t_b332b6eec2d0c0 690,692-693
+  s_52daf9b39e2b17::t_8703d41e352309 716
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 101,134,559,561
+  s_debe127c3dbc4c::t_e12dd9ba512471 394,398,400-401,482,573-574
+  s_debe127c3dbc4c::t_42ce1b03069865 204-208,218-235,237-265,267-269,271-285,287,289-290,293-307,309-311,313-319,323,329-333,354-356,361-363,373-379,383-390,392-393,396-397,402-410,413-418,420-423,426-440,442-456,458-467,470-471,484-486,490-491,494,510-511,519,521-526,557-558,560,562-570
+  s_debe127c3dbc4c::t_a8c63cd89c4877 286
+  s_debe127c3dbc4c::t_f81a342b93acea 85-91
+  s_debe127c3dbc4c::t_28c56e63a4584f 556,578,656,663-664,667,675-678,680-689,694-697,700-702,707-709,711-715,726-727,735-736,743-744,747-763,768-777,780,784-785,791-792
+  s_debe127c3dbc4c::t_9c64cb9c9ef016 236,266,270,288,291-292,372,391,395,399,419,468-469,483,489,543,571-572,691,698-699,781
+  s_debe127c3dbc4c::t_523e3b10b9d9c8 188-189,191,196-198
+  s_debe127c3dbc4c::t_59cce372ea3cc7 337,344-352
+  s_debe127c3dbc4c::t_7714a2302e4cbe 135,137,178,199,369,472,544,547,555,577,592,658,662,725,794,1000-1001,1042,1047-1048
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "0cd288d5f18c18b9b4ad77c690e97fe6d5271b5d",
+  "prompts": {},
+  "sessions": {
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_debe127c3dbc4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02d9b-0263-7be2-bd1f-e337b5c159a2",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

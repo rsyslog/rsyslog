@@ -1,0 +1,29 @@
+grammar/rainerscript.c
+  s_5e773934876cb4::t_5c9f35b57a056b 2128
+tests/Makefile.am
+  s_5e773934876cb4::t_4080e1bde05d41 75-78,3042-3061
+tests/random-range-read-preload.c
+  s_5e773934876cb4::t_ec0cc07a3c1d6c 1-51
+tests/random-range-values.c
+  s_5e773934876cb4::t_5324925de015d2 1-14
+tests/rscript-random-platform-limit.sh
+  s_5e773934876cb4::t_81c156451a6cb5 1-71
+tests/yaml-random-platform-limit-yamlonly.sh
+  s_5e773934876cb4::t_a20d09a46f7139 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff2a35e3feb57a123c657a93b623bf6e42cf2753",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

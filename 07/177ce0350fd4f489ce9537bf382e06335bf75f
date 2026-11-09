@@ -1,0 +1,29 @@
+tests/mmaudit-auditid.sh
+  s_5e773934876cb4::t_c0ac7b63a9e575 1-96
+tests/yaml-mmaudit-auditid.sh
+  s_5e773934876cb4::t_40e9d7f334c80f 1-5
+tests/Makefile.am
+  s_5e773934876cb4::t_f00333cd3a7965 94
+  s_5e773934876cb4::t_97c48f1e2e1135 91-93,4143-4149
+plugins/AGENTS.md
+  s_5e773934876cb4::t_3105ce73d52051 112-116
+  s_5e773934876cb4::t_f2a9060ce29d8d 110-111,117
+plugins/mmaudit/mmaudit.c
+  s_5e773934876cb4::t_fe58642417ff66 234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "07177ce0350fd4f489ce9537bf382e06335bf75f",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

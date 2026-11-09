@@ -1,0 +1,33 @@
+doc/source/configuration/yaml_config.rst
+  s_f8a738e4bdfaee::t_2553ca97467ed5 795-798
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_6f74f9427c819d 618-647
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_1552da371a6403 40-52,59-60,1340-1528,1950-1953,2119,2135-2139,2221
+runtime/reload-candidate.h
+  s_f8a738e4bdfaee::t_7d460ac4d7c964 67-97,103-104
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_baf9e203cf4017 4884-4920
+tests/unit/reload_candidate_graph_test.c
+  s_f8a738e4bdfaee::t_1432fdcdf79b04 152-157,163-164,166,168-191,195-197
+tests/unit/reload_parser_profile_frontend_test.c
+  s_f8a738e4bdfaee::t_a7ac93fd57be3d 1-226
+tests/unit/reload_parser_profiles_test.c
+  s_f8a738e4bdfaee::t_715087c82d9071 1-316
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a5ba5d743a9d053a8019e2d21ecbcdb8e3c53f0",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

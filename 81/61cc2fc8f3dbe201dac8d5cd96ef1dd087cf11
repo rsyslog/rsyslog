@@ -1,0 +1,24 @@
+runtime/template.c
+  s_6224eda96fc0da::t_a5a1d95b84e844 921-926
+tests/template-missing-jsonvars-queue.sh
+  s_6224eda96fc0da::t_91f9a99d04d65c 48
+  s_6224eda96fc0da::t_a5a1d95b84e844 1-47,49-50
+tests/Makefile.am
+  s_6224eda96fc0da::t_a5a1d95b84e844 185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8161cc2fc8f3dbe201dac8d5cd96ef1dd087cf11",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+tests/ratelimit-policy-persource-key-reload.sh
+  s_5e773934876cb4::t_1eaec90ddf4eeb 7-8,44,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46eae0b7b995049c8db5dc4473872eab0b906d7a",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

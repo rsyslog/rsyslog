@@ -1,0 +1,30 @@
+.agent/skills/rsyslog_continuous_issue_session/references/ledger-template.md
+  s_6224eda96fc0da::t_aa6219e4728828 50-55
+  s_6224eda96fc0da::t_861395438ce828 56
+  s_6224eda96fc0da::t_dc4647123b37c8 23-26
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 1-22,27-49,57-73
+AGENTS.md
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 27
+.agent/skills/rsyslog_continuous_issue_session/SKILL.md
+  s_6224eda96fc0da::t_7fdbc0777b2639 163,168-184,186-188
+  s_6224eda96fc0da::t_f290ab5e6ecbc8 185,194
+  s_6224eda96fc0da::t_99929e053bd51c 193
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 1-61,66-68,72-86,91-92,98,100,119-162,164-167,189-192,195-222
+  s_6224eda96fc0da::t_0c1d012cf26183 62-65,69-71,87-90,93-97,99,101-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9e68654db6009cfdb10ed3f09049e76dde8792fa",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

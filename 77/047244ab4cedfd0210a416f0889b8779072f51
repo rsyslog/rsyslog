@@ -1,0 +1,19 @@
+tests/unit/local_queue_stats_lifetime_test.c
+  s_142ee1fa291d22::t_a8a80642a6139a 27-28,35-42,45-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "77047244ab4cedfd0210a416f0889b8779072f51",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

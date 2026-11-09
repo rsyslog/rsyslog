@@ -1,0 +1,42 @@
+tests/omfile-dynafile-traversal-permit-escape.sh
+  s_30421e054f7af1::t_8b64bfea57bd65 25-26
+  s_30421e054f7af1::t_626db771295754 2-3,16,24,31
+  s_30421e054f7af1::t_3e19d83b2b8774 29-30
+tools/omfile.c
+  s_30421e054f7af1::t_626db771295754 369,383,387,1095-1100,1303-1310,2008-2013
+  s_b8b61e9bd8fd30::t_7228896b9cee11 2014
+tests/omfile-dynafile-traversal-default-template.sh
+  s_30421e054f7af1::t_626db771295754 2-4,49-51
+  s_b8b61e9bd8fd30::t_4cb9082683468c 52-55
+tests/omfile-dynafile-template-type-invalid.sh
+  s_30421e054f7af1::t_3e19d83b2b8774 16-17,21-27
+  s_30421e054f7af1::t_626db771295754 2-3,13
+tests/omfile-dynafile-template-type-override.sh
+  s_30421e054f7af1::t_3e19d83b2b8774 17-18
+tests/omfile-dynafile-template-type-list-default.sh
+  s_30421e054f7af1::t_3e19d83b2b8774 21-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a28322203ff90585c1b9b859f7503ac36c1e98f4",
+  "prompts": {},
+  "sessions": {
+    "s_30421e054f7af1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f56-743b-74b0-a007-68cda17ac9bc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_b8b61e9bd8fd30": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00e86-492d-7fa1-9ea1-e707cdd0d8e7",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

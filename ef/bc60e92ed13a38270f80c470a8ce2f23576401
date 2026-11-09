@@ -1,0 +1,99 @@
+tests/reserved-egress-unsupported.sh
+  s_316e24de471f59::t_79796d360bdd1b 82
+  s_316e24de471f59::t_772e6db17c2a22 88-92
+tests/producer-lanes-action-inflight-shutdown.sh
+  s_316e24de471f59::t_6d2a02c9535d59 1-30
+runtime/action.c
+  s_316e24de471f59::t_dc3436c4d78369 2277-2285
+  s_316e24de471f59::t_8d3568ecd8c954 58-64
+  s_316e24de471f59::t_4a267b0a499406 124-162,2088-2090,2108-2118,2142-2144
+runtime/wti.h
+  s_316e24de471f59::t_d0f42d5ec97582 98-100
+tests/testsuites/action-ranges-transaction-bin.py
+  s_316e24de471f59::t_1617644b057edc 11,15-20,35-36,49,65,74-78,80-81,88,90-96
+  s_316e24de471f59::t_39b96f6d004dc6 69-71,82
+  s_316e24de471f59::t_4a035f3a2ec068 1,3-4,6-8,13-14,41-44,48,50,52-54,56,66-68,83-84
+  s_316e24de471f59::t_42b25d8a3dba63 2,9-10,12,21-34,37-40,45-47,51,55,57-64,72-73,79,85-87,89
+  s_316e24de471f59::t_67e41292511a54 5
+tests/action-ranges-oom.sh
+  s_316e24de471f59::t_6849a928c13ce6 1-20,25-65
+  s_316e24de471f59::t_68b6be5cd2248f 21-24
+runtime/queue.c
+  s_316e24de471f59::t_d39b867f441ba6 4652,5533
+  s_316e24de471f59::t_eb574e1330d109 4697,5532,5676
+  s_316e24de471f59::t_0439c44935b639 4703,5238-5239,5599-5600
+runtime/wti.c
+  s_316e24de471f59::t_d0f42d5ec97582 40,329-331,362,396,493-496,548
+  s_316e24de471f59::t_180a53c9dbfbf8 41-44,90-100,507-509,515-517,520-522
+tests/testsuites/action-ranges-accept-bin.py
+  s_316e24de471f59::t_297fe54a308bdf 1-23
+runtime/ruleset.c
+  s_316e24de471f59::t_c7e192d51cd124 75,169-199,201-207
+  s_316e24de471f59::t_dc3436c4d78369 341,349-354,359-360
+doc/ai/module_map.yaml
+  s_316e24de471f59::t_a92c53198e24a7 29-43,46-47
+  s_316e24de471f59::t_4b2dc87cdb39f8 44-45
+tests/action-ranges-atleast-once.sh
+  s_316e24de471f59::t_297fe54a308bdf 1-8,12-13,18-56,58-59,61-70,73-86,88-105
+  s_316e24de471f59::t_80555c6c5cd5f4 9,11,71-72
+  s_316e24de471f59::t_3af05543e4c2d3 14-17
+  s_316e24de471f59::t_d39b867f441ba6 10
+  s_316e24de471f59::t_b85693fbc49431 57
+  s_316e24de471f59::t_699039c23fd973 60
+  s_316e24de471f59::t_c7e192d51cd124 87
+tests/action-ranges-config.sh
+  s_316e24de471f59::t_0c98a34d83e2fe 1-71,84-99
+  s_316e24de471f59::t_dc9eb7594787e4 72-83
+tests/action-ranges-fallback-runtime.sh
+  s_316e24de471f59::t_81d190301a2ce9 1-7,12-41,51-60,62-64
+  s_316e24de471f59::t_5add5c84fe76bc 8-11,61
+  s_316e24de471f59::t_93932c3b31b64d 42-50
+tests/producer-lanes-action-consumer-retry.sh
+  s_316e24de471f59::t_14be55d406a879 7-9,29,31
+  s_316e24de471f59::t_6d2a02c9535d59 1-6,10-28,30,32
+tests/Makefile.am
+  s_316e24de471f59::t_81d190301a2ce9 58
+  s_316e24de471f59::t_6849a928c13ce6 59
+  s_316e24de471f59::t_297fe54a308bdf 55,71
+  s_316e24de471f59::t_a78af6c219036d 60
+  s_316e24de471f59::t_4a035f3a2ec068 54,56-57,61-63,69-70,72,3020-3021
+  s_316e24de471f59::t_32cdfcdd0fc9f6 3022
+doc/ai/reserved_batch_egress.md
+  s_316e24de471f59::t_68f21028588594 4-9,55-57,266-267,309-310
+  s_316e24de471f59::t_08248928d69255 370-374
+  s_316e24de471f59::t_a92c53198e24a7 359-369,375-408,435-436,466-471
+tests/action-ranges-transaction.sh
+  s_316e24de471f59::t_57b460669a4310 89
+  s_316e24de471f59::t_b368cbfad60dd5 6-9,53,55-66,87-88,130-131
+  s_316e24de471f59::t_b36ae5e04279bc 67-79,102,104,145,147
+  s_316e24de471f59::t_4a035f3a2ec068 1-5,19,21-22,24-27,50-51,54,125-129,132-144,146,148-152,160
+  s_316e24de471f59::t_1617644b057edc 10-13,31,43-46,52,115-121,153-159
+  s_316e24de471f59::t_908a2952840dbc 14-18,20,23,28-30,32-42,47-49,80-86,90-101,103,105-114,122-124
+tests/action-ranges-core.sh
+  s_316e24de471f59::t_81d190301a2ce9 6-15,25,35
+  s_316e24de471f59::t_4a035f3a2ec068 1-5,16-24,26-34,36
+tests/reserved-egress-yaml.sh
+  s_316e24de471f59::t_772e6db17c2a22 37-39
+tests/action-ranges-persistent-restart.sh
+  s_316e24de471f59::t_baa9d71a2767f2 41-55,57
+  s_316e24de471f59::t_a78af6c219036d 1-5,22-29,40,56,58-89,91-96
+  s_316e24de471f59::t_8b91a1306fe002 6-21,30-39,90
+tests/producer-lanes-config.sh
+  s_316e24de471f59::t_772e6db17c2a22 50-52,54-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "efbc60e92ed13a38270f80c470a8ce2f23576401",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec
+  s_9a85c85c4f4e06::t_f679ef0c0af9e8 736
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "6b138a92e02f66499cd54f750478b4a8f480160f",
+  "prompts": {},
+  "sessions": {
+    "s_9a85c85c4f4e06": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13fb-f062-78e2-bc3a-d5621ec09f87",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

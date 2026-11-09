@@ -1,0 +1,19 @@
+tests/tcp_forwarding_retries.sh
+  s_5e773934876cb4::t_f8c28015282c38 4-10,13,16-20,25,27,32-34,37-40,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77a374060ec58d7c3d9809dada0732e5675bdb6c",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

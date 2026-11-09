@@ -1,0 +1,19 @@
+runtime/wti.c
+  s_9fa6fb351bcb08::t_51019aecd9c4ab 533-537
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc49aeb147feae9add0608cf1bfb9665fd3e7813",
+  "prompts": {},
+  "sessions": {
+    "s_9fa6fb351bcb08": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16974-bc22-7a60-9bc6-61429f0d8063",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

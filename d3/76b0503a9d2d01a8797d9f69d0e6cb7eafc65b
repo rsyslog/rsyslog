@@ -1,0 +1,19 @@
+tools/shadow_reload.c
+  s_f8a738e4bdfaee::t_1558378f3df92c 1606,1614,1636,1755,1771,1784-1785
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d376b0503a9d2d01a8797d9f69d0e6cb7eafc65b",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

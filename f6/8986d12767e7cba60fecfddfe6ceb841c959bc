@@ -1,0 +1,27 @@
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_a28aca6ee7827a 24-26
+tests/local-queue-imtcp-internal.sh
+  s_142ee1fa291d22::t_23cd985583ecdc 6-8
+tests/local-queue-omfile-activation.sh
+  s_142ee1fa291d22::t_a818bbd9524017 10-12
+tests/local-queue-s4-config.sh
+  s_142ee1fa291d22::t_efebb68f381e5d 10-12
+tests/local-queue-startup-failure.sh
+  s_142ee1fa291d22::t_6e0d7cc3124b27 10-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f68986d12767e7cba60fecfddfe6ceb841c959bc",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

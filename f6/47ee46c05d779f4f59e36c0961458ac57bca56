@@ -1,0 +1,21 @@
+tests/Makefile.am
+  s_36b1dbeb2adb2f::t_e1c95c85644b85 282
+tests/omfile-dynafile-traversal-repro.sh
+  s_36b1dbeb2adb2f::t_96e9fe740b0efb 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f647ee46c05d779f4f59e36c0961458ac57bca56",
+  "prompts": {},
+  "sessions": {
+    "s_36b1dbeb2adb2f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00103-5ff8-7210-881c-1092915f7ffe",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

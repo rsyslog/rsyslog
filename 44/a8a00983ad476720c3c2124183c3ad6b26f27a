@@ -1,0 +1,27 @@
+tests/Makefile.am
+  s_21a8eefcb5d3df::t_e74152a39b8da9 3315
+scripts/generate_distro_component_map.py
+  s_21a8eefcb5d3df::t_ec9dc2b89ef115 227
+devtools/format-python.sh
+  s_21a8eefcb5d3df::t_ec9dc2b89ef115 69-79
+sidecar/tests/validate.py
+  s_21a8eefcb5d3df::t_8eaabb409eea98 8
+doc/source/conf.py
+  s_21a8eefcb5d3df::t_8eaabb409eea98 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "44a8a00983ad476720c3c2124183c3ad6b26f27a",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

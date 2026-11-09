@@ -1,0 +1,23 @@
+plugins/imptcp/imptcp.c
+  s_5e773934876cb4::t_8de3a64a3dfed9 59,1773,1792-1796,2781-2786,2789
+tests/Makefile.am
+  s_5e773934876cb4::t_bfe94867b166c6 1741
+tests/imptcp_framing_regex_maxmsg_overflow.sh
+  s_5e773934876cb4::t_c1ba6692a2cafd 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d354856c0cf41cee32477c13f9847d88b93884c9",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

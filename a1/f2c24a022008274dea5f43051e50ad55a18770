@@ -1,0 +1,34 @@
+benchmarks/concurrent-array-fanout/rsyslog.conf.in
+  s_daa33b26269e69::t_7a746c89b20c02 1-44
+benchmarks/concurrent-array-fanout/README.md
+  s_daa33b26269e69::t_7a746c89b20c02 1-103
+benchmarks/concurrent-array-fanout/runner.py
+  s_daa33b26269e69::t_7a746c89b20c02 1-8,10-25,27-199,201,203-207,209-213,215-218,220-234,236,238,240-287,290-301,315-316,318-344,346-376,379-512,518-574,582-642,644-690,695-701,703-704,707-771
+  s_daa33b26269e69::t_3682194c4e3cd9 26,345,516,643
+  s_daa33b26269e69::t_688653dff7dc22 702,705-706
+  s_daa33b26269e69::t_43fbbaf6c9713c 575
+  s_daa33b26269e69::t_5dae3aa216f6f5 694
+  s_daa33b26269e69::t_41abcf2b454ce9 9,200,202,208,214,219,235,237,239,513-515,517,691-693
+  s_daa33b26269e69::t_0403dc0256c537 288-289,309-314,377-378,576-577,580-581
+  s_daa33b26269e69::t_27bd70ef0e1512 302-308,317,578-579
+benchmarks/concurrent-array-fanout/run.sh
+  s_daa33b26269e69::t_7a746c89b20c02 1-6
+benchmarks/concurrent-array-fanout/.gitignore
+  s_daa33b26269e69::t_7a746c89b20c02 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a1f2c24a022008274dea5f43051e50ad55a18770",
+  "prompts": {},
+  "sessions": {
+    "s_daa33b26269e69": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05bbb-f13d-7f81-83cd-f90383a7dd00",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

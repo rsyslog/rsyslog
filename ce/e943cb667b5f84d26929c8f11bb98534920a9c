@@ -1,0 +1,20 @@
+ChangeLog
+  s_de358a5d0a4803::t_7fe9d8afdd67d0 19-23
+  s_de358a5d0a4803::t_d5e4120dd67896 4-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cee943cb667b5f84d26929c8f11bb98534920a9c",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

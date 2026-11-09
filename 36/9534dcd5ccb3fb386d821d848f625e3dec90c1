@@ -1,0 +1,19 @@
+tests/mysql-reconnect-timeout.sh
+  s_f7da5901776b2e::t_764ac9354d0641 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "369534dcd5ccb3fb386d821d848f625e3dec90c1",
+  "prompts": {},
+  "sessions": {
+    "s_f7da5901776b2e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a167cc-4bee-7083-bcce-43de6b360394",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

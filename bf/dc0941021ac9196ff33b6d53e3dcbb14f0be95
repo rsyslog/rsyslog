@@ -1,0 +1,21 @@
+tests/concurrent-array-action-suspend.sh
+  s_316e24de471f59::t_9c3c43d0d10fb6 13-14,24
+tests/concurrent-array-action-transaction.sh
+  s_316e24de471f59::t_9c3c43d0d10fb6 10-12,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bfdc0941021ac9196ff33b6d53e3dcbb14f0be95",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

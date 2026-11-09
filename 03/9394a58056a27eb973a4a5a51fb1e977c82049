@@ -1,0 +1,31 @@
+doc/source/configuration/yaml_config.rst
+  s_f8a738e4bdfaee::t_dbabf78801c85d 797-799
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_3ef338a05fd524 641-646
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_ed26e024992ef7 419-424,1451
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_7acb79dcf8e619 1170
+tests/unit/reload_parser_profile_frontend_test.c
+  s_f8a738e4bdfaee::t_b4c5e178d04e3a 133,138-147,196,199-208
+tests/unit/reload_parser_profiles_test.c
+  s_f8a738e4bdfaee::t_94a20e2f2ebfc0 178-181,312-348,350
+tests/yaml-parser-empty-array.sh
+  s_f8a738e4bdfaee::t_30b33bde1c95a7 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "039394a58056a27eb973a4a5a51fb1e977c82049",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

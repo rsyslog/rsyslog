@@ -1,0 +1,21 @@
+doc/source/reference/properties/system-time-now-unixtimestamp.rst
+  s_5e773934876cb4::t_00ec95f0af4392 6-9,50,59,67
+  s_5e773934876cb4::t_6bc24c32dbb856 52,55,68-71
+  s_5e773934876cb4::t_affbfc749c6d70 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d88150749f72afaf28382909259a68ab080717fa",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+plugins/omelasticsearch/omelasticsearch.c
+  s_a1907ce932db7f::t_836bab6dd20c50 85-88,92-117,2169-2178,2982-2993
+tests/omelasticsearch-maxbytes-boundary.sh
+  s_a1907ce932db7f::t_50ba7eb8181884 10-14
+  s_a1907ce932db7f::t_000406f9629f1e 34,41-42,63,72-74,163
+  s_a1907ce932db7f::t_1f289c832cb8f2 6-9,22,93-98,118,120-121,140-145,149,151-162,164
+  s_a1907ce932db7f::t_20a07032916547 146-148,150
+  s_a1907ce932db7f::t_f181dbd277937c 17
+  s_a1907ce932db7f::t_c6d17dacf9c215 165-167
+  s_a1907ce932db7f::t_90bebd00f6ae76 168-169
+tests/es-basic.sh
+  s_a1907ce932db7f::t_836bab6dd20c50 3-5,61-70
+doc/source/configuration/modules/omelasticsearch.rst
+  s_a1907ce932db7f::t_836bab6dd20c50 305-317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "32e617a039ffd596a95b57870a9a3c3fac75195c",
+  "prompts": {},
+  "sessions": {
+    "s_a1907ce932db7f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05db5-6dd0-73f0-a1f1-ca1f64608bbf",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

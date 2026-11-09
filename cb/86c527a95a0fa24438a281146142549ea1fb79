@@ -1,0 +1,19 @@
+doc/source/configuration/modules/omrabbitmq.rst
+  s_5e773934876cb4::t_07f6cfafb26ca8 228,268-269,276,278-280
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb86c527a95a0fa24438a281146142549ea1fb79",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

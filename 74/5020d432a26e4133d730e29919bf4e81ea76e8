@@ -1,0 +1,53 @@
+tests/local-queue-omfile-cancel.sh
+  s_142ee1fa291d22::t_c7e439b121930d 25-30
+  s_142ee1fa291d22::t_7db12653690c78 10-15
+tests/local-queue-omfile-hup.sh
+  s_142ee1fa291d22::t_c7e439b121930d 28-33
+tests/known_issues.supp
+  s_142ee1fa291d22::t_047504b4a59ed4 96
+  s_142ee1fa291d22::t_0253f9a26fe77c 92
+tests/local-queue-helping.sh
+  s_142ee1fa291d22::t_6fb0ffb39a9890 7-10,44-45,87-88,90-92,125-132
+  s_142ee1fa291d22::t_d64b85136d55f9 81-86,114-124,134-135,138-139
+  s_142ee1fa291d22::t_572064cf7af9f3 89,93,133,136-137
+  s_142ee1fa291d22::t_c7e439b121930d 18,113
+  s_142ee1fa291d22::t_b6774e15562aad 80
+tests/local-queue-common.sh
+  s_142ee1fa291d22::t_e10c577ade5f52 147,155-163
+benchmarks/queue-contention/latency-observer.py
+  s_142ee1fa291d22::t_a63f75bdbfbd6f 260
+doc/ai/designs/local-queue-frontends.md
+  s_142ee1fa291d22::t_96eaad5dacb033 202-203
+tests/Makefile.am
+  s_142ee1fa291d22::t_ba67f38b4349c5 2948-2958
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_c6d677cac1d1a3 25-28
+tests/local-queue-force-term-actions.sh
+  s_142ee1fa291d22::t_4e3edc6da2785b 11-12
+tests/local-queue-omfile-activation.sh
+  s_142ee1fa291d22::t_3baf25099c1c18 11-14
+tests/local-queue-omfile-cancel-preload.c
+  s_142ee1fa291d22::t_f9f86cdda6fbc3 60-62
+tests/local-queue-s4-config.sh
+  s_142ee1fa291d22::t_a1420fb5a4c43f 10-13
+tests/local-queue-s5-graph-shutdown.sh
+  s_142ee1fa291d22::t_c6aec28b58719d 8-9
+tests/local-queue-stats-reconciliation.sh
+  s_142ee1fa291d22::t_c000c7a7568820 57-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "745020d432a26e4133d730e29919bf4e81ea76e8",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

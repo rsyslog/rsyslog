@@ -1,0 +1,20 @@
+plugins/imdiag/imdiag.c
+  s_142ee1fa291d22::t_282b706267852e 702,721-727,731-744,809,816,833,841,844,868
+  s_142ee1fa291d22::t_0deaa523e23310 700,845-852,854
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fd198de43025cb7df83cc9c7e1a143e7a1fd7298",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

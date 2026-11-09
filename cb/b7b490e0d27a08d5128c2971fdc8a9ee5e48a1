@@ -1,0 +1,45 @@
+benchmarks/queue-contention/trial.sh
+  s_53c9354de38ddb::t_93cd17531fdb6c 4-6
+tests/queue-deferred-idle-shutdown.sh
+  s_53c9354de38ddb::t_127945a8a286a0 8-10
+tests/queue-fixedarray-outoforder.sh
+  s_53c9354de38ddb::t_127945a8a286a0 10-12
+benchmarks/queue-contention/trial-multi.sh
+  s_53c9354de38ddb::t_127945a8a286a0 18-21
+  s_53c9354de38ddb::t_93cd17531fdb6c 8-10
+  s_53c9354de38ddb::t_29ed5d1079eb3a 14-17,22
+tests/queue-deferred-idle-wakeup.sh
+  s_53c9354de38ddb::t_127945a8a286a0 9-11
+benchmarks/queue-contention/compare.py
+  s_53c9354de38ddb::t_93cd17531fdb6c 74-79
+  s_53c9354de38ddb::t_e86b0a17cf572c 7,30-31,34-36,63,111,123-129
+  s_53c9354de38ddb::t_127945a8a286a0 2-3,25-26,28-29,41-42,45-46,51-52,59-62,64-66,69-73,80,83-89,91-93,97,99-102,105-110,112,130-138,140-141,143-144
+  s_53c9354de38ddb::t_d6852d3a7208c2 43-44,47-50,53-54,56-58,81-82,90,94-96,98,103-104,139,142,145
+  s_53c9354de38ddb::t_a882c0b781da28 32,113-122
+  s_53c9354de38ddb::t_c5325c288423d4 33
+  s_53c9354de38ddb::t_29ed5d1079eb3a 55,67-68
+runtime/wti.c
+  s_53c9354de38ddb::t_c26966caf82030 281-282,324-325
+runtime/wti.h
+  s_53c9354de38ddb::t_c26966caf82030 88-89
+benchmarks/queue-contention/README.md
+  s_53c9354de38ddb::t_c5325c288423d4 15-22
+runtime/queue.c
+  s_53c9354de38ddb::t_c26966caf82030 3066-3067,3069,3075,3084,3087,3090,3641
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "cbb7b490e0d27a08d5128c2971fdc8a9ee5e48a1",
+  "prompts": {},
+  "sessions": {
+    "s_53c9354de38ddb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070da-a4a3-71b1-83ca-215b48a880c1",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

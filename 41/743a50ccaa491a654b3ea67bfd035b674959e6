@@ -1,0 +1,21 @@
+doc/source/reference/parameters/omprog-usetransactions.rst
+  s_6224eda96fc0da::t_286f87a83209a9 54-67
+doc/source/configuration/modules/omprog.rst
+  s_6224eda96fc0da::t_de53114a5ca0a1 148-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "41743a50ccaa491a654b3ea67bfd035b674959e6",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

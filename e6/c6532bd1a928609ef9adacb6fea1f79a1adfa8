@@ -1,0 +1,21 @@
+tests/omawslogshlc-event-too-large.sh
+  s_0ed7a98cdca2e7::t_bf0d2fd6302230 46
+doc/source/configuration/modules/omawslogshlc.rst
+  s_0ed7a98cdca2e7::t_bf0d2fd6302230 81,96,110,124,138,155,250-251,254-263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e6c6532bd1a928609ef9adacb6fea1f79a1adfa8",
+  "prompts": {},
+  "sessions": {
+    "s_0ed7a98cdca2e7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f2c80-b6dc-7e91-9682-31b99079a0a7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

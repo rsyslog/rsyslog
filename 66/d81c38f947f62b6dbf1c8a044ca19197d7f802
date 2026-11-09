@@ -1,0 +1,23 @@
+runtime/parser.c
+  s_d7272bc53775bd::t_ce058e816e4156 307-310,349
+tests/Makefile.am
+  s_d7272bc53775bd::t_7c6baf4b71967f 883
+tests/legacy-zlib-empty-output.sh
+  s_d7272bc53775bd::t_6d5f1319d32293 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66d81c38f947f62b6dbf1c8a044ca19197d7f802",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

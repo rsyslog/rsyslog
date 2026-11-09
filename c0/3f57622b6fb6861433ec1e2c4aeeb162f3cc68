@@ -1,0 +1,94 @@
+tests/imbeats-limits.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 96
+tests/imbeats-basic.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 47
+tests/imbeats-multiplex-idle-sessions.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 67
+tests/imbeats-compressed-window-overflow.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+plugins/imbeats/imbeats.c
+  s_d41298c6e29859::t_62ac628c149ad9 789-793
+  s_d41298c6e29859::t_4d99c4a03db078 13,17,61-67,119-124,181,187-192,252-256,282-284,298,323-375,556-667,678-679,682,759,771,787,795-797,801-811,827,842-903,932-934,964-965,967-968,1009,1017-1023,1028,1031-1034,1048,1056-1059,1064,1067-1070,1133,1138,1142-1147,1161,1263-1301,1308-1312,1315,1366-1367,1586-1591,1595,1622,1674-1678,1776-1787,1990-1992,2027-2032
+tests/Makefile.am
+  s_d41298c6e29859::t_8f045d8451f6c4 1350-1355,1357-1358,2392,2568-2569,2577-2584,3285-3287,4026
+  s_d41298c6e29859::t_822854f64921c7 122,1346-1347
+tests/imbeats-metadata-collision.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 58
+tests/imbeats-filebeat-omelasticsearch-docker.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-elastic-agent-windows-fixture.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 99
+tests/imbeats-seq-cumulative-two-windows.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 51
+tests/yaml-imbeats-basic.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 52
+tests/imbeats-compressed.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 49
+tests/imbeats-seq-reset-rejected.sh
+  s_d41298c6e29859::t_6139918b7d7bea 56
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-compressed-malformed.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+tests/imbeats-seq-cumulative-after-multi-event-window.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 52
+tests/imbeats-maxsessions.sh
+  s_d41298c6e29859::t_b82651b46bfcb0 2-3
+  s_d41298c6e29859::t_6139918b7d7bea 85
+doc/Makefile.am
+  s_d41298c6e29859::t_cd993e0fe75484 235,237,244,247,269
+doc/ai/module_map.yaml
+  s_d41298c6e29859::t_d7bdcbe3ad3be8 166-170
+doc/source/configuration/modules/imbeats.rst
+  s_d41298c6e29859::t_d3de8213ad7c51 50-53,152-168,192-196,202-206,242-246,257-261,362-366,381-385,410-414,444-452,459,461,468,471,493
+plugins/imbeats/MODULE_METADATA.yaml
+  s_d41298c6e29859::t_fc6af7efc50929 4,10-11
+plugins/imbeats/lj_parser.c
+  s_d41298c6e29859::t_69dccac94bacc6 11,17-38,44-98,102,104,111-114,118-119,124-127,137,140,157-159,163-166,169,174-177,188,200,234-235,240,245-246,252-261,276-299,301-305,309,317-324,326,328-329,334-337,362
+plugins/imbeats/lj_parser.h
+  s_d41298c6e29859::t_50304d7d0835ab 15-17,22,31-35,41-44,48-51,56-57
+doc/source/reference/parameters/imbeats-frametimeout.rst
+  s_d41298c6e29859::t_4fb0e18057261f 1-64
+doc/source/reference/parameters/imbeats-idletimeout.rst
+  s_d41298c6e29859::t_d372e457dd6cb7 1-66
+doc/source/reference/parameters/imbeats-maxcompressionratio.rst
+  s_d41298c6e29859::t_0908e5cd2da19b 1-64
+doc/source/reference/parameters/imbeats-maxinflightbytes.rst
+  s_d41298c6e29859::t_a97ec3a602f0a0 1-64
+doc/source/reference/parameters/imbeats-windowtimeout.rst
+  s_d41298c6e29859::t_ef58b253f0537e 1-66
+tests/imbeats-json-trailing-data.sh
+  s_d41298c6e29859::t_cf4213e1aac2f8 1-107
+tests/imbeats-resource-budget.sh
+  s_d41298c6e29859::t_6e9067f4b5f9d4 1-176
+tests/imbeats-submit-timeout.sh
+  s_d41298c6e29859::t_0a22d854ce67bd 1-79
+tests/unit/imbeats_parser_test.c
+  s_d41298c6e29859::t_30628ff1ea4de0 1-309
+tests/yaml-imbeats-session-timeouts.sh
+  s_d41298c6e29859::t_0129132ec258e8 1-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "c03f57622b6fb6861433ec1e2c4aeeb162f3cc68",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

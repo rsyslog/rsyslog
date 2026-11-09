@@ -1,0 +1,23 @@
+runtime/ruleset.c
+  s_f8a738e4bdfaee::t_333a8a0a46eca6 936-943
+tests/global-reloadonhup-ruleset-metadata-rainerscript.sh
+  s_f8a738e4bdfaee::t_080c2a5eef72b5 3-9,29-30,48-49,70-71,89-91,107-109,112-113,116,119-120
+tests/global-reloadonhup-ruleset-metadata-yaml.sh
+  s_f8a738e4bdfaee::t_6b83970465593a 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "690002f59a7ef0878e857d57c56a9ed000ada139",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

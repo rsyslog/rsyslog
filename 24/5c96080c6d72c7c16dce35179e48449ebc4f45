@@ -1,0 +1,38 @@
+tests/imrelp-maxDataSize-range.sh
+  s_d7272bc53775bd::t_68afd8fb244da9 2-5,8-10,61-64
+  s_d7272bc53775bd::t_1277cf5b4c67e4 22
+  s_d7272bc53775bd::t_e07499e24057f5 60,68
+  s_d7272bc53775bd::t_5320a0a5d489e2 1,6-7,11-21,23-59,65-67,69-70
+doc/source/reference/parameters/imrelp-maxdatasize.rst
+  s_d7272bc53775bd::t_5320a0a5d489e2 4,6-7,35-36,49-53
+  s_d7272bc53775bd::t_e07499e24057f5 37-38
+  s_d7272bc53775bd::t_672b2d844df5cb 54
+  s_d7272bc53775bd::t_afbc5e9e36e9ad 5
+tests/yaml-imrelp-maxDataSize-range.sh
+  s_d7272bc53775bd::t_e07499e24057f5 59
+  s_d7272bc53775bd::t_68afd8fb244da9 2-5,7-9,61-72
+  s_d7272bc53775bd::t_5320a0a5d489e2 1,6,10-23,25-58,60,73-74
+  s_d7272bc53775bd::t_1277cf5b4c67e4 24
+tests/Makefile.am
+  s_d7272bc53775bd::t_5320a0a5d489e2 2081,2095-2096
+plugins/imrelp/imrelp.c
+  s_d7272bc53775bd::t_5320a0a5d489e2 60-61,807-808,810-816,818-820
+  s_d7272bc53775bd::t_68afd8fb244da9 558-563
+  s_d7272bc53775bd::t_e07499e24057f5 59,809,817
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "245c96080c6d72c7c16dce35179e48449ebc4f45",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

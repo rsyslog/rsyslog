@@ -1,0 +1,21 @@
+tests/imptcp-bind-failure.sh
+  s_f8a738e4bdfaee::t_94026c69f2d407 89,98-101,127,129-131
+  s_f8a738e4bdfaee::t_304fa6952b59c1 14-16,67,69-70,72,77-78,80-81,90,92,97,102-103,119,121,128,133-134,139-140
+  s_f8a738e4bdfaee::t_67ff90835ae67a 12-13,85-88,91,93-96,104-118,120,122-126,132,135-138,141-150,242-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cdbbacf5f5b2fa9f4016e692cf0e6e210a6f775b",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+.github/workflows/doc_build.yml
+  s_c4e7938e7d7f5a::t_0a049bb61a7283 186,188-190,193-195,197-200,202,205,208
+.github/workflows/pr_coverage_upload.yml
+  s_c4e7938e7d7f5a::t_31e864d934afd9 1-131
+.github/workflows/run_checks.yml
+  s_5e773934876cb4::t_8f7c0a6be8c8dd 511-531,594-598,701-725
+devtools/check-flake-evidence-coverage.py
+  s_5e773934876cb4::t_c5ac25494c5fc1 42-45
+devtools/pr-coverage-source.cjs
+  s_c4e7938e7d7f5a::t_199ff846d24778 1-76
+devtools/validate-pr-coverage.py
+  s_c4e7938e7d7f5a::t_fd8ecc4b45301a 1-77
+tests/Makefile.am
+  s_5e773934876cb4::t_db9d9976f61518 62-66,2883-2884
+tests/pr-coverage-artifact.py
+  s_5e773934876cb4::t_2e0946e8f2b421 1-122
+tests/pr-coverage-artifact.sh
+  s_5e773934876cb4::t_58976cf416c709 1-10
+tests/pr-coverage-source.cjs
+  s_c4e7938e7d7f5a::t_49d7e3fe3f813c 1-120
+tests/pr-coverage-source.sh
+  s_5e773934876cb4::t_1b1921914d68fa 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a3b9368e2549aa300d2c69cbb295c126b329393",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

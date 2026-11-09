@@ -1,0 +1,21 @@
+runtime/parser.c
+  s_6224eda96fc0da::t_1a3d9faa59e62a 338,389,396,403-406,414
+tests/Makefile.am
+  s_6224eda96fc0da::t_1a3d9faa59e62a 687,718
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "8df51e11c90b1a58ee278cf7147cc7a578483d4d",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

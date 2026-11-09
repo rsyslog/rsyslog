@@ -1,0 +1,22 @@
+doc/ai/transactional_reload_stack_ledger.md
+  s_f8a738e4bdfaee::t_bbf9412920d896 21,29-30,34-37,40-45,197-210,221-223,234-242,294-301
+  s_f8a738e4bdfaee::t_ea1b4f7fd0c57b 12-20,22-28,31-33,38-39,46-60
+  s_f8a738e4bdfaee::t_aaba5cd4c88317 187,302-303
+  s_f8a738e4bdfaee::t_3af101ddd60191 61-70,186,304-318
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8e6d9ba235f4e90baa32ebe8ecee465f14b4847",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

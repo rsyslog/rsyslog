@@ -1,0 +1,33 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_b7ea7bbbb60681 410,973
+  s_5e773934876cb4::t_5ccff28b91ab74 366
+tests/filecreatemode-invalid-digits.sh
+  s_5e773934876cb4::t_b7ea7bbbb60681 1-64
+tests/yaml-filecreatemode-invalid-digits.sh
+  s_5e773934876cb4::t_b7ea7bbbb60681 1-72
+grammar/rainerscript.c
+  s_5e773934876cb4::t_26a49fbfa8e3ca 938,947
+tests/mysql-reconnect-timeout.sh
+  s_5e773934876cb4::t_5ccff28b91ab74 13-14,16,19-23,25,34,45,47,57,95
+tests/mysql-reconnect-relevance.sh
+  s_5e773934876cb4::t_46969aa5018b82 1-4,8-9,11-19,26-29,33-44,48-50,55-63,68-71
+  s_5e773934876cb4::t_11459a3974c516 5-7,10,20-25,30-32,45,47,51-54,64-67,76,81
+  s_5e773934876cb4::t_12ba7858959290 72-75,77-80,82-84
+  s_5e773934876cb4::t_05b01eabbda1f5 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6eeb0a20ffdfec94defd59e2e4deef3a6e66a678",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

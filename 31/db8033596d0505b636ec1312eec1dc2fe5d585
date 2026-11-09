@@ -1,0 +1,19 @@
+benchmarks/imtcp-ruleset-reload/README.md
+  s_f2c089be484e12::t_ed90300cecb745 19-31,68-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31db8033596d0505b636ec1312eec1dc2fe5d585",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

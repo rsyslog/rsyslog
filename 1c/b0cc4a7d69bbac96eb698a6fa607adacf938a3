@@ -1,0 +1,19 @@
+tests/minitcpsrv-exclusive-port.sh
+  s_5e773934876cb4::t_5c12d5be6f8bc8 3,7-9,66-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1cb0cc4a7d69bbac96eb698a6fa607adacf938a3",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+tests/imtcp-stream-always-zstd-window-budget.sh
+  s_5424d888acca0b::t_9353949c90722d 108
+  s_5424d888acca0b::t_d60db7c73594f3 38
+  s_5424d888acca0b::t_37b17230ce8be3 4-7,77-85,96-105,113-114
+  s_5424d888acca0b::t_7152459f54f37a 1-3,8-37,39-76,106-107,109-112,115-116
+  s_5424d888acca0b::t_729da8bdfa7b31 86-95
+runtime/tcps_sess.c
+  s_5424d888acca0b::t_37b17230ce8be3 38,98-100,142-154,167,972-1022,1042-1050,1052-1053,1056-1064,1068-1093,1096-1097,1134
+tests/Makefile.am
+  s_5424d888acca0b::t_7152459f54f37a 854,2167-2168
+runtime/tcps_sess.h
+  s_5424d888acca0b::t_e1553270a69036 41,89-92
+runtime/tcpsrv.c
+  s_5424d888acca0b::t_bbbe04dc486aa8 388-393,474-476,623-625
+runtime/tcpsrv.h
+  s_5424d888acca0b::t_8a70b84b29f1ea 85-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "c5be7b074ff99d7555ef39969494360ef5cb9de7",
+  "prompts": {},
+  "sessions": {
+    "s_5424d888acca0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4dd5-73fd-7af3-9aef-a1169b92629a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

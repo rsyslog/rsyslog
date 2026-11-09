@@ -1,0 +1,31 @@
+runtime/queue.c
+  s_f8a738e4bdfaee::t_7ea13594cb85d5 1055,1060,1067-1070,1127,1138,1155-1158,1205,1337,1355,1359-1362,1975,2220,2244,2267-2270,2408-2446,2470,2481,2486-2491,2517-2520,3061,3076,3090-3093,4754,4763,4772,4786,4801,5536-5537,5554,5649,5680,5686,5698,5728,5734-5737,5867-5878,5887,5890-5896,5899-5902,5904,5913,5924,5926,5931,5935
+runtime/queue.h
+  s_f8a738e4bdfaee::t_418f07349d0b6a 190-193
+runtime/tcps_sess.c
+  s_f8a738e4bdfaee::t_5358d1c4a22c00 840-849,857,863-866,881-885
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_e3d70188e8da88 3005,3007-3012,4930,5001,5005,5097
+tests/unit/tcps_pending_test.inc
+  s_f8a738e4bdfaee::t_96f6db035b1e67 1-270
+tests/unit/tcpsrv_prepared_backend_test.c
+  s_f8a738e4bdfaee::t_e55c0b4a01668b 56-58,68,72,75,961-962,1016-1027,1034-1036
+tools/rsyslogd.c
+  s_f8a738e4bdfaee::t_5a06cefc48a1a1 1359-1361,1364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ebfe027b30708161d545464cbac80d58c4cfcaf",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

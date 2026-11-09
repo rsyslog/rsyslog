@@ -1,0 +1,28 @@
+doc/ai/designs/local-queue-execution-ledger.md
+  s_de358a5d0a4803::t_7b82b0c5904d61 507-508,722-723,813-814,1116-1118,1209-1211
+  s_de358a5d0a4803::t_0433428327b894 7,10-14,23-24,1018-1021
+  s_de358a5d0a4803::t_afb660edcffc7d 401-402,505-506,720-721,742-743,808,812,893-894,948-949
+  s_de358a5d0a4803::t_f9353fb075bfbb 1050-1051,1114-1115,1146-1147,1165,1194-1195
+doc/ai/README.md
+  s_de358a5d0a4803::t_1904c34b1cd321 25,27-28,55
+doc/ai/designs/local-queue-target-measurement-method.md
+  s_de358a5d0a4803::t_7056d1a28cadd3 115,237-239
+doc/ai/designs/local-queue-implementation-plan.md
+  s_de358a5d0a4803::t_6a14f8bba8a5ce 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a90e589e291befc6ab555e75c710016e70416faa",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

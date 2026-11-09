@@ -1,0 +1,41 @@
+devtools/release/opensuse-daily-stable.sh
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 111-113
+tests/rpm-baseline-patch-policy.sh
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 1-20,22-23,25-26,28,30-36,42-51,57-59
+  s_2dc01c7e3d2940::t_2e12ef469f7bbf 21,24,27,29,37-41
+  s_2dc01c7e3d2940::t_bbf0850bbfe833 52-56,60
+devtools/release/amazonlinux-daily-stable.sh
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 108-110
+Makefile.am
+  s_2dc01c7e3d2940::t_135f0c19a34bf4 20-21
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 2,4-5,9-10
+.github/fedora44-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 2
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 111-113
+devtools/release/validate-rpm-baseline-patches.py
+  s_2dc01c7e3d2940::t_2e12ef469f7bbf 94-96
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 1-93,97-110
+.github/el10-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 2,4-5,9-10,14-15,19-20,22-27
+tests/Makefile.am
+  s_2dc01c7e3d2940::t_b1160ed45ecaeb 18,28,3788
+  s_2dc01c7e3d2940::t_bf6b3544979e77 3789
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "fb2c6e24c80838f5169b873dae4f61512e3608fc",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

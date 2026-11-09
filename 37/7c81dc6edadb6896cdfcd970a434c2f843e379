@@ -1,0 +1,27 @@
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_5e773934876cb4::t_6d1d47128ec8d4 117-123
+devtools/format-code.sh
+  s_5e773934876cb4::t_0abfb94fc7b5ee 40-42,141-148
+devtools/list-git-changed-c-h-files.sh
+  s_5e773934876cb4::t_07dc7f0fa2c4fe 10-13,16
+devtools/local-validation-plan.sh
+  s_5e773934876cb4::t_70183de9ff2437 209,337-347,653
+devtools/tests/test_format_code.py
+  s_5e773934876cb4::t_9a302987d65fcb 1-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "377c81dc6edadb6896cdfcd970a434c2f843e379",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

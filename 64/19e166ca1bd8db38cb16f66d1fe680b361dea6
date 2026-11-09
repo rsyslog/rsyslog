@@ -1,0 +1,46 @@
+tests/imtcp-tls-ossl-manycon.sh
+  s_5e773934876cb4::t_6f53c8e03ef29c 4-6,10,24
+tests/imtcp-tls-ossl-manycon-wildcard.sh
+  s_5e773934876cb4::t_52e86583cf5679 1-8
+runtime/net.h
+  s_5e773934876cb4::t_c01b9782dd7f70 137
+runtime/net.c
+  s_5e773934876cb4::t_ca6adec74bfaa5 250-251,254,265-268,277-281,362-364
+doc/ai/module_map.yaml
+  s_5e773934876cb4::t_4ac392334e121c 356-367
+tests/Makefile.am
+  s_5e773934876cb4::t_ed8a60f7d1012e 2153
+  s_5e773934876cb4::t_6d3e21199b25cd 2154
+plugins/imdtls/imdtls.c
+  s_b8063877016328::t_7fc78f7a80c53e 988-989,991
+plugins/imtcp/imtcp.c
+  s_b8063877016328::t_bdcc3c2ad196d9 968-969,971,1223-1224,1226
+tests/tls-permittedpeer-invalid.sh
+  s_b8063877016328::t_a15d5ea6c33566 1-21
+tools/omfwd.c
+  s_b8063877016328::t_68c9580975de67 2502-2506
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6419e166ca1bd8db38cb16f66d1fe680b361dea6",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_b8063877016328": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a172b9-d157-7fa2-8965-64163a3d8faa",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

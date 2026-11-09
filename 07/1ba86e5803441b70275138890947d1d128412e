@@ -1,0 +1,46 @@
+.agent/skills/rsyslog_rejected_paths/agents/openai.yaml
+  s_a84ad1a36f7145::t_dd8ada889d3dea 1-4
+.agent/skills/rsyslog-performance/references/campaign-lessons.md
+  s_a84ad1a36f7145::t_d38bf7bd68b179 3-7
+doc/AGENTS.md
+  s_a84ad1a36f7145::t_94994ce06ca8fe 11
+  s_a84ad1a36f7145::t_2af9e2f031fd43 16
+.agent/skills/rsyslog-performance/SKILL.md
+  s_a84ad1a36f7145::t_f81a2505cd3815 59-64
+  s_a84ad1a36f7145::t_a68dc6a86e8853 85-87
+doc/ai/rejected_engineering_paths.md
+  s_a84ad1a36f7145::t_6b44dc3c25ccd4 1-82,84-110,112-148,150-170,172-187,189-205,207-224
+  s_a84ad1a36f7145::t_e0363758334b45 149,171,188,206
+  s_a84ad1a36f7145::t_8fd32bdbe508c4 83
+  s_a84ad1a36f7145::t_f32ce30a4d122f 111
+.agent/skills/rsyslog_rejected_paths/SKILL.md
+  s_a84ad1a36f7145::t_42e42dd5f1b769 1-56
+.agent/skills/rsyslog_module/SKILL.md
+  s_a84ad1a36f7145::t_d660e4c84327a4 21-23
+doc/ai/README.md
+  s_a84ad1a36f7145::t_e6c75f65bbb3f0 16
+doc/ai/AGENTS.md
+  s_a84ad1a36f7145::t_d40f6aa45b3670 10
+AGENTS.md
+  s_a84ad1a36f7145::t_89c2753657c826 29
+  s_a84ad1a36f7145::t_2a0b69ac91b02e 113-114
+  s_a84ad1a36f7145::t_888f01c100aca5 56-60
+runtime/AGENTS.md
+  s_a84ad1a36f7145::t_ce13926f5f6d3f 54-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "071ba86e5803441b70275138890947d1d128412e",
+  "prompts": {},
+  "sessions": {
+    "s_a84ad1a36f7145": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "34781d95-dea8-4bae-8586-cf3ef14f9291",
+        "model": "grok-4.6"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

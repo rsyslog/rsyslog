@@ -1,0 +1,51 @@
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_90dc4c3b643b32 7,17-20,130-131,147-149,456-460,596-617
+doc/source/rainerscript/global.rst
+  s_f8a738e4bdfaee::t_f48669c0ec66ee 26-27,33,36-42
+grammar/reload-ruleset-materializer.c
+  s_f8a738e4bdfaee::t_af4deda0e45207 179-183,393-394,398-401,405-406,408,421-428,460-469,578-579
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_cd64013a9f4eb8 826-832,839,1054,1410-1411,1430,1432-1433,1612-1613,1730-1732,1752-1754,1835-1836,2031,2061,2064
+runtime/reload-candidate.h
+  s_f8a738e4bdfaee::t_a9fee41ec0665c 16-17,30-31
+runtime/rsconf.c
+  s_f8a738e4bdfaee::t_94c258c9acea46 1404-1405,1424-1425
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_cdd3c39e9a7026 4865-4882
+tests/global-reloadonhup-default-program-rainerscript.sh
+  s_f8a738e4bdfaee::t_56cbcd73742d28 1-288
+tests/global-reloadonhup-default-program-yaml.sh
+  s_f8a738e4bdfaee::t_305062f7e803ed 1-8
+tests/global-reloadonhup-default-unnamed-rainerscript.sh
+  s_f8a738e4bdfaee::t_a42bf16dd2909d 1-32
+tests/global-reloadonhup-imtcp-reorder-yaml.sh
+  s_f8a738e4bdfaee::t_e74a56d809d40a 10,60,66,79,97
+tests/global-reloadonhup-legacy-current-rainerscript.sh
+  s_f8a738e4bdfaee::t_55174172380e90 1-5
+tests/global-reloadonhup-legacy-routing-rainerscript.sh
+  s_f8a738e4bdfaee::t_e247101cb40f01 1-40
+tests/global-reloadonhup-on-yaml.sh
+  s_f8a738e4bdfaee::t_5768871eb82de3 16,177,183,204,217,231,249,267,284,298,323,334,340
+tests/global-reloadonhup-validate-yaml.sh
+  s_f8a738e4bdfaee::t_51b79273ef476a 6,35,50,61,71,85,96,111,125,136,152,164,190
+tests/unit/reload_callgraph_fence_test.c
+  s_f8a738e4bdfaee::t_752b94119a221d 70-71,73-75,96-103,226-260
+tests/unit/reload_candidate_graph_test.c
+  s_f8a738e4bdfaee::t_144eca25c9c112 6-7,373-386,456-465,624,707,728,957,1001-1004,1037-1051,1059-1078,1145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f52df22f5b1bae374726bc9bac4aa36e6e2007f3",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

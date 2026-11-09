@@ -1,0 +1,19 @@
+tests/unit/perctile_ringbuf_test.c
+  s_0c298b7fe57910::t_e97041deb8e7f7 3-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b89dddd8e744a01b2fa8177908ca73ec2ae4fc39",
+  "prompts": {},
+  "sessions": {
+    "s_0c298b7fe57910": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11206-4f89-72b1-b0cd-325652009d85",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

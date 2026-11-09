@@ -1,0 +1,24 @@
+tests/queue-benchmark-throughput-local.sh
+  s_142ee1fa291d22::t_281e855e107e28 1-5,8-11,13-15,24-25
+  s_142ee1fa291d22::t_f08f31977d5195 6-7,12,16-23,26
+tests/Makefile.am
+  s_142ee1fa291d22::t_281e855e107e28 88-89,3075
+benchmarks/queue-contention/trial-multi.sh
+  s_142ee1fa291d22::t_7d6134c91ed72c 131,136-138,146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8da6e0301d44cc006a78db17f5910e29bd11103e",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

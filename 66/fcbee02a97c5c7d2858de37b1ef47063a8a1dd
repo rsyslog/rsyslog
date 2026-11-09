@@ -1,0 +1,23 @@
+tests/local-queue-force-term-actions.sh
+  s_142ee1fa291d22::t_70498d4ba39304 12-13
+tests/local-queue-stats-reconciliation.sh
+  s_142ee1fa291d22::t_70498d4ba39304 58
+tests/local-queue-omfile-cancel.sh
+  s_142ee1fa291d22::t_70498d4ba39304 11-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "66fcbee02a97c5c7d2858de37b1ef47063a8a1dd",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

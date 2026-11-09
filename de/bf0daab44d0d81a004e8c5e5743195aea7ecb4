@@ -1,0 +1,33 @@
+.codex/pre_push_container_gate.sh
+  s_142ee1fa291d22::t_60976b03171a2d 256,302-303,405
+devtools/record-container-validation.py
+  s_142ee1fa291d22::t_49a78ea2229fd5 2-15,33-36,65-70,84-87,107
+tests/codex-pre-push-container-gate.sh
+  s_fa2d27bab00d3c::t_2cb4f50f75a256 201-221
+tests/record-container-validation.sh
+  s_fa2d27bab00d3c::t_b28dc5597967a7 2-16,80,82-83,104-126,134-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "debf0daab44d0d81a004e8c5e5743195aea7ecb4",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_fa2d27bab00d3c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a8fe-3f47-7dd3-90d2-eedfb415bf34",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

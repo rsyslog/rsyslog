@@ -1,0 +1,41 @@
+plugins/imtcp/imtcp.c
+  s_f8a738e4bdfaee::t_c34ef51f0dc33d 2520,2527-2528
+tests/unit/imtcp_policy_owner_test.c
+  s_f8a738e4bdfaee::t_0cb3464e549c16 11-12,183-184,196-203
+tests/unit/reload_callgraph_fence_test.c
+  s_f8a738e4bdfaee::t_d2e7f39cfa0e61 12,203,220-221,232-236
+tests/unit/reload_candidate_graph_test.c
+  s_f8a738e4bdfaee::t_b7fc80413ab0c9 746-747
+tests/unit/ruleset_addition_owner_test.c
+  s_f8a738e4bdfaee::t_1b2d78635aae80 63-64,66-67
+tests/unit/ruleset_call_test.c
+  s_f8a738e4bdfaee::t_9827ca676cc272 10,63-65,67-70
+tests/unit/ruleset_name_index_unsupported_test.c
+  s_f8a738e4bdfaee::t_6f60df1710e65f 7-8,13-14
+tests/unit/tcpsrv_accept_publication_test.c
+  s_f8a738e4bdfaee::t_8d815afdf00767 15,56-57
+tests/unit/tcpsrv_fence_test.c
+  s_f8a738e4bdfaee::t_6d717f2749d4e3 106-108,115,121-122,124,239,254,279,287-288,320,337,341,345,389,405,421,425,427-428,434-439,536-537,581-584,608-613,638-643,649-650,700-701,704-707
+tests/unit/tcpsrv_prepared_backend_test.c
+  s_f8a738e4bdfaee::t_e503726d352170 628-629
+tests/unit/tcpsrv_prepared_test.c
+  s_f8a738e4bdfaee::t_f8708c9b977a19 10-11,39-40
+tests/unit/wtp_quiesce_test.c
+  s_f8a738e4bdfaee::t_e20192bc93bc58 650-652,703-705,824-826
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d806ed88a820b3125a5d5b3baf971466e213f10",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
