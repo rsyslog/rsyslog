@@ -28,7 +28,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-24.04
+            runner: ubuntu-22.04
           - arch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
@@ -57,7 +57,7 @@ jobs:
         run: devtools/test-debian-repro.sh "$DEBIAN_ARCH"
       - name: Upload test failure evidence
         if: ${{ failure() }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: Debian buildinfo replay (${{ matrix.arch }})
       - name: Preserve experiment metadata and logs
