@@ -1,0 +1,18 @@
+devtools/DEBIAN_REPRO_EXPERIMENT.md
+  h_95716f3de0caf5 14,28,39
+devtools/debian-repro-experiment.py
+  h_95716f3de0caf5 15,81,98,108,115,126-127,147-173
+devtools/tests/test_debian_repro_experiment.py
+  h_95716f3de0caf5 28-29,31-35,40-41,48,56-59,86-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1119ddb18b9b67b2cbf3c54f4e2a3dc0e437147c",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
