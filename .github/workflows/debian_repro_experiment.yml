@@ -80,6 +80,22 @@ jobs:
               "$bootstrap/keyring/usr/share/keyrings/debian-archive-keyring.gpg" \
               /usr/share/keyrings/debian-archive-keyring.gpg
             sha256sum /usr/share/keyrings/debian-archive-keyring.gpg
+            mmdebstrap_package="$bootstrap/mmdebstrap.deb"
+            curl --fail --location --retry 3 \
+              https://deb.debian.org/debian/pool/main/m/mmdebstrap/mmdebstrap_1.7.0-1_all.deb \
+              --output "$mmdebstrap_package"
+            printf '%s  %s\n' \
+              1bd358f7bfd3b64668ccce6a9f9a45244a80840bfeeac29a77fb50916db03e3e \
+              "$mmdebstrap_package" | sha256sum --check
+            dpkg-deb --extract "$mmdebstrap_package" "$bootstrap/mmdebstrap"
+            # These are the helper's standard absolute runtime data paths.
+            sudo install -d /usr/share/mmdebstrap/hooks /usr/libexec/mmdebstrap
+            sudo cp -a "$bootstrap/mmdebstrap/usr/share/mmdebstrap/hooks/." /usr/share/mmdebstrap/hooks/
+            sudo cp -a "$bootstrap/mmdebstrap/usr/libexec/mmdebstrap/." /usr/libexec/mmdebstrap/
+            ln -s "$bootstrap/mmdebstrap/usr/bin/mmdebstrap" "$bootstrap/bin/mmdebstrap"
+            ln -s "$bootstrap/package/usr/bin/debrebuild" "$bootstrap/bin/debrebuild"
+            "$bootstrap/bin/mmdebstrap" --version
+            "$bootstrap/bin/debrebuild" --help
             # Expand these variables when the generated wrapper runs.
             # shellcheck disable=SC2016
             printf '%s\n' '#!/usr/bin/env bash' \
