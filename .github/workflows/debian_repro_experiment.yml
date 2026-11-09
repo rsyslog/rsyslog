@@ -49,8 +49,36 @@ jobs:
             sudo apt-get install -y --no-install-recommends \
               devscripts sbuild mmdebstrap uidmap debian-archive-keyring ca-certificates \
               libstring-shellquote-perl python3-pycurl python3-requests python3-debian \
-              equivs apt-utils debian-keyring
+              equivs apt-utils debian-keyring python3-apt curl
           } 2>&1 | tee ".ci/debian-repro-$DEBIAN_ARCH/bootstrap.log"
+      - name: Prepare pinned snapshot helper compatibility
+        env:
+          DEBIAN_ARCH: ${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          bootstrap="$RUNNER_TEMP/debian-repro-bootstrap"
+          mkdir -p "$bootstrap/bin"
+          package="$bootstrap/devscripts.deb"
+          {
+            curl --fail --location --retry 3 \
+              https://deb.debian.org/debian/pool/main/d/devscripts/devscripts_2.26.13_all.deb \
+              --output "$package"
+            printf '%s  %s\n' \
+              d1f0913cdbcc1f62d8bae39924a65c4a9102abf6fa021a02685607d764d4cecd \
+              "$package" | sha256sum --check
+            dpkg-deb --extract "$package" "$bootstrap/package"
+            # Expand these variables when the generated wrapper runs.
+            # shellcheck disable=SC2016
+            printf '%s\n' '#!/usr/bin/env bash' \
+              'set -euo pipefail' \
+              'base="$(cd "$(dirname "$0")/.." && pwd)"' \
+              'exec env PYTHONPATH="$base/package/usr/lib/python3/dist-packages" /usr/bin/python3 "$base/package/usr/bin/debootsnap" "$@"' \
+              > "$bootstrap/bin/debootsnap"
+            chmod +x "$bootstrap/bin/debootsnap"
+            "$bootstrap/bin/debootsnap" --help
+            sha256sum "$bootstrap/package/usr/bin/debootsnap"
+          } 2>&1 | tee -a ".ci/debian-repro-$DEBIAN_ARCH/bootstrap.log"
+          printf '%s\n' "$bootstrap/bin" >> "$GITHUB_PATH"
       - name: Replay original Debian buildinfo
         env:
           DEBIAN_ARCH: ${{ matrix.arch }}
