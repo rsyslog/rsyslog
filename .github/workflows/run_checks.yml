@@ -456,7 +456,9 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 50
+    # Private self-hosted workers include slower, shared older hardware.
+    # Keep hosted/public limits unchanged and retain parallel runner routing.
+    timeout-minutes: ${{ github.event.repository.private && 180 || 50 }}
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
