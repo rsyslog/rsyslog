@@ -93,7 +93,18 @@ jobs:
             sudo cp -a "$bootstrap/mmdebstrap/usr/share/mmdebstrap/hooks/." /usr/share/mmdebstrap/hooks/
             sudo cp -a "$bootstrap/mmdebstrap/usr/libexec/mmdebstrap/." /usr/libexec/mmdebstrap/
             ln -s "$bootstrap/mmdebstrap/usr/bin/mmdebstrap" "$bootstrap/bin/mmdebstrap"
-            ln -s "$bootstrap/package/usr/bin/debrebuild" "$bootstrap/bin/debrebuild"
+            # Jammy debrebuild/sbuild must use their matching native config format.
+            # Its missing cache option affects only outer download reuse.
+            # shellcheck disable=SC2016
+            printf '%s\n' '#!/usr/bin/env bash' \
+              'set -euo pipefail' \
+              'args=()' \
+              'for arg in "$@"; do' \
+              '  case "$arg" in --cache=*) echo "Compatibility: native debrebuild has no cache option; ignoring outer download cache" >&2 ;; *) args+=("$arg") ;; esac' \
+              'done' \
+              'exec /usr/bin/debrebuild "${args[@]}"' \
+              > "$bootstrap/bin/debrebuild"
+            chmod +x "$bootstrap/bin/debrebuild"
             "$bootstrap/bin/mmdebstrap" --version
             "$bootstrap/bin/debrebuild" --help
             # Expand these variables when the generated wrapper runs.
