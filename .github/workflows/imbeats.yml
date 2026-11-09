@@ -37,7 +37,7 @@ env:
 jobs:
   imbeats_CI:
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    timeout-minutes: ${{ github.event.repository.private && 180 || 25 }}
     name: imbeats-tests
     env:
       RSYSLOG_TESTBENCH_EXTERNAL_ES_URL: http://127.0.0.1:19200
