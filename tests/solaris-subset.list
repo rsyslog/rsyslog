@@ -41,3 +41,6 @@ keep imfile-readmode2.sh
 keep imfile-endregex.sh
 keep imfile-truncate.sh
 keep imfile-rename.sh
+
+# Redis output: needs a redis-server, no portability relevance.
+skip omhiredis-*
