@@ -1732,6 +1732,7 @@ TESTS_OMHIREDIS_VALGRIND = \
 	omhiredis-set-vg.sh \
 	omhiredis-setex-vg.sh \
 	omhiredis-template-vg.sh \
+	omhiredis-template-percent-vg.sh \
 	omhiredis-withpass-vg.sh \
 	omhiredis-wrongpass-vg.sh \
 	omhiredis-stream-ack-vg.sh \
