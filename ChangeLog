@@ -1,6 +1,14 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2612.0 (aka 2026.12) 2026-12-20
 
+- 2026-11-09: imptcp: bound decompression of compressed streams
+  imptcp now enforces the same stream decompression limits as imtcp. New
+  input parameters compression.maxExpansionRatio (default 1024) and
+  compression.maxDecompressedBytesPerReceive (default 64 MiB) reject streams
+  that expand beyond them; 0 disables a limit. Existing configurations that
+  legitimately receive streams denser than 1024:1 must raise or disable the
+  ratio limit.
+
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-20
 

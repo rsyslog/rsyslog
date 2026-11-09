@@ -184,6 +184,14 @@ the input they are specified with.
      - .. include:: ../../reference/parameters/imptcp-compression-mode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imptcp-compression-maxexpansionratio`
+     - .. include:: ../../reference/parameters/imptcp-compression-maxexpansionratio.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imptcp-compression-maxdecompressedbytesperreceive`
+     - .. include:: ../../reference/parameters/imptcp-compression-maxdecompressedbytesperreceive.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imptcp-flowcontrol`
      - .. include:: ../../reference/parameters/imptcp-flowcontrol.rst
         :start-after: .. summary-start
@@ -246,6 +254,9 @@ If ``compression.mode="stream:always"`` is enabled, ``imptcp`` also logs:
 - trailing bytes after the end of a compressed stream
 - truncated compressed streams detected when the peer disconnects before the
   stream is cleanly finished
+- compressed streams rejected because they exceeded
+  ``compression.maxExpansionRatio`` or
+  ``compression.maxDecompressedBytesPerReceive``
 
 
 Caveats/Known Bugs
@@ -323,6 +334,8 @@ Create a unix domain socket:
    ../../reference/parameters/imptcp-ratelimit-interval
    ../../reference/parameters/imptcp-ratelimit-burst
    ../../reference/parameters/imptcp-compression-mode
+   ../../reference/parameters/imptcp-compression-maxexpansionratio
+   ../../reference/parameters/imptcp-compression-maxdecompressedbytesperreceive
    ../../reference/parameters/imptcp-flowcontrol
    ../../reference/parameters/imptcp-multiline
    ../../reference/parameters/imptcp-framing-delimiter-regex

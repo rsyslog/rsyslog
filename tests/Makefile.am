@@ -1813,6 +1813,9 @@ TESTS_IMPTCP = \
 	imptcp-compression-none-legacy-single.sh \
 	imptcp-stream-compression-auto.sh \
 	imptcp-stream-compression-auto-zlib-prefix-plain.sh \
+	imptcp-stream-always-zlib-expansion-guard.sh \
+	imptcp-stream-always-zlib-per-receive-guard.sh \
+	imptcp-stream-always-zlib-within-limits.sh \
 	imptcp-stream-auto-z-prefix.sh \
 	imptcp-stream-auto-legacy-single.sh \
 	rscript_random.sh \
