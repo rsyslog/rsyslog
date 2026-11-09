@@ -98,6 +98,8 @@ jobs:
             # shellcheck disable=SC2016
             printf '%s\n' '#!/usr/bin/env bash' \
               'set -euo pipefail' \
+              'dpkg-query -W devscripts sbuild' \
+              'mmdebstrap --version' \
               'args=()' \
               'for arg in "$@"; do' \
               '  case "$arg" in --cache=*) echo "Compatibility: native debrebuild has no cache option; ignoring outer download cache" >&2 ;; *) args+=("$arg") ;; esac' \
