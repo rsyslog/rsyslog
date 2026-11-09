@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: Apache-2.0
+name: Debian reproduction experiment
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/debian_repro_experiment.yml
+      - devtools/test-debian-repro.sh
+      - devtools/debian-repro-experiment.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debian-repro-experiment-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    # Bounded to this disposable TEST ONLY / DO NOT MERGE PR.
+    if: >-
+      github.event.pull_request.head.repo.full_name == 'rgerhards/rsyslog' &&
+      github.head_ref == 'codex/debian-repro-experiment-20261109'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - name: Checkout experiment harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install unprivileged rebuild tooling
+        env:
+          DEBIAN_ARCH: ${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          mkdir -p ".ci/debian-repro-$DEBIAN_ARCH"
+          {
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends \
+              devscripts sbuild mmdebstrap uidmap debian-archive-keyring ca-certificates
+          } 2>&1 | tee ".ci/debian-repro-$DEBIAN_ARCH/bootstrap.log"
+      - name: Replay original Debian buildinfo
+        env:
+          DEBIAN_ARCH: ${{ matrix.arch }}
+        run: devtools/test-debian-repro.sh "$DEBIAN_ARCH"
+      - name: Upload test failure evidence
+        if: ${{ failure() }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: Debian buildinfo replay (${{ matrix.arch }})
+      - name: Preserve experiment metadata and logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: debian-rebuild-${{ matrix.arch }}
+          path: |
+            .ci/debian-repro-${{ matrix.arch }}/*.buildinfo
+            .ci/debian-repro-${{ matrix.arch }}/rebuild.json
+            .ci/debian-repro-${{ matrix.arch }}/*.log
+          retention-days: 7
+          if-no-files-found: warn
