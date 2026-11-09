@@ -41,7 +41,7 @@ Signed APT indexes are published under both `binary-amd64/` and
 `binary-arm64/`. Each package is built and installed on a native runner of the
 matching architecture.
 
-During the 90-day retention window (see DAILY_STABLE_PACKAGE_ARCHIVE.md), the
+During the retention window (see DAILY_STABLE_PACKAGE_ARCHIVE.md), the
 APT indexes retain every published package version. Storage must not remove
 package-pool, by-hash, or snapshot objects on its own; once pruning automation
 exists, it must remove old versions from the indexes before deleting their pool
