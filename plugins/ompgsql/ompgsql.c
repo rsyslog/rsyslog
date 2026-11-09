@@ -49,6 +49,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "parserif.h"
+#include "statsobj.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -58,6 +59,12 @@ MODULE_CNFNAME("ompgsql")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
+DEFobjCurrIf(statsobj);
+static statsobj_t *pgsqlStats;
+STATSCOUNTER_DEF(pgsqlSubmitted, mutPgsqlSubmitted)
+STATSCOUNTER_DEF(pgsqlCommitted, mutPgsqlCommitted)
+STATSCOUNTER_DEF(pgsqlTransactions, mutPgsqlTransactions)
+STATSCOUNTER_DEF(pgsqlFailed, mutPgsqlFailed)
 
 typedef struct _instanceData {
     char *srv; /* IP or hostname of DB server*/
@@ -323,6 +330,7 @@ ENDbeginTransaction
 
 BEGINcommitTransaction
     CODESTARTcommitTransaction;
+    STATSCOUNTER_ADD(pgsqlSubmitted, mutPgsqlSubmitted, nParams);
     dbgprintf("ompgsql: beginTransaction\n");
     if (pWrkrData->f_hpgsql == NULL) initPgSQL(pWrkrData, 0);
     CHKiRet(writePgSQL((uchar *)"BEGIN", pWrkrData)); /* TODO: make user-configurable */
@@ -351,7 +359,11 @@ BEGINcommitTransaction
 
 finalize_it:
     if (iRet == RS_RET_OK) {
+        STATSCOUNTER_ADD(pgsqlCommitted, mutPgsqlCommitted, nParams);
+        STATSCOUNTER_INC(pgsqlTransactions, mutPgsqlTransactions);
         pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+    } else {
+        STATSCOUNTER_INC(pgsqlFailed, mutPgsqlFailed);
     }
 
 ENDcommitTransaction
@@ -534,6 +546,8 @@ ENDparseSelectorAct
 
 BEGINmodExit
     CODESTARTmodExit;
+    statsobj.Destruct(&pgsqlStats);
+    objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -548,6 +562,22 @@ ENDqueryEtryPt
 
 BEGINmodInit()
     CODESTARTmodInit;
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(statsobj.Construct(&pgsqlStats));
+    CHKiRet(statsobj.SetName(pgsqlStats, (uchar *)"ompgsql"));
+    CHKiRet(statsobj.SetOrigin(pgsqlStats, (uchar *)"ompgsql"));
+    STATSCOUNTER_INIT(pgsqlSubmitted, mutPgsqlSubmitted);
+    STATSCOUNTER_INIT(pgsqlCommitted, mutPgsqlCommitted);
+    STATSCOUNTER_INIT(pgsqlTransactions, mutPgsqlTransactions);
+    STATSCOUNTER_INIT(pgsqlFailed, mutPgsqlFailed);
+    CHKiRet(
+        statsobj.AddCounter(pgsqlStats, (uchar *)"submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pgsqlSubmitted));
+    CHKiRet(
+        statsobj.AddCounter(pgsqlStats, (uchar *)"committed", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pgsqlCommitted));
+    CHKiRet(statsobj.AddCounter(pgsqlStats, (uchar *)"transactions", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &pgsqlTransactions));
+    CHKiRet(statsobj.AddCounter(pgsqlStats, (uchar *)"failed", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pgsqlFailed));
+    CHKiRet(statsobj.ConstructFinalize(pgsqlStats));
     INITLegCnfVars;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
