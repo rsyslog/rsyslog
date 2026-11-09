@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 """Check experiment provenance and the setup/test/package-failure boundary."""
+import contextlib
 import hashlib
 import importlib.util
 import io
@@ -41,7 +42,8 @@ class Experiment(unittest.TestCase):
                     mock.patch.object(REPRO, "phase") as phase, \
                     mock.patch.object(REPRO.sys, "argv", ["repro", "--arch", "amd64", "--output", str(out), *extra]):
                 with mock.patch.dict(REPRO.os.environ, {"RSYSLOG_FLAKE_EVIDENCE_ROOT": str(out / "evidence")}):
-                    result = REPRO.main()
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        result = REPRO.main()
                 metadata = json.loads((out / "rebuild.json").read_text())
                 inputs = {p.name: p.read_bytes() for p in out.glob("*.buildinfo")}
                 return result, metadata, phase.call_args_list, inputs
@@ -62,6 +64,13 @@ class Experiment(unittest.TestCase):
                                             "package checksum mismatch\n", 1)
         self.assertEqual(result, 1)
         self.assertEqual(phases, [mock.call("begin"), mock.call("end", 0)])
+
+    def test_nested_summary_cannot_hide_interrupted_outer_test(self):
+        result, metadata, phases, _ = self.execute(
+            "PASS: nested.sh\n# TOTAL: 1\n# FAIL: 0\n# ERROR: 0\nTest: ./blocked.sh\n", 2)
+        self.assertEqual(result, 2)
+        self.assertFalse(metadata["test_summary_complete"])
+        self.assertEqual(phases, [mock.call("begin"), mock.call("end", 1)])
 
     def test_parallelism_override_preserves_original(self):
         _, metadata, _, inputs = self.execute("", 0, ["--parallelism", "2", "--download-only"])

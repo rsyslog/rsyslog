@@ -53,6 +53,7 @@ def main():
     metadata = {"source_version": "8.2610.0-3", "architecture": args.arch,
                 "buildinfo_url": BASE + name, "buildinfo_sha256": actual,
                 "signature_verified": False, "source": "Debian package, not PR source",
+                "harness_commit": os.environ.get("GITHUB_SHA", "local-unpublished-harness"),
                 "recorded_parallelism": re.search(r'DEB_BUILD_OPTIONS="([^"]+)"', text).group(1),
                 "limits": ["CPU/kernel/network and outer bootstrap tools differ from Debian builder."]}
     if args.parallelism is not None:
@@ -88,6 +89,8 @@ def main():
         started = time.monotonic()
         phase_started = False
         counts = {}
+        summary_fields = set()
+        summary_complete = False
         with (args.output / "rebuild.log").open("w") as log:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        text=True, bufsize=1)
@@ -96,26 +99,46 @@ def main():
                 sys.stdout.flush()
                 log.write(line)
                 log.flush()
-                # Actual test headers/results, never dependency/configure output.
-                if not phase_started and (re.search(r"Test: \./", line) or
-                                          re.match(r"(?:PASS|FAIL|SKIP|ERROR): .*\.sh", line)):
-                    phase("begin")
-                    phase_started = True
+                # Every newly observed test invalidates an earlier (possibly
+                # nested) summary. Only a fresh complete summary after the last
+                # test can establish that all observed test work completed.
+                test_line = (re.search(r"Test: \./", line) or
+                             re.match(r"(?:PASS|FAIL|SKIP|ERROR): .*\.sh", line))
+                if test_line:
+                    summary_fields.clear()
+                    summary_complete = False
+                    if not phase_started:
+                        phase("begin")
+                        phase_started = True
                 match = re.match(r"#\s*(TOTAL|PASS|SKIP|FAIL|ERROR):\s*(\d+)", line)
                 if match:
+                    if match.group(1) == "TOTAL":
+                        summary_fields.clear()
+                        summary_complete = False
                     counts[match.group(1)] = int(match.group(2))
+                    summary_fields.add(match.group(1))
+                    summary_complete = {"TOTAL", "FAIL", "ERROR"}.issubset(summary_fields)
             rc = process.wait()
         if phase_started:
             # Successful tests followed by a package/diff failure are not flakes.
-            test_rc = int(bool(counts.get("FAIL", 0) or counts.get("ERROR", 0) or "TOTAL" not in counts))
+            test_rc = int(bool(counts.get("FAIL", 0) or counts.get("ERROR", 0) or not summary_complete))
+            if not summary_complete:
+                rc = rc or 2
             phase("end", test_rc)
             evidence = Path(os.environ.get("RSYSLOG_FLAKE_EVIDENCE_ROOT", ".ci/flake-evidence"))
             target = evidence / "logs/debian-rebuild.log"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes((args.output / "rebuild.log").read_bytes())
         metadata.update(exit_code=rc, test_counts=counts, test_phase_started=phase_started,
+                        test_summary_complete=summary_complete,
                         seconds=round(time.monotonic() - started, 2))
-        (args.output / "rebuild.json").write_text(json.dumps(metadata, indent=2) + "\n")
+        metadata_text = json.dumps(metadata, indent=2) + "\n"
+        (args.output / "rebuild.json").write_text(metadata_text)
+        if phase_started:
+            # The normal collector downloads only ci-failure-* artifacts. Keep
+            # actual Debian source identity beside the log, not only in the
+            # separate experiment artifact whose GitHub SHA names the harness.
+            (evidence / "logs/debian-rebuild-provenance.log").write_text(metadata_text)
         return rc
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         metadata.update(exit_code=2, setup_error=str(error), test_phase_started=phase_started)
