@@ -37,7 +37,7 @@ concurrency:
 jobs:
   test_push:
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 20
+    timeout-minutes: ${{ github.event.repository.private && 180 || 20 }}
 
     services:
       victoriametrics:
