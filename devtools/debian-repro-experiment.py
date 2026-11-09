@@ -78,6 +78,7 @@ def main():
         print(json.dumps(metadata))
         return 0
     phase_started = False
+    phase_ended = False
     process = None
     try:
         native = subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()
@@ -128,6 +129,9 @@ def main():
             if not summary_complete:
                 rc = rc or 2
             phase("end", test_rc)
+            phase_ended = True
+            metadata.update(test_exit_code=test_rc, test_counts=counts,
+                            test_summary_complete=summary_complete)
             evidence = Path(os.environ.get("RSYSLOG_FLAKE_EVIDENCE_ROOT", ".ci/flake-evidence"))
             target = evidence / "logs/debian-rebuild.log"
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -156,7 +160,7 @@ def main():
                     process.wait(timeout=10)
             except ProcessLookupError:
                 pass
-        if phase_started:
+        if phase_started and not phase_ended:
             try:
                 phase("end", 1)
             except subprocess.SubprocessError as phase_error:

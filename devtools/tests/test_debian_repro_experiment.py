@@ -107,6 +107,26 @@ class Experiment(unittest.TestCase):
         self.assertEqual(process.waited, [10])
         self.assertEqual(phases, [mock.call("begin"), mock.call("end", 1)])
 
+    def test_evidence_copy_error_preserves_completed_passing_phase(self):
+        original = Path.write_bytes
+        failed = False
+
+        def fail_once(path, data):
+            nonlocal failed
+            if path.name == "debian-rebuild.log" and not failed:
+                failed = True
+                raise OSError("fixture post-test copy failure")
+            return original(path, data)
+
+        with mock.patch.object(Path, "write_bytes", fail_once):
+            result, metadata, phases, _ = self.execute(
+                "PASS: example.sh\n# TOTAL: 1\n# FAIL: 0\n# ERROR: 0\n", 0)
+        self.assertEqual(result, 2)
+        self.assertIn("fixture post-test copy failure", metadata["execution_error"])
+        self.assertEqual(metadata["test_exit_code"], 0)
+        self.assertTrue(metadata["test_summary_complete"])
+        self.assertEqual(phases, [mock.call("begin"), mock.call("end", 0)])
+
     def test_parallelism_override_preserves_original(self):
         _, metadata, _, inputs = self.execute("", 0, ["--parallelism", "2", "--download-only"])
         self.assertEqual(inputs["rsyslog_8.2610.0-3_amd64.buildinfo"], FIXTURE)
