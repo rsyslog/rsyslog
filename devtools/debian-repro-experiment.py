@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -77,6 +78,7 @@ def main():
         print(json.dumps(metadata))
         return 0
     phase_started = False
+    process = None
     try:
         native = subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()
         if native != args.arch:
@@ -93,7 +95,7 @@ def main():
         summary_complete = False
         with (args.output / "rebuild.log").open("w") as log:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                       text=True, bufsize=1)
+                                       text=True, errors="replace", bufsize=1, start_new_session=True)
             for line in process.stdout:
                 sys.stdout.write(line)
                 sys.stdout.flush()
@@ -103,14 +105,14 @@ def main():
                 # nested) summary. Only a fresh complete summary after the last
                 # test can establish that all observed test work completed.
                 test_line = (re.search(r"Test: \./", line) or
-                             re.match(r"(?:PASS|FAIL|SKIP|ERROR): .*\.sh", line))
+                             re.match(r"(?:PASS|FAIL|SKIP|ERROR|XFAIL|XPASS): [A-Za-z0-9_.+/-]+\s*$", line))
                 if test_line:
                     summary_fields.clear()
                     summary_complete = False
                     if not phase_started:
                         phase("begin")
                         phase_started = True
-                match = re.match(r"#\s*(TOTAL|PASS|SKIP|FAIL|ERROR):\s*(\d+)", line)
+                match = re.match(r"#\s*(TOTAL|PASS|SKIP|FAIL|ERROR|XFAIL|XPASS):\s*(\d+)", line)
                 if match:
                     if match.group(1) == "TOTAL":
                         summary_fields.clear()
@@ -121,7 +123,8 @@ def main():
             rc = process.wait()
         if phase_started:
             # Successful tests followed by a package/diff failure are not flakes.
-            test_rc = int(bool(counts.get("FAIL", 0) or counts.get("ERROR", 0) or not summary_complete))
+            test_rc = int(bool(counts.get("FAIL", 0) or counts.get("ERROR", 0)
+                          or counts.get("XPASS", 0) or not summary_complete))
             if not summary_complete:
                 rc = rc or 2
             phase("end", test_rc)
@@ -141,8 +144,33 @@ def main():
             (evidence / "logs/debian-rebuild-provenance.log").write_text(metadata_text)
         return rc
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-        metadata.update(exit_code=2, setup_error=str(error), test_phase_started=phase_started)
-        (args.output / "rebuild.json").write_text(json.dumps(metadata, indent=2) + "\n")
+        # Popen owns a new session, so only this replay's process group is
+        # stopped. Do not leave sbuild descendants running after logging fails.
+        if process is not None and process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=10)
+            except ProcessLookupError:
+                pass
+        if phase_started:
+            try:
+                phase("end", 1)
+            except subprocess.SubprocessError as phase_error:
+                print("could not finalize interrupted phase: " + str(phase_error), file=sys.stderr)
+        metadata.update(exit_code=2, test_phase_started=phase_started)
+        metadata["execution_error" if phase_started else "setup_error"] = str(error)
+        metadata_text = json.dumps(metadata, indent=2) + "\n"
+        (args.output / "rebuild.json").write_text(metadata_text)
+        if phase_started:
+            evidence = Path(os.environ.get("RSYSLOG_FLAKE_EVIDENCE_ROOT", ".ci/flake-evidence"))
+            logs = evidence / "logs"
+            logs.mkdir(parents=True, exist_ok=True)
+            (logs / "debian-rebuild.log").write_bytes((args.output / "rebuild.log").read_bytes())
+            (logs / "debian-rebuild-provenance.log").write_text(metadata_text)
         print("rebuild setup/execution failed: " + str(error), file=sys.stderr)
         return 2
 

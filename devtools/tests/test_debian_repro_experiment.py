@@ -25,20 +25,27 @@ class Process:
     def __init__(self, output, code):
         self.stdout = io.StringIO(output)
         self.code = code
+        self.pid = 424242
+        self.waited = []
 
-    def wait(self):
+    def wait(self, timeout=None):
+        self.waited.append(timeout)
+        return self.code
+
+    def poll(self):
         return self.code
 
 
 class Experiment(unittest.TestCase):
-    def execute(self, output, code, extra=()):
+    def execute(self, output, code, extra=(), process=None):
+        process = process or Process(output, code)
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             with mock.patch.object(REPRO.urllib.request, "urlopen", return_value=io.BytesIO(FIXTURE)), \
                     mock.patch.dict(REPRO.INPUTS, {"amd64": hashlib.sha256(FIXTURE).hexdigest()}), \
                     mock.patch.object(REPRO.subprocess, "check_output", return_value="amd64\n"), \
                     mock.patch.object(REPRO.subprocess, "run"), \
-                    mock.patch.object(REPRO.subprocess, "Popen", return_value=Process(output, code)), \
+                    mock.patch.object(REPRO.subprocess, "Popen", return_value=process), \
                     mock.patch.object(REPRO, "phase") as phase, \
                     mock.patch.object(REPRO.sys, "argv", ["repro", "--arch", "amd64", "--output", str(out), *extra]):
                 with mock.patch.dict(REPRO.os.environ, {"RSYSLOG_FLAKE_EVIDENCE_ROOT": str(out / "evidence")}):
@@ -46,6 +53,10 @@ class Experiment(unittest.TestCase):
                         result = REPRO.main()
                 metadata = json.loads((out / "rebuild.json").read_text())
                 inputs = {p.name: p.read_bytes() for p in out.glob("*.buildinfo")}
+                if metadata.get("test_phase_started"):
+                    provenance = json.loads((out / "evidence/logs/debian-rebuild-provenance.log").read_text())
+                    self.assertEqual(provenance["source_version"], "8.2610.0-3")
+                    self.assertEqual(provenance["buildinfo_sha256"], metadata["buildinfo_sha256"])
                 return result, metadata, phase.call_args_list, inputs
 
     def test_setup_failure_is_not_a_test_phase(self):
@@ -70,6 +81,30 @@ class Experiment(unittest.TestCase):
             "PASS: nested.sh\n# TOTAL: 1\n# FAIL: 0\n# ERROR: 0\nTest: ./blocked.sh\n", 2)
         self.assertEqual(result, 2)
         self.assertFalse(metadata["test_summary_complete"])
+        self.assertEqual(phases, [mock.call("begin"), mock.call("end", 1)])
+
+    def test_compiled_unit_failure_starts_phase(self):
+        _, _, phases, _ = self.execute("FAIL: runtime_unit_linkedlist\n# TOTAL: 1\n# FAIL: 1\n# ERROR: 0\n", 2)
+        self.assertEqual(phases, [mock.call("begin"), mock.call("end", 1)])
+
+    def test_unexpected_pass_is_not_a_successful_phase(self):
+        _, metadata, phases, _ = self.execute(
+            "XPASS: unexpected.sh\n# TOTAL: 1\n# FAIL: 0\n# XPASS: 1\n# ERROR: 0\n", 1)
+        self.assertEqual(metadata["test_counts"]["XPASS"], 1)
+        self.assertEqual(phases, [mock.call("begin"), mock.call("end", 1)])
+
+    def test_output_error_stops_owned_process_and_ends_phase(self):
+        def broken_output():
+            yield "PASS: started.sh\n"
+            raise OSError("fixture output failure")
+        process = Process("", None)
+        process.stdout = broken_output()
+        with mock.patch.object(REPRO.os, "killpg") as kill:
+            result, metadata, phases, _ = self.execute("", 2, process=process)
+        self.assertEqual(result, 2)
+        self.assertIn("fixture output failure", metadata["execution_error"])
+        kill.assert_called_once_with(process.pid, REPRO.signal.SIGTERM)
+        self.assertEqual(process.waited, [10])
         self.assertEqual(phases, [mock.call("begin"), mock.call("end", 1)])
 
     def test_parallelism_override_preserves_original(self):
