@@ -323,7 +323,7 @@ jobs:
   compile:
     name: compile (${{ matrix.config }})
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event.repository.private && 180 || 30 }}
     permissions:
       contents: read
       pull-requests: read
@@ -394,7 +394,7 @@ jobs:
     needs: [compile, changes]
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.c_headers == 'true' }}
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event.repository.private && 180 || 30 }}
     permissions:
       contents: read
     strategy:
@@ -456,8 +456,6 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    # Private self-hosted workers include slower, shared older hardware.
-    # Keep hosted/public limits unchanged and retain parallel runner routing.
     timeout-minutes: ${{ github.event.repository.private && 180 || 50 }}
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
@@ -753,7 +751,7 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
-    timeout-minutes: 35
+    timeout-minutes: ${{ github.event.repository.private && 180 || 35 }}
     strategy:
       fail-fast: true
       matrix:
@@ -843,7 +841,7 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-22.04' }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event.repository.private && 180 || 45 }}
     strategy:
       fail-fast: false
       matrix:
@@ -1284,7 +1282,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event.repository.private && 180 || 45 }}
     name: elasticsearch-8-tests
     env:
       RSYSLOG_TESTBENCH_EXTERNAL_ES_URL: http://127.0.0.1:19200
@@ -1356,7 +1354,7 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    timeout-minutes: ${{ github.event.repository.private && 180 || 25 }}
     name: victorialogs-tests
     env:
       DOCKER_RUN_EXTRA_OPTS: --network host
@@ -1542,7 +1540,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 50
+    timeout-minutes: ${{ github.event.repository.private && 180 || 50 }}
     name: kafka distcheck CI
     steps:
       - name: git checkout project
@@ -1875,7 +1873,7 @@ jobs:
       contents: read
       pull-requests: read
     runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
-    timeout-minutes: 75
+    timeout-minutes: ${{ github.event.repository.private && 180 || 75 }}
     name: i386 CI (Debian 13, linux/386)
     steps:
       - name: git checkout project
@@ -1914,10 +1912,13 @@ jobs:
 
       - name: Run i386 build and regular testbench
         if: steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_I386_CHECK_TIMEOUT: ${{ github.event.repository.private && '150m' || '45m' }}
         run: |
           chmod -R go+rw .
           docker run --rm --platform linux/386 \
             -e ARCH=i386 \
+            -e RSYSLOG_I386_CHECK_TIMEOUT \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
@@ -2006,7 +2007,7 @@ jobs:
               time_su_phase "config sanity" "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
               time_su_phase build "make -j8"
               time_su_phase check "devtools/ci-flake-phase.sh run i386-check automake -- \
-                timeout 45m make -j10 check VERBOSE=1"
+                timeout ${RSYSLOG_I386_CHECK_TIMEOUT} make -j10 check VERBOSE=1"
             '
 
       - name: Upload test failure evidence
