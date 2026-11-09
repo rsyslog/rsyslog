@@ -59,6 +59,18 @@ Input usage
        compression.maxDecompressedBytesPerReceive="134217728"
    )
 
+YAML usage
+----------
+.. code-block:: yaml
+
+   modules:
+     - load: imptcp
+   inputs:
+     - type: imptcp
+       port: "514"
+       compression.mode: "stream:always"
+       compression.maxDecompressedBytesPerReceive: "134217728"
+
 See also
 --------
 
