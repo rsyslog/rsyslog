@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# added 2026-11-09, released under ASL 2.0
+# added 2026-11-09 by Rainer Gerhards, released under ASL 2.0
 # Regression test for the imptcp per-receive decompressed-byte cap.
 # Stimulus: the same ~270:1 zlib stream (a few hundred compressed bytes expanding
 # to ~297 KB) sent in one write to a listener with the ratio guard disabled

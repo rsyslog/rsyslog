@@ -248,7 +248,9 @@ Error Messages
 
 When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
 
-If ``compression.mode="stream:always"`` is enabled, ``imptcp`` also logs:
+When stream decompression is active (``compression.mode="stream:always"``, or
+``"stream:auto"`` once a session is detected as compressed), ``imptcp`` also
+logs:
 
 - invalid compressed streams
 - trailing bytes after the end of a compressed stream

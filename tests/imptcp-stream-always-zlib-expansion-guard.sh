@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# added 2026-11-09, released under ASL 2.0
+# added 2026-11-09 by Rainer Gerhards, released under ASL 2.0
 # Regression test for imptcp stream decompression amplification: imptcp used to
 # inflate compressed streams without any expansion cap, unlike imtcp.
 # Stimulus: one valid, highly expanding zlib stream (~270:1) sent to a

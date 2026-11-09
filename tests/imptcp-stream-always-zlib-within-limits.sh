@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# added 2026-11-09, released under ASL 2.0
+# added 2026-11-09 by Rainer Gerhards, released under ASL 2.0
 # Positive control for the imptcp decompression guards: a valid ~270:1 zlib
 # stream must still be accepted when the configured limits are comfortably above
 # its size (maxExpansionRatio="1000", maxDecompressedBytesPerReceive="1048576").
