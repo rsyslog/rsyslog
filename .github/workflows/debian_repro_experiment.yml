@@ -1,0 +1,143 @@
+# SPDX-License-Identifier: Apache-2.0
+name: Debian reproduction experiment
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/debian_repro_experiment.yml
+      - devtools/test-debian-repro.sh
+      - devtools/debian-repro-experiment.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debian-repro-experiment-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    # Bounded to this disposable TEST ONLY / DO NOT MERGE PR.
+    if: >-
+      github.event.pull_request.head.repo.full_name == 'rgerhards/rsyslog' &&
+      github.head_ref == 'codex/debian-repro-experiment-20261109'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - name: Checkout experiment harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install unprivileged rebuild tooling
+        env:
+          DEBIAN_ARCH: ${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          mkdir -p ".ci/debian-repro-$DEBIAN_ARCH"
+          {
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends \
+              devscripts sbuild mmdebstrap uidmap debian-archive-keyring ca-certificates \
+              libstring-shellquote-perl python3-pycurl python3-requests python3-debian \
+              equivs apt-utils debian-keyring python3-apt curl
+          } 2>&1 | tee ".ci/debian-repro-$DEBIAN_ARCH/bootstrap.log"
+      - name: Prepare pinned snapshot helper compatibility
+        env:
+          DEBIAN_ARCH: ${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          bootstrap="$RUNNER_TEMP/debian-repro-bootstrap"
+          mkdir -p "$bootstrap/bin"
+          package="$bootstrap/devscripts.deb"
+          {
+            curl --fail --location --retry 3 \
+              https://deb.debian.org/debian/pool/main/d/devscripts/devscripts_2.26.13_all.deb \
+              --output "$package"
+            printf '%s  %s\n' \
+              d1f0913cdbcc1f62d8bae39924a65c4a9102abf6fa021a02685607d764d4cecd \
+              "$package" | sha256sum --check
+            dpkg-deb --extract "$package" "$bootstrap/package"
+            # Ubuntu 22.04 predates the Debian release keys used by this snapshot.
+            keyring_package="$bootstrap/debian-archive-keyring.deb"
+            curl --fail --location --retry 3 \
+              https://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb \
+              --output "$keyring_package"
+            printf '%s  %s\n' \
+              9ea7778e443144ca490668737a8ab22dd3e748bb99e805e22ec055abeb3c7fac \
+              "$keyring_package" | sha256sum --check
+            dpkg-deb --extract "$keyring_package" "$bootstrap/keyring"
+            sudo install -m 0644 \
+              "$bootstrap/keyring/usr/share/keyrings/debian-archive-keyring.gpg" \
+              /usr/share/keyrings/debian-archive-keyring.gpg
+            sha256sum /usr/share/keyrings/debian-archive-keyring.gpg
+            mmdebstrap_package="$bootstrap/mmdebstrap.deb"
+            curl --fail --location --retry 3 \
+              https://deb.debian.org/debian/pool/main/m/mmdebstrap/mmdebstrap_1.7.0-1_all.deb \
+              --output "$mmdebstrap_package"
+            printf '%s  %s\n' \
+              1bd358f7bfd3b64668ccce6a9f9a45244a80840bfeeac29a77fb50916db03e3e \
+              "$mmdebstrap_package" | sha256sum --check
+            dpkg-deb --extract "$mmdebstrap_package" "$bootstrap/mmdebstrap"
+            # These are the helper's standard absolute runtime data paths.
+            sudo install -d /usr/share/mmdebstrap/hooks /usr/libexec/mmdebstrap
+            sudo cp -a "$bootstrap/mmdebstrap/usr/share/mmdebstrap/hooks/." /usr/share/mmdebstrap/hooks/
+            sudo cp -a "$bootstrap/mmdebstrap/usr/libexec/mmdebstrap/." /usr/libexec/mmdebstrap/
+            ln -s "$bootstrap/mmdebstrap/usr/bin/mmdebstrap" "$bootstrap/bin/mmdebstrap"
+            # Jammy debrebuild/sbuild must use their matching native config format.
+            # Its missing cache option affects only outer download reuse.
+            # shellcheck disable=SC2016
+            printf '%s\n' '#!/usr/bin/env bash' \
+              'set -euo pipefail' \
+              'dpkg-query -W devscripts sbuild' \
+              'mmdebstrap --version' \
+              'args=()' \
+              'for arg in "$@"; do' \
+              '  case "$arg" in --cache=*) echo "Compatibility: native debrebuild has no cache option; ignoring outer download cache" >&2 ;; *) args+=("$arg") ;; esac' \
+              'done' \
+              'exec /usr/bin/debrebuild "${args[@]}"' \
+              > "$bootstrap/bin/debrebuild"
+            chmod +x "$bootstrap/bin/debrebuild"
+            "$bootstrap/bin/mmdebstrap" --version
+            "$bootstrap/bin/debrebuild" --help
+            # Expand these variables when the generated wrapper runs.
+            # shellcheck disable=SC2016
+            printf '%s\n' '#!/usr/bin/env bash' \
+              'set -euo pipefail' \
+              'base="$(cd "$(dirname "$0")/.." && pwd)"' \
+              'exec env PYTHONPATH="$base/package/usr/lib/python3/dist-packages" /usr/bin/python3 "$base/package/usr/bin/debootsnap" "$@"' \
+              > "$bootstrap/bin/debootsnap"
+            chmod +x "$bootstrap/bin/debootsnap"
+            "$bootstrap/bin/debootsnap" --help
+            sha256sum "$bootstrap/package/usr/bin/debootsnap"
+          } 2>&1 | tee -a ".ci/debian-repro-$DEBIAN_ARCH/bootstrap.log"
+          printf '%s\n' "$bootstrap/bin" >> "$GITHUB_PATH"
+      - name: Replay original Debian buildinfo
+        env:
+          DEBIAN_ARCH: ${{ matrix.arch }}
+        run: devtools/test-debian-repro.sh "$DEBIAN_ARCH"
+      - name: Upload test failure evidence
+        if: ${{ failure() }}
+        uses: $/.github/actions/upload-flake-evidence
+        with:
+          job-name: Debian buildinfo replay (${{ matrix.arch }})
+      - name: Preserve experiment metadata and logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: debian-rebuild-${{ matrix.arch }}
+          path: |
+            .ci/debian-repro-${{ matrix.arch }}/*.buildinfo
+            .ci/debian-repro-${{ matrix.arch }}/rebuild.json
+            .ci/debian-repro-${{ matrix.arch }}/*.log
+          retention-days: 7
+          if-no-files-found: warn
