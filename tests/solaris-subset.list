@@ -41,3 +41,7 @@ keep imfile-readmode2.sh
 keep imfile-endregex.sh
 keep imfile-truncate.sh
 keep imfile-rename.sh
+
+# imbeats timeout regression: platform-independent timer semantics, includes a
+# deliberate 3 s pause, no Solaris-specific need.
+skip imbeats-idle-between-windows.sh

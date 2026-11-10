@@ -1641,6 +1641,7 @@ TESTS_IMBEATS = \
 	imbeats-shutdown-open-session.sh \
 	imbeats-maxsessions.sh \
 	imbeats-maxsessions-cap-warning.sh \
+	imbeats-idle-between-windows.sh \
 	imbeats-multiplex-idle-sessions.sh \
 	imbeats-submit-timeout.sh \
 	imbeats-json-trailing-data.sh \
