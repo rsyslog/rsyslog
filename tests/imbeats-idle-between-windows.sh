@@ -43,13 +43,23 @@ def frame(seq, message):
     return b"2J" + struct.pack(">I", seq) + struct.pack(">I", len(payload)) + payload
 
 
+def recv_ack(sock):
+    data = b""
+    while len(data) < 6:
+        chunk = sock.recv(6 - len(data))
+        if not chunk:
+            raise EOFError("connection closed before full ACK")
+        data += chunk
+    return data
+
+
 with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
     sock.settimeout(10)
     sock.sendall(b"2W" + struct.pack(">I", 1) + frame(1, "first"))
-    print(sock.recv(6).hex())
+    print(recv_ack(sock).hex())
     time.sleep(3)
     sock.sendall(b"2W" + struct.pack(">I", 1) + frame(2, "second"))
-    print(sock.recv(6).hex())
+    print(recv_ack(sock).hex())
 PY
 
 shutdown_when_empty
