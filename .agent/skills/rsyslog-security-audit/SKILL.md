@@ -120,6 +120,15 @@ For each write, determine:
 4. Every guard on the path: what value it checks, and whether that is the same
    value used at the write. A check on `len` does not protect a write at
    `offset + len` when `offset` has already advanced.
+5. **Position control:** how an attacker can place a short or minimal field
+   at the very end of the buffer, so that a fixed-size read or write at that
+   field runs past the end. Look at everything that moves a field: preceding
+   fields of attacker-chosen length, unbounded runs of digits, spaces, or
+   delimiters that the parser skips, and optional fields that may be omitted.
+   Repeat the analysis on both sides of every buffer-size threshold, for
+   example a small inline or stack buffer versus a heap allocation, or a
+   default versus an enlarged maximum size: a field that is harmless in one
+   layout can end exactly at the edge in the other.
 
 Patterns to look for in rsyslog code:
 
@@ -145,6 +154,24 @@ missing fields, lifecycle bugs such as use-after-free between session close and
 worker threads, data races, TLS verification or permitted-peer bypass, and log
 forgery (control characters, injected record separators, spoofed trusted
 properties such as hostname, PID, or credentials-derived fields).
+
+Breadth checklist. These areas are easy to under-cover; confirm each one was
+reviewed or state why it does not apply:
+
+- **Platform-specific paths:** every `#ifdef`/`#if` branch for other operating
+  systems or libc variants (for example BSD, Solaris, or macOS branches), and
+  the defaults those platforms select. Code that is not compiled on the audit
+  host is still shipped; review it statically and say it was not executed.
+- **Compression and decompression** reachable from input: output size limits,
+  ratio limits, partial streams, and errors in the middle of a stream.
+- **Error paths and cleanup:** resource leaks (memory, file descriptors,
+  sockets, received descriptors), shallow frees that leave nested allocations
+  behind, double frees, and state left half-initialized when parsing fails
+  part-way. An attacker who can trigger an error path repeatedly turns a leak
+  into resource exhaustion.
+- **Truncation and control-message flags:** handling of `MSG_TRUNC` and
+  `MSG_CTRUNC` from `recvmsg`, ancillary data of unexpected type, size, or
+  count, and short reads treated as complete records.
 
 Keep a working table outside the repository tree, one row per write:
 
@@ -185,19 +212,27 @@ export UBSAN_OPTIONS='print_stacktrace=1'
 Two deviations from the CI lane are intentional: `-O1` instead of `-O3` keeps
 stack traces and variable state readable, and `-fstack-protector` and
 `-D_FORTIFY_SOURCE=2` are left out so ASan reports the first bad access itself;
-their effect is checked in the production-like build described below. The `function` sanitizer is excluded because the module ABI uses generic
-callback pointers. Check that the build actually contains the audited module.
+their effect is checked in the production-like build described below. The
+`function` sanitizer is excluded because the module ABI uses generic callback
+pointers. Check that the build actually contains the audited module.
 `unsigned-integer-overflow` also reports intentional wraparound (for example in
 hashing); confirm each report against the code before treating it as a
 finding.
 
-If clang's sanitizer runtime is not installed (some minimal containers ship
-clang without `libclang_rt.asan`), fall back to GCC: set `CC=gcc`, use
+If linking fails with a missing `libclang_rt.asan` or `libclang_rt.ubsan`
+library, clang is installed without its sanitizer runtime. Install it before
+considering a fallback: on Debian and Ubuntu that is
+`libclang-rt-<version>-dev` for the installed clang (for example
+`libclang-rt-21-dev`); other distributions ship it as `compiler-rt` or
+`clang-rt`. Confirm with a one-line program that indexes past a stack array and
+must produce an ASan report.
+
+Only if the runtime cannot be installed, fall back to GCC: set `CC=gcc`, use
 `-fsanitize=address,undefined -fno-sanitize-recover=undefined` in `CFLAGS` and
 `-fsanitize=address,undefined` in `LDFLAGS`, drop the clang-only
 `nullability`, `unsigned-integer-overflow`, and `-fsanitize-blacklist` options,
-and add `-Wno-error` if warnings-as-errors stop the build. Say in the coverage
-notes that the reduced sanitizer set was used.
+and add `-Wno-error` if warnings-as-errors stop the build. Every sanitizer that
+was not run is a coverage gap that the report must list (see Phase 5).
 
 For **each** open or suspicious write from Phase 2, craft inputs that drive it
 to its worst case, and run them against a real rsyslogd instance configured
@@ -255,6 +290,22 @@ real vulnerability:
 Reclassify any item that chains into a vulnerability, and record the chain
 explicitly.
 
+### Root-cause completeness
+
+For every confirmed or potential memory-safety finding, enumerate **all**
+attacker-controlled preconditions that make it reachable, not just the first
+enabling cause you found. Typical preconditions are earlier parsing steps that
+let the attacker move the affected field's position or shrink the remaining
+length: unbounded runs of digits or whitespace before the field, optional
+fields that can be omitted, delimiters that can be repeated, or a size check
+performed before a later adjustment. Walk the path from the input surface to
+the sink and ask at each step whether a different input would still reach the
+sink if this step were fixed.
+
+List each precondition as a required fix point. A fix that removes only one
+enabling cause leaves the sink reachable through the others, so the report must
+make the complete set visible to whoever writes the fix.
+
 ## Phase 5: Classification and output
 
 Classify every finding using the rubric:
@@ -276,12 +327,17 @@ Report one line per finding, most severe first:
 
 Follow the list with:
 
+- for each vulnerability, its fix points from the root-cause completeness
+  step;
 - the chains found in Phase 4, if any;
 - a short "not actionable" list of investigated and cleared hypotheses;
 - coverage: audited revision, input surfaces covered, which writes were only
-  reviewed statically, build and configurations used, and what was out of
-  scope. Absence of findings is a statement about this coverage, not proof that
-  the component is safe.
+  reviewed statically, build and configurations used, sanitizers that were not
+  run (for example `nullability` or `unsigned-integer-overflow` in a GCC
+  fallback build), platform-specific branches that were reviewed but not
+  executed, breadth-checklist items that do not apply and why, and what was
+  out of scope. Absence of findings is a statement about this coverage, not
+  proof that the component is safe.
 
 ## Reporting and confidentiality
 
@@ -307,6 +363,10 @@ Follow the list with:
 - Stopping after the first bug in a function. Finish the trace; a second write
   with a different worst case is common.
 - Checking the guard that exists instead of the arithmetic at the write.
+- Naming only the first enabling cause of a finding, so that the fix leaves
+  other ways to reach the same sink.
+- Testing only the default buffer layout, when a different size threshold
+  lets an attacker place a field at the buffer's end.
 - Assuming library or kernel data (DNS answers, ancillary data, certificate
   fields, remote responses) is well-formed or bounded.
 - Reporting a finding as reproduced when only the static trace exists.

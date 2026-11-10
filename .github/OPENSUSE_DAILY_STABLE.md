@@ -65,7 +65,7 @@ snapshots/YYYY-MM-DD/EVR/aarch64/
 Each binary package is built and installed on a native runner of the matching
 architecture.
 
-RPMs and snapshots are immutable and retained for 90 days (see the retention rule in
+RPMs and snapshots are immutable and retained for the retention period (see the retention rule in
 DAILY_STABLE_PACKAGE_ARCHIVE.md). Each
 new repository generation merges prior signed metadata so old daily versions
 remain installable until

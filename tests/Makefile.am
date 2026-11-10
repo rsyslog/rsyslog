@@ -406,6 +406,7 @@ TESTS_DEFAULT = \
 	timestamp-3164.sh \
 	timestamp-3339.sh \
 	timestamp-isoweek.sh \
+	template-fixedwidth-empty.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
@@ -687,6 +688,7 @@ TESTS_DEFAULT = \
 	imuxsock_missing_socket.sh \
 	imuxsock_logger.sh \
 	imuxsock_unlink_off_stale_socket.sh \
+	imuxsock_socket_path_checks.sh \
 	imuxsock_logger_ratelimit.sh \
 	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_ruleset_ratelimit.sh \
@@ -979,6 +981,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
 	config-translate-rs-to-yaml.sh \
+	yaml-imuxsock-socket-path-checks.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
 	config-translate-rs-statements-to-yaml.sh \
@@ -1017,6 +1020,7 @@ TESTS_LIBYAML = \
 	yaml-statements-unset.sh \
 	yaml-template-controlcharacters.sh \
 	yaml-template-list.sh \
+	yaml-template-fixedwidth-empty.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
 	yaml-allowed-sender-modern.sh \
@@ -4480,6 +4484,7 @@ EXTRA_DIST += \
 	sndrcv_drvr.sh \
 	sndrcv_drvr_noexit.sh \
 	diag.sh \
+	solaris-subset.list \
 	testsuites/mmexternal-SegFault-mm-python.py \
 	testsuites/mmexternal-hang-no-reply.sh \
 	testsuites/mmexternal-no-output.sh \
