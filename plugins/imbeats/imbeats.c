@@ -761,7 +761,12 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
         sess->io_buf = buf;
         sess->io_need = len;
         sess->io_off = 0;
-        sessionRecordReadStart(sess);
+        /* An idle connection waiting for the next window header is governed by
+         * idleTimeout only. frameTimeout starts with the first received byte,
+         * otherwise legitimate quiet peers are disconnected after frameTimeout. */
+        if (sess->state != IMBEATS_ST_READ_WINDOW_HDR) {
+            sessionRecordReadStart(sess);
+        }
     }
     while (sess->io_off < sess->io_need) {
         ssize_t need = (ssize_t)(sess->io_need - sess->io_off);
@@ -771,6 +776,9 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
             if (need <= 0) {
                 sess->ioDirection = NSDSEL_RD;
                 return RS_RET_RETRY;
+            }
+            if (sess->state == IMBEATS_ST_READ_WINDOW_HDR && sess->io_off == 0) {
+                sessionRecordReadStart(sess);
             }
             sess->io_off += (size_t)need;
             sessionRecordProgress(sess);
