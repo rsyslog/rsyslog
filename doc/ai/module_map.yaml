@@ -354,3 +354,22 @@ imfifo:
     - Reads log messages line-by-line from local POSIX named pipes (FIFOs).
     - Utilizes non-blocking poll() loops with a 100ms timeout to ensure clean and immediate shutdown.
     - Uses O_RDWR opening technique to keep a dummy writer in the daemon itself to avoid startup hangs and EOF reopening loops.
+
+reload_validate_checkpoint:
+  operator_docs:
+    - "doc/source/rainerscript/global.rst"
+  paths:
+    - "runtime/reload-validate.c"
+    - "runtime/reload-candidate.c"
+    - "runtime/reload-normalized-graph.c"
+    - "grammar/rainerscript.c"
+    - "grammar/lexer.l"
+    - "runtime/yamlconf.c"
+  requires_serialization: true
+  notes:
+    - >-
+      Main-thread startup observation and private HUP parsing own syntax only;
+      no module construction, live publication or retirement is permitted.
+      OFF selects no source capture. HUP retains all legacy hooks before private
+      analysis, and reports structural-only evidence with semantic limitations.
+      The startup directory anchors candidate includes without process chdir.
