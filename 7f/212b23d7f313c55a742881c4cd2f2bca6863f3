@@ -1,0 +1,14 @@
+tests/test_id.c
+  h_95716f3de0caf5 32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f212b23d7f313c55a742881c4cd2f2bca6863f3",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
