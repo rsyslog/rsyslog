@@ -1195,7 +1195,6 @@ finalize_it:
             DESTROY_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
             free(pDescrNew);
         }
-        srSleep(0, 20000); /* Sleep 20ms */
     }
 no_more_data:
     RETiRet;
@@ -1211,11 +1210,41 @@ static rsRetVal ATTR_NONNULL(1)
     int nAccept = 0;
 #endif
 
+    /* Drain the whole listen backlog in a single pass: the listener fd is
+     * edge-triggered (EPOLLET|EPOLLONESHOT), so anything left queued now sits
+     * un-drained until the next connection edge.
+     *
+     * Classification is driven by one invariant: "did accept() consume a
+     * queued connection?". Every non-OK return except RS_RET_RESOURCE-style
+     * failures consumed exactly one backlog entry, so continuing is always
+     * bounded and the loop is guaranteed to reach RS_RET_NO_MORE_DATA.
+     */
     while (bRun) {
         iRet = doSingleAccept(pioDescr);
-        if (iRet != RS_RET_OK) {
+        if (iRet == RS_RET_NO_MORE_DATA) {
+            /* backlog drained (accept() returned EAGAIN) - normal pass end */
+            bRun = 0;
+        } else if (iRet == RS_RET_ACCEPT_ERR || iRet == RS_RET_OUT_OF_MEMORY) {
+            /* "Unhealthy" conditions that warrant a backoff:
+             *  - RS_RET_ACCEPT_ERR: the accept() syscall itself failed
+             *    (EMFILE/ENFILE/ENOBUFS, or a broken listener). No connection
+             *    was consumed, so retrying immediately would busy-spin.
+             *  - RS_RET_OUT_OF_MEMORY: the connection *was* consumed, but we
+             *    are under memory pressure; continuing to accept and allocate
+             *    would make it worse.
+             * In both cases we back off briefly and end the pass. Any backlog
+             * left queued is picked up on the next connection edge; when we are
+             * out of fds there is nothing we could accept with anyway.
+             */
+            srSleep(0, 20000); /* 20ms backoff */
             bRun = 0;
         }
+        /* Any other non-OK return (RS_RET_TLS_HANDSHAKE_ERR,
+         * RS_RET_HOST_NOT_PERMITTED, RS_RET_MAX_SESS_REACHED, ...) is a
+         * per-connection failure: accept() already consumed the queued
+         * connection, so we neither back off nor abort - we keep draining so a
+         * burst of peer-aborted handshakes cannot throttle the listener.
+         */
 #if defined(ENABLE_IMTCP_EPOLL)
         ++nAccept;
 #endif
