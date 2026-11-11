@@ -89,10 +89,12 @@ input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DY
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
-tcpflood -p"$TCPFLOOD_PORT" -m"$NUMMESSAGES" -Ttls \
+# TLS rejection may give tcpflood a normal nonzero exit; check-only still
+# rejects helper crashes and invalid successful-termination markers.
+tcpflood --check-only -p"$TCPFLOOD_PORT" -m"$NUMMESSAGES" -Ttls \
 	-x"$srcdir/tls-certs/ca.pem" \
 	-Z"$CERTDIR/client-cert.pem" \
-	-z"$CERTDIR/client-key.pem" || true
+	-z"$CERTDIR/client-key.pem"
 shutdown_when_empty
 wait_shutdown
 content_check --regex "not permitted to talk to peer '.*', certificate invalid: certificate expired"
