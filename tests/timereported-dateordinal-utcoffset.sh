@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Regression test for the "date-ordinal" property option with timestamps
 # that carry a UTC offset. The ordinal must be the day of the year of the
 # date as written in the timestamp, independent of offset sign and size.

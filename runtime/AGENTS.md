@@ -58,6 +58,9 @@ collection, and process orchestration).
 
 - Classic disk-queue serializer callback ABI and message round-trip coverage is
   in `tests/diskqueue-serializer-abi.sh`, including reduced macOS builds.
+- `datetime.c` `date-ordinal` handling of UTC offsets (both signs, large
+  positive offsets on 1 January) and the 23:59:59 end-of-day boundary is
+  covered by `tests/timereported-dateordinal-utcoffset.sh`.
 
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in
