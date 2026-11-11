@@ -1,0 +1,19 @@
+tests/clickhouse-sql-escape.sh
+  s_33f74d713b1a58::t_fa9ab6febfe733 8,16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "23fa28ed7fc46ba6df5e01f4b8d7326863e534eb",
+  "prompts": {},
+  "sessions": {
+    "s_33f74d713b1a58": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cba8-98b9-7ef1-849f-c6dc4552cb26",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
