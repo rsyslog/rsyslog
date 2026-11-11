@@ -1,0 +1,52 @@
+tests/clickhouse-limited-batch.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-5
+tests/clickhouse-template-type-plugin.sh
+  s_5e773934876cb4::t_cfcea55d478299 3-4
+tests/clickhouse-bulk-load.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-5
+tests/clickhouse-retry-error.sh
+  s_5e773934876cb4::t_cfcea55d478299 5
+  s_5e773934876cb4::t_6a00e633827146 4,6
+tests/clickhouse-select.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-6
+tests/clickhouse-errorfile.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-6
+tests/clickhouse-bulk.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-5
+tests/clickhouse-template-option-sql.sh
+  s_5e773934876cb4::t_cfcea55d478299 3-4
+tests/clickhouse-template-option-stdsql.sh
+  s_5e773934876cb4::t_cfcea55d478299 3-4
+tests/clickhouse-wrong-template-option.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-6
+tests/clickhouse-wrong-quotation-marks.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-5
+tests/clickhouse-sql-escape.sh
+  s_5e773934876cb4::t_cfcea55d478299 3-4
+tests/yaml-omclickhouse-template-escaping.sh
+  s_5e773934876cb4::t_cfcea55d478299 3-4
+tests/clickhouse-load.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-5
+tests/clickhouse-template-type-subtree.sh
+  s_5e773934876cb4::t_cfcea55d478299 3-4
+tests/clickhouse-basic.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-5
+tests/clickhouse-wrong-insert-syntax.sh
+  s_5e773934876cb4::t_cfcea55d478299 4-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "066c3321dfe84c4441e092dabc6ce7c6f6782f51",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
