@@ -222,6 +222,7 @@ typedef struct configSettings_s {
     int iConErrSkip;
     uchar *gnutlsPriorityString;
     permittedPeers_t *pPermPeers;
+    rsRetVal permittedPeersResult; /* legacy construction errors survive until reset */
 } configSettings_t;
 static configSettings_t cs;
 
@@ -319,6 +320,7 @@ BEGINinitConfVars /* (re)set config variables to default values */
     cs.iUDPRebindInterval = 0; /* support for automatic re-binding (load balancers!). 0 - no rebind */
     cs.iTCPRebindInterval = 0; /* support for automatic re-binding (load balancers!). 0 - no rebind */
     cs.pPermPeers = NULL;
+    cs.permittedPeersResult = RS_RET_OK;
 ENDinitConfVars
 
 
@@ -1208,9 +1210,9 @@ finalize_it:
  */
 static rsRetVal setPermittedPeer(void __attribute__((unused)) * pVal, uchar *pszID) {
     DEFiRet;
-    CHKiRet(net.AddPermittedPeer(&cs.pPermPeers, pszID));
-    free(pszID); /* no longer needed, but we must free it as of interface def */
-finalize_it:
+    iRet = net.AddPermittedPeer(&cs.pPermPeers, pszID);
+    if (cs.permittedPeersResult == RS_RET_OK) cs.permittedPeersResult = iRet;
+    free(pszID); /* the handler owns this string, including construction failure */
     RETiRet;
 }
 
@@ -2499,7 +2501,11 @@ BEGINnewActInst
                     DBGPRINTF("omfwd: ignoring empty permitted peer\n");
                 } else {
                     dbgprintf("omfwd: adding permitted peer: '%s'\n", start);
-                    CHKiRet(net.AddPermittedPeer(&(pData->pPermPeers), start));
+                    iRet = net.AddPermittedPeer(&(pData->pPermPeers), start);
+                    if (iRet != RS_RET_OK) {
+                        free(str);
+                        FINALIZE;
+                    }
                 }
                 start = p + 1;
                 if (lenStr) --lenStr;
@@ -2731,6 +2737,11 @@ BEGINparseSelectorAct
 
     ++p; /* eat '@' */
     if (*p == '@') { /* indicator for TCP! */
+        if (cs.permittedPeersResult != RS_RET_OK) {
+            LogError(0, cs.permittedPeersResult,
+                     "omfwd: invalid permitted peer configuration; legacy TCP action rejected");
+            ABORT_FINALIZE(cs.permittedPeersResult);
+        }
         localRet = loadTCPSupport();
         if (localRet != RS_RET_OK) {
             LogError(0, localRet,
@@ -2908,8 +2919,8 @@ static void freeConfigVars(void) {
     cs.pszStrmDrvrAuthMode = NULL;
     free(cs.pszStrmDrvrRemoteSNI);
     cs.pszStrmDrvrRemoteSNI = NULL;
-    free(cs.pPermPeers);
-    cs.pPermPeers = NULL;
+    net.DestructPermittedPeers(&cs.pPermPeers);
+    cs.permittedPeersResult = RS_RET_OK;
 }
 
 
@@ -2917,12 +2928,12 @@ BEGINmodExit
     CODESTARTmodExit;
     /* release what we no longer need */
     objRelease(glbl, CORE_COMPONENT);
+    freeConfigVars();
     objRelease(net, LM_NET_FILENAME);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(netstrms, LM_NETSTRMS_FILENAME);
     objRelease(tcpclt, LM_TCPCLT_FILENAME);
     objRelease(statsobj, CORE_COMPONENT);
-    freeConfigVars();
 ENDmodExit
 
 
