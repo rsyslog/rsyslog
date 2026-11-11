@@ -1,0 +1,18 @@
+tests/Makefile.am
+  h_95716f3de0caf5 22-23,3157
+tests/diag.sh
+  h_95716f3de0caf5 3102
+tests/imfile-fstat-relevance.sh
+  h_95716f3de0caf5 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0167379d36fc6f37f908adffddb5dcf1a06b65c6",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
