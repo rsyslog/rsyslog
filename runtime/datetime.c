@@ -1211,11 +1211,15 @@ int getOrdinal(struct syslogTime *ts) {
 
     thistime = syslogTime2time_t(ts);
 
-    previousyears = (time_t)yearInSecs[ts->year - yearInSec_startYear - 1];
+    /* yearInSecs[] holds the last second of each year (Dec 31 23:59:59 UTC).
+     * Add one so previousyears is 00:00:00 of the requested year. Without
+     * this, the last second of every day was counted as the next day.
+     */
+    previousyears = (time_t)yearInSecs[ts->year - yearInSec_startYear - 1] + 1;
 
     /* adjust previous years to match UTC offset */
     utcOffset = ts->OffsetHour * 3600 + ts->OffsetMinute * 60;
-    if (ts->OffsetMode == '+') utcOffset += -1; /* if timestamp is ahead, we need to "go back" to UTC */
+    if (ts->OffsetMode == '+') utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
     previousyears += utcOffset;
 
     /* subtract seconds from previous years */

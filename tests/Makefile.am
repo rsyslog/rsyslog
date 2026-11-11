@@ -436,6 +436,7 @@ TESTS_DEFAULT = \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
+	timereported-dateordinal-utcoffset.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
 	func-substring-invld-startpos.sh \
