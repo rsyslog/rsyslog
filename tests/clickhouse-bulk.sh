@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-07 by Pascal Withopf, released under ASL 2.0
+# Verify ten bulk INSERT rows preserve their IDs and syslog fields.
+# After queue drain and shutdown, compare all selected rows in ID order.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=10
 generate_conf

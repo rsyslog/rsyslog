@@ -1,6 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-07 by Pascal Withopf, released under ASL 2.0
+# Exercise invalid integer input and expect its ClickHouse exception in
+# the action errorfile after synchronized shutdown. Currently skipped because
+# ClickHouse no longer supplies the expected exception; exit 77 is not a pass.
 . ${srcdir:=.}/diag.sh init
 echo looks like clickhouse does no longer generate exceptions on error - skip until investigated
 exit 77

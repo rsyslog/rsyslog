@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0
 # Verify that the default omclickhouse template keeps a backslash-plus-quote
 # payload inside the message literal instead of allowing a second VALUES row.
 # Exactly one row and byte-for-byte hex equality prove both containment and

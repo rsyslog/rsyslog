@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-20 by Pascal Withopf, released under ASL 2.0
+# Verify bulk INSERT delivery with maxbytes="1k" limiting batch size.
+# After queue drain and shutdown, all 100000 IDs must form the full sequence.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100000
 

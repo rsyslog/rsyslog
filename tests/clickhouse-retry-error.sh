@@ -1,6 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-31 by Pascal Withopf, released under ASL 2.0
+# Exercise connection failure against the default HTTPS endpoint.
+# After queue drain and shutdown, the configured omfile output must contain
+# checkConn failed; this fixture expects the HTTPS connection to fail.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 generate_conf

@@ -1,6 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-07 by Pascal Withopf, released under ASL 2.0
+# Reject a SELECT template at delivery because omclickhouse requires INSERT.
+# After queue drain and shutdown, the configured omfile output must contain
+# the rejection diagnostic, including the rejected SELECT query.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 generate_conf

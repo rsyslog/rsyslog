@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-07 by Pascal Withopf, released under ASL 2.0
+# Verify 1000 non-bulk INSERTs arrive without loss. After queue drain
+# and shutdown, ordered message IDs must cover the full input sequence.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
 

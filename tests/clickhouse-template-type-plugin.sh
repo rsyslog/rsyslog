@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0
 # SQL mode does not escape plugin/subtree output, even when declared on the template.
 . ${srcdir:=.}/diag.sh init
 

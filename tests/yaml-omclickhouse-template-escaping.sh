@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0
 # Exercise the shared omclickhouse template requirement through YAML: SQL
 # escaping must validate, while stdSQL and unescaped templates must reject
 # the action. Explicit validation diagnostics are the oracle; no DB is used.

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0
 # Verify that omclickhouse accepts a custom INSERT template only when it uses
 # the backslash-aware SQL escaping mode.
 . ${srcdir:=.}/diag.sh init

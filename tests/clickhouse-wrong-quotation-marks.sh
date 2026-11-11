@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-19 by Pascal Withopf, released under ASL 2.0
+# Verify SQL escaping preserves an apostrophe in an INSERT message.
+# After queue drain and shutdown, compare the selected row exactly.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

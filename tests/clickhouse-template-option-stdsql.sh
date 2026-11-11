@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+# This file is part of the rsyslog project, released under ASL 2.0
 # Verify that omclickhouse rejects standard SQL escaping during validation.
 # The diagnostic and absence of successful validation prove the unsafe action
 # is rejected without requiring a ClickHouse service.

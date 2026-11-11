@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-07 by Pascal Withopf, released under ASL 2.0
+# Verify a single non-bulk INSERT round trip with SQL escaping enabled.
+# After queue drain and shutdown, compare the selected fields exactly.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 generate_conf
