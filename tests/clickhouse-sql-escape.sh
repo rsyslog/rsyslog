@@ -5,7 +5,7 @@
 # Verify that the default omclickhouse template keeps a backslash-plus-quote
 # payload inside the message literal instead of allowing a second VALUES row.
 # Exactly one row and byte-for-byte hex equality prove both containment and
-# preservation; the shared ClickHouse chain provides the service.
+# preservation; the shared ClickHouse chain provides HTTPS on port 8443.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
@@ -13,7 +13,7 @@ add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
 :syslogtag, contains, "tag" action(type="omclickhouse" server="localhost" port="8443"
-					usehttps="off" bulkmode="off" user="default" pwd="")
+					bulkmode="off" user="default" pwd="")
 '
 
 clickhouse-client --query="CREATE TABLE IF NOT EXISTS rsyslog.SystemEvents ( severity Int8, facility Int8, timestamp DateTime, hostname String, tag String, message String ) ENGINE = MergeTree() PARTITION BY severity order by tuple()"
