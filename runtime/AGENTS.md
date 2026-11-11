@@ -54,6 +54,9 @@ collection, and process orchestration).
   `stream.c` size-limit rotation with `asyncWriting="on"`, i.e. that the async
   writer thread survives a rotation. `tests/omfile-sizelimitcmd-many.sh` covers
   the same rotation path with the default synchronous writer.
+- `tests/imtcp-tls-gtls-certinfo-long-names.sh` (and its `-vg` wrapper)
+  covers the `nsd_gtls.c` peer certificate-info dump with a long DN and SAN,
+  i.e. the name buffer growth path (GnuTLS tests and imtcp required).
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 - Classic disk-queue serializer callback ABI and message round-trip coverage is
