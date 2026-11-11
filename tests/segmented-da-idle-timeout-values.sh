@@ -3,12 +3,18 @@
 #
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 #
-# Verify the two boundary values of queue.diskQueueIdleTimeout. Identical slow
-# action queues keep their output directory unavailable until both disk stores
-# materialize, so draining cannot race the spill precondition. Timeout 0 must
-# remove its store immediately,
-# while -1 must retain its drained store and final worker until shutdown. Exact
-# output sequences prove both children drained without loss.
+# Verify the two boundary values of queue.diskQueueIdleTimeout. Timeout 0 must
+# remove its disk store immediately after draining, while -1 must retain its
+# drained store and final worker until shutdown. Exact output sequences prove
+# both children drained without loss.
+#
+# On slow machines (seen on native ARMv7) the burst could drain before a disk
+# store materialized, so the idle assertions ran without the spill precondition.
+# To make spill happen before drain deterministically, both omfile actions
+# target an output directory that does not exist yet (createDirs off, unlimited
+# retries). Their queues fill and spill to disk; the directory is created only
+# once both physical stores exist. The lifecycle and sequence assertions after
+# that point are the oracle; the waits before it only establish the precondition.
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=1500
@@ -57,9 +63,13 @@ startup
 injectmsg
 # Failed opens suspend both original omfile consumers. Only release their
 # output after both physical stores exist. The retry interval recovers those
-# opens; the unchanged lifecycle and sequence assertions decide success.
+# opens (resumeInterval is 1s, well inside the 300s waits below, so keep it
+# small); the unchanged lifecycle and sequence assertions decide success.
 wait_path_state present "$SPOOL_DIR/idle-zero.segq"
 wait_path_state present "$SPOOL_DIR/idle-disabled.segq"
+# Invariant: nothing may have been written yet, i.e. the actions were truly held.
+[ ! -e "$ZERO_OUT" ] && [ ! -e "$DISABLED_OUT" ] ||
+	error_exit 1 "output written before release; spill precondition not held"
 mkdir "$OUTPUT_DIR" || error_exit 1 "could not release output actions"
 wait_file_lines "$ZERO_OUT" "$NUMMESSAGES" 300
 wait_file_lines "$DISABLED_OUT" "$NUMMESSAGES" 300
