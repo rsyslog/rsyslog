@@ -1,0 +1,14 @@
+tests/segmented-da-idle-timeout-values.sh
+  h_95716f3de0caf5 7-9,16-18,40,46,58-61,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fec344e283ef482422aa3a6cb006b5d24b2f6a0e",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

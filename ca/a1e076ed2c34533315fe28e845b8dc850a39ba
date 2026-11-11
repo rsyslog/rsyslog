@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_a34965ae26dfa8::t_67f796973ea9d7 1735
+tests/omhiredis-template-percent-vg.sh
+  s_a34965ae26dfa8::t_415b62c4fda2ca 1-8
+tests/solaris-subset.list
+  s_a34965ae26dfa8::t_975900bef61fd8 44-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "caa1e076ed2c34533315fe28e845b8dc850a39ba",
+  "prompts": {},
+  "sessions": {
+    "s_a34965ae26dfa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fdc49b8b-ddd2-56ff-8943-87022a158291",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

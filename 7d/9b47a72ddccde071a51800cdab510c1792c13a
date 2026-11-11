@@ -1,0 +1,27 @@
+doc/source/configuration/modules/imptcp.rst
+  s_a34965ae26dfa8::t_41591ae9a9ef17 251-253
+tests/imptcp-stream-always-zlib-expansion-guard.sh
+  s_a34965ae26dfa8::t_0ff96ea0694698 3
+tests/imptcp-stream-always-zlib-per-receive-guard.sh
+  s_a34965ae26dfa8::t_167a085324e7a6 3
+tests/imptcp-stream-always-zlib-within-limits.sh
+  s_a34965ae26dfa8::t_beee6040dee8cc 3
+tests/yaml-imptcp-stream-always-zlib-limits.sh
+  s_a34965ae26dfa8::t_6dbe75b4f91d26 3,7,9,13-17,23-24,58-64,70-72,78,81,83,90,94-99,107-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7d9b47a72ddccde071a51800cdab510c1792c13a",
+  "prompts": {},
+  "sessions": {
+    "s_a34965ae26dfa8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fdc49b8b-ddd2-56ff-8943-87022a158291",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
