@@ -126,6 +126,14 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #define COMPRESS_AUTO_MIN_SNIFF_BYTES 2
 #define COMPRESS_AUTO_MAX_SNIFF_BYTES 4096
 
+/* Decompression-amplification guards for stream compression. These mirror the
+ * imtcp defaults (TCPSRV_COMPRESS_MAX_*_DEFAULT in runtime/tcps_sess.h) so both
+ * TCP inputs share one decompression-safety contract. A value of 0 disables the
+ * respective guard.
+ */
+#define DFLT_compressionMaxExpansionRatio 1024ULL
+#define DFLT_compressionMaxDecompressedBytesPerReceive (64ULL * 1024ULL * 1024ULL)
+
 /* config settings */
 typedef struct configSettings_s {
     int bKeepAlive; /* support keep-alive packets */
@@ -158,6 +166,8 @@ struct instanceConf_s {
     int socketBacklog;
     sbool multiLine;
     uint8_t compressionMode;
+    uint64_t compressionMaxExpansionRatio; /* max decompressed:compressed bytes per stream, 0=off */
+    uint64_t compressionMaxDecompressedBytesPerReceive; /* max decompressed bytes per receive, 0=off */
     uchar *pszBindPort; /* port to bind to */
     uchar *pszLstnPortFileName; /* Name of the file with dynamic port used by testbench*/
     uchar *pszBindAddr; /* IP to bind socket to */
@@ -225,6 +235,8 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, 0}, /* legac
                                            {"notifyonconnectionclose", eCmdHdlrBinary, 0},
                                            {"notifyonconnectionopen", eCmdHdlrBinary, 0},
                                            {"compression.mode", eCmdHdlrGetWord, 0},
+                                           {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
                                            {"keepalive", eCmdHdlrBinary, 0},
                                            {"keepalive.probes", eCmdHdlrInt, 0},
                                            {"keepalive.time", eCmdHdlrInt, 0},
@@ -303,11 +315,15 @@ struct ptcpsess_s {
     DEF_ATOMIC_HELPER_MUT(mutWorkQueued);
     sbool bzInitDone; /* did we do an init of zstrm already? */
     sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
+    sbool bZipStreamFailed; /* a decompression guard rejected the stream; do not drain it on close */
     sbool bStreamDecompressed; /* current bytes came from stream decompression */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
     uint8_t compressionAutoDetectPending; /* AUTO mode: still sniffing? */
     size_t compressionAutoDetectLen; /* bytes buffered while AUTO mode is still ambiguous */
+    uint64_t compressionTotalBytesIn; /* compressed bytes fed to inflate() over the session */
+    uint64_t compressionTotalBytesOut; /* decompressed bytes produced over the session */
+    uint64_t compressionReceiveBytesOut; /* decompressed bytes produced by the current receive */
     uchar compressionAutoDetectBuf[COMPRESS_AUTO_MAX_SNIFF_BYTES];
     int iMsg; /* index of next char to store in msg */
     int iCurrLine; /* 2nd char of current line in regex framing mode */
@@ -1467,6 +1483,52 @@ static rsRetVal logCompressedStreamFailure(ptcpsess_t *const pThis, const char *
     return RS_RET_ZLIB_ERR;
 }
 
+/* Account for freshly inflated bytes and enforce the decompression-amplification
+ * guards (stream expansion ratio and per-receive output cap). Must be called for
+ * every chunk inflate() produces, before the chunk is parsed into messages.
+ * Without these limits a tiny compressed stream can force unbounded inflate and
+ * parse work (zip-bomb style CPU denial of service).
+ */
+static rsRetVal checkDecompressedBytesLimit(ptcpsess_t *const pThis, const size_t len) {
+    const instanceConf_t *const inst = pThis->pLstn->pSrv->inst;
+    const uint64_t maxRatio = inst->compressionMaxExpansionRatio;
+    const uint64_t maxPerReceive = inst->compressionMaxDecompressedBytesPerReceive;
+    const char *failure = NULL;
+    DEFiRet;
+
+    if (UINT64_MAX - pThis->compressionReceiveBytesOut < len || UINT64_MAX - pThis->compressionTotalBytesOut < len) {
+        failure = "decompressed byte counter overflowed";
+    } else {
+        const uint64_t newReceiveTotal = pThis->compressionReceiveBytesOut + len;
+        const uint64_t newStreamTotal = pThis->compressionTotalBytesOut + len;
+        if (maxPerReceive != 0 && newReceiveTotal > maxPerReceive) {
+            failure = "decompressed bytes exceeded configured per-receive limit";
+        } else if (maxRatio != 0) {
+            const uint64_t maxByRatio = pThis->compressionTotalBytesIn > UINT64_MAX / maxRatio
+                                            ? UINT64_MAX
+                                            : pThis->compressionTotalBytesIn * maxRatio;
+            if (newStreamTotal > maxByRatio) {
+                failure = "decompressed bytes exceeded configured expansion ratio";
+            }
+        }
+        if (failure == NULL) {
+            pThis->compressionReceiveBytesOut = newReceiveTotal;
+            pThis->compressionTotalBytesOut = newStreamTotal;
+        }
+    }
+
+    if (failure != NULL) {
+        LogError(0, RS_RET_ZLIB_ERR, "imptcp: received invalid compressed stream from peer %s[%s]: %s",
+                 propGetSzStrOrDefault(pThis->peerName, "(hostname unknown)"),
+                 propGetSzStrOrDefault(pThis->peerIP, "(IP unknown)"), failure);
+        pThis->bZipStreamFailed = RSTRUE;
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
     struct syslogTime stTime;
     time_t ttGenTime;
@@ -1498,6 +1560,11 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         pThis->bzInitDone = RSTRUE;
     }
 
+    if (UINT64_MAX - pThis->compressionTotalBytesIn < len) {
+        pThis->compressionTotalBytesIn = UINT64_MAX;
+    } else {
+        pThis->compressionTotalBytesIn += len;
+    }
     pThis->zstrm.next_in = (Bytef *)buf;
     pThis->zstrm.avail_in = len;
     /* run inflate() on buffer until everything has been uncompressed */
@@ -1515,6 +1582,7 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         }
         outavail = sizeof(zipBuf) - pThis->zstrm.avail_out;
         if (outavail != 0) {
+            CHKiRet(checkDecompressedBytesLimit(pThis, outavail));
             outtotal += outavail;
             ATOMIC_ADD_uint64(&pThis->pLstn->rcvdDecompressed, &pThis->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressedFromStream(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
@@ -1601,6 +1669,7 @@ static rsRetVal DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen) {
     struct syslogTime stTime;
     DEFiRet;
     ATOMIC_ADD_uint64(&pThis->pLstn->rcvdBytes, &pThis->pLstn->mut_rcvdBytes, iLen);
+    pThis->compressionReceiveBytesOut = 0; /* per-receive decompression budget starts fresh */
 
     if (pThis->compressionAutoDetectPending) {
         /* Buffer session-start bytes until a zlib-looking prefix is proven
@@ -1864,7 +1933,12 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
 
     if (!pSess->bzInitDone) goto done;
     if (pSess->bZipStreamEnd) goto finalize_it;
+    /* A rejected stream must not be drained: the remaining inflate output would
+     * be parsed into messages even though the guard declared the stream invalid.
+     */
+    if (pSess->bZipStreamFailed) goto finalize_it;
 
+    pSess->compressionReceiveBytesOut = 0; /* final drain gets its own per-receive budget */
     pSess->zstrm.avail_in = 0;
     /* run inflate() on buffer until everything has been compressed */
     do {
@@ -1882,6 +1956,7 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
         }
         outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
         if (outavail != 0) {
+            CHKiRet(checkDecompressedBytesLimit(pSess, outavail));
             ATOMIC_ADD_uint64(&pSess->pLstn->rcvdDecompressed, &pSess->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressedFromStream(pSess, (char *)zipBuf, outavail, &stTime, 0));
             // TODO: query time!
@@ -1982,6 +2057,8 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->ratelimitBurst = -1;
     inst->ratelimitInterval = -1;
     inst->compressionMode = COMPRESS_NEVER;
+    inst->compressionMaxExpansionRatio = DFLT_compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = DFLT_compressionMaxDecompressedBytesPerReceive;
     inst->multiLine = 0;
     inst->socketBacklog = 64;
     inst->pszLstnPortFileName = NULL;
@@ -2607,6 +2684,10 @@ BEGINnewInpInst
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
             free(cstr);
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
+            inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
             inst->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "keepalive")) {

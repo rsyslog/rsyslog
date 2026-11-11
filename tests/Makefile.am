@@ -1831,6 +1831,9 @@ TESTS_IMPTCP = \
 	imptcp-compression-none-legacy-single.sh \
 	imptcp-stream-compression-auto.sh \
 	imptcp-stream-compression-auto-zlib-prefix-plain.sh \
+	imptcp-stream-always-zlib-expansion-guard.sh \
+	imptcp-stream-always-zlib-per-receive-guard.sh \
+	imptcp-stream-always-zlib-within-limits.sh \
 	imptcp-stream-auto-z-prefix.sh \
 	imptcp-stream-auto-legacy-single.sh \
 	rscript_random.sh \
@@ -1849,6 +1852,9 @@ TESTS_IMPTCP_STREAM_ALWAYS = \
 
 TESTS_IMPTCP_STREAM_ALWAYS_IMPSTATS = \
 	imptcp-stream-always-impstats.sh
+
+TESTS_IMPTCP_YAML = \
+	yaml-imptcp-stream-always-zlib-limits.sh
 
 TESTS_IMPTCP_VALGRIND = \
 	imptcp-octet-framing-too-long-vg.sh \
@@ -2846,6 +2852,7 @@ EXTRA_DIST += $(TESTS_IMPSTATS_PUSH)
 EXTRA_DIST += $(TESTS_IMPSTATS_VALGRIND)
 EXTRA_DIST += $(TESTS_IMPTCP)
 EXTRA_DIST += $(TESTS_IMPTCP_STREAM_ALWAYS)
+EXTRA_DIST += $(TESTS_IMPTCP_YAML)
 EXTRA_DIST += $(TESTS_IMPTCP_STREAM_ALWAYS_IMPSTATS)
 EXTRA_DIST += $(TESTS_IMPTCP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMPTCP_FMHASH_VALGRIND)
@@ -4077,6 +4084,7 @@ TESTS += $(TESTS_IMPTCP)
 TESTS += $(TESTS_IMPTCP_STREAM_ALWAYS)
 TESTS += $(TESTS_IMPTCP_FROMHOST_PORT)
 if HAVE_LIBYAML
+TESTS += $(TESTS_IMPTCP_YAML)
 TESTS += $(TESTS_RATELIMIT_IMPTCP_YAML)
 endif # HAVE_LIBYAML
 if HAVE_VALGRIND
