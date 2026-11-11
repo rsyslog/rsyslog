@@ -101,8 +101,9 @@ if ! mock -r "$MOCK_CONFIG" --verbose --buildsrpm \
   --sources "$RPM_SOURCES" \
   --resultdir "$BUILD_RESULT/srpm"; then
   echo "=== mock --buildsrpm FAILED, logs ==="
-  tail -300 "$BUILD_RESULT/srpm/"*.log 2>/dev/null || true
-  find /var/lib/mock -name "*.log" -exec tail -200 {} \; 2>/dev/null || true
+  # Use explicit -n: the legacy form fails when the glob matches multiple logs.
+  tail -n 300 "$BUILD_RESULT/srpm/"*.log 2>/dev/null || true
+  find /var/lib/mock -name "*.log" -exec tail -n 200 {} \; 2>/dev/null || true
   exit 1
 fi
 
@@ -118,8 +119,9 @@ fi
 SRPM="${SRPMS[0]}"
 if ! mock -r "$MOCK_CONFIG" --verbose "$SRPM" --resultdir "$BUILD_RESULT/rpms"; then
   echo "=== mock build FAILED, logs ==="
-  tail -300 "$BUILD_RESULT/rpms/"*.log 2>/dev/null || true
-  find /var/lib/mock -name "*.log" -exec tail -200 {} \; 2>/dev/null || true
+  # Use explicit -n: the legacy form fails when the glob matches multiple logs.
+  tail -n 300 "$BUILD_RESULT/rpms/"*.log 2>/dev/null || true
+  find /var/lib/mock -name "*.log" -exec tail -n 200 {} \; 2>/dev/null || true
   exit 1
 fi
 
