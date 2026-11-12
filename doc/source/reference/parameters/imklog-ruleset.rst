@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Binds kernel log messages read by the rsyslog imklog module to a named ruleset using the module-level ruleset parameter.
+   :keywords: rsyslog, imklog, ruleset, kernel log, kmsg, module parameter
+
 .. index:: ! imklog; Ruleset
 
 .. _param-imklog-ruleset:
