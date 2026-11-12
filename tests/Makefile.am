@@ -486,6 +486,9 @@ TESTS_DEFAULT = \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-tcp-user-timeout.sh \
+	omfwd-source-address-tcp.sh \
+	omfwd-source-address-udp.sh \
+	yaml-omfwd-source-address-tcp.sh \
 	yaml-omfwd-tcp-user-timeout.sh \
 	omfwd-subtree-tpl.sh \
 	omfwd-errfile-maxsize.sh \
@@ -1392,7 +1395,12 @@ TESTS_ROOT = \
 	imklog_permitnonkernelfacility_root.sh
 
 TESTS_ROOT_IP = \
-	tcp_forwarding_ns_tpl.sh
+	tcp_forwarding_ns_tpl.sh \
+	udp_forwarding_ns.sh
+
+TESTS_ROOT_IP_NSGAI = \
+	omfwd-nsgai-netns-dns.sh \
+	omfwd-nsgai-netns-hosts.sh
 
 TESTS_ROOT_VALGRIND = \
 	mmexternal-SegFault-empty-jroot-vg.sh
@@ -2812,6 +2820,7 @@ EXTRA_DIST += $(TESTS_FMHTTP)
 EXTRA_DIST += $(TESTS_FMHTTP_VALGRIND)
 EXTRA_DIST += $(TESTS_ROOT)
 EXTRA_DIST += $(TESTS_ROOT_IP)
+EXTRA_DIST += $(TESTS_ROOT_IP_NSGAI)
 EXTRA_DIST += $(TESTS_ROOT_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP_FLAKY)
 EXTRA_DIST += $(TESTS_OMHTTP_FLAKY_VALGRIND)
@@ -3001,11 +3010,13 @@ endif
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock
+	runtime_unit_iminternal_lock \
+	runtime_unit_net_source
 TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock
+	runtime_unit_iminternal_lock \
+	runtime_unit_net_source
 
 runtime_unit_iminternal_lock_SOURCES = unit/iminternal_lock_test.c
 runtime_unit_iminternal_lock_CPPFLAGS = -I$(top_srcdir)
@@ -3055,6 +3066,9 @@ runtime_unit_wtp_wakeup_SOURCES = \
 
 runtime_unit_imudp_buffer_SOURCES = \
 	unit/imudp_buffer_test.c
+
+runtime_unit_net_source_SOURCES = \
+	unit/net_source_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -3183,6 +3197,8 @@ runtime_unit_wtp_wakeup_CPPFLAGS = \
 runtime_unit_imudp_buffer_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-I$(top_srcdir)/plugins/imudp
+runtime_unit_net_source_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -3841,6 +3857,9 @@ if ENABLE_ROOT_TESTS
 TESTS += $(TESTS_ROOT)
 if ENABLE_IP
 TESTS += $(TESTS_ROOT_IP)
+if ENABLE_NSGAI
+TESTS += $(TESTS_ROOT_IP_NSGAI)
+endif
 endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_ROOT_VALGRIND)
@@ -4549,6 +4568,10 @@ endif # if ENABLE_TESTBENCH
 TESTS_ENVIRONMENT+= TESTTOOL_DIR='$(abs_top_builddir)/tests'
 test_files = testbench.h runtime-dummy.c
 DISTCLEANFILES=rsyslog.pid testbench_test_failed_rsyslog
+
+# PKCS#11 tests create directory trees; CLEANFILES only removes files.
+clean-local:
+	rm -rf rstb_*
 
 distclean-local:
 	rm -rf .dep_cache .dep_wrk
