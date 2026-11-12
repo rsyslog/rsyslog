@@ -1054,7 +1054,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "defaultfacility")) {
             CHKmalloc(buf = es_str2cstr(pvals[i].val.d.estr, NULL));
             const int facility = decodeSyslogName((uchar *)buf, syslogFacNames);
-            /* Numeric settings already contain the facility ordinal. Symbolic
+            /* Keep the raw text: user and numeric 8 both decode to 8, but
+             * mean facility ordinals 1 and 8 respectively (mail/16 likewise).
+             * Numeric settings already contain the facility ordinal. Symbolic
              * names decode to LOG_* constants, so only those need normalizing.
              * Preserve the existing negative sentinel for invalid settings. */
             loadModConf->iDfltFacility = facility < 0 || isdigit((unsigned char)buf[0]) ? facility : pri2fac(facility);

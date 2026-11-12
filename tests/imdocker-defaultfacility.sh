@@ -3,7 +3,8 @@
 # An explicit Docker DefaultFacility must preserve its syslog meaning. A
 # loopback HTTP fixture supplies the Docker list/log endpoints and one binary
 # stdout frame; no Docker daemon is needed. Unset-default, kern, and numeric
-# ordinal controls precede explicit user/daemon/local0 assertions. Exact facility,
+# ordinal controls precede symbolic-name assertions. Collision pairs user/8
+# and mail/16 must remain distinct (ordinals 1/8 and 2/16). Exact facility,
 # severity, PRI and payload after owned daemon shutdown are the oracle.
 # Invalid-value and value-type behavior is checked with -N1 only for
 # compatibility; these controls never start a daemon or recommend invalid input.
@@ -25,7 +26,7 @@ trap cleanup_server EXIT
 server_pid=$!
 wait_file_exists_for_process "$RSYSLOG_DYNNAME.http.port" "$server_pid" "$TB_TIMEOUT_STARTSTOP" "Docker API fixture" "$RSYSLOG_DYNNAME.http.log"
 api_port=$(cat "$RSYSLOG_DYNNAME.http.port")
-for setting in unset kern 0 1 16 unknown empty negative numericjunk bare16 array user USER daemon local0; do
+for setting in unset kern 0 1 8 16 unknown empty negative numericjunk bare16 array user USER mail daemon local0; do
 	value=$setting
 	config_only=0
 	expected_status=0
@@ -36,6 +37,7 @@ for setting in unset kern 0 1 16 unknown empty negative numericjunk bare16 array
 		kern) facility=0; param='DefaultFacility="kern"' ;;
 		0) facility=0; param='DefaultFacility="0"' ;;
 		1) facility=1; param='DefaultFacility="1"' ;;
+		8) facility=8; param='DefaultFacility="8"' ;;
 		16) facility=16; param='DefaultFacility="16"' ;;
 		unknown) config_only=1; value=not-a-facility; param='DefaultFacility="not-a-facility"' ;;
 		empty) config_only=1; value=; param='DefaultFacility=""' ;;
@@ -45,6 +47,7 @@ for setting in unset kern 0 1 16 unknown empty negative numericjunk bare16 array
 			[ "${IMDOCKER_FACILITY_YAML:-0}" = 1 ] || expected_status=1 ;;
 		array) config_only=1; expected_status=1; param='DefaultFacility=["user", "daemon"]' ;;
 		user) facility=1; param='DefaultFacility="user"' ;;
+		mail) facility=2; param='DefaultFacility="mail"' ;;
 		USER) facility=1; param='DefaultFacility="USER"' ;;
 		daemon) facility=3; param='DefaultFacility="daemon"' ;;
 		local0) facility=16; param='DefaultFacility="local0"' ;;
