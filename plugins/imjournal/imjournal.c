@@ -844,12 +844,27 @@ static rsRetVal restoreJournalPosition(struct journalContext_s *journalContext, 
         FINALIZE;
     }
 
-    if ((r = sd_journal_seek_cursor(journalContext->j, journalContext->cursor)) != 0) {
+    r = sd_journal_seek_cursor(journalContext->j, journalContext->cursor);
+    if (r != 0 && r != -EINVAL) {
+        /* sd_journal_seek_cursor() only parses the cursor string and records
+         * the seek target; it does no journal I/O and cannot tell whether the
+         * entry still exists (a vanished entry is resolved by the following
+         * sd_journal_next()). Any error other than -EINVAL (e.g. -ENOMEM)
+         * therefore says nothing about the cursor itself. Keep the cursor and
+         * let tryRecover() retry instead of replaying the journal from head.
+         * See https://github.com/rsyslog/rsyslog/issues/7886 */
+        LogError(-r, RS_RET_ERR,
+                 "imjournal: "
+                 "couldn't seek to cursor `%s', keeping it and retrying\n",
+                 journalContext->cursor);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (r != 0) {
         LogError(-r, RS_RET_ERR,
                  "imjournal: "
                  "couldn't seek to cursor `%s'\n",
                  journalContext->cursor);
-        LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: saved cursor is unavailable, seeking to the head of journal\n");
+        LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: saved cursor is invalid, seeking to the head of journal\n");
         if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
             LogError(-r, RS_RET_ERR,
                      "imjournal: "
