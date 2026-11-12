@@ -644,6 +644,7 @@ EXTRA_DIST = \
     source/reference/parameters/imklog-ratelimitburst.rst \
     source/reference/parameters/imklog-ratelimitinterval.rst \
     source/reference/parameters/imklog-ratelimit-name.rst \
+    source/reference/parameters/imklog-ruleset.rst \
     source/reference/parameters/immark-interval.rst \
     source/reference/parameters/immark-markmessagetext.rst \
     source/reference/parameters/immark-ruleset.rst \
