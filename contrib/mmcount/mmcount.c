@@ -126,6 +126,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
     CODESTARTfreeInstance;
+    if (pData->ht != NULL) hashtable_destroy(pData->ht, 1);
 ENDfreeInstance
 
 
@@ -142,14 +143,6 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->pszValue = NULL;
     pData->valueCounter = 0;
     pData->ht = NULL;
-}
-
-static unsigned int hash_from_key_fn(void *k) {
-    return *(unsigned int *)k;
-}
-
-static int key_equals_fn(void *k1, void *k2) {
-    return (*(unsigned int *)k1 == *(unsigned int *)k2);
 }
 
 BEGINnewActInst
@@ -192,7 +185,7 @@ BEGINnewActInst
     }
 
     if (pData->pszKey != NULL && pData->pszValue == NULL) {
-        if (NULL == (pData->ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL))) {
+        if (NULL == (pData->ht = create_hashtable(100, hash_from_string, key_equals_string, NULL))) {
             DBGPRINTF("mmcount: error creating hash table!\n");
             ABORT_FINALIZE(RS_RET_ERR);
         }
@@ -212,25 +205,22 @@ BEGINtryResume
 ENDtryResume
 
 static int *getCounter(struct hashtable *ht, const char *str) {
-    unsigned int key;
     int *pCounter;
-    unsigned int *pKey;
+    char *pKey;
 
-    /* we dont store str as key, instead we store hash of the str
-       as key to reduce memory usage */
-    key = hash_from_string((char *)str);
-    pCounter = hashtable_search(ht, &key);
+    /* Keep the complete value so distinct strings with the same hash
+       retain independent counters. The table owns a copy of the key. */
+    pCounter = hashtable_search(ht, (void *)str);
     if (pCounter) {
         return pCounter;
     }
 
     /* counter is not found for the str, so add new entry and
        return the counter */
-    if (NULL == (pKey = (unsigned int *)malloc(sizeof(unsigned int)))) {
+    if (NULL == (pKey = strdup(str))) {
         DBGPRINTF("mmcount: memory allocation for key failed\n");
         return NULL;
     }
-    *pKey = key;
 
     if (NULL == (pCounter = (int *)malloc(sizeof(int)))) {
         DBGPRINTF("mmcount: memory allocation for value failed\n");

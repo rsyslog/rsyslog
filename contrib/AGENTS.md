@@ -35,3 +35,9 @@ AI agents working in `contrib/` MUST follow the standardized skills in `.agent/s
 deduplication preserves every encoded newline, including consecutive blank
 lines. Each dedup mode runs in a separate single-input daemon and compares
 exact message bytes against ordinary-space and dedup-off controls.
+
+## Focused coverage
+
+- `tests/mmcount-distinct-values.sh` verifies independent counters for distinct
+  property values with colliding hashes. Its YAML companion checks action
+  parameter parity.

@@ -45,3 +45,8 @@ keep imfile-rename.sh
 # imbeats timeout regression: platform-independent timer semantics, includes a
 # deliberate 3 s pause, no Solaris-specific need.
 skip imbeats-idle-between-windows.sh
+
+# mmcount collision counters: platform-independent contrib-module behavior.
+# Both frontends stay covered on Linux; neither adds a Solaris portability oracle.
+skip mmcount-distinct-values.sh
+skip yaml-mmcount-distinct-values.sh
