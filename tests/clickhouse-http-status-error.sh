@@ -22,7 +22,7 @@ generate_conf
 add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
-template(name="outfmt" option.stdsql="on" type="string"
+template(name="outfmt" option.sql="on" type="string"
          string="INSERT INTO rsyslog.statuserror (id, severity, message) VALUES (%msg:F,58:2%, %syslogseverity%, '\''%msg%'\'')")
 
 :syslogtag, contains, "tag" action(type="omclickhouse"

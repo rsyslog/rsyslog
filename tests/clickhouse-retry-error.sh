@@ -1,13 +1,16 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-31 by Pascal Withopf, released under ASL 2.0
+# Exercise connection failure against the default HTTPS endpoint.
+# After queue drain and shutdown, the configured omfile output must contain
+# checkConn failed; this fixture expects the HTTPS connection to fail.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 generate_conf
 add_conf '
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.retryerror (id, severity, message) VALUES (%msg:F,58:2%, %syslogseverity%, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.retryerror (id, severity, message) VALUES (%msg:F,58:2%, %syslogseverity%, '
 add_conf "'%msg%')"
 add_conf '")
 

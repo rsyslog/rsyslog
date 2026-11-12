@@ -1,6 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-19 by Pascal Withopf, released under ASL 2.0
+# Reject an INSERT template without SQL escaping during configuration.
+# After synchronized shutdown, the configured omfile output must contain
+# the diagnostic requiring option.sql="on".
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 generate_conf
@@ -27,6 +30,6 @@ shutdown_when_empty
 wait_shutdown
 
 clickhouse-client --query="DROP TABLE rsyslog.template"
-content_check "you have to specify the SQL or stdSQL option in your template!"
+content_check 'the SQL option (option.sql="on") in your template!'
 
 exit_test

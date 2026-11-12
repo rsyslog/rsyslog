@@ -1270,12 +1270,18 @@ TESTS_MMANON = \
 	mmanon_random_cons_128_ipembedded.sh \
 	mmanon_truncated_dotted_suffix.sh
 
+TESTS_CLICKHOUSE_LIBYAML = yaml-omclickhouse-template-escaping.sh
+
 TESTS_CLICKHOUSE = \
+	clickhouse-template-option-sql.sh \
 	clickhouse-template-option-stdsql.sh \
+	clickhouse-template-type-plugin.sh \
+	clickhouse-template-type-subtree.sh \
 	clickhouse-http-status-error.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-dflt-tpl.sh \
+	clickhouse-sql-escape.sh \
 	clickhouse-retry-error.sh \
 	clickhouse-load.sh \
 	clickhouse-bulk.sh \
@@ -2780,6 +2786,7 @@ EXTRA_DIST += $(TESTS_MMAITAG)
 EXTRA_DIST += $(TESTS_MAIL)
 EXTRA_DIST += $(TESTS_MAIL_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_MMANON)
+EXTRA_DIST += $(TESTS_CLICKHOUSE_LIBYAML)
 EXTRA_DIST += $(TESTS_CLICKHOUSE)
 EXTRA_DIST += $(TESTS_CLICKHOUSE_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBFAKETIME)
@@ -3691,10 +3698,14 @@ endif # if ENABLE_MMANON
 
 if ENABLE_CLICKHOUSE_TESTS
 TESTS += $(TESTS_CLICKHOUSE)
+if HAVE_LIBYAML
+TESTS += $(TESTS_CLICKHOUSE_LIBYAML)
+endif
 
 clickhouse-basic.log: clickhouse-start.log
 clickhouse-dflt-tpl.log: clickhouse-basic.log
-clickhouse-retry-error.log: clickhouse-dflt-tpl.log
+clickhouse-sql-escape.log: clickhouse-dflt-tpl.log
+clickhouse-retry-error.log: clickhouse-sql-escape.log
 clickhouse-load.log: clickhouse-retry-error.log
 clickhouse-bulk.log: clickhouse-load.log
 clickhouse-bulk-load.log: clickhouse-bulk.log
