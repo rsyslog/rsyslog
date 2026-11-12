@@ -1,6 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2612.0 (aka 2026.12) 2026-12-20
 
+- 2026-10-28: rainerscript: compare large integers correctly
+  Relational comparisons now preserve full signed integer ordering when
+  operands differ by 2^32 or span the signed 64-bit range. Numeric string
+  conversion and lexical comparison fallback remain unchanged.
+
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-20
 
