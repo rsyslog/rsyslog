@@ -1450,9 +1450,16 @@ struct stats_buf {
     size_t cap;
 };
 
+/* Bound the memory retained for one scrape. The callback returns an error
+ * before reallocating, so stats generation stops once the response is full. */
+#define PROMETHEUS_MAX_RESPONSE_SIZE (16U * 1024U * 1024U)
+
 static rsRetVal prom_stats_collect(void *usrptr, const char *line) {
     struct stats_buf *sb = (struct stats_buf *)usrptr;
     const size_t line_len = strlen(line);
+    if (sb->len >= PROMETHEUS_MAX_RESPONSE_SIZE || line_len >= PROMETHEUS_MAX_RESPONSE_SIZE - sb->len) {
+        return RS_RET_FILE_TOO_LARGE;
+    }
     if (line_len > ((size_t)-1) - sb->len - 1) {
         return RS_RET_OUT_OF_MEMORY;
     }
