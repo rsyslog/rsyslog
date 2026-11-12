@@ -3099,6 +3099,7 @@ module_needs_testing() {
 				;;
 			imfile:plugins/imfile/*|\
 			imfile:tests/*imfile*.sh|\
+			imfile:tests/override_fstat.c|\
 			imfile:tests/testsuites/imfile*|\
 			imfile:tests/testsuites/*imfile*)
 				return 0
