@@ -100,6 +100,7 @@ struct dtlsClient_s {
     time_t lastActivityTime; /* Last Activity Time */
     int clientfd; /* ClientFD */
     int peerVerified; /* post-handshake permitted-peer check completed */
+    long verifiedRenegotiations; /* handshake generation covered by peerVerified */
     short pollEvents; /* readiness needed by the handshake */
 };
 
@@ -576,16 +577,19 @@ static void DTLScleanupSession(instanceConf_t *inst, int idx) {
     inst->dtlsClients[idx]->sslClient = NULL;
     inst->dtlsClients[idx]->lastActivityTime = 0;
     inst->dtlsClients[idx]->peerVerified = 0;
+    inst->dtlsClients[idx]->verifiedRenegotiations = 0;
     inst->dtlsClients[idx]->pollEvents = POLLIN;
 }
 
 static int DTLSVerifySession(instanceConf_t *inst, int idx) {
     dtlsClient_t *client = inst->dtlsClients[idx];
-    if (client->peerVerified) {
-        return 1;
-    }
     if (!SSL_is_init_finished(client->sslClient)) {
+        client->peerVerified = 0;
         return 0;
+    }
+    long renegotiations = SSL_total_renegotiations(client->sslClient);
+    if (client->peerVerified && client->verifiedRenegotiations == renegotiations) {
+        return 1;
     }
 
     if (imdtls_verify_callback(1, client->sslClient) == 0) {
@@ -594,6 +598,7 @@ static int DTLSVerifySession(instanceConf_t *inst, int idx) {
         return 0;
     }
     client->peerVerified = 1;
+    client->verifiedRenegotiations = renegotiations;
     DBGPRINTF("imdtls: Cert Verify SUCCESS for DTLS client idx (%d)\n", idx);
     return 1;
 }
@@ -915,6 +920,7 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                             inst->dtlsClients[i]->sslClient = ssl;
                             inst->dtlsClients[i]->lastActivityTime = time(NULL);
                             inst->dtlsClients[i]->peerVerified = 0;
+                            inst->dtlsClients[i]->verifiedRenegotiations = 0;
                             inst->dtlsClients[i]->pollEvents = POLLIN;
                             DBGPRINTF("imdtls: New Client added at idx %d.\n", i);
                             DTLSAcceptSession(inst, i);
