@@ -1,0 +1,19 @@
+tests/ubuntu-qpid-generation-order.sh
+  s_664d9256265529::t_dcf28af4655e09 6-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e372ba555a8ac6b30e2ada3bc46b978673e39160",
+  "prompts": {},
+  "sessions": {
+    "s_664d9256265529": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b199-3a63-7983-8dd0-af0b93b7a32b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

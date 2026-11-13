@@ -1,0 +1,41 @@
+tests/omawslogshlc-event-too-large.sh
+  s_0ed7a98cdca2e7::t_48f29c8d79a2ab 5-7,11,17,21,23-34,39-40
+  s_0ed7a98cdca2e7::t_bd091abb51eea2 1-4,8-10,12-16,18-20,22,35-38,41-47
+plugins/omawslogshlc/Makefile.am
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 8
+plugins/omawslogshlc/omawslogshlc.c
+  s_0ed7a98cdca2e7::t_437a7dcc4f3ecf 5-10,53,219-231,236-240,355
+tests/omawslogshlc-missing-region.sh
+  s_0ed7a98cdca2e7::t_39039337d56191 19
+tests/omawslogshlc-basic.sh
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 4-6,40-41
+  s_0ed7a98cdca2e7::t_39039337d56191 32
+doc/source/configuration/modules/omawslogshlc.rst
+  s_0ed7a98cdca2e7::t_fcdafd77ac1d3a 38,49,67,78,81,96,110,124,138,155,182,196
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 26,213,245-259
+doc/ai/module_map.yaml
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 44-49
+tests/omawslogshlc-batch.sh
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 4-6,41-42
+  s_0ed7a98cdca2e7::t_39039337d56191 33
+tests/Makefile.am
+  s_0ed7a98cdca2e7::t_6f1c36517d365b 2052
+  s_0ed7a98cdca2e7::t_9deb6ca3803662 2827
+  s_0ed7a98cdca2e7::t_48f29c8d79a2ab 1072-1074,2828-2829
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9089bd947394665512fba7834565f84c2c2d4393",
+  "prompts": {},
+  "sessions": {
+    "s_0ed7a98cdca2e7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f2c80-b6dc-7e91-9682-31b99079a0a7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

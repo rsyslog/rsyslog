@@ -1,0 +1,20 @@
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_b801f5b53f1414 918-921,930-931,1041-1043,1057-1071
+  s_f2c089be484e12::t_7c0aeb66ea3b91 1072-1074
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "7ffec391953535a6fe3c7f78b9df4d27db893e0b",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

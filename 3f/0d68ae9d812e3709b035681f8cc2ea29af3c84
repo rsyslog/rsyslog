@@ -1,0 +1,55 @@
+tests/helpers/tcpsrv_prepared_daemon_link.c
+  s_f2c089be484e12::t_7d54e9a6b55ff6 1-19
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_058cfb3f0204a4 196-197
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_455b1c2cd653a8 72,170-172,308-317,329-332,496-504,507
+tests/unit/tcpsrv_prepared_backend_test.c
+  s_f2c089be484e12::t_d22778e7c22744 1-726
+tests/Makefile.am
+  s_f2c089be484e12::t_455b1c2cd653a8 2953-2983
+configure.ac
+  s_f2c089be484e12::t_455b1c2cd653a8 2736-2738
+runtime/nsd_ptcp.c
+  s_f2c089be484e12::t_8d314a556f5afb 927
+  s_f2c089be484e12::t_455b1c2cd653a8 704,722-723,742,756-758,868,912,926
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_d7720e28cb22ac 3090
+  s_f2c089be484e12::t_058cfb3f0204a4 18-24
+  s_cf144905ab59ed::t_e392deb2dbbc2c 2128
+  s_f2c089be484e12::t_455b1c2cd653a8 157-203,270,836,1209,1253-1255,1283,1366,1379,1430,1433-1435,1452-1454,1470-1473,1483-1485,1493-1520,1525-1534,1579-1583,1592-1594,1613,1661,1678-1683,1747,1757-1776,1801,1854-1855,1887-1888,1891-1892,1895-1905,1945,2060,2086-2088,2091,2108,2126-2127,2130-2137,2140,2153,2159-2161,2164,2180,2189,2192,2214-2223,2260,2266-2269,2317-2354,3087-3089
+  s_f2c089be484e12::t_a3e8719be22c67 1659
+  s_f8a738e4bdfaee::t_6b2053dfcada9f 1617,1656-1658,1660,2119-2125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3f0d68ae9d812e3709b035681f8cc2ea29af3c84",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

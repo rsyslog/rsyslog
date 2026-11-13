@@ -1,0 +1,27 @@
+tests/Makefile.am
+  s_e1bc3bab0b4eb3::t_673d2d741940ed 311
+doc/source/reference/parameters/imdiag-properterminationfile.rst
+  s_e1bc3bab0b4eb3::t_9842a310dcd333 1-63
+plugins/imdiag/imdiag.c
+  s_e1bc3bab0b4eb3::t_ec8d63a9527eb2 107-111,121,135,823-826,828-833,843,848-856,873-876,878-889,930,959-960,1026-1028,1062,1148-1160
+tests/imdiag-proper-termination-timeoutguard.sh
+  s_e1bc3bab0b4eb3::t_878a98c188ab89 1-39
+tools/rsyslogd.c
+  s_e1bc3bab0b4eb3::t_e3debe3ccdac8e 54,243,2459-2543,2720
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "9208c815bc9cb584869578172256463b7efa1ab5",
+  "prompts": {},
+  "sessions": {
+    "s_e1bc3bab0b4eb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eff87-c605-7251-88e6-f834c8ca0205",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

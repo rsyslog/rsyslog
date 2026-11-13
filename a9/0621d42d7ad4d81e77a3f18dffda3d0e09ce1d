@@ -1,0 +1,31 @@
+runtime/perctile_ringbuf.h
+  s_0c298b7fe57910::t_bdbc3ab8efa8eb 1,3-5,7-8,12-13,15-17,28
+  s_0c298b7fe57910::t_c4868808902865 2
+tests/Makefile.am
+  s_0c298b7fe57910::t_941b7c3d6635ec 2711,2714-2717
+runtime/perctile_ringbuf.c
+  s_0c298b7fe57910::t_c4868808902865 4
+  s_0c298b7fe57910::t_3bbe5b0841224b 21,25,27-28,30-40,42-51,56-57,62-65,67-69,72-77,82-84,86,89,91-93,95-106,110-112,114,118,121
+  s_0c298b7fe57910::t_bdbc3ab8efa8eb 1
+tests/unit/perctile_ringbuf_test.c
+  s_0c298b7fe57910::t_ee417748be80b0 69-85
+  s_0c298b7fe57910::t_bdbc3ab8efa8eb 1-68,86-90
+runtime/perctile_stats.c
+  s_0c298b7fe57910::t_f091caf8fa4665 367,411
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a90621d42d7ad4d81e77a3f18dffda3d0e09ce1d",
+  "prompts": {},
+  "sessions": {
+    "s_0c298b7fe57910": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11206-4f89-72b1-b0cd-325652009d85",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

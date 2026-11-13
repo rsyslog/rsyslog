@@ -1,0 +1,69 @@
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_401417bb0b26a8 768-794
+grammar/rainerscript.c
+  s_f8a738e4bdfaee::t_df1666c7f88700 7242-7355
+grammar/rainerscript.h
+  s_f8a738e4bdfaee::t_51c9345e4a3e21 550-554
+grammar/reload-ruleset-materializer.c
+  s_f8a738e4bdfaee::t_e199f0fc6f7f39 32,70,521,548-549,552,582,655,662-683,707,761-763,869-870,911,939,962
+grammar/reload-ruleset-materializer.h
+  s_f8a738e4bdfaee::t_34ebcd0386ce0c 59-69
+plugins/imdiag/imdiag.c
+  s_f8a738e4bdfaee::t_21eb81f93b7294 2249-2262,2276-2280
+plugins/imtcp/imtcp.c
+  s_f8a738e4bdfaee::t_98ffaec8df601e 3138-3166,3189-3193
+runtime/Makefile.am
+  s_f8a738e4bdfaee::t_bd5f790fe92c28 153
+runtime/module-reload.c
+  s_f8a738e4bdfaee::t_34d592f6f7278d 121-128
+runtime/modules.h
+  s_f8a738e4bdfaee::t_32fb6a4a2d711a 177-178,180-181,189-212,223-224,240
+runtime/ratelimit.c
+  s_f8a738e4bdfaee::t_f06457d5885514 2998-3001,3011-3015,3046-3053,3074-3132
+runtime/ratelimit.h
+  s_f8a738e4bdfaee::t_a24ea405c60073 183-190
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_b10baa3dbf47b8 2063-2086,2092-2094,2136-2141
+runtime/reload-candidate.h
+  s_f8a738e4bdfaee::t_2eed11c5bc4db5 242-243
+runtime/reload-template-consumer.c
+  s_f8a738e4bdfaee::t_437a93293e6e82 1-288
+runtime/reload-template-consumer.h
+  s_f8a738e4bdfaee::t_ce304c9acf6302 1-24
+runtime/template.c
+  s_f8a738e4bdfaee::t_13bbf2230377f6 2987-2990,2992-3008,3010-3012,3014,3016-3020,3022-3023,3025-3029,3032-3040,3047,3051-3054
+runtime/template.h
+  s_f8a738e4bdfaee::t_04e5c947e428d8 197-198
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_0b80fffb4e5b18 5122-5152
+tests/global-reloadonhup-template-rainerscript.sh
+  s_f8a738e4bdfaee::t_a63e24a0be30c2 1-196
+tests/global-reloadonhup-template-yaml.sh
+  s_f8a738e4bdfaee::t_5cb00359f10556 1-6
+tests/unit/module_reload_test.c
+  s_f8a738e4bdfaee::t_f671eca0ed891a 216-218,232-236,260-273,282-287
+tests/unit/reload_callgraph_fence_test.c
+  s_f8a738e4bdfaee::t_543c3321e70635 562-610
+tests/unit/reload_template_consumer_test.c
+  s_f8a738e4bdfaee::t_7f48d0613b84a9 1-306
+tools/omfile.c
+  s_f8a738e4bdfaee::t_88dfd088199dfa 2261-2287,2290-2291
+tools/shadow_reload.c
+  s_f8a738e4bdfaee::t_afe0cbc08fcdb1 94,175,1070,1157-1176,1211-1212,1246-1249,1853-1863
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2695f8f87d8e0c0fc40695790363209d199a12c9",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

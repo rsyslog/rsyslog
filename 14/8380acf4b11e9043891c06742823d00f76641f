@@ -1,0 +1,21 @@
+tests/omfile-dynafile-traversal-repro.sh
+  s_36b1dbeb2adb2f::t_aa76cf2a637ff9 28-29,32
+tools/omfile.c
+  s_36b1dbeb2adb2f::t_bb29e4058cab14 60,84-88,165,231-427,990-991,1415,1444-1451,1517,2018
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "148380acf4b11e9043891c06742823d00f76641f",
+  "prompts": {},
+  "sessions": {
+    "s_36b1dbeb2adb2f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00103-5ff8-7210-881c-1092915f7ffe",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

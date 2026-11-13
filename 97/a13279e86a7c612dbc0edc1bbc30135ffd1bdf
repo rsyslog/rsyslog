@@ -1,0 +1,34 @@
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_5c18a3a148d6d5 70
+tests/unit/imtcp_lifecycle_test.c
+  s_f2c089be484e12::t_14a770ba88e2f1 43-49,95-97,122,147-153
+  s_f2c089be484e12::t_f3f3cba9a04d41 1-42,50-94,98-121,123-146,154-161
+tests/Makefile.am
+  s_f2c089be484e12::t_e30885fc90355a 188,3036-3038,3057
+  s_f2c089be484e12::t_92d8551ce25deb 2793-2794,2816-2821
+  s_f2c089be484e12::t_886258b37ea373 2822
+plugins/imtcp/Makefile.am
+  s_f2c089be484e12::t_5c18a3a148d6d5 3
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_5c18a3a148d6d5 70,114-121,2703-2704,2870,2878,2954,2958-2959,2973-2979,2982,3057,3062,3064,3068,3075-3080,3101-3104,3108,3338,3534-3535,3541-3542,3547-3549,3554,3567,3582
+  s_f2c089be484e12::t_52086de2137f46 3571-3573
+plugins/imtcp/imtcp-lifecycle.h
+  s_f2c089be484e12::t_7d4428fa24a5f9 1-44
+  s_f2c089be484e12::t_a2941cca7acfa2 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "97a13279e86a7c612dbc0edc1bbc30135ffd1bdf",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+tests/Makefile.am
+  s_de358a5d0a4803::t_fa709f88651153 272,563,1523,1560,1718,3327
+contrib/imczmq/imczmq.c
+  s_de358a5d0a4803::t_da0419486c2305 190,196,312,331-332,355,425,427
+contrib/imhiredis/imhiredis.c
+  s_de358a5d0a4803::t_6f581f5e656bc7 123,147,697-701,705-709,712,787,805,828,831-838
+doc/source/rainerscript/global.rst
+  s_de358a5d0a4803::t_e976ffac17843c 617-632
+plugins/imbeats/imbeats.c
+  s_de358a5d0a4803::t_c17e7eb6620de4 134-138,1548-1557,1564,1574,1585,1634-1641,1643,1657,1669-1672,1707-1708,1927-1928,1941-1951,1964,1966-1981
+plugins/imdtls/imdtls.c
+  s_de358a5d0a4803::t_ce3f6702eb73e2 109,122,141,196,203,207,288,365-367,445-450,903,1008,1099-1104,1120-1131,1199-1205,1217,1227,1229,1231
+plugins/imfifo/imfifo.c
+  s_de358a5d0a4803::t_052685ddc8ab31 300,316,326,333,341,450,483
+plugins/imkafka/imkafka.c
+  s_de358a5d0a4803::t_a7105ee080c882 1114
+plugins/imptcp/imptcp.c
+  s_de358a5d0a4803::t_7945bc95fa801c 47,358,527-613,738-741,796,807-808,2138,2140,2143,2149,2155-2161,2163,2174,2179-2180,2190,2203,2205-2206,2212-2214,2787-2788,2856,2866
+plugins/imrelp/imrelp.c
+  s_de358a5d0a4803::t_81a74650ad13dd 390,847-848
+plugins/imtcp/imtcp.c
+  s_de358a5d0a4803::t_4758ca3b3cd90e 851-854,1359-1360
+plugins/imudp/imudp.c
+  s_de358a5d0a4803::t_a8eae2834a57c0 502-504,528-541,1359-1360,1371,1487,1531
+plugins/imuxsock/imuxsock.c
+  s_de358a5d0a4803::t_0976173f12ee3a 160,523,544-547,559,1284,1358,1363-1364,1368-1369,1378-1388,1685-1686
+runtime/glbl.c
+  s_de358a5d0a4803::t_c049a621ce96ca 178,1563-1574
+runtime/im-helper.h
+  s_de358a5d0a4803::t_4e3fea912fbc62 52-58
+runtime/net.c
+  s_de358a5d0a4803::t_a8c517a4129b00 1533-1540
+runtime/rsconf.c
+  s_de358a5d0a4803::t_971edd8f13cf38 801,804,1031,1044,1050-1052,1091-1093,1118,1124,1134,1143-1148,1162,1171-1172,1180,1296-1297,1303,1777
+runtime/rsconf.h
+  s_de358a5d0a4803::t_b2bdefb079d192 110-112
+runtime/tcpsrv.c
+  s_de358a5d0a4803::t_40450cfbdb025e 504,718
+runtime/threads.c
+  s_de358a5d0a4803::t_da959e77663b17 34,51-62,263,286-288,300,302-306,308-309,311,313-317,319,322-335
+runtime/threads.h
+  s_de358a5d0a4803::t_bb1657764ef620 54-55
+tests/imbeats-bind-failure.sh
+  s_de358a5d0a4803::t_b7b3f9bb8c0e5d 1-163
+tests/imczmq-startup-failure.sh
+  s_de358a5d0a4803::t_82c173f6ad877a 1-60
+tests/imfifo-startup-failure.sh
+  s_de358a5d0a4803::t_affb221d2af56c 1-60
+tests/imptcp-bind-failure.sh
+  s_de358a5d0a4803::t_48437455c88759 1-165
+tests/imtcp-bind-failure.sh
+  s_de358a5d0a4803::t_adffa7e25be79c 5-7,84,86-87,95,110-111,142-247
+tests/imudp-bind-failure.sh
+  s_de358a5d0a4803::t_8385d33d14e652 1-183
+tests/miniamqpsrvr.c
+  s_de358a5d0a4803::t_ed141dcf3e4ea4 493,594-597
+tests/omhttp_server.py
+  s_de358a5d0a4803::t_f0cc49a279687d 10-14,137-149,170,189
+tests/rscript_http_request.sh
+  s_de358a5d0a4803::t_6deaaa99ed459a 3-9,11-17,22,28-29,51
+tools/rsyslogd.c
+  s_de358a5d0a4803::t_48ad51691e3f2a 1895-1900,2722-2725
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c84edd285667795741d26deb1c5667fa11203055",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

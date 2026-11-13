@@ -1,0 +1,19 @@
+tests/CI/ubuntu20.04.supp
+  s_d49cbcdfe645b0::t_e109159734c455 61-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b0c1c73f98f96bb463023f8a75ba06b3a866d83",
+  "prompts": {},
+  "sessions": {
+    "s_d49cbcdfe645b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_d49cbcdfe645b0",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

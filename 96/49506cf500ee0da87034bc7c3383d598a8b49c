@@ -1,0 +1,22 @@
+devtools/release/opensuse-daily-stable.sh
+  s_2dc01c7e3d2940::t_e860d9112dbfeb 143-159,164-169
+  s_2dc01c7e3d2940::t_63d74893b987c6 112,126-142,160-163,170-182
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_63d74893b987c6 18-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "9649506cf500ee0da87034bc7c3383d598a8b49c",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packaging/docker/dev_env/ubuntu/base/20.04/setup-system.sh
+  s_e1bc3bab0b4eb3::t_108875105c66a6 8,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "d3b0f435ed55c8a1febd110a80999735bb5ed664",
+  "prompts": {},
+  "sessions": {
+    "s_e1bc3bab0b4eb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eff87-c605-7251-88e6-f834c8ca0205",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

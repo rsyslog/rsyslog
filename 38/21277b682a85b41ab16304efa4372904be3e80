@@ -1,0 +1,14 @@
+doc/ai/module_map.yaml
+  h_95716f3de0caf5 68-69,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3821277b682a85b41ab16304efa4372904be3e80",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

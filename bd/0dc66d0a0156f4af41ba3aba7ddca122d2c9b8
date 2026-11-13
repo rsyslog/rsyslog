@@ -1,0 +1,20 @@
+tests/imbeats-tls-listener-rearm.sh
+  s_11817263318fdf::t_62c65a9fc065de 47,61,63-64
+  s_11817263318fdf::t_51c9d71eaabf02 9-12,59-60,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "bd0dc66d0a0156f4af41ba3aba7ddca122d2c9b8",
+  "prompts": {},
+  "sessions": {
+    "s_11817263318fdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0248d-e47f-7c23-a7d5-b0f7d1503b73",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

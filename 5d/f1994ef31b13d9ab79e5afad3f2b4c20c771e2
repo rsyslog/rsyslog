@@ -1,0 +1,75 @@
+runtime/msg.h
+  s_9193f66071a055::t_43b6c0136bd8f7 311
+grammar/rainerscript.c
+  s_9193f66071a055::t_43b6c0136bd8f7 3717,3722-3723,3725,3751
+  s_6b340ae08e941b::t_2885fb049d7a6d 3793,5884-5889,5897-5944,5979-5995,6002-6005,6059
+  s_6b340ae08e941b::t_29210a610ecdc8 5104,5115
+  s_6b340ae08e941b::t_4987f299b6b7d8 4201
+  s_6b340ae08e941b::t_1449a40732006d 5945-5978,5996,5999
+  s_6b340ae08e941b::t_7e314bf77cb0d2 5890-5896
+  s_6b340ae08e941b::t_d123f1995c3565 5997-5998,6000-6001
+  s_6b340ae08e941b::t_f6ba63d14efb70 3710-3712,3762-3792
+  s_6b340ae08e941b::t_097f715a9f68f4 3794
+tests/Makefile.am
+  s_9193f66071a055::t_e7044fc73eb76f 538
+  s_9193f66071a055::t_7d19f898b1da40 742
+  s_6b340ae08e941b::t_0df0970c34e7b7 539
+  s_6b340ae08e941b::t_8f07f966b7673e 743
+tests/mmnormalize-turbo-message-lifecycle.sh
+  s_9193f66071a055::t_78abbb3eb2cea4 3-6,17,26-28,38
+tests/rscript-json-var-eval-semantics.sh
+  s_9193f66071a055::t_c9be65bbb12d86 23-24
+  s_9193f66071a055::t_7304bb61f88df5 61
+  s_9193f66071a055::t_e7044fc73eb76f 1-5,8-9,12-21,25-38,40-57,62-63
+tests/rscript-json-var-eval-semantics-vg.sh
+  s_9193f66071a055::t_7d19f898b1da40 1-5
+runtime/msg.c
+  s_9193f66071a055::t_2b4fe110ad24e8 5454-5457,5466
+  s_9193f66071a055::t_43b6c0136bd8f7 79,3331-3410,5458-5464
+runtime/ruleset.c
+  s_6b340ae08e941b::t_ac9083ff9569b9 298-301,303-307,309-333,335,337
+grammar/rainerscript.h
+  s_6b340ae08e941b::t_29210a610ecdc8 139,209,212-220
+  s_6b340ae08e941b::t_ebdc11d489da5d 221
+tests/rscript-if-chain-snapshot-vg.sh
+  s_6b340ae08e941b::t_8f07f966b7673e 1-5
+runtime/wti.h
+  s_6b340ae08e941b::t_29210a610ecdc8 32-33,98
+  s_6b340ae08e941b::t_11996294d328f8 157
+doc/source/rainerscript/control_structures.rst
+  s_6b340ae08e941b::t_70746cc6d28a60 42-54
+tests/rscript-if-chain-snapshot.sh
+  s_6b340ae08e941b::t_0df0970c34e7b7 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5df1994ef31b13d9ab79e5afad3f2b4c20c771e2",
+  "prompts": {},
+  "sessions": {
+    "s_6b340ae08e941b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a048bc-a478-75f3-9438-60a4c05c4b69",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6e4560b726945f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0490a-a52f-7070-a860-07dbad0a9acd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_9193f66071a055": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04805-2388-7f93-b6b0-ef205cafe5b3",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

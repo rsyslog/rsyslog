@@ -1,0 +1,27 @@
+doc/source/reference/parameters/omelasticsearch-tls-ciphersuites.rst
+  s_f3db7ab3045489::t_5c41751e28e72e 35
+  s_f3db7ab3045489::t_e7f79a25804f96 45-52
+doc/source/reference/parameters/omelasticsearch-tls-tlsversion.rst
+  s_f3db7ab3045489::t_e7f79a25804f96 51-58
+plugins/omelasticsearch/omelasticsearch.c
+  s_f3db7ab3045489::t_fe0e86bac3a552 258,825,2167-2170,2172,2174-2182,2185,2193,2196-2197,2199-2211
+doc/source/reference/parameters/omelasticsearch-tls-keyexchangegroups.rst
+  s_f3db7ab3045489::t_5c41751e28e72e 45
+  s_f3db7ab3045489::t_e7f79a25804f96 59-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f7259f9dcdd0c92904d73f25070daacc25cbde6d",
+  "prompts": {},
+  "sessions": {
+    "s_f3db7ab3045489": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f222f-8acf-7402-8e25-189e3450b231",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

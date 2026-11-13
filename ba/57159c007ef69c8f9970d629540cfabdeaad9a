@@ -1,0 +1,26 @@
+runtime/ratelimit.c
+  s_cf144905ab59ed::t_83ad03ea48dbcf 62,64,68,78,80,84
+m4/atomic_operations.m4
+  s_cf144905ab59ed::t_0ef4a8d2d04dd2 67-93
+configure.ac
+  s_cf144905ab59ed::t_9e41b27e85ffde 369
+runtime/atomic.h
+  s_cf144905ab59ed::t_d89a508088f57b 68-74,85-89,227-230,239-242,264-266
+  s_cf144905ab59ed::t_1b96a6a68ddf2c 267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "ba57159c007ef69c8f9970d629540cfabdeaad9a",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

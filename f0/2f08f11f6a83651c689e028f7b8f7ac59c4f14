@@ -1,0 +1,19 @@
+.github/workflows/ci_codestyle_check.yml
+  s_5e773934876cb4::t_92fd16c5cd2f2b 16-18,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f02f08f11f6a83651c689e028f7b8f7ac59c4f14",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+tests/Makefile.am
+  s_1088b5a9d7f155::t_801fb960a5c47f 2418-2427
+  s_1088b5a9d7f155::t_64ccc12a860718 38
+  s_1088b5a9d7f155::t_ac5c1c49bef511 1236
+  s_cf144905ab59ed::t_acaa3d66779bed 2428-2429
+doc/source/reference/parameters/imbeats-maxsessions.rst
+  s_1088b5a9d7f155::t_3fe870f492ffb3 39-40
+tests/unit/imbeats_seq_test.c
+  s_1088b5a9d7f155::t_801fb960a5c47f 1-35
+plugins/imbeats/imbeats.c
+  s_1088b5a9d7f155::t_a5b4d9868a426d 316,319,321-325,1422
+  s_1088b5a9d7f155::t_64ccc12a860718 317-318
+  s_1088b5a9d7f155::t_801fb960a5c47f 47,596
+  s_1088b5a9d7f155::t_1395476b1cf82e 13,320
+plugins/imbeats/Makefile.am
+  s_1088b5a9d7f155::t_801fb960a5c47f 3
+tests/imbeats-maxsessions-cap-warning.sh
+  s_1088b5a9d7f155::t_ac5c1c49bef511 1-25
+plugins/imbeats/seqnum.h
+  s_1088b5a9d7f155::t_64ccc12a860718 1-21
+  s_1088b5a9d7f155::t_801fb960a5c47f 22-30,33-36
+  s_1088b5a9d7f155::t_f03204bb322477 31-32
+plugins/imbeats/lj_parser.c
+  s_1088b5a9d7f155::t_a5b4d9868a426d 135-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d76d19c37c6d073c5b3652cc062c9b0a664d48a0",
+  "prompts": {},
+  "sessions": {
+    "s_1088b5a9d7f155": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f37fe-f8ed-72d2-a546-ba7db57a7708",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    },
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

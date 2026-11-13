@@ -1,0 +1,28 @@
+doc/ai/transactional_reload_stack_ledger.md
+  s_f2c089be484e12::t_80ec7f511a8b08 183-186,192,196,201-202,212
+  s_f2c089be484e12::t_f022b9d7e9a286 191,193-194,203-208,213-216
+  s_f2c089be484e12::t_230cb0053c95fb 4-7,132-136,146,148-151,153-179,187-190,199,209-211,282
+  s_f2c089be484e12::t_27c2dfd3d986b5 220-249,251-254,256-257,259-261,263,265-281
+  s_f2c089be484e12::t_216423358eac36 250,255,258,262,264
+  s_f2c089be484e12::t_dac02930284d41 9-13
+  s_f2c089be484e12::t_aa77c94b5bf931 90,289-290,473-476
+  s_f2c089be484e12::t_a699edc06ff9b8 8,147,152,180-182,195,197-198,200,217-218
+  s_f2c089be484e12::t_36184fea795d5e 102-105,492,494
+  s_f2c089be484e12::t_7cac216cf7702c 219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e5f86defd3d68c00734416f1c8e8a9617579dd75",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

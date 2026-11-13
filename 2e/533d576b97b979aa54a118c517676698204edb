@@ -1,0 +1,33 @@
+runtime/tcpsrv-fence.c
+  s_f2c089be484e12::t_41837afaccd49a 269-276
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_41837afaccd49a 430
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_42212f2381d78d 69,73-77
+tests/unit/tcpsrv_fence_test.c
+  s_f2c089be484e12::t_db4190be56113d 291-300,357
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_e1de8a00295179 1676-1680,1735-1738,1805-1808,1873-1876
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_42212f2381d78d 57-59
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_42212f2381d78d 295-300
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_fba8f4da31134f 2139-2140,2147-2148,2155-2156,2163-2164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2e533d576b97b979aa54a118c517676698204edb",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

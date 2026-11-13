@@ -1,0 +1,20 @@
+doc/source/configuration/modules/ommysql.rst
+  s_6224eda96fc0da::t_fc2a9a5c92b085 87-93,95-100,104-105,108-110
+  s_6224eda96fc0da::t_74df68a2aa2e01 94,101-103,106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "c5f470708d88268364b0bc5a111ea78d7c0d2390",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

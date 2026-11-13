@@ -1,0 +1,20 @@
+runtime/queue.c
+  s_a84ad1a36f7145::t_d2769dfd9240cc 4803,4805,4807-4808
+  s_a84ad1a36f7145::t_ea3e2a31616d25 4806
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c9fbcfeb98abd8da18571aa4aa4a385afaac37a9",
+  "prompts": {},
+  "sessions": {
+    "s_a84ad1a36f7145": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "34781d95-dea8-4bae-8586-cf3ef14f9291",
+        "model": "grok-4.6"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

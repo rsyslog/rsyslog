@@ -1,0 +1,25 @@
+grammar/rainerscript.c
+  s_6e4560b726945f::t_7d55a57de3561f 3718-3719,3729-3747
+tests/rscript-json-var-eval-semantics.sh
+  s_6e4560b726945f::t_9c30246f2597e6 59
+  s_6e4560b726945f::t_ab9a0b11fb87e4 6-7,10-11
+  s_6e4560b726945f::t_66bce099459bef 22
+  s_6e4560b726945f::t_1394a123438f85 39
+  s_6e4560b726945f::t_b930c2ff8f2469 58,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "774ba4a77e64e827c7f7245ccb42dae09108b2bf",
+  "prompts": {},
+  "sessions": {
+    "s_6e4560b726945f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0490a-a52f-7070-a860-07dbad0a9acd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

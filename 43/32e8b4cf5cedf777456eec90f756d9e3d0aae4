@@ -1,0 +1,23 @@
+.github/workflows/spellcheck.yml
+  s_c4e7938e7d7f5a::t_8da58667462ffa 17-20
+.github/workflows/python_style.yml
+  s_c4e7938e7d7f5a::t_5f9db64a585439 35-40
+.github/workflows/yaml_lint.yml
+  s_c4e7938e7d7f5a::t_5f9db64a585439 52-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4332e8b4cf5cedf777456eec90f756d9e3d0aae4",
+  "prompts": {},
+  "sessions": {
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

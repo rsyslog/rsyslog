@@ -1,0 +1,30 @@
+.github/scripts/debian_package_build.sh
+  s_2dc01c7e3d2940::t_81e1a0c8959f11 60-72,224-249,550
+  s_2dc01c7e3d2940::t_e1b99f8f611c7d 120-185,250,548
+  s_2dc01c7e3d2940::t_bf8a842503a802 398
+  s_2dc01c7e3d2940::t_6902a7d5f419e8 251
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_8f34f57e608600 558-559
+  s_2dc01c7e3d2940::t_4498ab2066bc96 41
+  s_2dc01c7e3d2940::t_81e1a0c8959f11 192-195
+  s_2dc01c7e3d2940::t_e1b99f8f611c7d 26,76,81,176,178-184,292,302
+.github/debian-daily-stable-13-policy.yml
+  s_2dc01c7e3d2940::t_81e1a0c8959f11 20-26
+  s_2dc01c7e3d2940::t_4498ab2066bc96 1-19,27-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5d676ccec98d30cced6a7ecc0d94480dc4c98522",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

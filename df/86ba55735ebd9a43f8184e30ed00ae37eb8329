@@ -1,0 +1,23 @@
+runtime/msg.c
+  s_143f3471fbe913::t_de940d9fdea86d 4360-4361,4363-4364
+  s_143f3471fbe913::t_fed0a9f4f2b42c 4385,4397-4398
+tests/template-topos-neg-underflow.sh
+  s_143f3471fbe913::t_272c7a293d4232 8,18-19
+  s_143f3471fbe913::t_a430979df382f6 9-11,20-21,28,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df86ba55735ebd9a43f8184e30ed00ae37eb8329",
+  "prompts": {},
+  "sessions": {
+    "s_143f3471fbe913": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10ff0-3b62-72b1-9d44-0dfe1c008a39",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

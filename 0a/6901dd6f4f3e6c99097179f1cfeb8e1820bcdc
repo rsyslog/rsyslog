@@ -1,0 +1,28 @@
+grammar/rainerscript.c
+  s_a180e4d81879e5::t_e1f302cedcda41 64,1806-1822,1835-1837,1841,1843,1857,1883-1887,1889-1890,2562-2568,2570-2575
+  s_a180e4d81879e5::t_1a0b99ef18c128 1858,2569,2577
+  s_a180e4d81879e5::t_f4b91db6a49277 1888,2524,2538,2540-2541,2549-2552,2557,2576,2578,2581
+tests/Makefile.am
+  s_a180e4d81879e5::t_2741f9e1506606 65-67,578
+tests/rscript-replace-result-limit.sh
+  s_a180e4d81879e5::t_51205da58362ba 6,35
+  s_a180e4d81879e5::t_925c7f429f8992 4-5
+  s_a180e4d81879e5::t_2741f9e1506606 1-3,7-10,13-21,23-33,36
+  s_a180e4d81879e5::t_7f3c73de3c6456 11-12,22,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0a6901dd6f4f3e6c99097179f1cfeb8e1820bcdc",
+  "prompts": {},
+  "sessions": {
+    "s_a180e4d81879e5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a124df-80cc-70b3-92d8-34867d469a52",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

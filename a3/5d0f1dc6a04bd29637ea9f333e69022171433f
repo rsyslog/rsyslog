@@ -1,0 +1,21 @@
+.github/workflows/doc_build.yml
+  s_c4e7938e7d7f5a::t_6de1acb502cccf 50-51
+.github/workflows/run_checks.yml
+  s_c4e7938e7d7f5a::t_6f7f699519ea6f 754
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a35d0f1dc6a04bd29637ea9f333e69022171433f",
+  "prompts": {},
+  "sessions": {
+    "s_c4e7938e7d7f5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1354e-c5e8-7bb0-b6ae-5df4a660ae72",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

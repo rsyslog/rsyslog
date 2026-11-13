@@ -1,0 +1,19 @@
+runtime/wti-capacity.c
+  s_f8a738e4bdfaee::t_a6bf04d92615dc 81-88,93,144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "603c3b531a8766c6b48fa04bed147a5afafd4b44",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+ChangeLog
+  s_de358a5d0a4803::t_1feb61159f17fc 7-8
+  s_de358a5d0a4803::t_34802f03cd63c4 17-20
+  s_de358a5d0a4803::t_e3dc8813d32f78 28-30
+  s_de358a5d0a4803::t_7fe9d8afdd67d0 40-44
+  s_de358a5d0a4803::t_8f6519d620f073 4-6,9-11,16,21,27,31-33
+  s_de358a5d0a4803::t_d5e4120dd67896 12-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8258e7f3f8e08e038ee260acef9381dc9c038c3c",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,39 @@
+tests/global-reloadonhup-imtcp-add-yaml.sh
+  s_f2c089be484e12::t_0ede767d93917e 28-33
+  s_f2c089be484e12::t_053b2630ac0168 19
+  s_f2c089be484e12::t_335598718589e1 91,106-109,202
+  s_f2c089be484e12::t_32a4c03231d90d 11
+  s_f2c089be484e12::t_bf6eff84dae5b9 10,12-14,26-27,95,104-105,110-123,137,200-201,203-205
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_ca5de3298c6d4d 2318-2348,2368-2371,2387-2390,2395-2398,2409-2412,2422-2432,2436-2439
+tests/global-reloadonhup-imtcp-add-rainerscript.sh
+  s_f2c089be484e12::t_bf6eff84dae5b9 10,12-14,25,72,78-89,94,149-150,152-154
+  s_f2c089be484e12::t_335598718589e1 67,74-75,77,151
+  s_f2c089be484e12::t_32a4c03231d90d 11
+  s_f2c089be484e12::t_9c1b1392bd2df6 76
+  s_b3a84b787ce0a4::t_584aa3381e9ba3 73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f261c651ee60ea1ce9bfbb0c1bb60689f8bf6ec",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

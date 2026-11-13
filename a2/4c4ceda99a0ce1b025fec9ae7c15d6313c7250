@@ -1,0 +1,140 @@
+tests/local-queue-s4-output-tcp-fallback.sh
+  s_142ee1fa291d22::t_96002a7df147fd 1-45
+tests/local-queue-s4-output-es.sh
+  s_142ee1fa291d22::t_b7a3472caed034 1-87,89-150
+  s_142ee1fa291d22::t_501eb28ce69793 88
+tests/local-queue-s4-direct-main.sh
+  s_142ee1fa291d22::t_851932cc47ca2b 1-6
+doc/ai/designs/local-queue-implementation-plan.md
+  s_142ee1fa291d22::t_9d2b64be277947 11
+  s_142ee1fa291d22::t_a6bccf6b406069 400-407,422-429,437-438
+tests/local-queue-s4-graph.sh
+  s_142ee1fa291d22::t_4830a121cc53d3 1-11,13-15,25-28,30-37,39-50,52-59,65-83
+  s_142ee1fa291d22::t_f760a25f8d2baa 12
+  s_142ee1fa291d22::t_89759dbb4d0c5e 16-17,20-24,38,51
+  s_142ee1fa291d22::t_851932cc47ca2b 18-19,29
+  s_142ee1fa291d22::t_0dd09cf4088fb0 60-64
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_0d5e2880142409 666-714,723-725
+  s_142ee1fa291d22::t_366779dd893d86 715-722
+  s_142ee1fa291d22::t_8815d4cda0d2d4 726-905
+tests/Makefile.am
+  s_142ee1fa291d22::t_12c5457db0daa8 194
+  s_142ee1fa291d22::t_b2cfaf3fddb7c0 192-193,195-196
+  s_142ee1fa291d22::t_fc481c78dcf534 177-178,197,200
+  s_142ee1fa291d22::t_89759dbb4d0c5e 198
+  s_142ee1fa291d22::t_851932cc47ca2b 199
+  s_142ee1fa291d22::t_5f019c7c006a25 182-191
+tools/omfwd.c
+  s_142ee1fa291d22::t_5fbb328142d15c 1721,1862-1864,2927-2930,2933
+  s_142ee1fa291d22::t_646e24858f322a 1971,2094
+  s_142ee1fa291d22::t_d955efee87a2c3 2938
+  s_142ee1fa291d22::t_c983edca43e5d8 2931-2932,2934-2935
+  s_142ee1fa291d22::t_e6ecdef18cc05f 1693,1701-1707,1769,2081-2082
+tests/minitcpsrvr.c
+  s_142ee1fa291d22::t_c983edca43e5d8 39
+benchmarks/queue-contention/compare.py
+  s_142ee1fa291d22::t_c18143014053f0 26,173,239
+  s_142ee1fa291d22::t_01dcc4f02db1e7 51-52
+runtime/rsconf.c
+  s_142ee1fa291d22::t_9cba47d50ff69e 488
+  s_142ee1fa291d22::t_3650ba1f8c6059 1282
+doc/ai/module_map.yaml
+  s_142ee1fa291d22::t_9d2b64be277947 42-58
+  s_142ee1fa291d22::t_3aec3550d618c4 33,59-61,68-80,83-88
+doc/ai/designs/local-queue-frontends.md
+  s_142ee1fa291d22::t_9d2b64be277947 11,17,30-34,40
+  s_142ee1fa291d22::t_a25db8deba2d3a 41,824-835,843-848
+tests/local-queue-s4-output-tcp-recovery.sh
+  s_142ee1fa291d22::t_96002a7df147fd 1-49
+runtime/queue_local.h
+  s_142ee1fa291d22::t_732c911b27df3e 69
+  s_142ee1fa291d22::t_4f5ff8133a0bcc 32,68,76,83-89
+tests/local-queue-s4-config.sh
+  s_142ee1fa291d22::t_fe64e3366c7824 19-20
+  s_142ee1fa291d22::t_84b04b73f70fe9 1-18,21-30,32-56
+  s_142ee1fa291d22::t_fc481c78dcf534 31
+runtime/ruleset.c
+  s_142ee1fa291d22::t_63308794f71009 929-981,985-1059,1083-1101,1123,1144-1147,1160-1161,1164-1167,1175,1177-1190,1200-1201,1205-1206,1213-1214,1227,1278
+  s_142ee1fa291d22::t_59d410448740b3 982-984,1060-1082,1103-1106,1124,1149-1152
+  s_142ee1fa291d22::t_00628d725afa1e 1102,1107,1116,1118-1121,1148,1153-1159,1228-1230,1276-1277,1279-1287,1289
+runtime/queue.c
+  s_142ee1fa291d22::t_59d410448740b3 2668-2670,2682-2687
+  s_142ee1fa291d22::t_63308794f71009 225,250,345,596-619,746,750,864-865,968,1330,1923-1926,1941-1942,1949,2665-2667,2671-2681,2688-2710,2718,2729,2741,2757,3332,3395,3717,3723,4264,4271,4275,4281,4325,4626-4627,4927,4941,4953,5150,5304,5331,5406
+  s_142ee1fa291d22::t_42b8b41496c2a0 2711-2717,2719-2728,2730-2740,2742-2756,2758-2765,2769-2770,3252-3253,3264-3267,3272,3290,3331,3333-3341,3363,3377,3380-3381,3428,3433-3434,3449-3450,3718-3722,4237,4262-4263,4265-4270,4272-4274,4276-4279,4282,4292-4295,4298,4311,4322-4324,4326-4327,4378-4380,4609,4623-4625,4628-4630,4920-4926,4928-4940,4942-4945,4950-4952,4954,4989,4993,5028,5138-5149,5152-5158,5167,5255,5273,5279,5332-5337,5396-5397,5401-5405,5407-5413,5845-5846,5855-5857,5860-5863,5867,5888,5937-5938
+plugins/omelasticsearch/omelasticsearch.c
+  s_142ee1fa291d22::t_5fbb328142d15c 2923-2940
+  s_142ee1fa291d22::t_1a05469ecb82ad 2941-2948
+tests/local-queue-s4-global-boundary.sh
+  s_142ee1fa291d22::t_89759dbb4d0c5e 1-6
+tests/local-queue-s4-config-yaml.sh
+  s_142ee1fa291d22::t_84b04b73f70fe9 1-4
+tests/local-queue-s4-shutdown.sh
+  s_142ee1fa291d22::t_be351a807233f4 1-22,29-65,69,73-74
+  s_142ee1fa291d22::t_1e0f8aa8ade636 23-28,66-68,70-72
+tests/local-queue-s4-output-tcp.sh
+  s_142ee1fa291d22::t_96002a7df147fd 1-72
+runtime/rsconf.h
+  s_142ee1fa291d22::t_732c911b27df3e 279
+runtime/queue.h
+  s_142ee1fa291d22::t_63308794f71009 109
+  s_142ee1fa291d22::t_59d410448740b3 110-111
+  s_142ee1fa291d22::t_9cba47d50ff69e 104-108,323
+  s_142ee1fa291d22::t_88be64fd830a4a 103,321-322
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_365d74f2264d86 2-3,190,192,195
+  s_142ee1fa291d22::t_0944b14b105d3a 89-90
+  s_142ee1fa291d22::t_fe64e3366c7824 125
+  s_142ee1fa291d22::t_b27de6bc38650b 107-115
+benchmarks/queue-contention/trial-multi.sh
+  s_142ee1fa291d22::t_c18143014053f0 23-27,135-152,165,180-187
+runtime/ruleset.h
+  s_142ee1fa291d22::t_732c911b27df3e 102-103
+  s_142ee1fa291d22::t_a1bf41f64420b6 101
+runtime/queue_local.c
+  s_142ee1fa291d22::t_05694cdb184279 1,87,342-344,351-352,356-358,439,506-507,759,785-786,988,994-995,1045-1065,1163-1168,1173,1216,1266-1287,1289-1291,1293,1302,1304,1430-1440,1490,1497-1501,1541-1544,1549-1554,1573-1592
+runtime/queue_local_stats.c
+  s_142ee1fa291d22::t_44278f0aafbdbb 35-43,179-187,310-318
+runtime/wti.c
+  s_142ee1fa291d22::t_39f919d6ecf17a 407,537-538,540,578
+tests/local-queue-be-force-term-actions.sh
+  s_142ee1fa291d22::t_5209c1ed148ecb 134-135
+tests/local-queue-s4-output-es-partial.sh
+  s_142ee1fa291d22::t_3eacd33a7dc0f6 1-6
+tests/local-queue-s5-graph-shutdown.sh
+  s_142ee1fa291d22::t_edea56d68b65d3 1-100
+tests/local-queue-s5-persistence.sh
+  s_142ee1fa291d22::t_29f4392318f72e 1-124
+tests/local-queue-s5-save-disabled.sh
+  s_142ee1fa291d22::t_bc9366c5e5f305 1-6
+tests/local-queue-s5-segmented-graph-shutdown.sh
+  s_142ee1fa291d22::t_869d91a76cacc7 1-4
+tests/local-queue-s5-segmented-persistence.sh
+  s_142ee1fa291d22::t_4cc72f2b924ff3 1-5
+tests/local-queue-s5-segmented-save-disabled.sh
+  s_142ee1fa291d22::t_d213450b2b3ef8 1-6
+tests/local-queue-s5-segmented-spill.sh
+  s_142ee1fa291d22::t_529a9a57efcd23 1-4
+tests/local-queue-s5-segmented-store-failure.sh
+  s_142ee1fa291d22::t_2cb1966f85d657 1-4
+tests/local-queue-s5-spill.sh
+  s_142ee1fa291d22::t_cfef00c9b6166d 1-94
+tests/local-queue-s5-store-failure.sh
+  s_142ee1fa291d22::t_1b9f180774e9af 1-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a24c4ceda99a0ce1b025fec9ae7c15d6313c7250",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

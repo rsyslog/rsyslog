@@ -1,0 +1,21 @@
+doc/source/concepts/queues.rst
+  s_5e773934876cb4::t_c28847aff9571b 539-563
+doc/source/rainerscript/queue_parameters.rst
+  s_5e773934876cb4::t_6bca9b4d91cbdc 791-819
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "126e9255ed3777805d0c0151ce7779b1050b21d0",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

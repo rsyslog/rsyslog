@@ -1,0 +1,30 @@
+tests/Makefile.am
+  s_12493d1d1488ca::t_081286a60ba300 1286,3594-3596
+  s_12493d1d1488ca::t_fe4a6331e7dfc0 3597
+tests/mysql-reconnect-timeout.sh
+  s_12493d1d1488ca::t_14a40d334f2972 7-12,57-65
+  s_12493d1d1488ca::t_8c549c90336113 3-6
+  s_12493d1d1488ca::t_081286a60ba300 1-2,13-56,66-92
+plugins/ommysql/ommysql.c
+  s_12493d1d1488ca::t_8c549c90336113 55,267,300-302,308-311,356,359
+  s_12493d1d1488ca::t_081286a60ba300 51-54,56-57,299,307,313
+doc/source/configuration/modules/ommysql.rst
+  s_12493d1d1488ca::t_8c549c90336113 107,109-113
+  s_12493d1d1488ca::t_081286a60ba300 95-99,106,108,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e00db109b26f4cfb29d2312e7b1502058adffbf3",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,18 @@
+plugins/imuxsock/imuxsock.c
+  h_95716f3de0caf5 982
+tests/Makefile.am
+  h_95716f3de0caf5 698
+tests/imuxsock-pri-digit-limit.sh
+  h_95716f3de0caf5 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0e524c501a4c6e536807596a87848be163fba7b",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

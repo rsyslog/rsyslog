@@ -1,0 +1,26 @@
+runtime/msg.c
+  s_6d266762f4c57a::t_721873146d604a 2434-2467
+  s_6d266762f4c57a::t_5ee3e1fde6200e 3759,3762,3765
+runtime/ratelimit.c
+  s_6d266762f4c57a::t_721873146d604a 2613,2616,2620-2621,2623,2671,2674,2677-2678,2682-2683
+runtime/msg.h
+  s_6d266762f4c57a::t_721873146d604a 283
+doc/ai/module_map.yaml
+  s_6d266762f4c57a::t_2a4276dae2d066 40-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fd7af0bc36780e12b39261601f7a0964ee8e62d8",
+  "prompts": {},
+  "sessions": {
+    "s_6d266762f4c57a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1229-1f28-7223-8f9d-3dabc84a84b8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

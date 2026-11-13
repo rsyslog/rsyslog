@@ -1,0 +1,26 @@
+plugins/omjournal/omjournal.c
+  s_12493d1d1488ca::t_61cc389bdf3ccb 255,302
+  s_12493d1d1488ca::t_ffc80032adf82e 256,303-304
+doc/source/reference/parameters/omjournal-template.rst
+  s_12493d1d1488ca::t_068a40ae591bbd 36-39,41-43
+  s_12493d1d1488ca::t_61cc389bdf3ccb 6-9
+tests/omjournal-basic-no-template.sh
+  s_12493d1d1488ca::t_068a40ae591bbd 3-5,10,22-23,26
+  s_12493d1d1488ca::t_ca78b664142ef9 24-25,27-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5f795083787c66ad1a971fc1dd3d525df71f341c",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

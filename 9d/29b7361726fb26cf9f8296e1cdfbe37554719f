@@ -1,0 +1,24 @@
+tests/imptcp-bind-failure.sh
+  s_5e773934876cb4::t_a50a2aed2917a1 58
+  s_5e773934876cb4::t_c4bd86b2e330e5 49-57,59-64
+  s_5e773934876cb4::t_9c8ce7bd592625 100-101
+  s_5e773934876cb4::t_ec0eafacfe304b 11-12,32
+tests/omfwd-tls-gtls-module-files-mtls.sh
+  s_5e773934876cb4::t_9c8ce7bd592625 83-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d29b7361726fb26cf9f8296e1cdfbe37554719f",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

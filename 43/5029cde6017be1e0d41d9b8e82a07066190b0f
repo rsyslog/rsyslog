@@ -1,0 +1,19 @@
+tests/mmnormalize-turbo-hup-tsan.sh
+  s_e81486b0024d82::t_0df4660a437476 86-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "435029cde6017be1e0d41d9b8e82a07066190b0f",
+  "prompts": {},
+  "sessions": {
+    "s_e81486b0024d82": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "fb460e0b-d7c6-4951-ad2a-8bf23e8c4d24",
+        "model": "unknown"
+      },
+      "human_author": "Billie Alsup <balsup@cisco.com>"
+    }
+  }
+}

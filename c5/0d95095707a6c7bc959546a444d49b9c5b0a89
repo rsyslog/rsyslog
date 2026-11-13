@@ -1,0 +1,19 @@
+runtime/regexp.c
+  s_f67b54b127aca7::t_534f4b290f7f7e 248-251,257,269,279
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "c50d95095707a6c7bc959546a444d49b9c5b0a89",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

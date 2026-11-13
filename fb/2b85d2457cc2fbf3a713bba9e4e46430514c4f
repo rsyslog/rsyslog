@@ -1,0 +1,36 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_88fd3775d048cc 317-322
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_6d5c99d8d809d3 257-270,1031-1036,1039-1041,1043-1045,1047,1049-1051
+  s_f2c089be484e12::t_9691708803df6c 951-953,970-976,1003,1008-1026,1028-1030,1060,1063
+  s_f2c089be484e12::t_0fe6c1cb31bd8d 1037-1038,1042,1046,1048,1052-1059,1061-1062
+  s_f2c089be484e12::t_5ed4db4e888791 967,978,997,1027
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_7109c8682b4404 39-40,42-44,51,1342-1359,1361-1373,1375-1377,1381-1398,1434,1461-1462,1464-1465
+  s_f2c089be484e12::t_f7dc6c4e208983 1317-1341,1399-1405,1409-1432,1438,1440,1449-1452,1454-1459,1497-1498,1500-1514
+  s_f2c089be484e12::t_c6f83e2f52e0b6 1406-1408,1460
+  s_f2c089be484e12::t_a3349def3f5896 1570-1573,1736-1737,1745-1749,1840
+  s_f2c089be484e12::t_a093a140650458 41,1360,1374,1378-1380,1463
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_88fd3775d048cc 214-217,223,225,228-236
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_88fd3775d048cc 226-229,234,236,239-247
+doc/source/reference/parameters/imtcp-ratelimit-name.rst
+  s_f2c089be484e12::t_88fd3775d048cc 38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "fb2b85d2457cc2fbf3a713bba9e4e46430514c4f",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+contrib/AGENTS.md
+  s_5e773934876cb4::t_3de2c5391f8fd8 19-25
+contrib/imbatchreport/imbatchreport.c
+  s_5e773934876cb4::t_5b885b209a76f7 473-475,477
+tests/Makefile.am
+  s_5e773934876cb4::t_24b4c48a283175 2554,2573-2574,2831,4232-4234
+tests/imbatchreport-multiple-inputs.sh
+  s_5e773934876cb4::t_80ebd63fc56ee9 1-67
+tests/yaml-imbatchreport-multiple-inputs-yamlonly.sh
+  s_5e773934876cb4::t_e0a2bff06ec9a5 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89ce550805654626b8399f37dfbb90d43042313c",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

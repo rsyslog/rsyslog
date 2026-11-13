@@ -1,0 +1,45 @@
+doc/source/_ext/rsyslog_lexer.py
+  s_12493d1d1488ca::t_f6d8ff6e805ddb 66
+tests/Makefile.am
+  s_12493d1d1488ca::t_f6d8ff6e805ddb 75-77,403
+runtime/translate.c
+  s_12493d1d1488ca::t_f6d8ff6e805ddb 908-909
+grammar/rainerscript.c
+  s_12493d1d1488ca::t_f6d8ff6e805ddb 6013,7014-7015
+  s_12493d1d1488ca::t_5c0e5b400ee5a5 4190-4200
+  s_12493d1d1488ca::t_3242b818c6a87d 3849-3865,3898-3900
+  s_12493d1d1488ca::t_8710cf69959f4f 33,212-213
+  s_12493d1d1488ca::t_f044016af7a194 214,4995-5000
+  s_12493d1d1488ca::t_70d1ce6b02aa17 4642,4825
+tests/yaml-statements-complex.sh
+  s_12493d1d1488ca::t_80cc20247fe715 3-4,31
+grammar/lexer.l
+  s_12493d1d1488ca::t_3d621345195f61 372
+grammar/grammar.y
+  s_12493d1d1488ca::t_3d621345195f61 112,124,235
+tests/config-translate-rs-script-expressions.sh
+  s_12493d1d1488ca::t_fe65f0f26ebd32 3-4,8,45-47,81-83
+tests/rscript_fnmatch.sh
+  s_12493d1d1488ca::t_3b0d92bfb0d0a1 43-45
+  s_12493d1d1488ca::t_9a4d775c832953 9,26,41,51
+  s_12493d1d1488ca::t_80cc20247fe715 1-8,10-25,27-40,42,46-50,52-53
+doc/source/rainerscript/expressions.rst
+  s_12493d1d1488ca::t_9a4d775c832953 7-8,13-14,49-51
+  s_12493d1d1488ca::t_f6d8ff6e805ddb 6,9-12,15-17,27,40-48,52-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dbc4d8f3ccd410742247a677c31e3dd6d8bf7c37",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

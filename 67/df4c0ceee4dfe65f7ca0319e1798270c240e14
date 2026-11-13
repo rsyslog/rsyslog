@@ -1,0 +1,37 @@
+devtools/release/package-feature-overlay.py
+  s_2dc01c7e3d2940::t_bf2bb4909f7632 88-89,91
+devtools/release/alpine-daily-stable.sh
+  s_2dc01c7e3d2940::t_438968b8dd5a25 198,213-223,237
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_4a62ce9458a99c 585-591,604
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_4a62ce9458a99c 617-625,641
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_4a62ce9458a99c 639-645,661
+  s_2dc01c7e3d2940::t_6df18f00b79ad3 638
+.github/DAILY_STABLE_PACKAGE_FEATURES.md
+  s_2dc01c7e3d2940::t_bf2bb4909f7632 11-15,22,24,26-29,31-35
+  s_2dc01c7e3d2940::t_94eb4741f7f8f6 25
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_fd8e7ebfc9f6ae 673-678,695
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_fd8e7ebfc9f6ae 672-677,694
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_4a62ce9458a99c 616-624,640
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "67df4c0ceee4dfe65f7ca0319e1798270c240e14",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

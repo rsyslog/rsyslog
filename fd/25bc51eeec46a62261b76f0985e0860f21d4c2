@@ -1,0 +1,19 @@
+tools/omfile.c
+  s_142ee1fa291d22::t_4457d63f1f2377 1651-1652,1666-1667,1681-1682,1688
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fd25bc51eeec46a62261b76f0985e0860f21d4c2",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
