@@ -749,7 +749,8 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     }
                 }
             }
-            long long idleSeconds = (long long)inst->timeout - (long long)difftime(now, inst->dtlsClients[i]->lastActivityTime);
+            long long idleSeconds =
+                (long long)inst->timeout - (long long)difftime(now, inst->dtlsClients[i]->lastActivityTime);
             long long idleMs = idleSeconds <= 0 ? 0 : idleSeconds * 1000;
             int idleDelay = idleMs > INT_MAX ? INT_MAX : (int)idleMs;
             if (pollTimeout < 0 || idleDelay < pollTimeout) {
