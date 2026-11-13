@@ -1,6 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # A client that stops after the DTLS cookie exchange must not stall the listener.
+# Poll for honest-client delivery for at most 20 seconds (200 x 0.1 seconds).
+# This permits CI scheduling and handshake delays while staying below the
+# stalled session's 60-second timeout, so expiry cannot satisfy the oracle.
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=1
@@ -11,7 +14,7 @@ global(defaultNetstreamDriverCAFile="'$srcdir'/tls-certs/ca.pem"
        defaultNetstreamDriverCertFile="'$srcdir'/tls-certs/cert.pem"
        defaultNetstreamDriverKeyFile="'$srcdir'/tls-certs/key.pem")
 module(load="../plugins/imdtls/.libs/imdtls")
-input(type="imdtls" port="0" listenPortFileName="'$port_file'" timeout="15")
+input(type="imdtls" port="0" listenPortFileName="'$port_file'" timeout="60")
 *.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
@@ -61,7 +64,10 @@ grep -q '^FORWARD 2 ' "$RSYSLOG_DYNNAME.proxy.log" || error_exit 1
     -x"$srcdir/tls-certs/ca.pem" -Z"$srcdir/tls-certs/cert.pem" \
     -z"$srcdir/tls-certs/key.pem" -L0 > "$RSYSLOG_DYNNAME.honest.log" 2>&1 &
 honest_pid=$!
-sleep 7
+for ((attempt = 0; attempt < 200; ++attempt)); do
+    grep -q 'msgnum:00000000' "$RSYSLOG_OUT_LOG" 2>/dev/null && break
+    sleep 0.1
+done
 content_check 'msgnum:00000000'
 
 cleanup_helpers

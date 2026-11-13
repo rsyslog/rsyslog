@@ -1,6 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # An idle DTLS client must not prevent a second client from being served.
+# Poll for each delivery for at most 20 seconds (200 x 0.1 seconds), allowing
+# loaded CI runners to complete handshakes and writes. The stalled session's
+# 60-second timeout is longer than both delivery windows combined, so a second
+# delivery cannot be explained by recovery after that session expires.
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=2
@@ -16,7 +20,7 @@ global(defaultNetstreamDriverCAFile="'$srcdir'/tls-certs/ca.pem"
        defaultNetstreamDriverCertFile="'$srcdir'/tls-certs/cert.pem"
        defaultNetstreamDriverKeyFile="'$srcdir'/tls-certs/key.pem")
 module(load="../plugins/imdtls/.libs/imdtls")
-input(type="imdtls" port="0" listenPortFileName="'$port_file'" timeout="15")
+input(type="imdtls" port="0" listenPortFileName="'$port_file'" timeout="60")
 *.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
@@ -49,7 +53,6 @@ openssl s_client -dtls1_2 -connect "127.0.0.1:$port" -quiet \
     -CAfile "$srcdir/tls-certs/ca.pem" < "$first_input" > "$RSYSLOG_DYNNAME.first-client.log" 2>&1 &
 first_client_pid=$!
 exec {first_fd}> "$first_input"
-sleep 1
 printf '<13>Nov 13 09:00:00 firsthost first-message\n' >&"$first_fd"
 
 for ((attempt = 0; attempt < 200; ++attempt)); do
@@ -63,10 +66,12 @@ openssl s_client -dtls1_2 -connect "127.0.0.1:$port" -quiet \
     -CAfile "$srcdir/tls-certs/ca.pem" < "$second_input" > "$RSYSLOG_DYNNAME.second-client.log" 2>&1 &
 second_client_pid=$!
 exec {second_fd}> "$second_input"
-sleep 1
 printf '<13>Nov 13 09:00:00 secondhost second-message\n' >&"$second_fd"
 
-sleep 7
+for ((attempt = 0; attempt < 200; ++attempt)); do
+    grep -q 'second-message' "$RSYSLOG_OUT_LOG" 2>/dev/null && break
+    sleep 0.1
+done
 content_check 'second-message'
 cleanup_clients
 shutdown_when_empty
