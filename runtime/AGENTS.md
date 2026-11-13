@@ -62,6 +62,12 @@ collection, and process orchestration).
   positive offsets on 1 January) and the 23:59:59 end-of-day boundary is
   covered by `tests/timereported-dateordinal-utcoffset.sh`.
 
+- `nsd_gtls.c` PKCS#11 URIs for the CA, certificate and key are covered by
+  `tests/omfwd-tls-gtls-pkcs11-mtls.sh` (mutual TLS from a SoftHSM token),
+  `tests/yaml-omfwd-tls-gtls-pkcs11-mtls.sh` (the same through YAML) and
+  `tests/omfwd-tls-gtls-pkcs11-error-key.sh` (missing key, PIN masked in the
+  error). All need SoftHSM, `pkcs11-tool` and GnuTLS `p11tool`.
+
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in
   files that manage shared state (queues, network sessions, statistics).

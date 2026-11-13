@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 #if GNUTLS_VERSION_NUMBER <= 0x020b00
@@ -258,10 +259,148 @@ finalize_it:
  * need to load certificates into our private store.
  * rgerhards, 2008-05-26
  */
+/**
+ * @brief Mask PKCS#11 PIN attribute values so a TLS object reference can be
+ * logged; the same attributes the ossl driver redacts.
+ * @param input Configured path or URI, or NULL.
+ * @param sanitized Receives an allocated masked copy when one was needed; the
+ * caller frees it.
+ * @return @p input itself when it holds no PIN, otherwise the masked copy.
+ */
+static const char *gtlsLogSafe(const uchar *const input, char **const sanitized) {
+    static const char *const pinKeys[] = {"pin-value=", "pkcs11-module-token-pin="};
+    const char *const in = (const char *)input;
+
+    *sanitized = NULL;
+    if (in == NULL || (strstr(in, pinKeys[0]) == NULL && strstr(in, pinKeys[1]) == NULL)) {
+        return in;
+    }
+    if ((*sanitized = strdup(in)) == NULL) {
+        return "[redacted]";
+    }
+    for (size_t k = 0; k < sizeof(pinKeys) / sizeof(pinKeys[0]); ++k) {
+        char *pos = *sanitized;
+        while ((pos = strstr(pos, pinKeys[k])) != NULL) {
+            pos += strlen(pinKeys[k]);
+            while (*pos != '\0' && *pos != ';' && *pos != '&') {
+                *pos++ = '*';
+            }
+        }
+    }
+    return *sanitized;
+}
+
+/**
+ * @brief Check whether a TLS object reference is a strict PKCS#11 URI.
+ * @param ref Configured certificate or key reference, or NULL.
+ * @return Non-zero when @p ref begins with ``pkcs11:``.
+ */
+static int gtlsIsPkcs11Uri(const uchar *const ref) {
+    return ref != NULL && strncmp((const char *)ref, "pkcs11:", sizeof("pkcs11:") - 1) == 0;
+}
+
+/**
+ * @brief Load our certificate chain from a PEM file, or our end-entity
+ * certificate from a ``pkcs11:`` URI.
+ */
+static rsRetVal gtlsLoadOurCert(nsd_gtls_t *const pThis, const uchar *const certFile) {
+    DEFiRet;
+    int gnuRet = 0;
+    gnutls_datum_t data = {NULL, 0};
+
+    if (gtlsIsPkcs11Uri(certFile)) {
+#ifdef GTLS_HAVE_PKCS11_URI
+        CHKgnutls(gnutls_x509_crt_init(&pThis->pOurCerts[0]));
+        pThis->nOurCerts = 1;
+        pThis->bOurCertIsInit = 1;
+        CHKgnutls(gnutls_x509_crt_import_url(pThis->pOurCerts[0], (const char *)certFile, 0));
+#else
+        char *safe;
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: certificate '%s' is a PKCS#11 URI, but this GnuTLS build cannot load PKCS#11 objects",
+                 gtlsLogSafe(certFile, &safe));
+        free(safe);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+#endif
+    } else {
+        CHKiRet(readFile(certFile, &data));
+        pThis->nOurCerts = sizeof(pThis->pOurCerts) / sizeof(gnutls_x509_crt_t);
+        gnuRet = gnutls_x509_crt_list_import(pThis->pOurCerts, &pThis->nOurCerts, &data, GNUTLS_X509_FMT_PEM,
+                                             GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+        if (gnuRet < 0) {
+            ABORTgnutls;
+        }
+        pThis->bOurCertIsInit = 1;
+    }
+
+finalize_it:
+    free(data.data);
+    RETiRet;
+}
+
+/**
+ * @brief Load our private key from a PEM file, or as a handle on a
+ * ``pkcs11:`` URI whose key material never leaves the token.
+ */
+static rsRetVal gtlsLoadOurKey(nsd_gtls_t *const pThis, const uchar *const keyFile) {
+    DEFiRet;
+    int gnuRet = 0;
+    gnutls_datum_t data = {NULL, 0};
+
+    if (gtlsIsPkcs11Uri(keyFile)) {
+#ifdef GTLS_HAVE_PKCS11_URI
+        CHKgnutls(gnutls_pkcs11_privkey_init(&pThis->ourP11Key));
+        pThis->bOurKeyIsP11 = 1;
+        pThis->bOurKeyIsInit = 1;
+        CHKgnutls(gnutls_pkcs11_privkey_import_url(pThis->ourP11Key, (const char *)keyFile, 0));
+#else
+        char *safe;
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: key '%s' is a PKCS#11 URI, but this GnuTLS build cannot load PKCS#11 objects",
+                 gtlsLogSafe(keyFile, &safe));
+        free(safe);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+#endif
+    } else {
+        CHKiRet(readFile(keyFile, &data));
+        CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
+        pThis->bOurKeyIsInit = 1;
+        CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
+    }
+
+finalize_it:
+    free(data.data);
+    RETiRet;
+}
+
+/**
+ * @brief Release our certificate chain and private key, whichever form they
+ * were loaded in.
+ */
+static void gtlsFreeOurCertKey(nsd_gtls_t *const pThis) {
+    if (pThis->bOurCertIsInit) {
+        for (unsigned i = 0; i < pThis->nOurCerts; ++i) {
+            gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
+        }
+        pThis->bOurCertIsInit = 0;
+    }
+    if (pThis->bOurKeyIsInit) {
+#ifdef GTLS_HAVE_PKCS11_URI
+        if (pThis->bOurKeyIsP11) {
+            gnutls_pkcs11_privkey_deinit(pThis->ourP11Key);
+        } else {
+            gnutls_x509_privkey_deinit(pThis->ourKey);
+        }
+#else
+        gnutls_x509_privkey_deinit(pThis->ourKey);
+#endif
+        pThis->bOurKeyIsInit = 0;
+    }
+    pThis->bOurKeyIsP11 = 0;
+}
+
 static rsRetVal gtlsLoadOurCertKey(nsd_gtls_t *pThis) {
     DEFiRet;
-    int gnuRet;
-    gnutls_datum_t data = {NULL, 0};
     const uchar *keyFile;
     const uchar *certFile;
 
@@ -276,30 +415,17 @@ static rsRetVal gtlsLoadOurCertKey(nsd_gtls_t *pThis) {
          * may be well acceptable. In other cases, we will see some
          * more error messages down the road. -- rgerhards, 2008-07-02
          */
+        char *safeCert;
+        char *safeKey;
         dbgprintf("gtlsLoadOurCertKey our certificate is not set, file name values are cert: '%s', key: '%s'\n",
-                  certFile, keyFile);
+                  gtlsLogSafe(certFile, &safeCert), gtlsLogSafe(keyFile, &safeKey));
+        free(safeCert);
+        free(safeKey);
         ABORT_FINALIZE(RS_RET_CERTLESS);
     }
 
-    /* try load certificate */
-    CHKiRet(readFile(certFile, &data));
-    pThis->nOurCerts = sizeof(pThis->pOurCerts) / sizeof(gnutls_x509_crt_t);
-    gnuRet = gnutls_x509_crt_list_import(pThis->pOurCerts, &pThis->nOurCerts, &data, GNUTLS_X509_FMT_PEM,
-                                         GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
-    if (gnuRet < 0) {
-        ABORTgnutls;
-    }
-    pThis->bOurCertIsInit = 1;
-    free(data.data);
-    data.data = NULL;
-
-    /* try load private key */
-    CHKiRet(readFile(keyFile, &data));
-    CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
-    pThis->bOurKeyIsInit = 1;
-    CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
-    free(data.data);
-
+    CHKiRet(gtlsLoadOurCert(pThis, certFile));
+    CHKiRet(gtlsLoadOurKey(pThis, keyFile));
 
 finalize_it:
     if (iRet == RS_RET_CERTLESS) {
@@ -308,19 +434,14 @@ finalize_it:
         pThis->bOurKeyIsInit = 0;
     } else if (iRet != RS_RET_OK) {
         dbgprintf("gtlsLoadOurCertKey error exit\n");
-        if (data.data != NULL) free(data.data);
-        if (pThis->bOurCertIsInit) {
-            for (unsigned i = 0; i < pThis->nOurCerts; ++i) {
-                gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
-            }
-            pThis->bOurCertIsInit = 0;
-        }
-        if (pThis->bOurKeyIsInit) {
-            gnutls_x509_privkey_deinit(pThis->ourKey);
-            pThis->bOurKeyIsInit = 0;
-        }
+        gtlsFreeOurCertKey(pThis);
     } else {
-        dbgprintf("gtlsLoadOurCertKey Successfully Loaded cert '%s' and key: '%s'\n", certFile, keyFile);
+        char *safeCert;
+        char *safeKey;
+        dbgprintf("gtlsLoadOurCertKey Successfully Loaded cert '%s' and key: '%s'\n", gtlsLogSafe(certFile, &safeCert),
+                  gtlsLogSafe(keyFile, &safeKey));
+        free(safeCert);
+        free(safeKey);
     }
     RETiRet;
 }
@@ -359,7 +480,22 @@ static int gtlsClientCertCallback(gnutls_session_t session,
 #endif
     st->ncerts = pThis->nOurCerts;
     st->cert.x509 = pThis->pOurCerts;
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+    #ifdef GTLS_HAVE_PKCS11_URI
+    if (pThis->bOurKeyIsP11) {
+        st->key_type = GNUTLS_PRIVKEY_PKCS11;
+        st->key.pkcs11 = pThis->ourP11Key;
+    } else {
+        st->key_type = GNUTLS_PRIVKEY_X509;
+        st->key.x509 = pThis->ourKey;
+    }
+    #else
+    st->key_type = GNUTLS_PRIVKEY_X509;
     st->key.x509 = pThis->ourKey;
+    #endif
+#else
+    st->key.x509 = pThis->ourKey;
+#endif
     st->deinit_all = 0;
 
     return 0;
@@ -705,12 +841,16 @@ static rsRetVal gtlsAddOurCert(nsd_gtls_t *const pThis) {
     const uchar *keyFile;
     const uchar *certFile;
     uchar *pGnuErr; /* for GnuTLS error reporting */
+    char *safeCert = NULL;
+    char *safeKey = NULL;
     DEFiRet;
 
     certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
     keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
-    dbgprintf("GTLS certificate file: '%s'\n", certFile);
-    dbgprintf("GTLS key file: '%s'\n", keyFile);
+    const char *const logCert = gtlsLogSafe(certFile, &safeCert);
+    const char *const logKey = gtlsLogSafe(keyFile, &safeKey);
+    dbgprintf("GTLS certificate file: '%s'\n", logCert);
+    dbgprintf("GTLS key file: '%s'\n", logKey);
 
     if (certFile == NULL && !(loggedWarnings & GTLS_LOGGED_WARN_CERT_MISSING)) {
         LogError(0, RS_RET_CERT_MISSING, "warning: certificate file is not set");
@@ -734,9 +874,11 @@ finalize_it:
         LogError(0, iRet,
                  "error adding our certificate. GnuTLS error %d, message: '%s', "
                  "key: '%s', cert: '%s'",
-                 gnuRet, pGnuErr, keyFile, certFile);
+                 gnuRet, pGnuErr, logKey, logCert);
         free(pGnuErr);
     }
+    free(safeCert);
+    free(safeKey);
     RETiRet;
 }
 
@@ -800,13 +942,16 @@ static rsRetVal gtlsInitCred(nsd_gtls_t *const pThis) {
         loggedWarnings |= GTLS_LOGGED_WARN_CA_MISSING;
     }
     if (cafile != NULL) {
-        dbgprintf("GTLS CA file: '%s'\n", cafile);
+        char *safeCA;
+        dbgprintf("GTLS CA file: '%s'\n", gtlsLogSafe(cafile, &safeCA));
+        free(safeCA);
         gnuRet = gnutls_certificate_set_x509_trust_file(pThis->xcred, (char *)cafile, GNUTLS_X509_FMT_PEM);
         if (gnuRet == GNUTLS_E_FILE_ERROR) {
             LogError(0, RS_RET_GNUTLS_ERR,
                      "error reading certificate file '%s' - a common cause is that the "
                      "file  does not exist",
-                     cafile);
+                     gtlsLogSafe(cafile, &safeCA));
+            free(safeCA);
             ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
         } else if (gnuRet < 0) {
             /* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
@@ -1612,11 +1757,7 @@ BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and
     free((void *)pThis->pszCRLFile);
     free(pThis->remoteSNI);
 
-    if (pThis->bOurCertIsInit)
-        for (unsigned i = 0; i < pThis->nOurCerts; ++i) {
-            gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
-        }
-    if (pThis->bOurKeyIsInit) gnutls_x509_privkey_deinit(pThis->ourKey);
+    gtlsFreeOurCertKey(pThis);
     if (pThis->bHaveSess) gnutls_deinit(pThis->sess);
     if (pThis->xcred != NULL &&
         (pThis->bIsInitiator || (!pThis->xcred_is_copy && (!pThis->bIsInitiator || pThis->bHaveSess)))) {
