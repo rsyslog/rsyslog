@@ -1,0 +1,18 @@
+plugins/imuxsock/imuxsock.c
+  h_95716f3de0caf5 1278-1283,1291-1311,1313-1314,1320-1321,1327-1329
+tests/Makefile.am
+  h_95716f3de0caf5 714
+tests/imuxsock_scm_rights.sh
+  h_95716f3de0caf5 1-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "483db835dd47926a1b080bdb35c6d2ec22f7685a",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
