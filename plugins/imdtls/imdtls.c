@@ -35,6 +35,7 @@
 #include <poll.h>
 #include <assert.h>
 #include <time.h>
+#include <limits.h>
 
 // --- Include openssl headers as well
 #include <openssl/ssl.h>
@@ -713,6 +714,8 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     int optval = 1;
     int fdcount = 0;
     int ret, err;
+    int pollTimeout = -1;
+    time_t now = time(NULL);
     memset(clientIdxByPollSlot, -1, sizeof(clientIdxByPollSlot));
     memset(fds, 0, sizeof(fds));
     fds[0].fd = inst->sockfd;
@@ -733,11 +736,30 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
             fds[fdcount].fd = clientfd;
             fds[fdcount].events = inst->dtlsClients[i]->pollEvents;
             clientIdxByPollSlot[fdcount] = i;
+
+            /* A nonblocking DTLS handshake needs its retransmission timer
+             * serviced even if no socket becomes ready. */
+            if (!SSL_is_init_finished(inst->dtlsClients[i]->sslClient)) {
+                struct timeval tv;
+                if (DTLSv1_get_timeout(inst->dtlsClients[i]->sslClient, &tv)) {
+                    long long ms = (long long)tv.tv_sec * 1000 + (tv.tv_usec + 999) / 1000;
+                    int delay = ms > INT_MAX ? INT_MAX : (int)ms;
+                    if (pollTimeout < 0 || delay < pollTimeout) {
+                        pollTimeout = delay;
+                    }
+                }
+            }
+            long long idleSeconds = (long long)inst->timeout - (long long)difftime(now, inst->dtlsClients[i]->lastActivityTime);
+            long long idleMs = idleSeconds <= 0 ? 0 : idleSeconds * 1000;
+            int idleDelay = idleMs > INT_MAX ? INT_MAX : (int)idleMs;
+            if (pollTimeout < 0 || idleDelay < pollTimeout) {
+                pollTimeout = idleDelay;
+            }
         }
     }
 
     DBGPRINTF("imdtls: Waiting for poll (clients %d) ...\n", fdcount);
-    ret = poll(fds, fdcount + 1, -1);
+    ret = poll(fds, fdcount + 1, pollTimeout);
     if (glbl.GetGlobalInputTermState() == 1) {
         DBGPRINTF("imdtls: DTLSHandleSessions Terminate State\n");
         return; /* terminate input! */
@@ -758,7 +780,16 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     // Check session timeouts
     for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
         if (inst->dtlsClients[i]->sslClient != NULL) {
-            if (difftime(time(NULL), inst->dtlsClients[i]->lastActivityTime) > inst->timeout) {
+            if (!SSL_is_init_finished(inst->dtlsClients[i]->sslClient)) {
+                struct timeval tv;
+                if (DTLSv1_get_timeout(inst->dtlsClients[i]->sslClient, &tv) && tv.tv_sec == 0 && tv.tv_usec == 0 &&
+                    DTLSv1_handle_timeout(inst->dtlsClients[i]->sslClient) < 0) {
+                    DBGPRINTF("imdtls: DTLS retransmission failed for client index %d.\n", i);
+                    DTLScleanupSession(inst, i);
+                    continue;
+                }
+            }
+            if (difftime(time(NULL), inst->dtlsClients[i]->lastActivityTime) >= inst->timeout) {
                 DBGPRINTF("imdtls: Session timeout (%d) for client index %d.\n", i, inst->timeout);
                 DTLScleanupSession(inst, i);
                 continue;
