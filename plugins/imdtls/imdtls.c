@@ -659,7 +659,7 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
                 return;
             }
         }
-        if (!DTLSVerifySession(inst, idx) || !(revents & POLLIN)) {
+        if (!DTLSVerifySession(inst, idx) || !(revents & inst->dtlsClients[idx]->pollEvents)) {
             return;
         }
         DBGPRINTF("imdtls: Read Client activity on index %d.\n", idx);
@@ -669,6 +669,7 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
         do {
             len = SSL_read(ssl, buf, sizeof(buf) - 1);
             if (len > 0) {
+                inst->dtlsClients[idx]->pollEvents = POLLIN;
                 if (!DTLSVerifySession(inst, idx)) {
                     return;
                 }
@@ -677,10 +678,12 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
             } else {
                 err = SSL_get_error(ssl, len);
                 if (err == SSL_ERROR_WANT_READ) {
+                    inst->dtlsClients[idx]->pollEvents = POLLIN;
                     DBGPRINTF("imdtls: SSL_ERROR_WANT_READ flush rbio on index %d.\n", idx);
                     BIO *rbio = SSL_get_rbio(ssl);
                     BIO_flush(rbio);
                 } else if (err == SSL_ERROR_WANT_WRITE) {
+                    inst->dtlsClients[idx]->pollEvents = POLLIN | POLLOUT;
                     DBGPRINTF("imdtls: SSL_ERROR_WANT_WRITE flush wbio on index %d.\n", idx);
                     BIO *wbio = SSL_get_wbio(ssl);
                     BIO_flush(wbio);
