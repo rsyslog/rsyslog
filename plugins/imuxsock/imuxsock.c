@@ -816,10 +816,13 @@ static void fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred) {
 
     lenPID = snprintf(bufPID, sizeof(bufPID), "[%lu]:", (unsigned long)cred->pid);
 
-    for (i = *lenTag; i >= 0 && bufTAG[i] != '['; --i) /*JUST SKIP*/
+    for (i = *lenTag - 1; i >= 0 && bufTAG[i] != '['; --i) /*JUST SKIP*/
         ;
 
-    if (i < 0) i = *lenTag - 1; /* go right at end of TAG, pid was not present (-1 for ':') */
+    if (i < 0) {
+        i = *lenTag;
+        if (i > 0 && bufTAG[i - 1] == ':') --i;
+    }
 
     if (i + lenPID > CONF_TAG_MAXSIZE) return; /* do not touch, as things would break */
 
