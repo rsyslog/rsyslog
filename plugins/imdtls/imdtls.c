@@ -102,6 +102,7 @@ struct dtlsClient_s {
     int peerVerified; /* post-handshake permitted-peer check completed */
     long verifiedRenegotiations; /* handshake generation covered by peerVerified */
     short pollEvents; /* readiness needed by the handshake */
+    int drainPending; /* continue after the per-client read limit */
 };
 
 // Use typedef to define a type 'dtlsClient_t' based on 'struct dtlsClient_s'
@@ -579,6 +580,7 @@ static void DTLScleanupSession(instanceConf_t *inst, int idx) {
     inst->dtlsClients[idx]->peerVerified = 0;
     inst->dtlsClients[idx]->verifiedRenegotiations = 0;
     inst->dtlsClients[idx]->pollEvents = POLLIN;
+    inst->dtlsClients[idx]->drainPending = 0;
 }
 
 static int DTLSVerifySession(instanceConf_t *inst, int idx) {
@@ -672,6 +674,7 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
         char buf[MAX_DTLS_MSGSIZE];
         int len = 0;
         int reads = 0;
+        inst->dtlsClients[idx]->drainPending = 0;
         do {
             len = SSL_read(ssl, buf, sizeof(buf) - 1);
             if (len > 0) {
@@ -710,6 +713,13 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
             }
             ++reads;
         } while (len > 0 && reads < 32);
+        /* OpenSSL can retain complete DTLS records after the datagram socket
+         * has been drained. Retry once on the next loop after the limit,
+         * even if poll reports no new socket data. A WANT_READ clears this
+         * flag, so an incomplete record cannot spin the event loop. */
+        if (len > 0 && reads == 32) {
+            inst->dtlsClients[idx]->drainPending = 1;
+        }
     }
 }
 
@@ -741,6 +751,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
             fds[fdcount].fd = clientfd;
             fds[fdcount].events = inst->dtlsClients[i]->pollEvents;
             clientIdxByPollSlot[fdcount] = i;
+            if (inst->dtlsClients[i]->drainPending) {
+                pollTimeout = 0;
+            }
 
             /* A nonblocking DTLS handshake needs its retransmission timer
              * serviced even if no socket becomes ready. */
@@ -779,7 +792,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     DBGPRINTF("imdtls: DTLSHandleSessions handle client sockets (%d) \n", fdcount);
     for (int i = 1; i <= fdcount; ++i) {
         if (clientIdxByPollSlot[i] >= 0) {
-            DTLSReadClient(inst, clientIdxByPollSlot[i], fds[i].revents);
+            int idx = clientIdxByPollSlot[i];
+            short revents = fds[i].revents | (inst->dtlsClients[idx]->drainPending ? POLLIN : 0);
+            DTLSReadClient(inst, idx, revents);
         }
     }
 
@@ -922,6 +937,7 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                             inst->dtlsClients[i]->peerVerified = 0;
                             inst->dtlsClients[i]->verifiedRenegotiations = 0;
                             inst->dtlsClients[i]->pollEvents = POLLIN;
+                            inst->dtlsClients[i]->drainPending = 0;
                             DBGPRINTF("imdtls: New Client added at idx %d.\n", i);
                             DTLSAcceptSession(inst, i);
                             addedClient = 1;

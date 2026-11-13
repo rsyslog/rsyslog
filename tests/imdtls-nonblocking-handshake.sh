@@ -15,23 +15,43 @@ input(type="imdtls" port="0" listenPortFileName="'$port_file'" timeout="15")
 *.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+port=''
 assign_file_content port "$port_file"
 
+attacker_input="$RSYSLOG_DYNNAME.attacker.fifo"
+attacker_fd=''
+proxy_pid=''
+attacker_pid=''
+honest_pid=''
+cleanup_helpers() {
+    local pid
+    [ -n "$attacker_fd" ] && exec {attacker_fd}>&-
+    for pid in "$proxy_pid" "$attacker_pid" "$honest_pid"; do
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+    done
+    for pid in "$proxy_pid" "$attacker_pid" "$honest_pid"; do
+        [ -n "$pid" ] && wait "$pid" 2>/dev/null || true
+    done
+    proxy_pid='' attacker_pid='' honest_pid='' attacker_fd=''
+    rm -f "$attacker_input"
+}
+trap cleanup_helpers EXIT
+mkfifo "$attacker_input"
 python3 "$srcdir/imdtls-two-flight-proxy.py" "$port" > "$RSYSLOG_DYNNAME.proxy.log" 2>&1 &
 proxy_pid=$!
-trap 'kill "$proxy_pid" "$attacker_pid" "$honest_pid" 2>/dev/null || true' EXIT
-for i in $(seq 1 100); do
+for ((attempt = 0; attempt < 100; ++attempt)); do
     grep -q '^PORT ' "$RSYSLOG_DYNNAME.proxy.log" && break
     sleep 0.1
 done
 proxy_port=$(awk '/^PORT / {print $2; exit}' "$RSYSLOG_DYNNAME.proxy.log")
 [ -n "$proxy_port" ] || error_exit 1
 
-( sleep 15 | openssl s_client -dtls1_2 -connect "127.0.0.1:$proxy_port" -quiet \
+openssl s_client -dtls1_2 -connect "127.0.0.1:$proxy_port" -quiet \
     -cert "$srcdir/tls-certs/cert.pem" -key "$srcdir/tls-certs/key.pem" \
-    -CAfile "$srcdir/tls-certs/ca.pem" > "$RSYSLOG_DYNNAME.attacker.log" 2>&1 ) &
+    -CAfile "$srcdir/tls-certs/ca.pem" < "$attacker_input" > "$RSYSLOG_DYNNAME.attacker.log" 2>&1 &
 attacker_pid=$!
-for i in $(seq 1 100); do
+exec {attacker_fd}> "$attacker_input"
+for ((attempt = 0; attempt < 100; ++attempt)); do
     grep -q '^FORWARD 2 ' "$RSYSLOG_DYNNAME.proxy.log" && break
     sleep 0.1
 done
@@ -44,7 +64,7 @@ honest_pid=$!
 sleep 7
 content_check 'msgnum:00000000'
 
-kill "$proxy_pid" "$attacker_pid" "$honest_pid" 2>/dev/null || true
+cleanup_helpers
 shutdown_when_empty
 wait_shutdown
 exit_test
