@@ -2406,6 +2406,8 @@ TESTS_IMDTLS = \
 	imdtls-basic.sh \
 	imdtls-basic-tlscommands.sh \
 	imdtls-basic-timeout.sh \
+	imdtls-nonblocking-handshake.sh \
+	imdtls-nonblocking-read.sh \
 	imdtls-error-cert.sh \
 	imdtls-permittedpeer-reject.sh \
 	imdtls-sessionbreak.sh
@@ -2927,6 +2929,7 @@ EXTRA_DIST += $(TESTS_RELP_GNUTLS)
 EXTRA_DIST += $(TESTS_RELP_GNUTLS_CFG)
 EXTRA_DIST += $(TESTS_RELP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMDTLS)
+EXTRA_DIST += imdtls-two-flight-proxy.py
 EXTRA_DIST += $(TESTS_IMDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS_VALGRIND)

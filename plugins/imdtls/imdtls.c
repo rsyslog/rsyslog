@@ -98,6 +98,8 @@ struct dtlsClient_s {
     SSL *sslClient; /* DTSL (SSL) Client */
     time_t lastActivityTime; /* Last Activity Time */
     int clientfd; /* ClientFD */
+    int peerVerified; /* post-handshake permitted-peer check completed */
+    short pollEvents; /* readiness needed by the handshake */
 };
 
 // Use typedef to define a type 'dtlsClient_t' based on 'struct dtlsClient_s'
@@ -572,6 +574,27 @@ static void DTLScleanupSession(instanceConf_t *inst, int idx) {
     }
     inst->dtlsClients[idx]->sslClient = NULL;
     inst->dtlsClients[idx]->lastActivityTime = 0;
+    inst->dtlsClients[idx]->peerVerified = 0;
+    inst->dtlsClients[idx]->pollEvents = POLLIN;
+}
+
+static int DTLSVerifySession(instanceConf_t *inst, int idx) {
+    dtlsClient_t *client = inst->dtlsClients[idx];
+    if (client->peerVerified) {
+        return 1;
+    }
+    if (!SSL_is_init_finished(client->sslClient)) {
+        return 0;
+    }
+
+    if (imdtls_verify_callback(1, client->sslClient) == 0) {
+        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: Cert Verify FAILED for DTLS client idx (%d)", idx);
+        DTLScleanupSession(inst, idx);
+        return 0;
+    }
+    client->peerVerified = 1;
+    DBGPRINTF("imdtls: Cert Verify SUCCESS for DTLS client idx (%d)\n", idx);
+    return 1;
 }
 
 static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
@@ -587,7 +610,7 @@ static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
         if (ret <= 0) {
             err = SSL_get_error(ssl, ret);
             if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
-                // Non-blocking operation did not complete; retry later
+                inst->dtlsClients[idx]->pollEvents = (err == SSL_ERROR_WANT_WRITE) ? POLLIN | POLLOUT : POLLIN;
                 DBGPRINTF("imdtls: SSL_accept didn't complete (%d). Will retry.\n", err);
             } else if (err == SSL_ERROR_SYSCALL) {
                 DBGPRINTF("imdtls: SSL_accept failed SSL_ERROR_SYSCALL idx (%d), removing client.\n", idx);
@@ -602,18 +625,12 @@ static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
         } else {
             DBGPRINTF("imdtls: SSL_accept success idx (%d), adding client.\n", idx);
             inst->dtlsClients[idx]->lastActivityTime = time(NULL);
-
-            int status = 1;
-            status = imdtls_verify_callback(status, ssl);
-            if (status == 0) {
-                LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: Cert Verify FAILED for DTLS client idx (%d)", idx);
-                DTLScleanupSession(inst, idx);
-            } else {
-                DBGPRINTF("imdtls: Cert Verify SUCCESS for DTLS client idx (%d)\n", idx);
-            }
+            inst->dtlsClients[idx]->pollEvents = POLLIN;
+            DTLSVerifySession(inst, idx);
         }
     } else {
         DBGPRINTF("imdtls: SSL_get_state for DTLS client idx (%d) is %d\n", idx, ret);
+        DTLSVerifySession(inst, idx);
     }
 }
 
@@ -630,17 +647,31 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
     int err;
     SSL *ssl = inst->dtlsClients[idx]->sslClient;
     DBGPRINTF("imdtls: DEBUG Check Client activity on index %d.\n", idx);
-    if (revents & POLLIN) {
+    if (revents & (POLLIN | POLLOUT)) {
         if (ssl == NULL) {
             DBGPRINTF("imdtls: DTLSHandleSessions MISSING SSL OBJ for index %d.\n", idx);
+            return;
+        }
+        if (!SSL_is_init_finished(ssl)) {
+            DTLSAcceptSession(inst, idx);
+            ssl = inst->dtlsClients[idx]->sslClient;
+            if (ssl == NULL || !SSL_is_init_finished(ssl)) {
+                return;
+            }
+        }
+        if (!DTLSVerifySession(inst, idx) || !(revents & POLLIN)) {
             return;
         }
         DBGPRINTF("imdtls: Read Client activity on index %d.\n", idx);
         char buf[MAX_DTLS_MSGSIZE];
         int len = 0;
+        int reads = 0;
         do {
             len = SSL_read(ssl, buf, sizeof(buf) - 1);
             if (len > 0) {
+                if (!DTLSVerifySession(inst, idx)) {
+                    return;
+                }
                 buf[len] = '\0';
                 processMsg(inst, inst->dtlsClients[idx], buf, len);
             } else {
@@ -668,7 +699,8 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
                     break;
                 }
             }
-        } while (len > 0);
+            ++reads;
+        } while (len > 0 && reads < 32);
     }
 }
 
@@ -696,7 +728,7 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
             fdcount++;
             DBGPRINTF("imdtls: DTLSHandleSessions handle client %d (%d)\n", fdcount, clientfd);
             fds[fdcount].fd = clientfd;
-            fds[fdcount].events = POLLIN;
+            fds[fdcount].events = inst->dtlsClients[i]->pollEvents;
             clientIdxByPollSlot[fdcount] = i;
         }
     }
@@ -832,12 +864,23 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     int addedClient = 0;
                     BIO_ctrl_set_connected(rbio, client_addr);
                     DBGPRINTF("imdtls: BIO_connect succeeded.\n");
+                    /* BIO_connect can reset the socket's blocking mode. Set
+                     * O_NONBLOCK only after the BIO has been connected. */
+                    int flags = fcntl(clientfd, F_GETFL, 0);
+                    if (flags < 0 || fcntl(clientfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+                        LogError(0, NO_ERRCODE, "imdtls: unable to make client socket non-blocking");
+                        close(clientfd);
+                        SSL_free(ssl);
+                        break;
+                    }
 
                     // Add to DTLS Clients
                     for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
                         if (inst->dtlsClients[i]->sslClient == NULL) {
                             inst->dtlsClients[i]->sslClient = ssl;
                             inst->dtlsClients[i]->lastActivityTime = time(NULL);
+                            inst->dtlsClients[i]->peerVerified = 0;
+                            inst->dtlsClients[i]->pollEvents = POLLIN;
                             DBGPRINTF("imdtls: New Client added at idx %d.\n", i);
                             DTLSAcceptSession(inst, i);
                             addedClient = 1;
@@ -857,10 +900,11 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                 /* Retry on EAGAIN (recv timeout, no datagram) and on ret == 0
                  * with an empty error queue (no usable handshake data yet). */
                 if (err == SSL_ERROR_SYSCALL && (errno == EAGAIN || (ret == 0 && ERR_peek_error() == 0))) {
-                    DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), retry\n", ret, err, errno);
-                    // Wait little and retry DTLSv1_listen
-                    srSleep(0, 100000);
-                    continue;
+                    DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), defer\n", ret, err, errno);
+                    /* DTLSv1_listen is stateless across the cookie exchange.
+                     * Return to poll instead of waiting here for a second flight. */
+                    SSL_free(ssl);
+                    break;
                 } else {
                     DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), abort\n", ret, err, errno);
                     net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING, "DTLSHandleSessions",
