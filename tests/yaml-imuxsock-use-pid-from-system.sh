@@ -7,6 +7,11 @@
 . "${srcdir:=.}/diag.sh" init
 require_yaml_support
 
+if ! grep -q '^#define HAVE_SCM_CREDENTIALS 1' ../config.h; then
+	echo "imuxsock UsePIDFromSystem requires SCM_CREDENTIALS"
+	exit 77
+fi
+
 export NUMMESSAGES=6
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 
