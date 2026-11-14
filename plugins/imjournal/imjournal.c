@@ -1367,6 +1367,12 @@ BEGINrunInput
         ratelimitSetLinuxLike(ratelimiter, (unsigned)cs.ratelimitInterval, (unsigned)cs.ratelimitBurst);
     }
     ratelimitSetNoTimeCache(ratelimiter);
+    /* All journal readers share this ratelimiter. Each input() statement
+     * adds a reader thread next to the main reader, so ratelimitAddMsg()
+     * may be called concurrently. Single-reader setups only pay for an
+     * uncontended mutex.
+     */
+    ratelimitSetThreadSafe(ratelimiter);
 
     /* handling old "usepidfromsystem" option */
     if (cs.bUseJnlPID != -1) {
