@@ -61,10 +61,12 @@ run_case() {
     local auth="$1" peer="$2" port="$3" marker="$4"
     local prefix="$RSYSLOG_DYNNAME.$auth.$peer"
     local cert="$attacker_cert" key="$attacker_key"
-    local baseline current proxy_port attempt finished=0 outcome=0
+    local baseline current reject_before reject_after proxy_port attempt finished=0 outcome=0
     [ "$peer" = allowed ] && { cert="$srcdir/tls-certs/cert.pem"; key="$srcdir/tls-certs/key.pem"; }
     baseline=$(grep -c "SSL_accept didn't complete" "$RSYSLOG_DEBUGLOG" 2>/dev/null || true)
     baseline=${baseline:-0}
+    reject_before=$(grep -c 'Cert Verify FAILED' "$RSYSLOG_OUT_LOG" 2>/dev/null || true)
+    reject_before=${reject_before:-0}
     python3 "$srcdir/imdtls-permittedpeer-pacing-proxy.py" "$port" "$prefix.release" 100 \
         >"$prefix.proxy.log" 2>&1 &
     proxy_pid=$!
@@ -94,7 +96,8 @@ run_case() {
         grep -Eq 'SSL_connect:.*read finished|SSL_connect:SSL negotiation finished successfully' \
             "$prefix.client.err" && finished=1
         if [ "$peer" = denied ]; then
-            grep -q 'Cert Verify FAILED' "$RSYSLOG_OUT_LOG" 2>/dev/null && outcome=1
+            reject_after=$(grep -c 'Cert Verify FAILED' "$RSYSLOG_OUT_LOG" 2>/dev/null || true)
+            [ "${reject_after:-0}" -gt "$reject_before" ] && outcome=1
         else
             grep -qF "$marker" "$RSYSLOG_OUT_LOG" 2>/dev/null && outcome=1
         fi
