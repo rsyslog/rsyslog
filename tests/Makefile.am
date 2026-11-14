@@ -1456,6 +1456,7 @@ TESTS_IMJOURNAL = \
 	imjournal-namespace-remote-conflict.sh \
 	imjournal-persiststateinterval-zero.sh \
 	imjournal-statefile.sh \
+	imjournal-statefile-directory.sh \
 	imjournal-statefile-symlink.sh \
 	imjournal_ratelimit_name.sh
 

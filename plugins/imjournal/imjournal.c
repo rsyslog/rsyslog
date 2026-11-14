@@ -1059,18 +1059,32 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     if (fstat(fd, &st) != 0) {
         LogError(errno, RS_RET_IO_ERROR, "imjournal: fstat on state file `%s' failed\n", stateFile);
         iRet = RS_RET_IO_ERROR;
-        FINALIZE;
-    }
-    if (!S_ISREG(st.st_mode)) {
+    } else if (!S_ISREG(st.st_mode)) {
         LogError(0, RS_RET_IO_ERROR, "imjournal: state file `%s' is not a regular file\n", stateFile);
         iRet = RS_RET_IO_ERROR;
+    }
+    if (iRet != RS_RET_OK) {
+        /* An unusable state file path (e.g. a directory left over from
+         * a former multi-input configuration) is handled like any other
+         * invalid state file, so the input keeps reading the journal.
+         */
+        if (cs.bIgnoreNonValidStatefile) {
+            iRet = RS_RET_OK;
+            LogError(0, NO_ERRCODE, "imjournal: ignoring invalid state file %s", stateFile);
+            if (cs.bIgnorePrevious) {
+                skipOldMessages(journalContext);
+            }
+        }
         FINALIZE;
     }
 
     if ((r_sf = fdopen(fd, "rb")) != NULL) {
         fd = -1;
-        char readCursor[128 + 1];
-        if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
+        /* journal cursors can exceed 128 characters; keep a generous,
+         * bounded limit so a saved cursor is never cut short on reload.
+         */
+        char readCursor[511 + 1];
+        if (fscanf(r_sf, "%511s\n", readCursor) != EOF) {
             if (sd_journal_seek_cursor(journalContext->j, readCursor) != 0) {
                 LogError(0, RS_RET_ERR,
                          "imjournal: "
