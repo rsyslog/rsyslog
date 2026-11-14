@@ -31,6 +31,8 @@ EXTRA_DIST += $(TESTS_LOCAL_QUEUE_STATS_HELPER)
 
 TESTS_STATSLOG_PERCENT = statslog-evicted-percent.sh
 EXTRA_DIST += $(TESTS_STATSLOG_PERCENT) helpers/statslog-evicted-percent.sh
+TESTS_IMKLOG_MAXLINE = imklog-maxmessagesize-intmax.sh
+EXTRA_DIST += $(TESTS_IMKLOG_MAXLINE)
 TESTS_MINITCP_EXCLUSIVE = minitcpsrv-exclusive-port.sh
 EXTRA_DIST += $(TESTS_MINITCP_EXCLUSIVE)
 TESTS_IMFILE_FSTAT_RELEVANCE = imfile-fstat-relevance.sh
@@ -3856,6 +3858,9 @@ endif
 endif
 
 
+if ENABLE_IMKLOG
+TESTS += $(TESTS_IMKLOG_MAXLINE)
+endif
 
 if ENABLE_EXTENDED_TESTS
 # random.sh is temporarily disabled as it needs some work
