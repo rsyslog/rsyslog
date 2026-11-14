@@ -700,6 +700,11 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
 
     CHKiRet(createInstance(&inst));
 
+    /* Legacy listeners have no rate-limit parameters. Match the defaults
+     * applied by newInpInst before passing them to the unsigned TCP API. */
+    inst->ratelimitInterval = 0;
+    inst->ratelimitBurst = 10000;
+
     CHKmalloc(inst->cnf_params->pszPort = ustrdup((pNewVal == NULL || *pNewVal == '\0') ? (uchar *)"10514" : pNewVal));
     if ((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
         inst->pszBindRuleset = NULL;
