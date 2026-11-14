@@ -555,7 +555,13 @@ static rsRetVal enqMsg(uchar *msg,
         CHKiRet(iRet);
     }
 
-    CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
+    /* ratelimitAddMsg() owns pMsg on every path imjournal can reach,
+     * including error returns (journal messages never need parsing), so
+     * pMsg must not be touched or freed afterwards.
+     */
+    iRet = ratelimitAddMsg(ratelimiter, NULL, pMsg);
+    pMsg = NULL;
+    CHKiRet(iRet);
     STATSCOUNTER_INC(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
 
 finalize_it:
@@ -581,6 +587,7 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     DEFiRet;
 
     struct timeval tv;
+    struct timeval *tp = NULL; /* NULL: use current time */
     uint64_t timestamp;
 
     struct fjson_object *json = NULL;
@@ -659,10 +666,16 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     if (journalGetData(journalContext, "SYSLOG_FACILITY", &get, &length) >= 0) {
         // Note: the journal frequently contains invalid facilities!
         if (length == 17 || length == 18) {
-            facility = ((char *)get)[16] - '0';
-            if (length == 18) {
-                facility *= 10;
-                facility += ((char *)get)[17] - '0';
+            const char *const fac_str = (const char *)get + 16;
+            if (!isdigit((unsigned char)fac_str[0]) || (length == 18 && !isdigit((unsigned char)fac_str[1]))) {
+                DBGPRINTF("The value of the 'FACILITY' field is not numeric, resetting\n");
+                facility = cs.iDfltFacility;
+            } else {
+                facility = fac_str[0] - '0';
+                if (length == 18) {
+                    facility *= 10;
+                    facility += fac_str[1] - '0';
+                }
             }
             if (facility < 0 || 23 < facility) {
                 DBGPRINTF(
@@ -729,15 +742,19 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     CHKiRet(readJSONfromJournalMsg(journalContext, &json));
 
     /* calculate timestamp */
-    if (sd_journal_get_realtime_usec(journalContext->j, &timestamp) >= 0) {
+    r = sd_journal_get_realtime_usec(journalContext->j, &timestamp);
+    if (r >= 0) {
         tv.tv_sec = timestamp / 1000000;
         tv.tv_usec = timestamp % 1000000;
+        tp = &tv;
+    } else {
+        DBGPRINTF("imjournal: sd_journal_get_realtime_usec() failed: %d, using current time\n", r);
     }
 
     CHKiRet(updateJournalCursor(journalContext));
 
     /* submit message */
-    iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
+    iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, tp, json, 0, pBindRuleset);
     json = NULL;
     if (iRet == RS_RET_DISCARDMSG) {
         iRet = RS_RET_OK;
