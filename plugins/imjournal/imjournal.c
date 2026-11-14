@@ -187,12 +187,13 @@ struct journalContext_s { /* structure encapsulating all the journald_API-relate
     sbool warnedFutureJournalTime; /* warning already emitted for journal entries ahead of current system time */
     uint64_t nextFutureJournalProbeUsec; /* next permitted future-time diagnostic probe */
     char *cursor; /* should point to last valid journald entry we processed */
+    sbool persistSkipped; /* state file path is not a regular file, persisting is paused */
 };
 
 #define MAX_JOURNAL 8
 static struct journalContext_s journalContextArray[MAX_JOURNAL] = {
-    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
-    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
+    {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0},
+    {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0},
 };
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process */
@@ -765,6 +766,7 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
     int fd = -1;
     size_t len;
     ssize_t wr_ret;
+    struct stat st;
 
     DBGPRINTF("Persisting journal position, cursor: %s, at head? %d\n", journalContext->cursor, journalContext->atHead);
 
@@ -772,6 +774,32 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
     if (!journalContext->cursor) {
         DBGPRINTF("Journal cursor is not valid, ok...\n");
         ABORT_FINALIZE(RS_RET_OK);
+    }
+
+    /* Do not replace a state file path that exists but is not a regular
+     * file (e.g. a FIFO, a device or a directory). loadJournalState()
+     * ignores such a path if IgnoreNonValidStatefile is on, and rename()
+     * below would silently replace a FIFO or device with a regular file.
+     * A symlink is still replaced as before: rename() replaces the link
+     * itself, never its target. This only guards against misconfiguration;
+     * the path can change between this check and rename(), so it is not
+     * an atomic guarantee. Log once per journal context, and once more if
+     * the path becomes usable again.
+     */
+    if (lstat(stateFile, &st) == 0 && !S_ISREG(st.st_mode) && !S_ISLNK(st.st_mode)) {
+        if (!journalContext->persistSkipped) {
+            LogError(0, RS_RET_IO_ERROR,
+                     "imjournal: state file `%s' exists and is not a regular file, "
+                     "journal position is not saved while it is there",
+                     stateFile);
+            journalContext->persistSkipped = 1;
+        }
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (journalContext->persistSkipped) {
+        LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: state file `%s' can be written again, saving journal position",
+               stateFile);
+        journalContext->persistSkipped = 0;
     }
 
     CHKiRet(openStateFileTemp(stateFile, &tmp_sf, &fd));
@@ -1036,7 +1064,11 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n", journalContext->atHead,
               journalContext->reloaded);
 
-    fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW);
+    /* O_NONBLOCK: a FIFO without a writer must not block the open; such a
+     * path is then rejected as not a regular file below. The flag has no
+     * effect on reading a regular file.
+     */
+    fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW | O_NONBLOCK);
     if (fd == -1 && errno == ENOENT) {
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
@@ -1080,8 +1112,9 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
 
     if ((r_sf = fdopen(fd, "rb")) != NULL) {
         fd = -1;
-        /* journal cursors can exceed 128 characters; keep a generous,
-         * bounded limit so a saved cursor is never cut short on reload.
+        /* journal cursors can exceed 128 characters (about 142 have been
+         * seen); read up to 511 so such cursors are not cut short on
+         * reload. A longer cursor is still truncated.
          */
         char readCursor[511 + 1];
         if (fscanf(r_sf, "%511s\n", readCursor) != EOF) {
