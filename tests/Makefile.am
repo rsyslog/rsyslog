@@ -712,7 +712,6 @@ TESTS_DEFAULT = \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_annotate_large.sh \
 	imuxsock_annotate_escape.sh \
-	yaml-imuxsock-annotate-escape.sh \
 	imuxsock-NUL.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
@@ -999,6 +998,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	yaml-imuxsock-annotate-escape.sh \
 	yaml-ompipe-module-template.sh \
 	config-translate-rs-to-yaml.sh \
 	yaml-imuxsock-socket-path-checks.sh \
