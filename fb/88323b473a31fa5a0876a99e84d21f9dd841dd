@@ -1,0 +1,24 @@
+doc/source/reference/parameters/imklog-consoleloglevel.rst
+  h_95716f3de0caf5 39-44
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 33,164-182,201-202,209-212,316-325
+  h_95716f3de0caf5 200,203,213-219
+tests/Makefile.am
+  h_95716f3de0caf5 32-33,3009-3010,3012-3018,3020,3889-3890,3892-3894
+  h_95716f3de0caf5 3011,3019,3888,3891
+tests/imklog-consoleloglevel-restore.sh
+  h_95716f3de0caf5 1-38
+tests/imklog-klogctl-preload.c
+  h_95716f3de0caf5 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb88323b473a31fa5a0876a99e84d21f9dd841dd",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
