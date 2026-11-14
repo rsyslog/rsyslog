@@ -36,6 +36,16 @@ reading from the start of the journal (or from the end if ``IgnorePreviousMessag
 is enabled). A new valid state file is written after the next state persistence
 or shutdown.
 
+If the state file path exists but is not a regular file (for example a
+directory, a FIFO or a device), or if ``fstat()`` on it fails, the module also
+ignores it and reads from the start of the journal (or from the end if
+``IgnorePreviousMessages`` is enabled). Unlike a corrupt file, a path that is
+not a regular file is not replaced: imjournal leaves it untouched and does not
+save its position while the path is there. This is logged once; once the path
+is removed (or replaced by a regular file), saving resumes at the next state
+persistence or shutdown. If this parameter is ``off``, any of these conditions
+stops the imjournal input.
+
 Module usage
 ------------
 .. _param-imjournal-module-ignorenonvalidstatefile:
