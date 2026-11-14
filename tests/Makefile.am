@@ -1406,9 +1406,13 @@ TESTS_OMHTTP_FLAKY_VALGRIND = \
 TESTS_IMJOURNAL = \
 	imjournal-basic.sh \
 	imjournal-namespace-remote-conflict.sh \
+	imjournal-persiststateinterval-zero.sh \
 	imjournal-statefile.sh \
 	imjournal-statefile-symlink.sh \
 	imjournal_ratelimit_name.sh
+
+TESTS_IMJOURNAL_YAML = \
+	yaml-imjournal-persiststateinterval-zero.sh
 
 TESTS_IMJOURNAL_VALGRIND = \
 	imjournal-basic-vg.sh \
@@ -2816,6 +2820,7 @@ EXTRA_DIST += $(TESTS_ROOT_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP_FLAKY)
 EXTRA_DIST += $(TESTS_OMHTTP_FLAKY_VALGRIND)
 EXTRA_DIST += $(TESTS_IMJOURNAL)
+EXTRA_DIST += $(TESTS_IMJOURNAL_YAML)
 EXTRA_DIST += $(TESTS_IMJOURNAL_VALGRIND)
 EXTRA_DIST += $(TESTS_OMJOURNAL)
 EXTRA_DIST += $(TESTS_IMPROG)
@@ -3867,6 +3872,9 @@ endif # end if ENABLE_FLAKY_TESTS
 if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
 TESTS += $(TESTS_IMJOURNAL)
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMJOURNAL_YAML)
+endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMJOURNAL_VALGRIND)
 endif

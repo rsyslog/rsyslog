@@ -35,6 +35,11 @@ Defines how often the module writes its position in the journal to the state fil
 The cursor is saved after each ``PersistStateInterval`` messages so rsyslog resumes
 from the last processed entry on restart.
 
+A value of ``0`` or below disables periodic persisting. The cursor is then
+written to the state file only when imjournal shuts down, so after an
+unclean termination rsyslog may re-read entries that were processed after
+the last clean shutdown. This parameter has no effect unless ``StateFile`` is set.
+
 Module usage
 ------------
 .. _param-imjournal-module-persiststateinterval:
