@@ -82,6 +82,7 @@ DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop
     /* Module static data */
     typedef struct journal_etry_s {
     pthread_t tid; /* the worker's thread ID */
+    sbool bThrdStarted; /* 1 if tid refers to a running worker thread */
     ruleset_t *pBindRuleset;
     char *stateFile;
     struct journalContext_s *journalContext;
@@ -1342,6 +1343,8 @@ static void startSrvWrkr(journal_etry_t *const etry) {
     if (r != 0) {
         LogError(r, NO_ERRCODE, "imjournal: error creating imjournal thread");
         /* we do NOT abort, as other servers may run - after all, we logged an error */
+    } else {
+        etry->bThrdStarted = 1;
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
@@ -1350,9 +1353,13 @@ static void startSrvWrkr(journal_etry_t *const etry) {
 /* stop server worker thread
  */
 static void stopSrvWrkr(journal_etry_t *const etry) {
+    if (!etry->bThrdStarted) {
+        return; /* thread creation failed, nothing to stop */
+    }
     DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
     pthread_kill(etry->tid, SIGTTIN);
     pthread_join(etry->tid, NULL);
+    etry->bThrdStarted = 0;
     DBGPRINTF("input %p terminated\n", etry);
 }
 
@@ -1375,13 +1382,32 @@ BEGINrunInput
         LogError(0, RS_RET_DEPRECATED, "\"usepidfromsystem\" is deprecated, use \"usepid\" instead");
     }
 
+    int nWrkrs = 0;
     journal_etry_t *etry = journal_root->next;
     while (etry != NULL) {
         startSrvWrkr(etry);
+        if (etry->bThrdStarted) {
+            ++nWrkrs;
+        }
         etry = etry->next;
     }
 
-    CHKiRet(doRun(journal_root));
+    /* The worker threads use journal contexts that afterRun closes and
+     * frees, so they must be joined before runInput returns, even if the
+     * first input fails. The workers only stop on shutdown, so if the
+     * first input fails early the others keep running until then.
+     */
+    iRet = doRun(journal_root);
+    if (iRet != RS_RET_OK && nWrkrs > 0 && glbl.GetGlobalInputTermState() == 0 && !thrdGetShallStop(pThrd)) {
+        LogError(0, iRet,
+                 "imjournal: first journal input failed, "
+                 "remaining imjournal inputs continue to run");
+        /* triggers shutdown if all inputs are required */
+        thrd_report_fatal_input_failure();
+        while (glbl.GetGlobalInputTermState() == 0 && !thrdGetShallStop(pThrd)) {
+            srSleep(0, 100000);
+        }
+    }
 
     etry = journal_root->next;
     while (etry != NULL) {
