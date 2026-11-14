@@ -1274,7 +1274,10 @@ static rsRetVal doRun(journal_etry_t const *etry) {
             count++;
             etry->journalContext->atHead = 0;
             etry->journalContext->warnedFutureJournalTime = 0;
-            if (stateFile) {
+            /* PersistStateInterval <= 0 disables periodic persisting; the
+             * state is then only written in afterRun().
+             */
+            if (stateFile && cs.iPersistStateInterval > 0) {
                 /* TODO: This could use some finer metric. */
                 if ((count % cs.iPersistStateInterval) == 0) {
                     persistJournalState(etry->journalContext, stateFile);
