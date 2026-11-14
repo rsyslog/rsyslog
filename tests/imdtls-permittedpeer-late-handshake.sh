@@ -5,6 +5,8 @@
 # the configured omfile output is the acceptance/rejection oracle. Bounded
 # 0.1-second polls wait for proxy readiness, WANT_READ (up to 75 seconds), and
 # client/server completion (up to 20 seconds), without assuming fixed latency.
+# YAML routes imdtls messages through a named ruleset while internal diagnostics
+# use the default ruleset, so that variant checks rejection in the debug log.
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=1
@@ -20,9 +22,18 @@ openssl x509 -req -in "$attacker_csr" -CA "$srcdir/tls-certs/ca.pem" \
     -CAkey "$srcdir/tls-certs/ca-key.pem" -CAserial "$RSYSLOG_DYNNAME.attacker.srl" \
     -CAcreateserial -out "$attacker_cert" -days 1 >/dev/null 2>&1 || error_exit 1
 
-generate_conf
 name_port_file="$RSYSLOG_DYNNAME.imdtls-name.port"
 fingerprint_port_file="$RSYSLOG_DYNNAME.imdtls-fingerprint.port"
+if [ "${YAML_MODE:-0}" = 1 ]; then
+    generate_conf --yaml-only
+    sed -i '/^global:/a\  processInternalMessages: "on"' "${TESTCONF_NM}.yaml"
+    sed -e "s|@NAME_PORT_FILE@|$name_port_file|g" \
+        -e "s|@FINGERPRINT_PORT_FILE@|$fingerprint_port_file|g" \
+        -e "s|@CERT_DIR@|$srcdir/tls-certs|g" \
+        -e "s|@OUT_LOG@|$RSYSLOG_OUT_LOG|g" \
+        "$srcdir/testsuites/yaml-imdtls-permittedpeer-late-handshake.yaml" >> "${TESTCONF_NM}.yaml"
+else
+generate_conf
 add_conf '
 global(processInternalMessages="on")
 module(load="../plugins/imdtls/.libs/imdtls")
@@ -38,11 +49,14 @@ input(type="imdtls" name="dtls-fingerprint" port="0" listenPortFileName="'$finge
 template(name="outfmt" type="string" string="%inputname%|%rawmsg%\n")
 *.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
+fi
 startup
 name_port=''
 fingerprint_port=''
 assign_file_content name_port "$name_port_file"
 assign_file_content fingerprint_port "$fingerprint_port_file"
+reject_log="$RSYSLOG_OUT_LOG"
+[ "${YAML_MODE:-0}" = 1 ] && reject_log="$RSYSLOG_DEBUGLOG"
 
 proxy_pid='' client_pid='' client_fd=''
 cleanup_helpers() {
@@ -67,7 +81,7 @@ run_case() {
     [ "$peer" = allowed ] && { cert="$srcdir/tls-certs/cert.pem"; key="$srcdir/tls-certs/key.pem"; }
     baseline=$(grep -c "SSL_accept didn't complete" "$RSYSLOG_DEBUGLOG" 2>/dev/null || true)
     baseline=${baseline:-0}
-    reject_before=$(grep -c 'Cert Verify FAILED' "$RSYSLOG_OUT_LOG" 2>/dev/null || true)
+    reject_before=$(grep -c 'Cert Verify FAILED' "$reject_log" 2>/dev/null || true)
     reject_before=${reject_before:-0}
     python3 "$srcdir/imdtls-permittedpeer-pacing-proxy.py" "$port" "$prefix.release" 100 \
         >"$prefix.proxy.log" 2>&1 &
@@ -98,7 +112,7 @@ run_case() {
         grep -Eq 'SSL_connect:.*read finished|SSL_connect:SSL negotiation finished successfully' \
             "$prefix.client.err" && finished=1
         if [ "$peer" = denied ]; then
-            reject_after=$(grep -c 'Cert Verify FAILED' "$RSYSLOG_OUT_LOG" 2>/dev/null || true)
+            reject_after=$(grep -c 'Cert Verify FAILED' "$reject_log" 2>/dev/null || true)
             [ "${reject_after:-0}" -gt "$reject_before" ] && outcome=1
         else
             grep -qF "$marker" "$RSYSLOG_OUT_LOG" 2>/dev/null && outcome=1
@@ -122,7 +136,7 @@ run_case fingerprint allowed "$fingerprint_port" 'R3-FINGERPRINT-ALLOWED'
 
 shutdown_when_empty
 wait_shutdown
-content_check 'Cert Verify FAILED'
+content_check 'Cert Verify FAILED' "$reject_log"
 content_check 'R3-NAME-ALLOWED'
 content_check 'R3-FINGERPRINT-ALLOWED'
 assert_content_missing 'R3-NAME-DENIED'
