@@ -354,3 +354,13 @@ imfifo:
     - Reads log messages line-by-line from local POSIX named pipes (FIFOs).
     - Utilizes non-blocking poll() loops with a 100ms timeout to ensure clean and immediate shutdown.
     - Uses O_RDWR opening technique to keep a dummy writer in the daemon itself to avoid startup hangs and EOF reopening loops.
+
+imjournal:
+  paths: ["plugins/imjournal/"]
+  requires_serialization: false
+  notes:
+    - The framework input thread runs the head journal input (main="on", else the default input); each further input runs in its own worker thread.
+    - Each list entry owns its journal context and state file; willRun opens all contexts and afterRun persists, closes and frees them.
+    - runInput stops and joins all started workers before returning, also when the head input fails; it then waits for shutdown or until no worker is left in doRun().
+    - Worker thread creation failures and a failing head input are reported via thrd_report_fatal_input_failure(), which only stops rsyslogd under inputStartupPolicy="require-all".
+    - Module-global state shared by the threads includes the cs settings, input name props, stats counters, the ratelimiter, and pidFieldName/bPidFallBack/cs.dfltTag assigned in doRun().

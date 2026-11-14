@@ -74,6 +74,31 @@ MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imjournal")
 
+/* =============================================================================
+ * Concurrency & Locking
+ * =============================================================================
+ * - The framework input thread (runInput) processes the head of journal_root:
+ *   the first input with main="on", or else the default input. Every further
+ *   list entry runs in its own worker thread (startSrvWrkr/RunServerThread).
+ * - Each journal_etry_t owns one journalContext (sd_journal handle, cursor)
+ *   and its state file; only the thread running that entry uses them while
+ *   the input runs. willRun opens all contexts before the threads start,
+ *   afterRun persists state, closes and frees them.
+ * - runInput stops (SIGTTIN) and joins every started worker before it
+ *   returns, also when the head input fails, so afterRun never frees a
+ *   context that a worker still uses. If the head input fails before
+ *   shutdown, runInput waits until shutdown or until worker_count (atomic
+ *   helper, workers that have not yet left doRun()) drops to 0.
+ * - A failed pthread_create() for a worker and a failing head input are
+ *   reported with thrd_report_fatal_input_failure(), which shuts rsyslogd
+ *   down only with inputStartupPolicy="require-all". A failing worker
+ *   only logs an error.
+ * - Module-global objects shared by these threads: the settings in cs,
+ *   pInputName, pLocalHostIP, statsCounter (updated via STATSCOUNTER_INC
+ *   and atomic helpers), the ratelimiter, and pidFieldName, bPidFallBack
+ *   and cs.dfltTag, which doRun() assigns at the start of every input.
+ * ============================================================================= */
+
 /* Module static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop) DEFobjCurrIf(net)
@@ -82,6 +107,7 @@ DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop
     /* Module static data */
     typedef struct journal_etry_s {
     pthread_t tid; /* the worker's thread ID */
+    sbool thread_started; /* 1 if tid refers to a worker thread not yet joined */
     ruleset_t *pBindRuleset;
     char *stateFile;
     struct journalContext_s *journalContext;
@@ -89,6 +115,8 @@ DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop
 } journal_etry_t;
 static journal_etry_t *journal_root = NULL;
 static int n_journal = 0;
+static int worker_count = 0; /* worker threads that have not yet left doRun() */
+DEF_ATOMIC_HELPER_MUT(mut_worker_count);
 
 struct modConfData_s {
     rsconf_t *pConf;
@@ -1314,6 +1342,7 @@ static void *RunServerThread(void *myself) {
                  "imjournal: error while stopping journal processing; "
                  "rsyslog may hang on shutdown");
     }
+    ATOMIC_DEC(&worker_count, &mut_worker_count);
     return NULL;
 }
 
@@ -1338,10 +1367,15 @@ static void startSrvWrkr(journal_etry_t *const etry) {
 
     pthread_attr_init(&sessThrdAttr);
     pthread_attr_setstacksize(&sessThrdAttr, 4096 * 1024);
+    /* count the worker before it can run, it decrements when leaving doRun() */
+    ATOMIC_INC(&worker_count, &mut_worker_count);
     r = pthread_create(&etry->tid, &sessThrdAttr, RunServerThread, etry);
     if (r != 0) {
+        ATOMIC_DEC(&worker_count, &mut_worker_count);
         LogError(r, NO_ERRCODE, "imjournal: error creating imjournal thread");
         /* we do NOT abort, as other servers may run - after all, we logged an error */
+    } else {
+        etry->thread_started = 1;
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
@@ -1350,9 +1384,13 @@ static void startSrvWrkr(journal_etry_t *const etry) {
 /* stop server worker thread
  */
 static void stopSrvWrkr(journal_etry_t *const etry) {
+    if (!etry->thread_started) {
+        return; /* thread creation failed, nothing to stop */
+    }
     DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
     pthread_kill(etry->tid, SIGTTIN);
     pthread_join(etry->tid, NULL);
+    etry->thread_started = 0;
     DBGPRINTF("input %p terminated\n", etry);
 }
 
@@ -1375,13 +1413,39 @@ BEGINrunInput
         LogError(0, RS_RET_DEPRECATED, "\"usepidfromsystem\" is deprecated, use \"usepid\" instead");
     }
 
+    int create_failed = 0;
     journal_etry_t *etry = journal_root->next;
     while (etry != NULL) {
         startSrvWrkr(etry);
+        if (!etry->thread_started) {
+            create_failed = 1;
+        }
         etry = etry->next;
     }
+    if (create_failed) {
+        /* reported once; triggers shutdown if all inputs are required */
+        thrd_report_fatal_input_failure();
+    }
 
-    CHKiRet(doRun(journal_root));
+    /* The worker threads use journal contexts that afterRun closes and
+     * frees, so they must be joined before runInput returns, even if the
+     * first input fails. The workers normally only stop on shutdown, so if
+     * the first input fails early, we wait until shutdown or until no
+     * worker is running any longer.
+     */
+    iRet = doRun(journal_root);
+    if (iRet != RS_RET_OK && ATOMIC_LOAD_32BIT(&worker_count, &mut_worker_count) > 0 &&
+        glbl.GetGlobalInputTermState() == 0 && !thrdGetShallStop(pThrd)) {
+        LogError(0, iRet,
+                 "imjournal: first journal input failed, "
+                 "remaining imjournal inputs continue to run");
+        /* triggers shutdown if all inputs are required */
+        thrd_report_fatal_input_failure();
+        while (ATOMIC_LOAD_32BIT(&worker_count, &mut_worker_count) > 0 && glbl.GetGlobalInputTermState() == 0 &&
+               !thrdGetShallStop(pThrd)) {
+            srSleep(0, 100000);
+        }
+    }
 
     etry = journal_root->next;
     while (etry != NULL) {
@@ -1623,6 +1687,7 @@ ENDafterRun
 
 BEGINmodExit
     CODESTARTmodExit;
+    DESTROY_ATOMIC_HELPER_MUT(mut_worker_count);
     if (pInputName != NULL) prop.Destruct(&pInputName);
     if (pLocalHostIP != NULL) prop.Destruct(&pLocalHostIP);
 
@@ -1811,6 +1876,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(datetime, CORE_COMPONENT));
+    INIT_ATOMIC_HELPER_MUT(mut_worker_count);
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(parser, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
