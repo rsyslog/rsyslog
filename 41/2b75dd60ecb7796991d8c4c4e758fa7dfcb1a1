@@ -1,0 +1,20 @@
+doc/source/configuration/modules/imklog.rst
+  h_95716f3de0caf5 92-95
+plugins/imklog/imklog.c
+  h_95716f3de0caf5 59,77-78,165,179-185,474,506
+tests/Makefile.am
+  h_95716f3de0caf5 31-32
+tests/imklog_control_chars.sh
+  h_95716f3de0caf5 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "412b75dd60ecb7796991d8c4c4e758fa7dfcb1a1",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
