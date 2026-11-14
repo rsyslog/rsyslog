@@ -1,0 +1,20 @@
+runtime/AGENTS.md
+  h_95716f3de0caf5 61-62
+runtime/datetime.c
+  h_95716f3de0caf5 1190,1395
+tests/Makefile.am
+  h_95716f3de0caf5 2,18,443
+tests/timereported-weekday-range.sh
+  h_95716f3de0caf5 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "59c3657b02ae81426220ec6dd504dff2b395ce6e",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
