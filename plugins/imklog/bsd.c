@@ -365,9 +365,14 @@ rsRetVal klogLogKMsg(modConfData_t *pModConf) {
 }
 
 
-/* provide the (system-specific) default facility for internal messages
+/* provide the (system-specific) default facility for internal messages.
+ * Linux has historically used "kern", other platforms use "syslog".
  * rgerhards, 2008-04-14
  */
 int klogFacilIntMsg(void) {
+#ifdef OS_LINUX
+    return LOG_KERN;
+#else
     return LOG_SYSLOG;
+#endif
 }
