@@ -1013,6 +1013,7 @@ EXTRA_DIST = \
     source/reference/parameters/omdtls-target.rst \
     source/reference/parameters/omdtls-template.rst \
     source/reference/parameters/omdtls-tls-authmode.rst \
+    source/reference/parameters/omdtls-tls-permittedpeer.rst \
     source/reference/parameters/omdtls-tls-cacert.rst \
     source/reference/parameters/omdtls-tls-mycert.rst \
     source/reference/parameters/omdtls-tls-myprivkey.rst \

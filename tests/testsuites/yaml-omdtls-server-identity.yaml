@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+version: 2
+testbench_modules:
+  - load: "@IMDIAG@"
+    serverrun: "0"
+    listenportfilename: "@IMDIAG_PORT@"
+    aborttimeout: "30"
+    properterminationfile: "@MARKER@"
+modules:
+  - load: "@IMUDP@"
+  - load: "@OMDTLS@"
+inputs:
+  - type: imudp
+    address: "127.0.0.1"
+    port: "0"
+    listenPortFileName: "@INPUT_PORT_FILE@"
+    ruleset: main
+rulesets:
+  - name: main
+    actions:
+      - type: omdtls
+        target: "127.0.0.1"
+        port: "@SERVER_PORT@"
+        tls.authmode: "@MODE@"
+# @PERMITTED_PEER@
+        tls.cacert: "@CA@"
+        tls.mycert: "@CLIENT_CERT@"
+        tls.myprivkey: "@CLIENT_KEY@"
+        action.resumeRetryCount: "0"

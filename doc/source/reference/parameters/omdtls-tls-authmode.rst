@@ -19,9 +19,9 @@ Sets the DTLS peer authentication method used by the action.
 This parameter applies to :doc:`../../configuration/modules/omdtls`.
 
 :Name: tls.authmode
-:Scope: input
+:Scope: action
 :Type: string
-:Default: input=none
+:Default: anonymous authentication
 :Required?: no
 :Introduced: v8.2402.0
 
@@ -31,10 +31,20 @@ Sets the mode of authentication to be used.
 
 Supported values are ``fingerprint``, ``name``, or ``certvalid``.
 
-* ``fingerprint``: Authentication based on certificate fingerprint.
-* ``name``: Authentication based on the ``subjectAltName`` and, as a fallback,
-  the subject common name.
+* ``fingerprint``: The trusted server certificate must match the complete
+  SHA-256 fingerprint in ``tls.permittedpeer``. The pin is required in this
+  mode and has the form ``SHA256:AA:BB:...`` (32 colon-separated octets).
+* ``name``: The trusted server certificate must identify the expected server.
+  The expected name is ``tls.permittedpeer`` when set, otherwise ``target``.
+  DNS names use ``subjectAltName`` with a common-name fallback when no DNS
+  subjectAltName is present. IP addresses require a matching IP subjectAltName.
 * ``certvalid``: Requires a valid certificate for authentication.
+
+All three modes require a certificate trusted by the configured CA set.
+``certvalid`` does not bind the certificate to ``target``. Use it only when
+chain validation alone is the intended policy. Existing ``name`` deployments
+that connect by IP to a DNS-named server should set ``tls.permittedpeer`` to
+that DNS name; ``fingerprint`` deployments must add an explicit SHA-256 pin.
 
 If this parameter is not set, or if an unsupported value is provided, the
 action falls back to anonymous authentication (no client certificate

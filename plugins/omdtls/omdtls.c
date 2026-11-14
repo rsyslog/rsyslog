@@ -31,6 +31,7 @@
 #include <strings.h>
 #include <assert.h>
 #include <errno.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/uio.h>
@@ -39,6 +40,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <math.h>
 #ifdef HAVE_SYS_STAT_H
     #include <sys/stat.h>
@@ -100,6 +102,8 @@ typedef struct _instanceData {
 
     uchar *target;
     uchar *port;
+    uchar *permittedPeer; /* expected server name or SHA-256 certificate pin */
+    unsigned char fingerprint[32];
 
     uchar *tlscfgcmd; /* OpenSSL Config Command used to override any OpenSSL Settings */
     int bHaveSess; /* True if DTLS session is established */
@@ -149,13 +153,57 @@ static rsRetVal dtls_send(wrkrInstanceData_t *pWrkrData,
                           const actWrkrIParams_t *__restrict__ const pParam,
                           const int iMsg);
 
+/* A pin is a complete SHA-256 digest, never a string prefix. */
+static int parseSHA256Pin(const char *pin, unsigned char digest[32]) {
+    if (pin == NULL || strncasecmp(pin, "SHA256:", 7) != 0) return 0;
+    const char *hex = pin + 7;
+    if (strlen(hex) != 95) return 0;
+    for (size_t i = 0; i < 32; ++i) {
+        unsigned int byte;
+        if (i != 0 && hex[i * 3 - 1] != ':') return 0;
+        if (!isxdigit((unsigned char)hex[i * 3]) || !isxdigit((unsigned char)hex[i * 3 + 1])) return 0;
+        if (sscanf(hex + i * 3, "%2x", &byte) != 1) return 0;
+        digest[i] = (unsigned char)byte;
+    }
+    return 1;
+}
+
+static int verifyServerIdentity(const instanceData *pData, SSL *ssl) {
+    X509 *cert = SSL_get_peer_certificate(ssl);
+    int matched = 0;
+    if (cert == NULL) return 0;
+    if (SSL_get_verify_result(ssl) != X509_V_OK) goto done;
+
+    if (pData->pNetOssl->authMode == OSSL_AUTH_CERTNAME) {
+        const char *expected = (const char *)(pData->permittedPeer != NULL ? pData->permittedPeer : pData->target);
+        struct in_addr ipv4;
+        struct in6_addr ipv6;
+        if (inet_pton(AF_INET, expected, &ipv4) == 1 || inet_pton(AF_INET6, expected, &ipv6) == 1)
+            matched = X509_check_ip_asc(cert, expected, 0) == 1;
+        else
+            matched = X509_check_host(cert, expected, 0, 0, NULL) == 1;
+    } else if (pData->pNetOssl->authMode == OSSL_AUTH_CERTFINGERPRINT) {
+        unsigned char actual[EVP_MAX_MD_SIZE];
+        unsigned int length = 0;
+        matched = X509_digest(cert, EVP_sha256(), actual, &length) == 1 && length == sizeof(pData->fingerprint) &&
+                  CRYPTO_memcmp(actual, pData->fingerprint, sizeof(pData->fingerprint)) == 0;
+    } else {
+        matched = 1; /* certvalid checks only the trusted chain. */
+    }
+done:
+    X509_free(cert);
+    return matched;
+}
+
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    {"target", eCmdHdlrGetWord, 0},       {"port", eCmdHdlrGetWord, 0},      {"tls.authmode", eCmdHdlrString, 0},
-    {"tls.cacert", eCmdHdlrString, 0},    {"tls.mycert", eCmdHdlrString, 0}, {"tls.myprivkey", eCmdHdlrString, 0},
-    {"tls.tlscfgcmd", eCmdHdlrString, 0}, {"template", eCmdHdlrGetWord, 0},  {"statsname", eCmdHdlrGetWord, 0}};
+    {"target", eCmdHdlrGetWord, 0},       {"port", eCmdHdlrGetWord, 0},
+    {"tls.authmode", eCmdHdlrString, 0},  {"tls.cacert", eCmdHdlrString, 0},
+    {"tls.mycert", eCmdHdlrString, 0},    {"tls.myprivkey", eCmdHdlrString, 0},
+    {"tls.tlscfgcmd", eCmdHdlrString, 0}, {"tls.permittedpeer", eCmdHdlrString, 0},
+    {"template", eCmdHdlrGetWord, 0},     {"statsname", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 /* module-global parameters */
@@ -279,16 +327,9 @@ BEGINcreateInstance
     pData->tplName = NULL;
     pData->target = NULL;
     pData->port = NULL;
+    pData->permittedPeer = NULL;
     pData->tlscfgcmd = NULL;
     pData->statsName = NULL;
-
-    /* node created, let's add to config */
-    if (loadModConf->tail == NULL) {
-        loadModConf->tail = loadModConf->root = pData;
-    } else {
-        loadModConf->tail->next = pData;
-        loadModConf->tail = pData;
-    }
 
     // Construct pNetOssl helper
     CHKiRet(net_ossl.Construct(&pData->pNetOssl));
@@ -327,6 +368,7 @@ BEGINfreeInstance
     /* Free other mem */
     free(pData->target);
     free(pData->port);
+    free(pData->permittedPeer);
     free(pData->tlscfgcmd);
 
     free(pData->tplName);
@@ -467,6 +509,8 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.tlscfgcmd")) {
             CHKmalloc(pData->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
+            CHKmalloc(pData->permittedPeer = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omdtls: program error, non-handled param '%s'\n",
                      actpblk.descr[i].name);
@@ -476,6 +520,19 @@ BEGINnewActInst
     /* check if no port is set. If so, we use DEFAULT of 433 */
     if (pData->port == NULL) {
         CHKmalloc(pData->port = (uchar *)strdup("443"));
+    }
+
+    if (pData->pNetOssl->authMode == OSSL_AUTH_CERTNAME &&
+        ((pData->permittedPeer != NULL && pData->permittedPeer[0] == '\0') ||
+         (pData->permittedPeer == NULL && (pData->target == NULL || pData->target[0] == '\0')))) {
+        LogError(0, RS_RET_PARAM_ERROR, "omdtls: name authentication requires a target or tls.permittedpeer");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    if (pData->pNetOssl->authMode == OSSL_AUTH_CERTFINGERPRINT &&
+        !parseSHA256Pin((const char *)pData->permittedPeer, pData->fingerprint)) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omdtls: fingerprint authentication requires a complete SHA256 tls.permittedpeer");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     iNumTpls = 1;
@@ -498,6 +555,13 @@ BEGINnewActInst
         CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"failures", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                     &pData->ctrDtlsFail));
         CHKiRet(statsobj.ConstructFinalize(pData->stats));
+    }
+    /* Publish only fully validated instances; the failure finalizer frees pData. */
+    if (loadModConf->tail == NULL) {
+        loadModConf->tail = loadModConf->root = pData;
+    } else {
+        loadModConf->tail->next = pData;
+        loadModConf->tail = pData;
     }
     CODE_STD_FINALIZERnewActInst;
     cnfparamvalsDestruct(pvals, &actpblk);
@@ -661,6 +725,15 @@ static rsRetVal dtls_connect(wrkrInstanceData_t *pWrkrData) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
+    if (pData->pNetOssl->authMode != OSSL_AUTH_CERTANON && !verifyServerIdentity(pData, pWrkrData->sslClient)) {
+        LogError(0, RS_RET_ERR, "omdtls: server certificate failed %s identity verification for %s:%s",
+                 pData->pNetOssl->authMode == OSSL_AUTH_CERTFINGERPRINT ? "fingerprint"
+                 : pData->pNetOssl->authMode == OSSL_AUTH_CERTNAME      ? "name"
+                                                                        : "chain",
+                 pData->target, pData->port);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
     // Print Cipher info
     sslCipher = SSL_get_current_cipher(pWrkrData->sslClient);
     dbgprintf("dtls_connect[%p]: Cipher Version: %s Name: %s\n", pWrkrData, SSL_CIPHER_get_version(sslCipher),
@@ -698,7 +771,8 @@ static rsRetVal dtls_connect(wrkrInstanceData_t *pWrkrData) {
 finalize_it:
     DBGPRINTF("dtls_connect[%p]: Exit with %d for %s:%s\n", pWrkrData, iRet, pData->target, pData->port);
     if (iRet != RS_RET_OK) {
-        pWrkrData->ConnectState = DTLS_DISCONNECTED;
+        /* A rejected peer must not retain an established SSL object. */
+        dtls_close(pWrkrData);
     }
     RETiRet;
 }
@@ -787,9 +861,9 @@ static rsRetVal dtls_close(wrkrInstanceData_t *pWrkrData) {
     DEFiRet;
     int iErr;
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
-    if (pWrkrData->ConnectState == DTLS_CONNECTED) {
+    if (pWrkrData->sslClient != NULL) {
         DBGPRINTF("dtls_close[%p]: close session for %s:%s\n", pWrkrData, pData->target, pData->port);
-        if (pWrkrData->sslClient != NULL && pWrkrData->ConnectState == DTLS_CONNECTED) {
+        if (pWrkrData->ConnectState == DTLS_CONNECTED) {
             iErr = SSL_shutdown(pWrkrData->sslClient);
             if (iErr <= 0) {
                 /* Shutdown not finished, call SSL_read to do a bidirectional shutdown, see doc:
@@ -800,9 +874,9 @@ static rsRetVal dtls_close(wrkrInstanceData_t *pWrkrData) {
                 char rcvBuf[DTLS_MAX_RCVBUF];
                 SSL_read(pWrkrData->sslClient, rcvBuf, DTLS_MAX_RCVBUF);
             }
-            SSL_free(pWrkrData->sslClient);
-            pWrkrData->sslClient = NULL;
         }
+        SSL_free(pWrkrData->sslClient);
+        pWrkrData->sslClient = NULL;
     }
 
     // Close Sockets
