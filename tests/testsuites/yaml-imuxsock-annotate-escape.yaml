@@ -1,0 +1,31 @@
+modules:
+  - load: "../plugins/imuxsock/.libs/imuxsock"
+    sysSock.use: "off"
+
+templates:
+  - name: plainfmt
+    type: string
+    string: "%rawmsg%\n"
+  - name: jsonfmt
+    type: string
+    string: "%rawmsg%|%$!appname%|%$!exe%|%$!cmd%\n"
+
+rulesets:
+  - name: plain
+    script: |
+      action(type="omfile" file="@OUT@" template="plainfmt")
+  - name: json
+    script: |
+      action(type="omfile" file="@OUT@" template="jsonfmt")
+
+inputs:
+  - type: imuxsock
+    socket: "@DYN@-plain.sock"
+    annotate: "on"
+    parseTrusted: "off"
+    ruleset: plain
+  - type: imuxsock
+    socket: "@DYN@-json.sock"
+    annotate: "on"
+    parseTrusted: "on"
+    ruleset: json

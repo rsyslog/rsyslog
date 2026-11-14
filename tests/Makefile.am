@@ -712,6 +712,7 @@ TESTS_DEFAULT = \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_annotate_large.sh \
 	imuxsock_annotate_escape.sh \
+	yaml-imuxsock-annotate-escape.sh \
 	imuxsock-NUL.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
@@ -2840,6 +2841,7 @@ EXTRA_DIST += $(TESTS_OMAZUREDCE_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAZUREDCE_YAML)
 EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
+EXTRA_DIST += testsuites/yaml-imuxsock-annotate-escape.yaml
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC)
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC_IMTCP)
 EXTRA_DIST += $(TESTS_OMKINESIS) $(TESTS_OMKINESIS_YAML) omkinesis-mock-common.sh omkinesis-mock-server.py
