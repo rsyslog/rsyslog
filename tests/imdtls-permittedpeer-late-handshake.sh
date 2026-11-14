@@ -39,6 +39,8 @@ template(name="outfmt" type="string" string="%inputname%|%rawmsg%\n")
 *.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+name_port=''
+fingerprint_port=''
 assign_file_content name_port "$name_port_file"
 assign_file_content fingerprint_port "$fingerprint_port_file"
 
