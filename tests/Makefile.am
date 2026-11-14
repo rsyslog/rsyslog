@@ -2597,12 +2597,17 @@ TESTS_IMDTLS_VALGRIND = \
 	imdtls-sessionbreak-vg.sh
 
 TESTS_IMDTLS_OMDTLS = \
+	omdtls-server-identity.sh \
 	sndrcv_dtls_certvalid.sh \
 	sndrcv_dtls_anon_ciphers.sh \
 	sndrcv_dtls_certvalid_ciphers.sh \
 	sndrcv_dtls_certvalid_permitted.sh \
 	sndrcv_dtls_certvalid_missing.sh \
 	sndrcv_dtls_anon_ciphers.sh
+
+TESTS_IMDTLS_OMDTLS_YAML = omdtls-server-identity.py \
+	yaml-omdtls-server-identity.sh \
+	testsuites/yaml-omdtls-server-identity.yaml
 
 TESTS_IMDTLS_OMDTLS_VALGRIND = \
 	sndrcv_dtls_certvalid-vg.sh
@@ -3135,6 +3140,7 @@ EXTRA_DIST += imdtls-two-flight-proxy.py
 EXTRA_DIST += imdtls-permittedpeer-pacing-proxy.py
 EXTRA_DIST += $(TESTS_IMDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS)
+EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS_YAML)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_OMUDPSPOOF) $(TESTS_OMUDPSPOOF_IMTCP)
 EXTRA_DIST += $(TESTS_OMRULESET)
@@ -4806,6 +4812,9 @@ TESTS += $(TESTS_IMDTLS_VALGRIND)
 endif # HAVE_VALGRIND
 if ENABLE_OMDTLS
 TESTS += $(TESTS_IMDTLS_OMDTLS)
+if HAVE_LIBYAML
+TESTS += yaml-omdtls-server-identity.sh
+endif # HAVE_LIBYAML
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMDTLS_OMDTLS_VALGRIND)
 endif # HAVE_VALGRIND

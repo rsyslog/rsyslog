@@ -82,6 +82,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omdtls-tls-authmode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omdtls-tls-permittedpeer`
+     - .. include:: ../../reference/parameters/omdtls-tls-permittedpeer.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omdtls-tls-cacert`
      - .. include:: ../../reference/parameters/omdtls-tls-cacert.rst
         :start-after: .. summary-start
@@ -110,6 +114,7 @@ Action Parameters
    ../../reference/parameters/omdtls-port
    ../../reference/parameters/omdtls-template
    ../../reference/parameters/omdtls-tls-authmode
+   ../../reference/parameters/omdtls-tls-permittedpeer
    ../../reference/parameters/omdtls-tls-cacert
    ../../reference/parameters/omdtls-tls-mycert
    ../../reference/parameters/omdtls-tls-myprivkey
