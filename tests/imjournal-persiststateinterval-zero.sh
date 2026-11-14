@@ -5,25 +5,59 @@
 # versions used the value as a modulus, i.e. divided by zero on the first
 # journal entry read (undefined behavior; SIGFPE on x86).
 #
+# The imjournal module parameters are set via RainerScript (default) or,
+# when IMJOURNAL_PSI0_YAML=1 is set (see
+# yaml-imjournal-persiststateinterval-zero.sh), via an included YAML file
+# that sets the same parameters.
+#
 # Oracle: the injected test message is received exactly once, rsyslogd
 # shuts down cleanly (wait_shutdown fails on abnormal termination), and the
 # state file exists and is non-empty afterwards, because the cursor is still
 # written at shutdown even if periodic persisting is disabled.
-# The test skips (77) if the message cannot be put into or read back from
-# the journal, like the other imjournal tests.
+#
+# Journal readiness: journald may take a moment to expose the injected
+# message. The test polls journalctl once per second for up to 30 seconds
+# and continues as soon as the message is visible. Only if the journal
+# cannot be read, or the message is still not visible after that bound, the
+# test skips (77), like the other imjournal tests.
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh require-journalctl
-generate_conf
+if [ "${IMJOURNAL_PSI0_YAML:-0}" = 1 ]; then
+	require_yaml_support
+fi
 
 STATEFILE="$RSYSLOG_DYNNAME.spool/imjournal.state"
 
+generate_conf
 add_conf '
-global(workDirectory="'$RSYSLOG_DYNNAME.spool'")
+global(workDirectory="'$RSYSLOG_DYNNAME'.spool")
+'
+if [ "${IMJOURNAL_PSI0_YAML:-0}" = 1 ]; then
+	# Same module parameters, but parsed by the YAML loader. The filter and
+	# action stay in RainerScript (as in yaml-imdocker-defaultfacility.sh)
+	# because imjournal's module-level listener feeds the default ruleset,
+	# and a YAML rulesets: entry of that name is rejected as a duplicate.
+	cat > "$RSYSLOG_DYNNAME.imjournal.yaml" <<'YAMLEOF'
+version: 2
+modules:
+  - load: "../plugins/imjournal/.libs/imjournal"
+    statefile: "imjournal.state"
+    persiststateinterval: "0"
+    # we turn off rate-limiting, else we may miss our test message:
+    ratelimit.interval: "0"
+YAMLEOF
+	add_conf '
+include(file="'$RSYSLOG_DYNNAME'.imjournal.yaml")
+'
+else
+	add_conf '
 module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state"
 	PersistStateInterval="0"
 	# we turn off rate-limiting, else we may miss our test message:
 	RateLimit.interval="0")
-
+'
+fi
+add_conf '
 template(name="outfmt" type="string" string="%msg%\n")
 
 # only process messages from this test instance to avoid interference
@@ -41,18 +75,21 @@ if [ $? -ne 0 ]; then
 	error_exit 77
 fi
 
-# sleep 1 to get this test to reliably detect the message
-sleep 1
-
-journalctl -an 200 > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-	echo "SKIP: cannot read journal."
-	error_exit 77
-fi
-
-journalctl -an 200 | grep -qF "$TESTMSG"
-if [ $? -ne 0 ]; then
-	echo "SKIP: cannot find '$TESTMSG' in journal."
+# bounded readiness poll: leave as soon as the message is visible
+msg_found=0
+for _ in $(seq 1 30); do
+	if ! journalctl -an 200 > /dev/null 2>&1; then
+		echo "SKIP: cannot read journal."
+		error_exit 77
+	fi
+	if journalctl -an 200 | grep -qF "$TESTMSG"; then
+		msg_found=1
+		break
+	fi
+	sleep 1
+done
+if [ "$msg_found" -ne 1 ]; then
+	echo "SKIP: cannot find '$TESTMSG' in journal after 30 seconds."
 	error_exit 77
 fi
 
