@@ -555,9 +555,11 @@ static rsRetVal enqMsg(uchar *msg,
         CHKiRet(iRet);
     }
 
-    /* ratelimitAddMsg() owns pMsg on every path imjournal can reach,
-     * including error returns (journal messages never need parsing), so
-     * pMsg must not be touched or freed afterwards.
+    /* ratelimitAddMsg() takes over pMsg: it submits it, keeps it for
+     * repeated-message reduction or frees it, also on error returns.
+     * Its only exit that does not is the parse-failure discard for
+     * messages flagged NEEDS_PARSING, which imjournal never sets. So
+     * pMsg must not be used or freed here afterwards.
      */
     iRet = ratelimitAddMsg(ratelimiter, NULL, pMsg);
     pMsg = NULL;
