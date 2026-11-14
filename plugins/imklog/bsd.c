@@ -238,6 +238,7 @@ rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf) {
     if (r < 0 && errno != EINVAL) {
         imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.", GetPath(pModConf),
                         rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+        close(fklog);
         fklog = -1;
         ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
     }
@@ -248,14 +249,17 @@ finalize_it:
 
 
 /* Read kernel log while data are available, split into lines.
+ * Returns RS_RET_EOF if read() reported end of file and RS_RET_READ_ERR
+ * if a read error occurred. In the latter case, the kernel log is closed.
  */
-static void readklog(modConfData_t *pModConf) {
+static rsRetVal readklog(modConfData_t *pModConf) {
     char *p, *q;
     int len, i;
     int iMaxLine;
     uchar bufRcv[128 * 1024 + 1];
     char errmsg[2048];
     uchar *pRcv = NULL; /* receive buffer */
+    DEFiRet;
 
     iMaxLine = klog_getMaxLine();
 
@@ -281,10 +285,14 @@ static void readklog(modConfData_t *pModConf) {
         if (i > 0) {
             pRcv[i + len] = '\0';
         } else {
-            if (i < 0 && errno != EINTR && errno != EAGAIN) {
+            if (i == 0) {
+                iRet = RS_RET_EOF;
+            } else if (errno != EINTR && errno != EAGAIN) {
                 imklogLogIntMsg(LOG_ERR, "imklog: error reading kernel log - shutting down: %s",
                                 rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+                close(fklog);
                 fklog = -1;
+                iRet = RS_RET_READ_ERR;
             }
             break;
         }
@@ -303,6 +311,7 @@ static void readklog(modConfData_t *pModConf) {
     if (len > 0) submitSyslog(pModConf, LOG_INFO, pRcv);
 
     if (pRcv != bufRcv) free(pRcv);
+    RETiRet;
 }
 
 
@@ -333,8 +342,25 @@ rsRetVal ATTR_NONNULL() klogAfterRun(modConfData_t *const pModConf __attribute__
  * rgerhards, 2008-04-09
  */
 rsRetVal klogLogKMsg(modConfData_t *pModConf) {
+    static int bEOFReported = 0; /* EOF on the kernel log was already reported */
     DEFiRet;
-    readklog(pModConf);
+    iRet = readklog(pModConf);
+    if (iRet == RS_RET_EOF) {
+        /* The kernel log devices block instead of returning EOF. EOF only
+         * happens if LogPath is e.g. a regular file or a FIFO without a
+         * writer. Retrying immediately would spin, so wait a bit before
+         * checking for new data.
+         */
+        if (!bEOFReported) {
+            imklogLogIntMsg(LOG_WARNING,
+                            "imklog: end of file reached on kernel log (%s), "
+                            "checking for new data once per second",
+                            GetPath(pModConf));
+            bEOFReported = 1;
+        }
+        srSleep(1, 0);
+        iRet = RS_RET_OK;
+    }
     RETiRet;
 }
 

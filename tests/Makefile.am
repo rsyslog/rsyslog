@@ -37,6 +37,11 @@ TESTS_IMUXSOCK_FIXPID_YAML = yaml-imuxsock-use-pid-from-system.sh
 EXTRA_DIST += $(TESTS_IMUXSOCK_FIXPID) $(TESTS_IMUXSOCK_FIXPID_YAML) \
 	testsuites/yaml-imuxsock-use-pid-from-system.yaml
 
+TESTS_IMKLOG_LOGPATH = \
+	imklog-logpath-eof.sh \
+	imklog-logpath-read-error.sh
+EXTRA_DIST += $(TESTS_IMKLOG_LOGPATH)
+
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
 	diskqueue-qi-reload-abi.sh
@@ -3781,6 +3786,10 @@ TESTS += $(TESTS_OMHTTP)
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMHTTP_VALGRIND)
 endif
+endif
+
+if ENABLE_IMKLOG
+TESTS += $(TESTS_IMKLOG_LOGPATH)
 endif
 
 if ENABLE_IMFIFO
