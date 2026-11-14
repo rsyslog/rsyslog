@@ -184,6 +184,14 @@ the input they are specified with.
      - .. include:: ../../reference/parameters/imptcp-compression-mode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imptcp-compression-maxexpansionratio`
+     - .. include:: ../../reference/parameters/imptcp-compression-maxexpansionratio.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imptcp-compression-maxdecompressedbytesperreceive`
+     - .. include:: ../../reference/parameters/imptcp-compression-maxdecompressedbytesperreceive.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imptcp-flowcontrol`
      - .. include:: ../../reference/parameters/imptcp-flowcontrol.rst
         :start-after: .. summary-start
@@ -240,12 +248,17 @@ Error Messages
 
 When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
 
-If ``compression.mode="stream:always"`` is enabled, ``imptcp`` also logs:
+When stream decompression is active (``compression.mode="stream:always"``, or
+``"stream:auto"`` once a session is detected as compressed), ``imptcp`` also
+logs:
 
 - invalid compressed streams
 - trailing bytes after the end of a compressed stream
 - truncated compressed streams detected when the peer disconnects before the
   stream is cleanly finished
+- compressed streams rejected because they exceeded
+  ``compression.maxExpansionRatio`` or
+  ``compression.maxDecompressedBytesPerReceive``
 
 
 Caveats/Known Bugs
@@ -323,6 +336,8 @@ Create a unix domain socket:
    ../../reference/parameters/imptcp-ratelimit-interval
    ../../reference/parameters/imptcp-ratelimit-burst
    ../../reference/parameters/imptcp-compression-mode
+   ../../reference/parameters/imptcp-compression-maxexpansionratio
+   ../../reference/parameters/imptcp-compression-maxdecompressedbytesperreceive
    ../../reference/parameters/imptcp-flowcontrol
    ../../reference/parameters/imptcp-multiline
    ../../reference/parameters/imptcp-framing-delimiter-regex

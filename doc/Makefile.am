@@ -674,6 +674,8 @@ EXTRA_DIST = \
     source/reference/parameters/impstats-severity.rst \
     source/reference/parameters/imptcp-address.rst \
     source/reference/parameters/imptcp-addtlframedelimiter.rst \
+    source/reference/parameters/imptcp-compression-maxdecompressedbytesperreceive.rst \
+    source/reference/parameters/imptcp-compression-maxexpansionratio.rst \
     source/reference/parameters/imptcp-compression-mode.rst \
     source/reference/parameters/imptcp-defaulttz.rst \
     source/reference/parameters/imptcp-discardtruncatedmsg.rst \
