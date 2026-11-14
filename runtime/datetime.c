@@ -1187,6 +1187,7 @@ int getWeekdayNbr(struct syslogTime *ts) {
     }
     wday = ((36525 * g) / 100) + ((306 * f) / 10) + ts->day - 621049;
     wday %= 7;
+    if (wday < 0) wday += 7;
     return wday;
 }
 
