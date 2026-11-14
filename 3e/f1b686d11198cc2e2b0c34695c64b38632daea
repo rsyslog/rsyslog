@@ -1,0 +1,18 @@
+doc/source/reference/parameters/omdtls-tls-permittedpeer.rst
+  h_95716f3de0caf5 31-67
+tests/omdtls-server-identity.py
+  h_95716f3de0caf5 5,26-52,55,67,83,116-119
+tests/testsuites/yaml-omdtls-server-identity.yaml
+  h_95716f3de0caf5 14-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ef1b686d11198cc2e2b0c34695c64b38632daea",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
