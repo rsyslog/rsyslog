@@ -1,0 +1,19 @@
+tests/Makefile.am
+  s_21a8eefcb5d3df::t_e74152a39b8da9 3315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "d23a4edf7b7f67e21ef551c175783211a0277abd",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

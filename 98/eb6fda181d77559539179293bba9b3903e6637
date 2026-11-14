@@ -1,0 +1,123 @@
+tests/cee_diskqueue.sh
+  s_d41298c6e29859::t_13bf8ea1382c1d 8,17
+tests/dircreate_dflt.sh
+  s_d41298c6e29859::t_424e5428a1668c 9-17,26
+tests/diskq-rfc5424.sh
+  s_d41298c6e29859::t_383a68b2a48777 18,27
+tests/diskqueue-scope-action.sh
+  s_d41298c6e29859::t_57d91bdf4aaf45 1-4
+tests/diskqueue-scope-main.sh
+  s_d41298c6e29859::t_8a13342b2284ca 1-4
+tests/diskqueue-scope-ruleset.sh
+  s_d41298c6e29859::t_16eb7e66ea6b42 1-4
+tests/fromhost-port-async-ruleset.sh
+  s_d41298c6e29859::t_3ed492ea9b8abf 7,22-23
+tests/omprog-diskq-restart-save.sh
+  s_d41298c6e29859::t_079bd0b6a3955c 6,11,37
+tests/pipeaction.sh
+  s_d41298c6e29859::t_ef478b273099cd 16-24,38
+tests/segmented-diskqueue-cee.sh
+  s_d41298c6e29859::t_1491c52274a887 1-5
+tests/segmented-diskqueue-checkpoint-0.sh
+  s_d41298c6e29859::t_eabc8d2b575991 1-5
+tests/segmented-diskqueue-checkpoint-1.sh
+  s_d41298c6e29859::t_50e9462e3e2d8d 1-5
+tests/segmented-diskqueue-checkpoint-5.sh
+  s_d41298c6e29859::t_04533cf9d03e92 1-5
+tests/segmented-diskqueue-config.sh
+  s_d41298c6e29859::t_27783da61ce698 2-4,44-69
+tests/segmented-diskqueue-crash-checkpoint-repeat.sh
+  s_d41298c6e29859::t_5aedc99c763947 1-5
+tests/segmented-diskqueue-crash-reservation-repeat.sh
+  s_d41298c6e29859::t_59176800be8e74 1-5
+tests/segmented-diskqueue-dircreate.sh
+  s_d41298c6e29859::t_f5689fd807e1e8 1-4
+tests/segmented-diskqueue-fromhost-port.sh
+  s_d41298c6e29859::t_14f3a9030b6827 1-5
+tests/segmented-diskqueue-maxdiskspace.sh
+  s_d41298c6e29859::t_715fe2ca91b7c4 1-42
+tests/segmented-diskqueue-missing-checkpoint.sh
+  s_d41298c6e29859::t_aec8fcb3ec6646 32
+tests/segmented-diskqueue-missing-segment.sh
+  s_d41298c6e29859::t_06daf33ebddcb0 1-52
+tests/segmented-diskqueue-missing-state.sh
+  s_d41298c6e29859::t_e4c649c5613dd6 1-4
+tests/segmented-diskqueue-multiple-recovery.sh
+  s_d41298c6e29859::t_7bcabb6a97c0b6 1-56
+tests/segmented-diskqueue-multiworker-frontier.sh
+  s_d41298c6e29859::t_aca119ebb61af4 1-56
+tests/segmented-diskqueue-omprog-restart-save.sh
+  s_d41298c6e29859::t_661f19007c4fe4 1-5
+tests/segmented-diskqueue-pipeaction.sh
+  s_d41298c6e29859::t_1d099da67f295b 1-4
+tests/segmented-diskqueue-recovery-budget.sh
+  s_d41298c6e29859::t_d24ca4cc96aa8d 1-61
+tests/segmented-diskqueue-rfc5424.sh
+  s_d41298c6e29859::t_6bc5ff86ac4745 1-5
+tests/segmented-diskqueue-scope-action.sh
+  s_d41298c6e29859::t_e5df3e4824b6e1 1-4
+tests/segmented-diskqueue-scope-main.sh
+  s_d41298c6e29859::t_6ed50a3ab476b0 1-4
+tests/segmented-diskqueue-scope-ruleset.sh
+  s_d41298c6e29859::t_6710283d2a705e 1-4
+tests/segmented-diskqueue-state-slots.sh
+  s_d41298c6e29859::t_db4951936bd2ed 36
+tests/segmented-diskqueue-v1-state.sh
+  s_d41298c6e29859::t_a2cfee6e013409 1-4
+tests/testsuites/pure-disk-queue-scope-driver.sh
+  s_d41298c6e29859::t_6718a07818b3d4 1-59
+tests/testsuites/segmented-diskqueue-checkpoint-driver.sh
+  s_d41298c6e29859::t_2f1f16254f65e3 1-45
+tests/testsuites/segmented-diskqueue-crash-driver.sh
+  s_d41298c6e29859::t_1f844a3afe4da6 1-75
+tests/testsuites/segmented-diskqueue-invalid-state-driver.sh
+  s_d41298c6e29859::t_29fa57be38d5dd 1-63
+tests/Makefile.am
+  s_d41298c6e29859::t_5977bee675326b 33-34,36-69,71-75,89,2448,2450,2467-2471,2532-2533,2540
+tests/segdisk-inspect.py
+  s_d41298c6e29859::t_c479b7618b9695 86-94,102,106-122,128,133-151,174-239,262,267-272,274-276,281-292
+tests/segmented-diskqueue-corruption-codec.sh
+  s_d41298c6e29859::t_eb52dd48dabc03 1-4
+tests/segmented-diskqueue-corruption-framing.sh
+  s_d41298c6e29859::t_39802d1db504f7 1-4
+tests/segmented-diskqueue-corruption.sh
+  s_d41298c6e29859::t_289d31e6acf1c2 2-4,9,39-45
+tests/segmented-diskqueue-crash-checkpoint.sh
+  s_d41298c6e29859::t_e6553188449da6 1-4
+tests/segmented-diskqueue-crash-commit.sh
+  s_d41298c6e29859::t_07b0528c0d4f3c 1-4
+tests/segmented-diskqueue-crash-create.sh
+  s_d41298c6e29859::t_165fd078ce765c 1-4
+tests/segmented-diskqueue-crash-predelete.sh
+  s_d41298c6e29859::t_c9664079668774 1-4
+tests/segmented-diskqueue-crash-reservation.sh
+  s_d41298c6e29859::t_ea90b978912272 1-4
+tests/segmented-diskqueue-crash-seal-rename.sh
+  s_d41298c6e29859::t_d721c86d8014d6 1-4
+tests/segmented-diskqueue-crash-seal-write.sh
+  s_d41298c6e29859::t_9ae63470413287 1-4
+tests/segmented-diskqueue-crash-unlink.sh
+  s_d41298c6e29859::t_67f26e5dad9510 1-4
+tests/segmented-diskqueue-fsync.sh
+  s_d41298c6e29859::t_48725d07097423 1-28
+tests/segmented-diskqueue-restart.sh
+  s_d41298c6e29859::t_1bc5e5e2becb06 69-77
+tests/unit/segdisk_state_test.c
+  s_d41298c6e29859::t_a1f71f3ae2f205 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "98eb6fda181d77559539179293bba9b3903e6637",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

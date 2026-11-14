@@ -1,0 +1,19 @@
+doc/source/reference/parameters/omfwd-tcp-user-timeout.rst
+  s_6224eda96fc0da::t_d39f65301dc144 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "16c27400c32d802bbafe72263855b29fc9931a1b",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

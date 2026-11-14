@@ -1,0 +1,21 @@
+plugins/AGENTS.md
+  s_5e773934876cb4::t_c66293111f6809 120
+tests/Makefile.am
+  s_5e773934876cb4::t_584b7094d1c76d 2680
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "275c963566874a36cdd48fdbc7be8579b536ab5a",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

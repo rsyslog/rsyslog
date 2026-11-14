@@ -1,0 +1,19 @@
+doc/source/reference/parameters/imtcp-failonbinderror.rst
+  s_b3a84b787ce0a4::t_a7d29003841190 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7553ff5b7b66015dff90da79d021dfbb81ea45c7",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+benchmarks/queue-contention/trial-multi.sh
+  s_53c9354de38ddb::t_b7eb5dec82a613 2-3
+benchmarks/queue-contention/compare.py
+  s_53c9354de38ddb::t_ce1bdf74c21746 80,162-165
+  s_53c9354de38ddb::t_b7eb5dec82a613 2-3,37-38,57-79,81-84,135,159,161
+benchmarks/queue-contention/trial.sh
+  s_53c9354de38ddb::t_b7eb5dec82a613 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "18cf999548982c350a2d553109069ffe8f4b2634",
+  "prompts": {},
+  "sessions": {
+    "s_53c9354de38ddb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070da-a4a3-71b1-83ca-215b48a880c1",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

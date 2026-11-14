@@ -1,0 +1,24 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_5935a77474593c 951
+tests/config-translate-write-error.sh
+  s_5e773934876cb4::t_5c40e7ea1dbcf0 15
+  s_5e773934876cb4::t_5935a77474593c 1-14,16-33
+runtime/translate.c
+  s_5e773934876cb4::t_07103591c621b9 27,1982-1994
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "080d61d16581a8bdeb9d60590691de4dac651323",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

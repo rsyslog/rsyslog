@@ -1,0 +1,19 @@
+.github/FEDORA_DAILY_STABLE.md
+  s_52daf9b39e2b17::t_ff6d3c2315a93d 11-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "3d342c430297c4c92b6892c8be4667c46d48090b",
+  "prompts": {},
+  "sessions": {
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

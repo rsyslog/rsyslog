@@ -1,0 +1,21 @@
+tests/imudp-bind-failure.sh
+  s_5e773934876cb4::t_fda847cfc843c7 31-32
+tests/local-queue-s4-config.sh
+  s_5e773934876cb4::t_b62dec07701842 27-28,36-37,39,42,44-45,47-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f38f7b1aa6fd2a4d8c29f3533a6e2e11c37f77a5",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

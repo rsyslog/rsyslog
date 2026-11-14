@@ -1,0 +1,26 @@
+tests/imtcp-ruleset-no-queue-warning.sh
+  s_6224eda96fc0da::t_00d83eec4e5683 6
+  s_6224eda96fc0da::t_17f974f01434db 1-5,7-27,29-48,50-52
+  s_6224eda96fc0da::t_e610b9ef3ee2fb 28,49
+tests/Makefile.am
+  s_6224eda96fc0da::t_17f974f01434db 682
+runtime/im-helper.h
+  s_6224eda96fc0da::t_54b338bac66db7 31,56-58
+  s_6224eda96fc0da::t_17f974f01434db 55,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "085e06f6158546d194da4cd59c722fbc253477b5",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

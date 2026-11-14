@@ -1,0 +1,28 @@
+doc/source/reference/parameters/imtcp-maxsessions.rst
+  s_5424d888acca0b::t_bf0e31f02de923 34-40
+  s_5424d888acca0b::t_77f0a80bdacac7 41
+tests/Makefile.am
+  s_5424d888acca0b::t_bf0e31f02de923 837,2174-2175,4005
+tests/imtcp-stream-always-zlib-completion-release.sh
+  s_5424d888acca0b::t_648682e5243823 13
+  s_5424d888acca0b::t_bf0e31f02de923 1-4,8-12,14-17,20-25,30-34,36-44,46-47,49-68,71-77,79
+  s_5424d888acca0b::t_ccb06538973ccc 5-7,18-19,26-29,35,45,48,69-70,78
+runtime/tcps_sess.c
+  s_5424d888acca0b::t_bf0e31f02de923 176-183,188,947-948,963,1123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "515f8a18d6fc72e209e40d31fc10233119adf302",
+  "prompts": {},
+  "sessions": {
+    "s_5424d888acca0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4dd5-73fd-7af3-9aef-a1169b92629a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

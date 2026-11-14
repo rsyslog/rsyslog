@@ -1,0 +1,21 @@
+tests/ommail-sendmail-default-binary.sh
+  s_12493d1d1488ca::t_4988bc87f20bad 10-11,14,16
+  s_12493d1d1488ca::t_29782f0abe6aad 7-8,12-13
+  s_12493d1d1488ca::t_73e172d8256c34 5-6,9,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0b40b8d996f0c6fca9e3341a45479528ac62b8a2",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

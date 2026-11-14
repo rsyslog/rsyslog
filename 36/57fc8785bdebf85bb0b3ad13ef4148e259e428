@@ -1,0 +1,27 @@
+doc/source/configuration/modules/omgssapi.rst
+  s_5e773934876cb4::t_590529ac7c5187 3-13,101-102,127-128,130-134,136-138
+doc/source/reference/parameters/omgssapi-actiongssforwarddefaulttemplate.rst
+  s_5e773934876cb4::t_e8db69f998f645 3-6,45-48,50-52,56,60
+doc/source/reference/parameters/omgssapi-gssforwardservicename.rst
+  s_5e773934876cb4::t_a32644cca53e18 3-6,45-48,50-52,56,60
+doc/source/reference/parameters/omgssapi-gssmode.rst
+  s_5e773934876cb4::t_dce6185dae06b4 3-6,48-51,53-55,59,63
+doc/source/reference/parameters/omgssapi-gsstokeniotimeout.rst
+  s_5e773934876cb4::t_9caadecde67c74 3-6,47-50,52-54,58,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3657fc8785bdebf85bb0b3ad13ef4148e259e428",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

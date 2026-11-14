@@ -1,0 +1,25 @@
+runtime/Makefile.am
+  s_142ee1fa291d22::t_48490bf9641f87 84
+runtime/queue_spsc.c
+  s_142ee1fa291d22::t_82316738854341 1-159
+runtime/queue_spsc.h
+  s_142ee1fa291d22::t_cd2e585fe131de 59,63,67,71-73
+tests/unit/queue_spsc_test.c
+  s_142ee1fa291d22::t_c9319b859720eb 26-28,121,125-127,145-149,232,234-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4fdcf40b45ae7dd6e3a6979516fe588ee2e750fa",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

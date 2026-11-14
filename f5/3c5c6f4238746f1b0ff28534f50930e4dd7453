@@ -1,0 +1,20 @@
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_2f9b5e373a48d1 597
+  s_2dc01c7e3d2940::t_ae3e2d404ba757 129-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "f53c5c6f4238746f1b0ff28534f50930e4dd7453",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

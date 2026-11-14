@@ -1,0 +1,24 @@
+tests/Makefile.am
+  s_142ee1fa291d22::t_23f90de521270b 351
+tests/minitcpsrvr.c
+  s_142ee1fa291d22::t_8060544d0f969f 421-423
+tests/minitcpsrv-reconnect.sh
+  s_142ee1fa291d22::t_b260f1a9d2ae92 12,33-34,38-39,56-57,68-69,73-74
+  s_142ee1fa291d22::t_23f90de521270b 1-11,13-32,35-37,40-55,58-67,70-72,75-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2cb2492d8cd8284bb78d9fe27e8ecf8e375f3aed",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

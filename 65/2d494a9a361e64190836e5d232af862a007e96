@@ -1,0 +1,21 @@
+devtools/devcontainer.sh
+  s_e1bc3bab0b4eb3::t_7251cda1fe2e3a 5-6,17-39,64-69
+.github/workflows/run_checks.yml
+  s_e1bc3bab0b4eb3::t_cca0ecd9dd8490 423
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "652d494a9a361e64190836e5d232af862a007e96",
+  "prompts": {},
+  "sessions": {
+    "s_e1bc3bab0b4eb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eff87-c605-7251-88e6-f834c8ca0205",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

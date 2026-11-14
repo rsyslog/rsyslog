@@ -1,0 +1,29 @@
+plugins/ompgsql/createDB.sql
+  s_06c5a5c0173a0b::t_e9dedafcc42592 25
+tests/Makefile.am
+  s_06c5a5c0173a0b::t_41deb363778f3e 3231-3232
+  s_06c5a5c0173a0b::t_e9dedafcc42592 1110
+tests/pgsql-long-syslogtag.sh
+  s_06c5a5c0173a0b::t_10a827fd2eae3f 25
+  s_06c5a5c0173a0b::t_a90fb0ada09bf2 1-24,26-31
+plugins/ompgsql/ompgsql.c
+  s_06c5a5c0173a0b::t_e9dedafcc42592 239-240
+tests/testsuites/pgsql-basic.sql
+  s_06c5a5c0173a0b::t_e9dedafcc42592 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "3315786a6de39890e61644c0f57b01af3e4f2dc0",
+  "prompts": {},
+  "sessions": {
+    "s_06c5a5c0173a0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a061b7-b567-7e63-b994-07007aa4c899",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

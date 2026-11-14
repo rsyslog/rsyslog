@@ -1,0 +1,20 @@
+devtools/release/debian-daily-stable.sh
+  s_2dc01c7e3d2940::t_82f28b75c6d56a 361-369,562-563,589-590,592-593,640-652
+  s_2dc01c7e3d2940::t_86bc59d543098c 653
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "541a7602d837326a3081e1072690eba43b477b10",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

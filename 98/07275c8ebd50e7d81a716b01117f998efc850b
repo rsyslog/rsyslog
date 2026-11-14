@@ -1,0 +1,20 @@
+tests/imtcp-stream-always-zlib-completion-release.sh
+  s_5424d888acca0b::t_7db99a3f306b58 10
+  s_5424d888acca0b::t_de9841f6fa2e99 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "9807275c8ebd50e7d81a716b01117f998efc850b",
+  "prompts": {},
+  "sessions": {
+    "s_5424d888acca0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4dd5-73fd-7af3-9aef-a1169b92629a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

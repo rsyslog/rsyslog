@@ -1,0 +1,44 @@
+tests/Makefile.am
+  s_f2c089be484e12::t_70354dbd8f0f82 166,2683,2686,2722-2724,2805-2806,2817
+runtime/reload-report.h
+  s_f2c089be484e12::t_70354dbd8f0f82 10
+runtime/reload-normalized-graph.c
+  s_f2c089be484e12::t_3467e65f6e8f16 19,41,78,123-124,126
+  s_f2c089be484e12::t_87ddb31698d9fd 70,76-77,111-112
+  s_f2c089be484e12::t_70354dbd8f0f82 1-18,20-28,30-40,42-69,71-75,79-110,113-122,127-147
+  s_f2c089be484e12::t_40206c04ac697e 125
+  s_f2c089be484e12::t_9c723c75413824 29
+runtime/Makefile.am
+  s_f2c089be484e12::t_70354dbd8f0f82 61-62
+tests/unit/reload_normalized_graph_test.c
+  s_f2c089be484e12::t_0cbe1ab524b268 103
+  s_f2c089be484e12::t_2991cc6b2179e4 92-96
+  s_f2c089be484e12::t_70354dbd8f0f82 1,3-41,48-54,57-58,60,62-63,72-74,84-85,89-91,97-98,112-114
+  s_f2c089be484e12::t_3467e65f6e8f16 59,75-80,83,86-88
+  s_f2c089be484e12::t_d4f77a4c355792 2
+  s_f2c089be484e12::t_54fb318dcbd005 42-47,55-56,81,99-100,104-111
+  s_f2c089be484e12::t_a7aebab59d4a72 61,64-71,82,101-102
+runtime/reload-normalized-graph.h
+  s_f2c089be484e12::t_b8b86239d51146 3
+  s_f2c089be484e12::t_87ddb31698d9fd 66-67,76
+  s_f2c089be484e12::t_3467e65f6e8f16 68-70,80-82
+  s_f2c089be484e12::t_70354dbd8f0f82 1-2,4-10,13-40,42-63,71-75,77-79,83-88
+  s_f2c089be484e12::t_ffe88b8d2b3a5b 64-65
+  s_f2c089be484e12::t_54fb318dcbd005 11-12,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "667fc2807a46121240b5dd2f7888b2017013bf80",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

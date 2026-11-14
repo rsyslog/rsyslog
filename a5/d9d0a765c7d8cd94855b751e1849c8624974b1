@@ -1,0 +1,38 @@
+runtime/dynstats.c
+  s_6224eda96fc0da::t_109bfd7d37d33e 1027,1029,1139
+  s_6224eda96fc0da::t_328817fce658da 1032,1117-1119,1141
+  s_6224eda96fc0da::t_af7a8f2a2656bc 1098,1138
+  s_6224eda96fc0da::t_22b59a1fde47dd 1030,1047-1048,1115,1140
+  s_6224eda96fc0da::t_7060b2ac11cc3a 1075
+  s_6224eda96fc0da::t_3e3c3bcc9da011 1095-1097,1099,1135-1137
+  s_6224eda96fc0da::t_b2efa3cd19cb3b 1031,1094,1100,1116,1124
+  s_6224eda96fc0da::t_6013f9561c17cc 1033-1034,1071,1074,1120-1123,1125-1134
+runtime/statsobj.c
+  s_6224eda96fc0da::t_82c0aadee2d93b 164
+  s_6224eda96fc0da::t_7060b2ac11cc3a 275,278
+  s_6224eda96fc0da::t_af7a8f2a2656bc 98,886-888,890
+  s_6224eda96fc0da::t_711c74d4586ecd 159,955-956
+  s_6224eda96fc0da::t_58c3939fa212c0 85-93,95-97,99-104,122-123,140-142,149-150,173-174,261
+  s_6224eda96fc0da::t_b2efa3cd19cb3b 889
+  s_6224eda96fc0da::t_bf6eeaa22057e6 105
+  s_6224eda96fc0da::t_a0a4cea744fe0b 127-129,135-136,885
+  s_6224eda96fc0da::t_c5414101bfaba7 94,118-121,134,147-148
+runtime/statsobj.h
+  s_6224eda96fc0da::t_7060b2ac11cc3a 215,221,229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "a5d9d0a765c7d8cd94855b751e1849c8624974b1",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

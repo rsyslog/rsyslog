@@ -1,0 +1,68 @@
+tests/queue-lease-attribution.sh
+  s_142ee1fa291d22::t_f1ad290bb04840 1-22
+plugins/imdiag/Makefile.am
+  s_142ee1fa291d22::t_f1ad290bb04840 5-7
+runtime/wti.c
+  s_142ee1fa291d22::t_53a539468c34f9 296-297
+tests/queue-fixedarray-outoforder.sh
+  s_142ee1fa291d22::t_8d407f8ea0bb13 40
+  s_142ee1fa291d22::t_b0a8f44c62e13f 20,39
+  s_142ee1fa291d22::t_0eec7fd3a3030d 8-12,61
+  s_142ee1fa291d22::t_c0fcd4cb62d1e3 49-53
+plugins/imdiag/imdiag.c
+  s_142ee1fa291d22::t_f1ad290bb04840 670-688,735-738
+tests/unit/queue_lease_test.c
+  s_142ee1fa291d22::t_b0a8f44c62e13f 1-2,5-39,41-51,53-56
+  s_142ee1fa291d22::t_f1ad290bb04840 3-4
+  s_142ee1fa291d22::t_4534cccc57e94e 40,52
+tests/queue-discard-only-lease.sh
+  s_142ee1fa291d22::t_859c0b74c5c3de 1-32
+runtime/queue_lease.h
+  s_142ee1fa291d22::t_b0a8f44c62e13f 1-48
+runtime/Makefile.am
+  s_142ee1fa291d22::t_0eec7fd3a3030d 80
+  s_142ee1fa291d22::t_f1ad290bb04840 150-153
+runtime/queue.c
+  s_142ee1fa291d22::t_b849ea34d7d4ab 208,680-683,687-688,691-692,3115,3211-3213,3658-3661,3668-3670,3675,3703,3709,3712-3718
+  s_142ee1fa291d22::t_ff4bd11f3041b2 3766-3767
+  s_142ee1fa291d22::t_4534cccc57e94e 3778-3779,3824,3826-3827,3836-3838,3846-3848
+  s_142ee1fa291d22::t_4ddf2a28b3aad8 684-686,3671-3672
+  s_142ee1fa291d22::t_79a4093edade7e 3750,3758,3782-3783,3865-3866
+  s_142ee1fa291d22::t_40ee72c7b24025 3148-3151,3177
+  s_142ee1fa291d22::t_15a45074b50721 3727-3729,3784-3785
+  s_142ee1fa291d22::t_0eec7fd3a3030d 3673-3674
+  s_142ee1fa291d22::t_d7bd780cb6c408 3753,3755,3793,3795
+  s_142ee1fa291d22::t_d59af6f870a6f5 3802
+  s_142ee1fa291d22::t_a5ef03637d8f08 3843
+  s_142ee1fa291d22::t_f43f175cd9ae24 3920
+  s_142ee1fa291d22::t_7516407afd74bd 3808-3811,3852
+  s_142ee1fa291d22::t_598e367fa7cc46 3724-3726,3730-3749,3751-3752,3754,3756-3757,3759-3765,3768-3777,3780-3781,3786-3792,3794,3796-3801,3803-3807,3812-3823,3825,3828-3835,3839,3857-3864,3867-3872
+  s_142ee1fa291d22::t_860e442235727b 689-690
+  s_142ee1fa291d22::t_9bc422fe0461f7 3840-3842,3844-3845,3849-3851,3853-3856
+  s_142ee1fa291d22::t_23a5e768d1b792 3710-3711
+runtime/wti.h
+  s_142ee1fa291d22::t_b0a8f44c62e13f 33,86-89
+runtime/queue.h
+  s_142ee1fa291d22::t_f1ad290bb04840 332-336
+tests/Makefile.am
+  s_142ee1fa291d22::t_859c0b74c5c3de 71,2994
+  s_142ee1fa291d22::t_b0a8f44c62e13f 2691,2694,2721,2723,2806
+  s_142ee1fa291d22::t_f1ad290bb04840 70,2722,2807
+  s_142ee1fa291d22::t_ff4bd11f3041b2 2819
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c499ea212d19d54db938ea55eb87e759cf131c53",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

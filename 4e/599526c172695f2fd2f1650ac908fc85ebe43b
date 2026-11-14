@@ -1,0 +1,14 @@
+plugins/imdtls/imdtls.c
+  h_95716f3de0caf5 103,580,587,590-593,601,923
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4e599526c172695f2fd2f1650ac908fc85ebe43b",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

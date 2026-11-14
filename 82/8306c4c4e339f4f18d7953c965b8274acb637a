@@ -1,0 +1,19 @@
+packaging/ubuntu/build-ubuntu.sh
+  s_5e773934876cb4::t_07d3c2f35484ef 115-119,346-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "828306c4c4e339f4f18d7953c965b8274acb637a",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

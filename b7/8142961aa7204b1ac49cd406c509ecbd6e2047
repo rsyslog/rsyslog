@@ -1,0 +1,20 @@
+doc/source/configuration/modules/imuxsock.rst
+  h_95716f3de0caf5 478-482
+plugins/imuxsock/imuxsock.c
+  h_95716f3de0caf5 903-904,908,911-918,922,926,931-934,957-1018,1131-1133,1137,1140-1141,1161-1162,1168-1169,1175-1176
+tests/Makefile.am
+  h_95716f3de0caf5 714
+tests/imuxsock_annotate_escape.sh
+  h_95716f3de0caf5 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b78142961aa7204b1ac49cd406c509ecbd6e2047",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

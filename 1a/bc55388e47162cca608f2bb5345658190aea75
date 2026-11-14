@@ -1,0 +1,32 @@
+runtime/template.c
+  s_93bca8a649ce85::t_569e9edc24f2fc 1519-1528,1889-1894
+tests/Makefile.am
+  s_93bca8a649ce85::t_569e9edc24f2fc 180
+  s_93bca8a649ce85::t_78db9b58335965 536
+tests/template-json-short-prop-vg.sh
+  s_93bca8a649ce85::t_78db9b58335965 1-5
+  s_93bca8a649ce85::t_cd6f54660cf66c 10,13,16
+  s_93bca8a649ce85::t_b79a17868069b3 6-9,11-12,14-15,17-18
+tests/template-json-short-prop.sh
+  s_93bca8a649ce85::t_20c108957262a8 29
+  s_93bca8a649ce85::t_9f79b105f9fac4 13
+  s_93bca8a649ce85::t_9430a7873f8471 12
+  s_93bca8a649ce85::t_569e9edc24f2fc 1-11,19,22-28,30-36,46-54,58
+  s_93bca8a649ce85::t_dfd9a0128a13b4 14-18,20-21,37-45,55-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1abc55388e47162cca608f2bb5345658190aea75",
+  "prompts": {},
+  "sessions": {
+    "s_93bca8a649ce85": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e6eae-6ead-7852-891b-261c45d0e2f5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+runtime/AGENTS.md
+  s_44bfc910592dc7::t_67e684265efe74 54-56
+tests/Makefile.am
+  s_44bfc910592dc7::t_1eaa9fb7372cd4 2075-2080,2787-2788,4049-4052
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3db4b0c2b374cf79e940e89ad14d140af8bf261f",
+  "prompts": {},
+  "sessions": {
+    "s_44bfc910592dc7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_44bfc910592dc7",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+.github/PACKAGING_STRATEGY.md
+  s_0d5683fb5e1727::t_e7d4261dec6627 35-36,46-47,53-56,64-65,69-71,77-207,235-236,266-275,338-339,348-372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf16091c629dd37d5c5ecd51deb84b297bdc7bd9",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

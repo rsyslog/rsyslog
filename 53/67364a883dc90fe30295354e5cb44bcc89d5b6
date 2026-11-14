@@ -1,0 +1,19 @@
+tests/codex-pre-push-container-gate.sh
+  s_142ee1fa291d22::t_e361b3af19e4c4 215-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5367364a883dc90fe30295354e5cb44bcc89d5b6",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

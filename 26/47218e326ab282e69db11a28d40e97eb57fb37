@@ -1,0 +1,19 @@
+tests/Makefile.am
+  s_dddca84a90e5c6::t_02e6d1737fbc02 3019-3020,3022
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2647218e326ab282e69db11a28d40e97eb57fb37",
+  "prompts": {},
+  "sessions": {
+    "s_dddca84a90e5c6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1643e-7192-7c62-a181-6de59bd2de6b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

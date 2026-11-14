@@ -1,0 +1,46 @@
+tests/package-candidate-plan.sh
+  s_0d5683fb5e1727::t_b6b1c2302a2874 6-7,116-162
+  s_0d5683fb5e1727::t_335f07d6a0c306 163-167
+.github/workflows/packaging_candidates.yml
+  s_0d5683fb5e1727::t_97c388778a4dfb 124-125
+  s_0d5683fb5e1727::t_1740c7b2359ab1 88
+devtools/release/package-candidate-plan.py
+  s_0d5683fb5e1727::t_0478dad304fe4e 20-22,69-71,87-121,128-130,132-141
+  s_0d5683fb5e1727::t_cabdbab1145ce3 142
+.github/PACKAGING_FOUNDATION.md
+  s_0d5683fb5e1727::t_efa83bb7a145a0 33-35,51-53,61-75,190-192
+.github/PACKAGING_IMPLEMENTATION.md
+  s_0d5683fb5e1727::t_1720b03244edff 24-27,32-34,36-65
+.github/PACKAGING_STRATEGY.md
+  s_0d5683fb5e1727::t_e26b9fde852856 16-18
+.github/workflows/alpine324_daily_stable.yml
+  s_0d5683fb5e1727::t_e8c91ac609aaa9 22-26,61-62,70-71,78-81,109,111-128,136,149-153
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_0d5683fb5e1727::t_56bca418136c38 22-26,60-61,69-70,77-80,108,110-127,135,147-151
+.github/workflows/debian_daily_stable.yml
+  s_0d5683fb5e1727::t_dc36650de4da91 28-32,70-71,79-80,87-90,120,122-139,147,162-166
+.github/workflows/el10_daily_stable.yml
+  s_0d5683fb5e1727::t_9fcf21983860dd 22-26,60-61,69-70,77-80,108,110-127,135,148-152
+.github/workflows/fedora44_daily_stable.yml
+  s_0d5683fb5e1727::t_49db5472d30bc2 22-26,60-61,69-70,77-80,108,110-127,135,147-151
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_0d5683fb5e1727::t_287145806eb41a 22-26,60-61,69-70,77-80,108,110-127,135,147-151
+.github/workflows/ubuntu_daily_stable.yml
+  s_0d5683fb5e1727::t_718abacb0aa194 28-32,71-72,80-81,88-91,121,123-140,148,163-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ffab12b95c30fb9f7636ca151f706bdd7b8c5b1",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

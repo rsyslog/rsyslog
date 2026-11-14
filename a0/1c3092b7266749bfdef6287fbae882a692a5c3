@@ -1,0 +1,21 @@
+doc/ai/designs/local-queue-execution-ledger.md
+  s_196a1624ba67a9::t_0d34f65bbeaffa 17-21
+doc/ai/designs/local-queue-implementation-plan.md
+  s_196a1624ba67a9::t_ee6c5af3d8d49f 683
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a01c3092b7266749bfdef6287fbae882a692a5c3",
+  "prompts": {},
+  "sessions": {
+    "s_196a1624ba67a9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16d98-9184-7f93-a3b2-5d7ca11bc41b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

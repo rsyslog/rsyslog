@@ -1,0 +1,35 @@
+benchmarks/queue-contention/README.md
+  s_142ee1fa291d22::t_370693df17f6b5 69-72,77-78,114-124
+benchmarks/queue-contention/evidence/local-queue-s0/s0-balanced-session1.json
+  s_142ee1fa291d22::t_0a3abae747979d 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-balanced-session2.json
+  s_142ee1fa291d22::t_aecbc17eccc6ed 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-batch-diagnostic.json
+  s_142ee1fa291d22::t_ba6580345993ef 1-68
+benchmarks/queue-contention/evidence/local-queue-s0/s0-impstats-diagnostic.json
+  s_142ee1fa291d22::t_c8794c1597eabd 1-292
+benchmarks/queue-contention/evidence/local-queue-s0/s0-low-session1.json
+  s_142ee1fa291d22::t_5bf8cfc0b863b1 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-low-session2.json
+  s_142ee1fa291d22::t_6701ba8da1b2dd 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-skew-session1.json
+  s_142ee1fa291d22::t_f9e768f258fe5a 1-492
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_cb631202667168 29-31,135-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a94a98cd43510a27af6834c6fb1e4d2a075e24ec",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

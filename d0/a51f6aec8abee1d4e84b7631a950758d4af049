@@ -1,0 +1,41 @@
+tools/shadow_reload.c
+  s_f2c089be484e12::t_f755481f738ee8 43,79,88-89,111,142-158,173,191
+  s_f2c089be484e12::t_982bc9465c220e 359-361,445-447,537-538,563-564,595-596
+  s_f2c089be484e12::t_feb7bc5ff246ff 523-525
+  s_f2c089be484e12::t_2cb9e64f96c7f7 192,448,526,597-598
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_f2ae3abb9e4293 25-35,40
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_5687ae1c844230 36,38-39
+  s_f2c089be484e12::t_4f08a0a6054c5d 13,35,37,40
+  s_f2c089be484e12::t_1f30243777fca4 41
+  s_f2c089be484e12::t_983658c5867c26 42
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_33bc9140bb095c 20
+  s_f2c089be484e12::t_1f30243777fca4 568-576,579-588
+  s_f2c089be484e12::t_21f9d37a2d213b 19
+  s_f2c089be484e12::t_162b1623a9638a 542-567,577-578,589-593
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_34e9ca082e2f11 258-264
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_f2ae3abb9e4293 13-29,34-38,40
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_4f08a0a6054c5d 1085,1088-1093,1095,1097-1098
+  s_f2c089be484e12::t_1f30243777fca4 1084,1086-1087,1094,1096
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "d0a51f6aec8abee1d4e84b7631a950758d4af049",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

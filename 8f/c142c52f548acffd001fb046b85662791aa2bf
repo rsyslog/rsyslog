@@ -1,0 +1,19 @@
+tests/pmrfc3164-SquareBracketsInHostname-oversize.sh
+  s_47434391063c98::t_b15d39a7a4bf09 8-9,17,34-42,44-50,53,55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8fc142c52f548acffd001fb046b85662791aa2bf",
+  "prompts": {},
+  "sessions": {
+    "s_47434391063c98": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a110d8-81db-7be0-a834-31df7ac9094e",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

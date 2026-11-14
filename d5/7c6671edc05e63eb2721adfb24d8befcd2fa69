@@ -1,0 +1,83 @@
+tests/local-queue-be-force-term-actions.sh
+  s_de358a5d0a4803::t_4d6c5af2301f48 33,36-38,147-158
+runtime/ruleset.c
+  s_de358a5d0a4803::t_108d138f3ceeb5 1139
+  s_de358a5d0a4803::t_c14c464d042255 55,1140-1143
+  s_de358a5d0a4803::t_bdc96d8bf71da4 1532,1542
+  s_de358a5d0a4803::t_6c25e1d0256679 61
+  s_de358a5d0a4803::t_52d47e5c1bb591 1122,1124-1126,1129,1135,1144,1146
+  s_de358a5d0a4803::t_66fce8e5a5e16b 56,1130-1134,1136,1145,1147
+tests/local-queue-stats-lifetime.sh
+  s_de358a5d0a4803::t_8327876feb4c6a 6-7
+  s_de358a5d0a4803::t_104570ece490e7 8-9
+tests/local-queue-s5-da-emergency-lease.sh
+  s_de358a5d0a4803::t_e645abb7b88418 1-26,33-77,79
+  s_de358a5d0a4803::t_8b1dfbdd2d3824 27-32,78
+tests/local-queue-submit-batches.sh
+  s_de358a5d0a4803::t_6bd0a80188bbc1 11-12,47-51
+  s_de358a5d0a4803::t_ba118428d07f02 52
+tests/local-queue-global-shutdown-loss-report-linkedlist.sh
+  s_de358a5d0a4803::t_f7b5bbc12f85d4 1-8
+tests/local-queue-global-shutdown-loss-report.sh
+  s_de358a5d0a4803::t_d821abbec07f57 6-8,76-77
+  s_de358a5d0a4803::t_e50d33cf480881 39
+  s_de358a5d0a4803::t_49abda06db541a 5,26-31,75
+  s_de358a5d0a4803::t_7303ece5ba06c8 4,60-61,65
+  s_de358a5d0a4803::t_cae2254a24a5f2 25,59
+  s_de358a5d0a4803::t_f2060a7aba6a4f 1-3,9-15,17-24,32-38,40-43,45-47,49-58,62-64,66-74,79-80
+  s_de358a5d0a4803::t_bd0b7ea21ac6c2 48
+  s_de358a5d0a4803::t_ef4f0e89eb4e5b 78
+  s_de358a5d0a4803::t_f7b5bbc12f85d4 16,44
+runtime/queue.c
+  s_de358a5d0a4803::t_66fce8e5a5e16b 2794,2798
+  s_de358a5d0a4803::t_47014c80131ad4 737,743,2795
+  s_de358a5d0a4803::t_d4279e82e7ed1c 1969-1970,1972-1975,4376-4379,4386-4391,4394-4404
+  s_de358a5d0a4803::t_e645abb7b88418 4383
+  s_de358a5d0a4803::t_e5c2f084786b50 1966-1968,1971,4380-4382,4384-4385,4392-4393,4420,4433
+  s_de358a5d0a4803::t_c14c464d042255 738,2797
+  s_de358a5d0a4803::t_52d47e5c1bb591 2782-2783
+  s_de358a5d0a4803::t_2e4bb29b578e63 732-735,739,748-750,1046,1113,2796
+  s_de358a5d0a4803::t_f47ee6fed765f1 736,740-742,744-747
+runtime/queue_local_stats.h
+  s_de358a5d0a4803::t_dcca259bb86f26 68-72
+runtime/queue.h
+  s_de358a5d0a4803::t_66fce8e5a5e16b 44,325
+tests/Makefile.am
+  s_de358a5d0a4803::t_4d6c5af2301f48 249-250
+  s_de358a5d0a4803::t_f2060a7aba6a4f 253
+  s_de358a5d0a4803::t_f7b5bbc12f85d4 254-255
+  s_de358a5d0a4803::t_e645abb7b88418 209
+tests/local-queue-shutdown-loss-report.sh
+  s_de358a5d0a4803::t_4d6c5af2301f48 1,3-9
+  s_de358a5d0a4803::t_52d47e5c1bb591 2
+runtime/queue_local_stats.c
+  s_de358a5d0a4803::t_73032d19521134 28
+  s_de358a5d0a4803::t_dd86da677c0ebe 522-523,529-530
+  s_de358a5d0a4803::t_0f94662ade9fe3 693
+  s_de358a5d0a4803::t_f7ec1238fd6f57 610,615-637,646,651,653,655,657-661,668,681,683-690,692,703-710,712
+  s_de358a5d0a4803::t_1a09ed33c2a5f1 509-518,525-528,531-532
+  s_de358a5d0a4803::t_0f546b27ee644c 11,13-15,321
+  s_de358a5d0a4803::t_a2c13fad5a71a0 320,611-614,694-697
+  s_de358a5d0a4803::t_2117f3ead151f3 643,656,671
+  s_de358a5d0a4803::t_2bca8373b1a441 711
+plugins/imdiag/imdiag.c
+  s_de358a5d0a4803::t_13ee24a748fb8c 889,894,900,910,914,926,938,946,951-952,1020
+  s_de358a5d0a4803::t_658c080e5861b2 823,832,843
+  s_de358a5d0a4803::t_5e0e8328e63fd2 824,842,844-846,878-880,1019
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d57c6671edc05e63eb2721adfb24d8befcd2fa69",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

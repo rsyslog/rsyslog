@@ -1,0 +1,27 @@
+runtime/queue.c
+  s_a84ad1a36f7145::t_4f8af7b2336032 1072
+  s_a84ad1a36f7145::t_ab7706e86fac30 3152
+  s_a84ad1a36f7145::t_f30376a9265a3a 4537
+  s_a84ad1a36f7145::t_65f6fca1550330 245
+  s_a84ad1a36f7145::t_449dad51d2d52c 4796
+  s_a84ad1a36f7145::t_bc487fb437d861 4676-4684
+  s_a84ad1a36f7145::t_34ff6956402115 4730
+runtime/queue.h
+  s_a84ad1a36f7145::t_ae55050cbc3bea 215-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "5811924e997a0923410998c16828c1f6d00ec292",
+  "prompts": {},
+  "sessions": {
+    "s_a84ad1a36f7145": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "34781d95-dea8-4bae-8586-cf3ef14f9291",
+        "model": "grok-4.6"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

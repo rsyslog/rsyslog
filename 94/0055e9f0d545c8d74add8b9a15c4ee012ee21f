@@ -1,0 +1,19 @@
+runtime/rsconf.c
+  s_f2c089be484e12::t_79bd96558fb694 92-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "940055e9f0d545c8d74add8b9a15c4ee012ee21f",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

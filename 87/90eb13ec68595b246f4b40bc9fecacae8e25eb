@@ -1,0 +1,19 @@
+grammar/rainerscript.c
+  s_6e4560b726945f::t_e65101ce39e85a 3729-3746,3748
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8790eb13ec68595b246f4b40bc9fecacae8e25eb",
+  "prompts": {},
+  "sessions": {
+    "s_6e4560b726945f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0490a-a52f-7070-a860-07dbad0a9acd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+runtime/queue_local.c
+  s_142ee1fa291d22::t_a4b518d96a269b 328-333
+  s_142ee1fa291d22::t_ae17d8825634d3 334
+tests/Makefile.am
+  s_142ee1fa291d22::t_a4b518d96a269b 186
+tests/local-queue-be-force-term-actions.sh
+  s_142ee1fa291d22::t_a4b518d96a269b 1-8,14-18,20-25,27-34,36-52,60-67,75-90,92,103-106
+  s_142ee1fa291d22::t_443f7047b6f56d 9-13,19,26,35,68-74,91,93-102
+  s_142ee1fa291d22::t_9b5dabcc64795d 53-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e727da45913d2e3d29b3f0cd2ce5367667f22235",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

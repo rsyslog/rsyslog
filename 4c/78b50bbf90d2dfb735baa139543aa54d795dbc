@@ -1,0 +1,28 @@
+tests/prifilt-trailing-separator.sh
+  s_6bc2ac41753eb9::t_3239e7b14aa32a 1-2,6-12,23,25,28-29
+  s_6bc2ac41753eb9::t_6a3856debb476d 3-5,21-22,26-27
+  s_6bc2ac41753eb9::t_b4bd050319e6bc 13-20,24
+runtime/conf.c
+  s_6bc2ac41753eb9::t_3239e7b14aa32a 370
+tests/prifilt-trailing-separator-vg.sh
+  s_6bc2ac41753eb9::t_75b870f111474e 3
+  s_6bc2ac41753eb9::t_3239e7b14aa32a 1-2,4-5
+tests/Makefile.am
+  s_6bc2ac41753eb9::t_3239e7b14aa32a 62-64,549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4c78b50bbf90d2dfb735baa139543aa54d795dbc",
+  "prompts": {},
+  "sessions": {
+    "s_6bc2ac41753eb9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0569f-287d-7d31-89ea-bad7fcbfe92f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

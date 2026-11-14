@@ -1,0 +1,32 @@
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_3df1b4fb731b18 274-311,334-336
+  s_142ee1fa291d22::t_c8ae71e9b0cad7 312-321
+  s_142ee1fa291d22::t_f6b241763e9288 30,337-346
+  s_142ee1fa291d22::t_556a36b10e184a 322-333
+benchmarks/queue-contention/evidence/local-queue-s1/s1-balanced-session1-retry.json
+  s_142ee1fa291d22::t_3d1ff0a56565eb 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-balanced-session1.json
+  s_142ee1fa291d22::t_a25c6f758256ea 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-balanced-session2.json
+  s_142ee1fa291d22::t_d48a1130b21ee7 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-low-session1.json
+  s_142ee1fa291d22::t_0a35c71994065e 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-low-session2.json
+  s_142ee1fa291d22::t_2ecbd5fd4f475c 1-497
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1826fdf27750a9b9e32f58eb7e9b0d3d6189c658",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

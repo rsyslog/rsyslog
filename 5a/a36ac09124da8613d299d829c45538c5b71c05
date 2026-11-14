@@ -1,0 +1,26 @@
+tests/Makefile.am
+  s_83566911eeff21::t_9c386bba51a027 440
+tests/omelasticsearch-maxbytes-boundary.sh
+  s_83566911eeff21::t_9c386bba51a027 1-6,8-55,59-60,62-86,89,91-107,110-127,130,132-156
+  s_83566911eeff21::t_ecf522f3701bac 56-57,61,87-88,90,108-109,128-129,131
+  s_83566911eeff21::t_73d28704442840 7
+  s_83566911eeff21::t_788756cafb21ae 58
+plugins/omelasticsearch/omelasticsearch.c
+  s_83566911eeff21::t_9c386bba51a027 1192,1194-1195,2220-2221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5aa36ac09124da8613d299d829c45538c5b71c05",
+  "prompts": {},
+  "sessions": {
+    "s_83566911eeff21": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a044c1-9e07-7e21-b6ec-b07c7ffff0a8",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+runtime/Makefile.am
+  s_f2c089be484e12::t_49a655e1fa2809 344
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_7e29a79d5a0244 559
+  s_f2c089be484e12::t_e07fc981e370ff 318-321,471-472,475
+tests/Makefile.am
+  s_f2c089be484e12::t_4da5889b70ba34 2763,2768,2822-2824,2931-2932,2952
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_d5c801e6691884 101-108,3311,3313-3316,3393-3396
+  s_f2c089be484e12::t_e07fc981e370ff 3310
+  s_f2c089be484e12::t_349415763e532e 69,95,97,182,230,2968-2970,3312,3318,3344-3345,3356-3358,3362-3371,3375,3380
+  s_f2c089be484e12::t_c36a1dc4e3e8f1 3359-3361
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_d295b3116064f9 58,67-68
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_e07fc981e370ff 1722-1723,1760,1882,1969,2025,2908
+  s_f2c089be484e12::t_7e29a79d5a0244 1750-1751,1754-1759,1761,1770,1911-1912,1934,1948-1949,1977,1993,2002,2005,2021-2024,2026-2028
+  s_f2c089be484e12::t_572a8f9ac2cbbb 970-971,986-987
+  s_f2c089be484e12::t_49a655e1fa2809 215,1762-1769,1908-1910
+  s_f2c089be484e12::t_1fc2613bdceaf6 1950-1953
+  s_f2c089be484e12::t_192ae7227dd581 1303-1307
+  s_f2c089be484e12::t_a82a5bf6a1cffc 2029
+runtime/tcpsrv-prepared.h
+  s_f2c089be484e12::t_49a655e1fa2809 1-112
+tests/unit/tcpsrv_prepared_test.c
+  s_f2c089be484e12::t_51eaa4fd36b9ac 87,92-94
+  s_f2c089be484e12::t_4da5889b70ba34 1-86,88-91,95-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40ee1a94f76b8b17b5741776eb9fc7f74513eb44",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

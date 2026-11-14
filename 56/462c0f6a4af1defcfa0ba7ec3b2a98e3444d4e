@@ -1,0 +1,32 @@
+AGENTS.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 56-66
+  s_2dc01c7e3d2940::t_96f25ac854ff70 85-87
+.github/FEDORA_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 18-20,89
+.github/OPENSUSE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 28-30,99
+.github/ALPINE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 11-13,83
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 1-117
+.github/AMAZONLINUX_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 19-21,90
+.github/DEBIAN_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_1ee652fa57d510 6-8,94,96-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "56462c0f6a4af1defcfa0ba7ec3b2a98e3444d4e",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

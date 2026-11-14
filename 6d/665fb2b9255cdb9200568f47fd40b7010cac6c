@@ -1,0 +1,23 @@
+grammar/rainerscript.c
+  s_5e773934876cb4::t_fe6746194fb3bf 5762,5766,5771,5778,5782,5787
+tests/Makefile.am
+  s_5e773934876cb4::t_3e149bb617c6fa 18-20,801
+tests/rscript-pri-optimizer-range.sh
+  s_5e773934876cb4::t_89d211c8162a73 1-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d665fb2b9255cdb9200568f47fd40b7010cac6c",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

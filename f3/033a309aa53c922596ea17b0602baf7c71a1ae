@@ -1,0 +1,67 @@
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_b09aa7fafa4267::t_efa733e4b4f727 65-70,80-81,85-107
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_b09aa7fafa4267::t_76a06ad44874e8 58-63
+.github/debian-daily-stable-13-policy.yml
+  s_b09aa7fafa4267::t_5599c04605871b 27-32
+.github/el10-daily-stable-policy.yml
+  s_b09aa7fafa4267::t_386c44b57e28ba 60-65
+.github/fedora44-daily-stable-policy.yml
+  s_b09aa7fafa4267::t_009ffc20179dcf 20-25
+.github/scripts/debian_package_build.sh
+  s_b09aa7fafa4267::t_e1c7f53246d10f 4-5,426-437
+.github/scripts/report-daily-stable-failure.js
+  s_b09aa7fafa4267::t_9cd16679616783 1-170
+.github/ubuntu-daily-stable-26.04-policy.yml
+  s_b09aa7fafa4267::t_290e6321a753d7 37-42
+.github/workflows/alpine324_daily_stable.yml
+  s_b09aa7fafa4267::t_5ffbb906c4a398 583,587-592,603-614
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_b09aa7fafa4267::t_239aba5210daaf 138-143,198,689,693-698,709-720
+.github/workflows/debian_daily_stable.yml
+  s_b09aa7fafa4267::t_1201633adc18aa 161-166,750,754-759,770-781
+.github/workflows/el10_daily_stable.yml
+  s_b09aa7fafa4267::t_5faa379dba3e74 141-146,209,266-272,707,711-716,727-738
+.github/workflows/fedora44_daily_stable.yml
+  s_b09aa7fafa4267::t_6c2d292dd5a799 138-143,198,688,692-697,708-719
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_b09aa7fafa4267::t_f6a9b763f7bdd1 138-143,210,709,713-718,729-740
+.github/workflows/ubuntu_daily_stable.yml
+  s_b09aa7fafa4267::t_cbe84efcd3064f 162-167,762,766-771,782-793
+devtools/release/amazonlinux-daily-stable.sh
+  s_b09aa7fafa4267::t_53083aadfd6614 110-111
+devtools/release/check-optional-module-policy.py
+  s_b09aa7fafa4267::t_a67d964997ee73 1-98
+devtools/release/fedora-daily-stable.sh
+  s_b09aa7fafa4267::t_a7ae728f3d72f9 110-111
+devtools/release/rpm-daily-stable.sh
+  s_b09aa7fafa4267::t_b11b6703fc24d1 113-114
+devtools/release/rpm-disable-optional-modules.py
+  s_b09aa7fafa4267::t_e86118ec71ed80 1-63
+devtools/release/upstream_patch_detect.py
+  s_b09aa7fafa4267::t_9e81132e192f33 1-142
+devtools/release/validate-rpm-baseline-patches.py
+  s_b09aa7fafa4267::t_0a0e2ba10c996b 21-27,32,37-39,45-48,100-103,106-131,137-142,147
+tests/Makefile.am
+  s_b09aa7fafa4267::t_c49405b818d840 25-27
+tests/daily-stable-package-drift.sh
+  s_b09aa7fafa4267::t_12b3c625cb3176 1-141
+tests/rpm-baseline-patch-policy.sh
+  s_b09aa7fafa4267::t_a674e5ea25d80b 10-16,18,184-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3033a309aa53c922596ea17b0602baf7c71a1ae",
+  "prompts": {},
+  "sessions": {
+    "s_b09aa7fafa4267": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "55783f72-320b-455b-bfb1-5335303c2de6",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

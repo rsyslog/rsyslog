@@ -1,0 +1,22 @@
+grammar/rainerscript.c
+  s_5e773934876cb4::t_b704278b6f99ba 1934-1937
+  s_5e773934876cb4::t_2a3f024311dbe2 1921-1928
+tests/rscript_parse_json.sh
+  s_5e773934876cb4::t_0c54bb1e03382f 4-6,16-27,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66661f23dee580f89493e0ddd3acdc6368eb4a21",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

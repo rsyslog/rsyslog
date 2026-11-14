@@ -1,0 +1,54 @@
+doc/source/configuration/modules/imhttp.rst
+  s_41b995fcc6f588::t_8e1fcfb03bc4f6 386-393
+doc/source/reference/parameters/impstats-format.rst
+  s_41b995fcc6f588::t_8e1fcfb03bc4f6 49-53
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_41b995fcc6f588::t_638161a0a4f2f4 1-42
+runtime/statsobj.c
+  s_41b995fcc6f588::t_0f2b32543e98ab 557-568,570-655,657-662,666,671-683,685-690
+  s_41b995fcc6f588::t_6026dd91ee2054 48
+  s_41b995fcc6f588::t_19f093899a7137 656,663-665,667-670,684,711-716,757-759,769-771,778-780,782
+  s_41b995fcc6f588::t_7b2429e4736c58 709-710,717,754-756,760-768,772-773,775-777,781,783,1110
+  s_41b995fcc6f588::t_d216f0963fd30d 718
+  s_41b995fcc6f588::t_cd2f76556e743d 569
+tests/stats-prometheus-escaping.sh
+  s_41b995fcc6f588::t_6154861edcd668 1-2,6-16,18-26,28,30-31
+  s_41b995fcc6f588::t_54b941d3b11cdd 3-5,17,27,29
+plugins/impstats/impstats_push.c
+  s_41b995fcc6f588::t_a07acc7a0ab01f 255-256,258,260,264,268-270
+  s_41b995fcc6f588::t_d216f0963fd30d 44
+  s_41b995fcc6f588::t_71e9099bbbb69c 272,275,312,403
+devtools/test-imhttp-prometheus-scrape.sh
+  s_41b995fcc6f588::t_54b941d3b11cdd 15,34
+  s_41b995fcc6f588::t_f2be86bd974c6c 19-23,27
+  s_41b995fcc6f588::t_881e97704b2448 45,49,51
+  s_41b995fcc6f588::t_33290e74a667d8 50,55
+  s_41b995fcc6f588::t_638161a0a4f2f4 1-14,16-18,24-26,28-33,35-44,46-48,52-54,56-81
+runtime/statsobj.h
+  s_41b995fcc6f588::t_6026dd91ee2054 174-177,225,234
+tests/imhttp-metrics.sh
+  s_41b995fcc6f588::t_54b941d3b11cdd 16,24-25
+tests/Makefile.am
+  s_41b995fcc6f588::t_6154861edcd668 1439
+doc/source/faq/impstats-push-mode.rst
+  s_41b995fcc6f588::t_8e1fcfb03bc4f6 67-70
+tests/stats-prometheus.sh
+  s_41b995fcc6f588::t_266b7444a061e8 27-28
+  s_41b995fcc6f588::t_be082d25b50974 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8dc4d3322aef9c8f803196165cd731881e34fa46",
+  "prompts": {},
+  "sessions": {
+    "s_41b995fcc6f588": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6691-5cc5-7943-b583-9f0e7f26659a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

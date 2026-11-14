@@ -1,0 +1,23 @@
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_ee766882cbdce2 19,29-33
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_ee766882cbdce2 1448-1463
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_1401b2f5817e92 320-335,404-417
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "c97e2d86afe00901cb06ceaa081b1c0539223a34",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/omfwd-lb-1target-retry-1_byte_buf.sh
+  s_6224eda96fc0da::t_2d007c08360ec6 6,20,22
+tests/omfwd-lb-1target-retry-1_byte_buf-TargetFail.sh
+  s_6224eda96fc0da::t_2d007c08360ec6 6,20,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e6d3a35736adbcc07ec7dcd5f968e05d3854aa7c",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

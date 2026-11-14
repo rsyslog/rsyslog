@@ -1,0 +1,24 @@
+runtime/tcps_sess.c
+  h_95716f3de0caf5 518-519,522
+tests/Makefile.am
+  h_95716f3de0caf5 31-32
+tests/fuzz/README.md
+  h_95716f3de0caf5 81-83
+tests/fuzz/corpus/imtcp-session/regex-framing-zstd-no-newline-oct10.hex
+  h_95716f3de0caf5 1-14
+tests/fuzz/corpus/imtcp-session/regex-framing-zstd-no-newline-oct13.hex
+  h_95716f3de0caf5 1-34
+tests/fuzz/prepare-imtcp-session-corpus.py
+  h_95716f3de0caf5 16-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "caa32f026a31ba67ab3a7ac4921f81d884fef543",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

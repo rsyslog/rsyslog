@@ -1,0 +1,37 @@
+doc/source/configuration/rsyslog_statistic_counter.rst
+  s_923c67e7c3d373::t_1d3b0d0967352e 67-70
+runtime/queue.c
+  s_923c67e7c3d373::t_3d6d7d5c1ae83c 544-549
+  s_923c67e7c3d373::t_3f821c0bc76787 558-561
+  s_923c67e7c3d373::t_0ee9a3b883bc3e 533-537,539-543,550-557,562-564
+  s_923c67e7c3d373::t_ee65dda05317b6 538
+  s_923c67e7c3d373::t_d18f99de1ad43f 2710,3575,3650,3693,3787,4073-4077,4387-4388
+  s_923c67e7c3d373::t_0145f3e6bba431 2709,4651,4700
+doc/source/configuration/modules/impstats.rst
+  s_923c67e7c3d373::t_1d3b0d0967352e 413-415
+runtime/queue.h
+  s_923c67e7c3d373::t_0ee9a3b883bc3e 244-245
+tests/Makefile.am
+  s_923c67e7c3d373::t_0516445e4cfa15 983-984
+tests/queue-mutex-contention-impstats.sh
+  s_923c67e7c3d373::t_f341c233f168f6 28
+  s_923c67e7c3d373::t_0516445e4cfa15 1-27,29-30
+tests/ratelimit_hup.sh
+  s_923c67e7c3d373::t_8c97c1cabfaa8b 2-7,16-31,79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "774ff4deb1cb3ea1b3cd79296f221ca76295bc42",
+  "prompts": {},
+  "sessions": {
+    "s_923c67e7c3d373": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05dfd-c5e9-7a01-b239-97b748984633",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

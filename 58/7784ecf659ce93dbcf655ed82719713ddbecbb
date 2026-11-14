@@ -1,0 +1,25 @@
+tests/yaml-queue-mutex-contention-stats.sh
+  s_923c67e7c3d373::t_df06f023c00c2d 4-5,51
+tests/ratelimit_hup.sh
+  s_923c67e7c3d373::t_df06f023c00c2d 17
+tests/queue-mutex-contention-impstats.sh
+  s_923c67e7c3d373::t_df06f023c00c2d 5-7,31
+doc/source/configuration/rsyslog_statistic_counter.rst
+  s_923c67e7c3d373::t_df06f023c00c2d 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "587784ecf659ce93dbcf655ed82719713ddbecbb",
+  "prompts": {},
+  "sessions": {
+    "s_923c67e7c3d373": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05dfd-c5e9-7a01-b239-97b748984633",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

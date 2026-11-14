@@ -1,0 +1,18 @@
+configure.ac
+  h_95716f3de0caf5 1037,1039-1042,1044
+tests/Makefile.am
+  h_95716f3de0caf5 42-44,2823-2825
+tools/Makefile.am
+  h_95716f3de0caf5 83-85,109,117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1113416464ec5bc0568c2181ae8f054fbbd86b95",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

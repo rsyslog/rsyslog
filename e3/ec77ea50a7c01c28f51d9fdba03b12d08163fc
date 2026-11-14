@@ -1,0 +1,25 @@
+plugins/imptcp/imptcp.c
+  s_d7272bc53775bd::t_bec53db065674d 2178
+tests/Makefile.am
+  s_d7272bc53775bd::t_941372521976ce 1582,2872-2877
+tests/override_recv_imptcp.c
+  s_d7272bc53775bd::t_0f76347a4371d3 1-38
+tests/imptcp-debug-recv-length.sh
+  s_d7272bc53775bd::t_9ba1b5a7da00b4 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3ec77ea50a7c01c28f51d9fdba03b12d08163fc",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

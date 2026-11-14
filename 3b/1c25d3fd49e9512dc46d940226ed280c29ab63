@@ -1,0 +1,19 @@
+doc/source/configuration/modules/mmaudit.rst
+  s_5e773934876cb4::t_5d4bf105ce3429 3-6,22-23,30-31,39,76,82-84,94-95,104-108,116-117,125-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b1c25d3fd49e9512dc46d940226ed280c29ab63",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
