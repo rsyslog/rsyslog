@@ -29,6 +29,8 @@ TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
 	diskqueue-qi-reload-abi.sh
 EXTRA_DIST += $(TESTS_DISK_QUEUE_SERIALIZER)
+TESTS_IMKLOG_CONSOLELOGLEVEL = imklog-consoleloglevel-restore.sh
+EXTRA_DIST += $(TESTS_IMKLOG_CONSOLELOGLEVEL)
 
 TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-hup.sh
 TESTS_LOCAL_OMFILE_ACTIVATION = local-queue-omfile-activation.sh
@@ -3004,6 +3006,18 @@ TESTS_OMJOURNAL_INDEPENDENT = $(TESTS_OMJOURNAL_SEND_ERRORS)
 endif
 endif
 
+# klogctl() interposer for unprivileged imklog consoleLogLevel tests
+if ENABLE_TESTBENCH
+if ENABLE_IMKLOG
+if ENABLE_IMKLOG_LINUX
+check_LTLIBRARIES += libimklog_klogctl_preload.la
+libimklog_klogctl_preload_la_SOURCES = imklog-klogctl-preload.c
+libimklog_klogctl_preload_la_CFLAGS =
+libimklog_klogctl_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+endif
+endif
+endif
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
@@ -3869,6 +3883,13 @@ endif # end if ENABLE_OMHTTP
 endif # end if ENABLE_FLAKY_TESTS
 
 
+
+
+if ENABLE_IMKLOG
+if ENABLE_IMKLOG_LINUX
+TESTS += $(TESTS_IMKLOG_CONSOLELOGLEVEL)
+endif
+endif
 
 
 if ENABLE_JOURNAL_TESTS
