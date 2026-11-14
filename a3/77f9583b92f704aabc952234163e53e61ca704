@@ -1,0 +1,25 @@
+runtime/Makefile.am
+  s_142ee1fa291d22::t_cfa05d158ef999 343-345
+runtime/queue_local.c
+  s_142ee1fa291d22::t_2b4e08d587cb8c 80-82,122-261,285-287,308-310,471-474,508-511,559-563,584-588,634-636,650-652,833-835,926-929,931,955-957,1080-1091
+runtime/queue_local.h
+  s_142ee1fa291d22::t_d412c58e51e725 47-54
+runtime/tcpsrv.c
+  s_142ee1fa291d22::t_9b9215fa531551 1550-1554
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a377f9583b92f704aabc952234163e53e61ca704",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

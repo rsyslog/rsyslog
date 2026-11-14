@@ -1,0 +1,27 @@
+tests/mmjsonparse-find-json-scan-stats.sh
+  s_5e773934876cb4::t_d3c9279ff05f3a 1-102
+tests/yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh
+  s_5e773934876cb4::t_6e01acf30dd2c6 1-5
+plugins/AGENTS.md
+  s_5e773934876cb4::t_9e77809ea6d412 115,124-129
+plugins/mmjsonparse/mmjsonparse.c
+  s_5e773934876cb4::t_03be861abfa6f4 291-292
+tests/Makefile.am
+  s_5e773934876cb4::t_059fd4710cd793 2015-2017,2819-2820,4136-4141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "208acb4446cd2d6767233b8ed9d63aad8cb48076",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

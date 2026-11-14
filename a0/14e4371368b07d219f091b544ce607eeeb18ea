@@ -1,0 +1,35 @@
+plugins/imrelp/imrelp.c
+  s_d7272bc53775bd::t_e07499e24057f5 59,803,811
+  s_d7272bc53775bd::t_5320a0a5d489e2 60-61,801-802,804-810,812-814
+tests/yaml-imrelp-maxDataSize-range.sh
+  s_d7272bc53775bd::t_5320a0a5d489e2 1-19,21-54,56-58
+  s_d7272bc53775bd::t_e07499e24057f5 55
+  s_d7272bc53775bd::t_1277cf5b4c67e4 20
+tests/imrelp-maxDataSize-range.sh
+  s_d7272bc53775bd::t_1277cf5b4c67e4 18
+  s_d7272bc53775bd::t_e07499e24057f5 56,60
+  s_d7272bc53775bd::t_5320a0a5d489e2 1-17,19-55,57-59,61-62
+tests/Makefile.am
+  s_d7272bc53775bd::t_5320a0a5d489e2 2081,2095-2096
+doc/source/reference/parameters/imrelp-maxdatasize.rst
+  s_d7272bc53775bd::t_afbc5e9e36e9ad 5
+  s_d7272bc53775bd::t_e07499e24057f5 37-38
+  s_d7272bc53775bd::t_5320a0a5d489e2 4,6-7,35-36,49-53
+  s_d7272bc53775bd::t_672b2d844df5cb 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a014e4371368b07d219f091b544ce607eeeb18ea",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

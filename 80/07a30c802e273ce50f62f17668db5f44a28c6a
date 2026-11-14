@@ -1,0 +1,27 @@
+doc/source/configuration/modules/mmsequence.rst
+  s_5e773934876cb4::t_ee99b868765034 33-37
+  s_5e773934876cb4::t_fed2b28a016a92 3-6,11-15
+  s_5e773934876cb4::t_ae0ea892864f24 16
+doc/source/rainerscript/variable_property_types.rst
+  s_5e773934876cb4::t_21b80f935378eb 57
+  s_5e773934876cb4::t_fed2b28a016a92 55-56,59,61-62
+  s_5e773934876cb4::t_ee99b868765034 3-8,12-18,30-32,39-47,49-53,58
+  s_5e773934876cb4::t_ff4f5f1c15d916 48
+  s_5e773934876cb4::t_71f4d2367dc578 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8007a30c802e273ce50f62f17668db5f44a28c6a",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

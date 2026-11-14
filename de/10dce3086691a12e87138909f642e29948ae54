@@ -1,0 +1,19 @@
+runtime/queue_local_stats.c
+  s_142ee1fa291d22::t_1f6d2ffd3571da 122,134,177,308,313,326,333,516-518,531
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "de10dce3086691a12e87138909f642e29948ae54",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

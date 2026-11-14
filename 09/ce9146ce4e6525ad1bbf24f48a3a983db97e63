@@ -1,0 +1,14 @@
+tests/solaris-subset.list
+  h_95716f3de0caf5 31-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "09ce9146ce4e6525ad1bbf24f48a3a983db97e63",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

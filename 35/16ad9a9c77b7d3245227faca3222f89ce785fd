@@ -1,0 +1,28 @@
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_f0add53470821c 140-143
+  s_f2c089be484e12::t_e2f89506562753 111,122
+  s_f2c089be484e12::t_7e44646609b545 134,144-149
+  s_f2c089be484e12::t_6d97270f57e85c 113-114
+  s_f2c089be484e12::t_ec61b26f7e8e93 84,92-98,102-107,112,123,126-133,135-138,150-172
+  s_f2c089be484e12::t_2ff6e6cef31978 108-110,115-121,124-125,139
+  s_f2c089be484e12::t_cddb8d367f8311 85-86
+  s_f2c089be484e12::t_4845321509739c 948-949,953-955,1436-1437,1571,1577,1580,1597,1603,1605-1606,1676-1677
+  s_f2c089be484e12::t_8871ad458fa19f 91
+  s_f2c089be484e12::t_6fe2a6d5011e4b 173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "3516ad9a9c77b7d3245227faca3222f89ce785fd",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

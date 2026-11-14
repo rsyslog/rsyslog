@@ -1,0 +1,25 @@
+ChangeLog
+  s_5e773934876cb4::t_12b4b632d19f51 4-8
+tests/Makefile.am
+  s_5e773934876cb4::t_ee3935ff296824 323,2934,2937,2971-2974
+tests/unit/iminternal_contention_test.c
+  s_5e773934876cb4::t_e39d4ee7991099 1-136
+tools/iminternal.c
+  s_5e773934876cb4::t_4174aa29380bdd 32,73-108,118-123,130-136,166-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "56937439cde1b058b34d073a36fa4245c74f1721",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

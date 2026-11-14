@@ -1,0 +1,27 @@
+tests/yaml-mmcount-distinct-values.sh
+  s_5e773934876cb4::t_097aea0afbdefa 1-5
+contrib/AGENTS.md
+  s_5e773934876cb4::t_2ed86bcdcf7cd1 21-26
+contrib/mmcount/mmcount.c
+  s_5e773934876cb4::t_1727b12de471a6 129,188,209,211-213,220
+tests/Makefile.am
+  s_5e773934876cb4::t_d295f73fb9e895 1187-1190,3595-3601
+tests/mmcount-distinct-values.sh
+  s_5e773934876cb4::t_f907d24a208728 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0bb0dd4078fcfd0db9be40fcabf88a68a5dc9bc",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

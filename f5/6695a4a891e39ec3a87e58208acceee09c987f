@@ -1,0 +1,29 @@
+tests/tcpflood.c
+  s_6224eda96fc0da::t_a59d241a6d3339 74,263,279,1886-1893,1933-1944,1954-1963,2140,2210-2212,2393-2402
+tests/Makefile.am
+  s_6224eda96fc0da::t_6a6d73a5ed9bcc 1578
+tests/tcpflood-gtls-priority-invalid.sh
+  s_6224eda96fc0da::t_ebb22f98399920 20-22,27-31
+  s_6224eda96fc0da::t_2e3a06d9adf0ce 7
+  s_6224eda96fc0da::t_35a91b86468197 19
+  s_6224eda96fc0da::t_3195e2bf4b6708 9-11,33
+  s_6224eda96fc0da::t_6f7e3e90ba4cf6 23,25-26
+  s_6224eda96fc0da::t_12b4d2e4b165a0 24
+  s_6224eda96fc0da::t_6a6d73a5ed9bcc 1-6,8,12-18,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "f56695a4a891e39ec3a87e58208acceee09c987f",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

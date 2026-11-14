@@ -1,0 +1,25 @@
+.github/PACKAGING_LAYOUT.md
+  s_0d5683fb5e1727::t_c606578451ba71 1-101
+.github/PACKAGING_IMPLEMENTATION.md
+  s_0d5683fb5e1727::t_c711a86bb0da95 1-102
+.github/PACKAGING_STRATEGY.md
+  s_0d5683fb5e1727::t_5a50e721ea5208 10-17
+.github/packaging-targets.json
+  s_0d5683fb5e1727::t_46f361cdea0632 1-696
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dbb17dcaf6f000716a2418f7e3a64a6ac2392f3",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

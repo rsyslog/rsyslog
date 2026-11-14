@@ -1,0 +1,18 @@
+tests/yaml-imuxsock-annotate-escape.sh
+  h_95716f3de0caf5 1-89
+tests/testsuites/yaml-imuxsock-annotate-escape.yaml
+  h_95716f3de0caf5 1-31
+tests/Makefile.am
+  h_95716f3de0caf5 715,2844
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "306b5fe1dd015c6e702e9516c683edbc61ccad87",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

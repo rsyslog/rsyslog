@@ -1,0 +1,40 @@
+doc/source/reference/templates/templates-statement-constant.rst
+  s_6224eda96fc0da::t_99ef19aee77b0a 23,32-33
+  s_6224eda96fc0da::t_79524628016c85 35-39
+  s_6224eda96fc0da::t_a59177630546f8 34
+doc/source/reference/parameters/mmutf8fix-replacementsequence.rst
+  s_6224eda96fc0da::t_99ef19aee77b0a 44-47,58,71
+tests/mmutf8fix_replacement_sequence.sh
+  s_6224eda96fc0da::t_99ef19aee77b0a 25
+doc/source/rainerscript/constant_strings.rst
+  s_6224eda96fc0da::t_7d511a4c465950 43-44
+  s_6224eda96fc0da::t_99ef19aee77b0a 1-4,8-9,13-14,24-42
+  s_6224eda96fc0da::t_79524628016c85 45-47
+doc/source/configuration/modules/mmutf8fix.rst
+  s_6224eda96fc0da::t_99ef19aee77b0a 123-126,138
+tests/Makefile.am
+  s_6224eda96fc0da::t_99ef19aee77b0a 24-26,201
+tests/rscript-object-string-escapes.sh
+  s_6224eda96fc0da::t_7d511a4c465950 16
+  s_6224eda96fc0da::t_99ef19aee77b0a 1-15,17-36
+grammar/lexer.l
+  s_6224eda96fc0da::t_99ef19aee77b0a 482,487
+tests/yaml-mmutf8fix-replacement-sequence.sh
+  s_6224eda96fc0da::t_99ef19aee77b0a 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "8bd6501f08a7189259953d31c4f280c428a617ca",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

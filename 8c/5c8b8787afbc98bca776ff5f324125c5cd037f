@@ -1,0 +1,43 @@
+runtime/queue.c
+  s_d41298c6e29859::t_60b7d721aef1d9 562,564,567-588,3835-3836,3853-3854
+runtime/segdisk_state.c
+  s_d41298c6e29859::t_fe7871f3de85b9 1-119
+runtime/segdisk_store.c
+  s_d41298c6e29859::t_baa21bc92ddb5a 20,29-30,37-38,106-126,129-138,265-285,288-306,312-314,332-335,505,525,571,578,772-777,823,871-874,904,928,947,980,1043-1047,1062-1066,1147-1152,1251-1266,1269-1275
+tests/diag.sh
+  s_d41298c6e29859::t_323072be402533 1859-1881
+runtime/Makefile.am
+  s_d41298c6e29859::t_0f58f4e6f936a0 82-86
+runtime/queue.h
+  s_d41298c6e29859::t_d84cf26adaf10c 247-248,309-310
+runtime/segdisk_codec.c
+  s_d41298c6e29859::t_b3819d6df777f2 14
+runtime/segdisk_codec.h
+  s_d41298c6e29859::t_692aa474671057 9
+runtime/segdisk_crc.c
+  s_d41298c6e29859::t_353a28817e9b63 1-12
+runtime/segdisk_crc.h
+  s_d41298c6e29859::t_b0a0d7b2c0ac9d 1-9
+runtime/segdisk_format.h
+  s_d41298c6e29859::t_6544a9ca117537 1-6
+runtime/segdisk_state.h
+  s_d41298c6e29859::t_cc348554ca5770 1-47
+runtime/segdisk_store.h
+  s_d41298c6e29859::t_5ebc6661320b8f 37,39,42-55,64-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "8c5c8b8787afbc98bca776ff5f324125c5cd037f",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

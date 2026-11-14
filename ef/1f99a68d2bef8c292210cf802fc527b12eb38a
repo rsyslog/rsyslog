@@ -1,0 +1,19 @@
+plugins/imdiag/imdiag.c
+  s_f558368e8cde26::t_8736253687af78 1034,1124-1126,1129,1215,1225-1233,1237-1238,1240-1248,1309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef1f99a68d2bef8c292210cf802fc527b12eb38a",
+  "prompts": {},
+  "sessions": {
+    "s_f558368e8cde26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a154bc-a08c-7d92-bb04-8ab8fa22637e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

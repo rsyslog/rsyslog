@@ -1,0 +1,20 @@
+doc/ai/module_map.yaml
+  s_1bbc97c2ca13d6::t_7424f29543ddab 40-52,54
+  s_1bbc97c2ca13d6::t_60a8e7457ee45f 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "869e69a50fb149d62300548ca2fdbf1b89c6a542",
+  "prompts": {},
+  "sessions": {
+    "s_1bbc97c2ca13d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a013d9-e208-7552-ab5d-8650d0f7e9f4",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

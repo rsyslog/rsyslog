@@ -1,0 +1,22 @@
+doc/source/configuration/modules/omprog.rst
+  s_6224eda96fc0da::t_26b809aecf272d 161
+  s_6224eda96fc0da::t_de53114a5ca0a1 148-160,162
+doc/source/reference/parameters/omprog-usetransactions.rst
+  s_6224eda96fc0da::t_286f87a83209a9 54-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "1ea91d191a4ee7602e96a70b25e50bf99e863a27",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,18 @@
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 237-238
+tests/Makefile.am
+  h_95716f3de0caf5 23-24,3581-3583
+tests/imklog-maxmessagesize-intmax.sh
+  h_95716f3de0caf5 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60a0cc4fb7df3f95be1db535e7b5f392805a41d7",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

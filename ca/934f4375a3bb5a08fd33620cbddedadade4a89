@@ -1,0 +1,27 @@
+.github/workflows/ci_codestyle_check.yml
+  s_5e773934876cb4::t_1974c912b94862 16-17
+tests/Makefile.am
+  s_5e773934876cb4::t_850a49343657fe 18-20,3268
+tests/local-queue-common.sh
+  s_5e773934876cb4::t_4b2a530d7fa050 53
+tests/local-queue-stats-greater.sh
+  s_5e773934876cb4::t_d822a0597c59f3 1-17
+.github/workflows/codeql.yml
+  s_5e773934876cb4::t_b9c551995ce66d 52,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca934f4375a3bb5a08fd33620cbddedadade4a89",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

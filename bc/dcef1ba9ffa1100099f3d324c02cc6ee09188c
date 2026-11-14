@@ -1,0 +1,29 @@
+.agent/skills/rsyslog_commit/SKILL.md
+  s_21a8eefcb5d3df::t_cbfb37f6dc2adf 21
+packaging/docker/dev_env/alpine/setup-system.sh
+  s_21a8eefcb5d3df::t_267248426aebed 1
+AGENTS.md
+  s_21a8eefcb5d3df::t_cbfb37f6dc2adf 160-161,164-166
+  s_21a8eefcb5d3df::t_ab629bfad7f4bd 146-159,163,167-176
+  s_21a8eefcb5d3df::t_f443c4f571672e 162
+.agent/skills/rsyslog_test/SKILL.md
+  s_21a8eefcb5d3df::t_cbfb37f6dc2adf 144-145,147,149-152
+  s_21a8eefcb5d3df::t_f443c4f571672e 146
+  s_21a8eefcb5d3df::t_ab629bfad7f4bd 129-143,148,153-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "bcdcef1ba9ffa1100099f3d324c02cc6ee09188c",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

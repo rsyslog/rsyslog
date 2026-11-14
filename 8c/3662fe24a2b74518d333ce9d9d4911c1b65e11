@@ -1,0 +1,30 @@
+devtools/tests/test_security_review_input.py
+  s_bd203615f89354::t_3f7b67b3df8281 98-100,109-110,171,174-177,179-181,183,225-231,236-238,248-256,260-265
+  s_bd203615f89354::t_af833c877c9837 172-173,178,182,232-235
+  s_bd203615f89354::t_ca3fee9d7d790c 239-247
+  s_bd203615f89354::t_58c11f09316bb8 257-259
+  s_bd203615f89354::t_30ed718290a59c 266
+devtools/build-security-review-input.py
+  s_bd203615f89354::t_ca3fee9d7d790c 216
+  s_bd203615f89354::t_0dcabc1d9b62af 2,7-15,197,200-204,206,208-215,218-220,241-244,314-315,372,394
+doc/security/threat-model-components.json
+  s_bd203615f89354::t_0dcabc1d9b62af 22,42,72,77,82
+.agent/skills/rsyslog-security-pr-review/SKILL.md
+  s_bd203615f89354::t_3f7b67b3df8281 43-44,110-111,119-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "8c3662fe24a2b74518d333ce9d9d4911c1b65e11",
+  "prompts": {},
+  "sessions": {
+    "s_bd203615f89354": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a037d0-b72d-7972-9a42-3cb7941f4f41",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

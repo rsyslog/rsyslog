@@ -1,0 +1,27 @@
+tests/imptcp-compression-none-pmnull.sh
+  s_6224eda96fc0da::t_98f320287fbfb2 1-54
+runtime/parser.c
+  s_6224eda96fc0da::t_5fa60d3fed8fcd 276-277
+plugins/imptcp/imptcp.c
+  s_6224eda96fc0da::t_55c20208f0efa6 991
+runtime/msg.h
+  s_6224eda96fc0da::t_5fa60d3fed8fcd 163-164
+tests/Makefile.am
+  s_6224eda96fc0da::t_98f320287fbfb2 1338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "37ad4911534fb7bdd92cbcecce596252a38b0ab8",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

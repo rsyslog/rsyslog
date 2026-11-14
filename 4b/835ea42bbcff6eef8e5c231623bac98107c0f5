@@ -1,0 +1,26 @@
+runtime/nsd_mbedtls.h
+  s_12493d1d1488ca::t_e69d8e30304799 29-30,33,77,80
+  s_12493d1d1488ca::t_d856f95f551558 31-32
+runtime/nsd_mbedtls.c
+  s_12493d1d1488ca::t_e69d8e30304799 41,43,113-115,172-178,183,210-213,228,278,281,307,310,1239,1241,1397,1399
+  s_12493d1d1488ca::t_d856f95f551558 42
+  s_12493d1d1488ca::t_6ca4a4478fb524 188,207
+  s_12493d1d1488ca::t_161605e0dff0c3 182,184
+  s_12493d1d1488ca::t_f8a513099a0917 179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b835ea42bbcff6eef8e5c231623bac98107c0f5",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

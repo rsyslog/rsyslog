@@ -1,0 +1,23 @@
+tests/unit/imbeats_seq_test.c
+  s_f2c089be484e12::t_96edaec297b841 9-13,18,20,24-25,29-37
+tests/msleep.c
+  s_f2c089be484e12::t_96edaec297b841 44,52
+tests/test_id.c
+  s_f2c089be484e12::t_96edaec297b841 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5bf6f9976afa4e271cea6d1973846871059eede7",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

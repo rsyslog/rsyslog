@@ -1,0 +1,21 @@
+tools/fuzz_rsyslog_message.c
+  s_0715b227193d07::t_0cd354481e3503 45,47
+tests/fuzz-syslog-message-smoke.sh
+  s_0715b227193d07::t_a6699063b54949 4-5,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "fcbe2c62ab1ce8dacfe9b798afb74b8445cbd2e0",
+  "prompts": {},
+  "sessions": {
+    "s_0715b227193d07": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe0a2-ce4c-7fc0-ade1-6e97f3c22a5a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

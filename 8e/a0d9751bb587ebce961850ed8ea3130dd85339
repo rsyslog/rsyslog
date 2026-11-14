@@ -1,0 +1,19 @@
+tests/imtcp-stream-always-zlib-fragmented-ratio.sh
+  s_12493d1d1488ca::t_0150531dd4c40d 38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8ea0d9751bb587ebce961850ed8ea3130dd85339",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

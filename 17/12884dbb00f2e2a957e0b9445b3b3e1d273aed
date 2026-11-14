@@ -1,0 +1,22 @@
+devtools/release/fedora-daily-stable.sh
+  s_b8b61e9bd8fd30::t_ed64e97f1453af 108-110,141-161
+  s_b8b61e9bd8fd30::t_22661dc9e87d3e 162
+.github/fedora44-daily-stable-policy.yml
+  s_b8b61e9bd8fd30::t_ed64e97f1453af 3-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1712884dbb00f2e2a957e0b9445b3b3e1d273aed",
+  "prompts": {},
+  "sessions": {
+    "s_b8b61e9bd8fd30": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00e86-492d-7fa1-9ea1-e707cdd0d8e7",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

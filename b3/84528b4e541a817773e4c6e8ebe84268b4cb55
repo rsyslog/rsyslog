@@ -1,0 +1,19 @@
+tests/unit/segdisk_state_test.c
+  s_f2c089be484e12::t_f8a49d1f956b3b 23,46-48,57,81,84,90,101,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b384528b4e541a817773e4c6e8ebe84268b4cb55",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

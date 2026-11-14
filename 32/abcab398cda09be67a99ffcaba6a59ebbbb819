@@ -1,0 +1,98 @@
+tests/global-reloadonhup-imtcp-regex-yaml.sh
+  s_f2c089be484e12::t_b4a68dd2865e10 1-81
+runtime/tcps_sess.h
+  s_f2c089be484e12::t_6916f436a32528 126-127
+  s_f2c089be484e12::t_89561cbe9cb159 123-125
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_4d648c768ddfc4 70-81,410-412
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_b46ba10f49f5c2 484,535,694
+  s_f2c089be484e12::t_ee78d162d6f440 2391
+  s_f2c089be484e12::t_4490b3da09b68d 2396-2414
+tests/global-reloadonhup-imtcp-regex-rainerscript.sh
+  s_f2c089be484e12::t_379e7a6dd7ac04 1-77
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_7969c73c72c375 98-100
+  s_f2c089be484e12::t_a800130ad9ca2d 438
+  s_f2c089be484e12::t_6916f436a32528 107-108,433
+  s_f2c089be484e12::t_60c39e4d864b40 134
+  s_f2c089be484e12::t_20d830a531700a 538-545
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_4d648c768ddfc4 176-177
+tests/Makefile.am
+  s_f2c089be484e12::t_96b1158e98767d 1894-1895
+  s_f2c089be484e12::t_a1cbf1c0f416cb 1000-1002
+  s_f2c089be484e12::t_271a075eb69d22 1896
+tests/global-reloadonhup-imtcp-maxsessions-explicit-rainerscript.sh
+  s_f2c089be484e12::t_51307f454397c2 1-6
+tools/shadow_reload.c
+  s_f2c089be484e12::t_3811021102699b 816
+  s_f2c089be484e12::t_c9939bfe5c8daa 746-754
+tests/global-reloadonhup-imtcp-maxsessions-yaml.sh
+  s_f2c089be484e12::t_c28fdbce5f7c5c 11-12,40-45,47-48,50,109,111,128,133-150,153,155
+  s_f2c089be484e12::t_2aed162c099c85 46,49
+  s_f2c089be484e12::t_ad2801229db2cf 1-10,13-39,51-108,110,112-127,129-132,151-152,154,156-162,175-179
+  s_f2c089be484e12::t_1d49ae6e18089d 163-174
+runtime/tcps_sess.c
+  s_f2c089be484e12::t_4d648c768ddfc4 2-4,348-355
+  s_f2c089be484e12::t_62731102e64855 389,392-393
+  s_f2c089be484e12::t_25d0bfd593e486 201-208,379-388,390-391,394-397,404,1381
+plugins/imtcp/imtcp-reload-regex.h
+  s_f2c089be484e12::t_61bf25fd0d4ed4 1-31,37-57
+  s_f2c089be484e12::t_aff9c5e73ee979 32-36
+tests/unit/module_reload_test.c
+  s_f2c089be484e12::t_e0411098dcd46f 71
+  s_f2c089be484e12::t_96c244597b13f5 25
+  s_f2c089be484e12::t_61bf25fd0d4ed4 10-11,24,26-31,45-70,214
+plugins/imtcp/Makefile.am
+  s_f2c089be484e12::t_61bf25fd0d4ed4 3
+tests/global-reloadonhup-imtcp-maxsessions-explicit-yaml.sh
+  s_f2c089be484e12::t_26deb796884352 1-6
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_61bf25fd0d4ed4 75
+  s_f2c089be484e12::t_5d6e2023f3768c 1746
+  s_f2c089be484e12::t_8f46d2bd4ac8c3 2097-2098
+  s_f2c089be484e12::t_41dc4e65d43cd6 1971-1973
+  s_f2c089be484e12::t_2033491fbb930d 2226
+  s_f2c089be484e12::t_5c50d35a3aa9c8 2113
+  s_f2c089be484e12::t_5016e1a1d0cc81 2221
+  s_f2c089be484e12::t_76472ae14ea16d 1694
+  s_f2c089be484e12::t_6916f436a32528 7-8
+  s_f2c089be484e12::t_fd03c98bffae76 1984-1996
+  s_f2c089be484e12::t_c44df17928cb55 2529
+  s_f2c089be484e12::t_b9dba276d53179 1864-1867
+  s_f2c089be484e12::t_3811021102699b 1877-1881
+  s_f2c089be484e12::t_090d21cab13106 2062-2072
+  s_f2c089be484e12::t_90ab63cc9a852f 1968
+  s_f2c089be484e12::t_ea1e26997df52d 2191-2196
+  s_f2c089be484e12::t_396fcab5a992d0 2132-2151
+  s_f2c089be484e12::t_d233ca3907199f 2233
+  s_f2c089be484e12::t_77507c0f4130e7 2242
+tests/global-reloadonhup-imtcp-maxsessions-rainerscript.sh
+  s_f2c089be484e12::t_5df0202451b03b 1-12,15-23,35-94,96,98-116,118-121,140-141,143,145-151,164-168
+  s_f2c089be484e12::t_2aed162c099c85 30,33
+  s_f2c089be484e12::t_3934bd96c89f57 152-163
+  s_f2c089be484e12::t_59968896ab8cf2 13-14,24,26-29,31-32,34,95,97,117,122-139,142,144
+  s_f2c089be484e12::t_a17fbe22a84d6c 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32abcab398cda09be67a99ffcaba6a59ebbbb819",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}

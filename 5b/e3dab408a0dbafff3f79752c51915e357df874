@@ -1,0 +1,21 @@
+runtime/msg.c
+  s_5e773934876cb4::t_e5cad0bbaf1747 4396-4398,4400-4401,4403-4410
+tests/template-property-transformations.sh
+  s_5e773934876cb4::t_e5d0eaa3d83317 5-6,53-58,276,295-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5be3dab408a0dbafff3f79752c51915e357df874",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

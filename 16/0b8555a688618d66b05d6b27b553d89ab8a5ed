@@ -1,0 +1,21 @@
+devtools/release/package-candidate-plan.py
+  s_0d5683fb5e1727::t_b6f9eac4bdb9de 39-40
+tests/package-candidate-plan.sh
+  s_0d5683fb5e1727::t_cefcbceee67e64 61-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "160b8555a688618d66b05d6b27b553d89ab8a5ed",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

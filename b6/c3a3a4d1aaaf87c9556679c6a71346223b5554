@@ -1,0 +1,37 @@
+tests/global-reloadonhup-imtcp-allowedsender-yaml.sh
+  s_f2c089be484e12::t_37b1fed4faffd8 2-5
+  s_f2c089be484e12::t_5dc6e0a2da702e 85-86,90-109,113-114
+  s_f2c089be484e12::t_e6d7ab9c5729ea 13,110-112,115-127,130-131
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_700f6f1f486121 206-211,327-333
+tests/global-reloadonhup-validate-yaml.sh
+  s_f2c089be484e12::t_7ba33530abcf93 119-120,124-134,136
+  s_f2c089be484e12::t_37b1fed4faffd8 2-5
+runtime/net.c
+  s_f2c089be484e12::t_2e8ff4105c4240 954-964,970,981,985,991-1028,1829
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_820d8b38005312 840,843,847-848,852,854,857-858
+  s_f2c089be484e12::t_e5684cf9fbd734 1373,1379-1381,1597,1603-1606
+runtime/net.h
+  s_f2c089be484e12::t_2e8ff4105c4240 120,257,259
+tests/global-reloadonhup-imtcp-allowedsender-rainerscript.sh
+  s_f2c089be484e12::t_5dc6e0a2da702e 73-76,80-99,104-105
+  s_f2c089be484e12::t_e6d7ab9c5729ea 13,100-103,106-118,121-122
+  s_f2c089be484e12::t_37b1fed4faffd8 2-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b6c3a3a4d1aaaf87c9556679c6a71346223b5554",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

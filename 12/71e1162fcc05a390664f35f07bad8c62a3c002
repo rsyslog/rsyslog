@@ -1,0 +1,21 @@
+doc/ai/transactional_reload_stack_ledger.md
+  s_f2c089be484e12::t_f0bb721635de71 27-30,114-115,121-127,133-137
+  s_f2c089be484e12::t_5a678e50bddcea 105-106,116-120,128-132
+  s_f2c089be484e12::t_4b439fd55a6b5b 138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1271e1162fcc05a390664f35f07bad8c62a3c002",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

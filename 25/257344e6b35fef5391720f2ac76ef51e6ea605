@@ -1,0 +1,27 @@
+plugins/AGENTS.md
+  s_5e773934876cb4::t_f68e5ea5a8d073 115,124-130
+plugins/mmsnmptrapd/mmsnmptrapd.c
+  s_5e773934876cb4::t_101f72f64ebbee 141
+tests/Makefile.am
+  s_5e773934876cb4::t_f00333cd3a7965 79-82,3596-3602
+tests/mmsnmptrapd-severity-sign.sh
+  s_5e773934876cb4::t_0dde6b29ddaa2b 1-54
+tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh
+  s_5e773934876cb4::t_aa9e5e145991a1 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "25257344e6b35fef5391720f2ac76ef51e6ea605",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

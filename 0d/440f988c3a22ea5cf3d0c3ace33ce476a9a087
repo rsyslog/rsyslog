@@ -1,0 +1,56 @@
+doc/Makefile.am
+  s_06d4859f6aa529::t_0fe47086720c4e 980
+tests/yaml-omkinesis-mock.sh
+  s_06d4859f6aa529::t_1579d5dae6791b 2-3
+packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec
+  s_06d4859f6aa529::t_3e9427622fb53d 329-334,556-558,1034-1036
+  s_06d4859f6aa529::t_8a10b9c737027b 1037
+tests/Makefile.am
+  s_06d4859f6aa529::t_2ee56b4fd7ee41 1371-1372
+plugins/omkinesis/MODULE_METADATA.yaml
+  s_06d4859f6aa529::t_0fe47086720c4e 9
+packaging/ubuntu/jammy/v8-stable/debian/rsyslog-omkinesis.install
+  s_06d4859f6aa529::t_3e9427622fb53d 1
+configure.ac
+  s_06d4859f6aa529::t_1f900e7fe82abf 3165-3169,3171,3176-3186
+  s_06d4859f6aa529::t_0893576bc50a23 3187
+tests/omkinesis-mock-common.sh
+  s_06d4859f6aa529::t_ca5901cca97610 49
+  s_06d4859f6aa529::t_1579d5dae6791b 2-3,10
+doc/source/reference/parameters/omkinesis-max_record_size.rst
+  s_06d4859f6aa529::t_fe9154eab9945a 1-33
+doc/source/configuration/modules/omkinesis.rst
+  s_06d4859f6aa529::t_0fe47086720c4e 30-39,57
+plugins/omkinesis/Makefile.am
+  s_06d4859f6aa529::t_1f900e7fe82abf 3,5
+packaging/ubuntu/noble/v8-stable/debian/control
+  s_06d4859f6aa529::t_3e9427622fb53d 385-394
+packaging/ubuntu/noble/v8-stable/debian/rsyslog-omkinesis.install
+  s_06d4859f6aa529::t_3e9427622fb53d 1
+packaging/ubuntu/jammy/v8-stable/debian/control
+  s_06d4859f6aa529::t_3e9427622fb53d 491-500
+plugins/omkinesis/omkinesis.c
+  s_06d4859f6aa529::t_4b0fb2fe07159f 43,62,92-111,171-173,223-224,317,323-324,363
+tests/omkinesis-mock-server.py
+  s_06d4859f6aa529::t_1579d5dae6791b 2-3
+tests/omkinesis-endpoint-validation.sh
+  s_06d4859f6aa529::t_2ee56b4fd7ee41 1-33
+tests/omkinesis-mock.sh
+  s_06d4859f6aa529::t_1579d5dae6791b 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0d440f988c3a22ea5cf3d0c3ace33ce476a9a087",
+  "prompts": {},
+  "sessions": {
+    "s_06d4859f6aa529": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10303-0be9-7c63-8e16-059a5d94d3e0",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

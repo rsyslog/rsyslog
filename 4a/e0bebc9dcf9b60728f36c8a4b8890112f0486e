@@ -1,0 +1,32 @@
+tests/imdocker-defaultfacility.sh
+  s_5e773934876cb4::t_09efb22827b963 6-7,29,40,50
+doc/source/reference/parameters/imdocker-defaultfacility.rst
+  s_5e773934876cb4::t_09efb22827b963 34-44
+  s_d45f8c248d7754::t_5e4837a5baaae5 3-6
+contrib/imdocker/imdocker.c
+  s_5e773934876cb4::t_a57e446a5307ac 1057-1059
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ae0bebc9dcf9b60728f36c8a4b8890112f0486e",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_d45f8c248d7754": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ce97-1369-7781-9256-affc70d2df85",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

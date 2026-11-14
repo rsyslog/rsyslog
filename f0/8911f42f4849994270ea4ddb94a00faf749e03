@@ -1,0 +1,30 @@
+runtime/queue.c
+  s_142ee1fa291d22::t_6bd1291f670315 3845
+  s_142ee1fa291d22::t_06c3cc30d09a38 4053-4058
+  s_142ee1fa291d22::t_75996ab53d1b68 3774-3775,3816-3827,3829-3844,3846-3847,3849-3850,3852-3854,3856-3862,3864-3866,3868-3874,3876-3878,3970
+  s_142ee1fa291d22::t_e5214ca4ac2538 548
+  s_142ee1fa291d22::t_dd4ee975567fbf 3828,3848,3851,3855,3863,3867
+  s_142ee1fa291d22::t_e3d4684cd815d6 3971
+tests/queue-lease-attribution.sh
+  s_142ee1fa291d22::t_75996ab53d1b68 3-9,12,15-21,24-28
+plugins/imdiag/imdiag.c
+  s_142ee1fa291d22::t_75996ab53d1b68 681-685
+runtime/queue.h
+  s_142ee1fa291d22::t_75996ab53d1b68 346-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f08911f42f4849994270ea4ddb94a00faf749e03",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

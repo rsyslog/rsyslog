@@ -1,0 +1,585 @@
+compat/asprintf.c
+  s_6303b89c4410f1::t_e4b836f8e8b9d8 1-2
+compat/solaris_elf_fix.c
+  s_6303b89c4410f1::t_ad92cbe424cdf9 1-2
+compat/strndup.c
+  s_6303b89c4410f1::t_374246c2807741 1-2
+contrib/ffaup/ffaup.c
+  s_6303b89c4410f1::t_cd3f1113ab9820 1-2
+contrib/fmunflatten/fmunflatten.c
+  s_6303b89c4410f1::t_6be26283eb60e6 1-2
+contrib/imbatchreport/imbatchreport.c
+  s_6303b89c4410f1::t_98c11dc13f3481 1-2
+contrib/imczmq/imczmq.c
+  s_6303b89c4410f1::t_36e9fad9b26a4d 1-2
+contrib/imdocker/imdocker.c
+  s_6303b89c4410f1::t_6e820a28b9968b 1-2
+contrib/imhttp/imhttp.c
+  s_6303b89c4410f1::t_bd15f949d19fd1 1-2
+contrib/imkmsg/imkmsg.c
+  s_6303b89c4410f1::t_00e28bd4244832 1-2
+contrib/imkmsg/imkmsg.h
+  s_6303b89c4410f1::t_b0f327e8e99225 1-2
+contrib/imkmsg/kmsg.c
+  s_6303b89c4410f1::t_938b2d13194485 1-2
+contrib/imkubernetes/imkubernetes.c
+  s_6303b89c4410f1::t_99e811000b5811 1-2
+contrib/impcap/arp_parser.c
+  s_6303b89c4410f1::t_0bdb551a47dab5 1-2
+contrib/impcap/dns_parser.c
+  s_6303b89c4410f1::t_2a7f6bc7d9292b 1-2
+contrib/impcap/eth_parser.c
+  s_6303b89c4410f1::t_fac6780a656842 1-2
+contrib/impcap/ftp_parser.c
+  s_6303b89c4410f1::t_251add70682c8c 1-2
+contrib/impcap/http_parser.c
+  s_6303b89c4410f1::t_1281e17c3b0039 1-2
+contrib/impcap/icmp_parser.c
+  s_6303b89c4410f1::t_ab07bbe55ea41b 1-2
+contrib/impcap/impcap.c
+  s_6303b89c4410f1::t_ee2873e56daf04 1-2
+contrib/impcap/ipv4_parser.c
+  s_6303b89c4410f1::t_f6621d2e87827c 1-2
+contrib/impcap/ipv6_parser.c
+  s_6303b89c4410f1::t_ebd7aee8a6d59a 1-2
+contrib/impcap/ipx_parser.c
+  s_6303b89c4410f1::t_3e506f822bab5d 1-2
+contrib/impcap/llc_parser.c
+  s_6303b89c4410f1::t_f73ea3e1dd5e3c 1-2
+contrib/impcap/parsers.h
+  s_6303b89c4410f1::t_d27b704cb869c0 1-2
+contrib/impcap/smb_parser.c
+  s_6303b89c4410f1::t_78acd950396aa6 1-2
+contrib/impcap/tcp_parser.c
+  s_6303b89c4410f1::t_dd176ffe2bf71c 1-2
+contrib/impcap/udp_parser.c
+  s_6303b89c4410f1::t_c3a30702fa90ea 1-2
+contrib/improg/improg.c
+  s_6303b89c4410f1::t_8f8c1e694af441 1-2
+contrib/imtuxedoulog/imtuxedoulog.c
+  s_6303b89c4410f1::t_baa36edd939962 1-2
+contrib/mmcount/mmcount.c
+  s_6303b89c4410f1::t_c668cbbba12906 1-2
+contrib/mmdarwin/mmdarwin.c
+  s_6303b89c4410f1::t_c6e964cd8f384d 1-2
+contrib/mmdarwin/protocol.h
+  s_6303b89c4410f1::t_dd8be96a7f12fb 1-2
+contrib/mmkubernetes/mmkubernetes.c
+  s_6303b89c4410f1::t_7bb5ba3490a07d 1-2
+contrib/mmrfc5424addhmac/mmrfc5424addhmac.c
+  s_6303b89c4410f1::t_3013ad6f5b345d 1-2
+contrib/mmsequence/mmsequence.c
+  s_6303b89c4410f1::t_806b63a05cd709 1-2
+contrib/mmtaghostname/mmtaghostname.c
+  s_6303b89c4410f1::t_526c81a9324cf6 1-2
+contrib/omczmq/omczmq.c
+  s_6303b89c4410f1::t_a80817cabe6b0d 1-2
+contrib/omhttp/omhttp.c
+  s_6303b89c4410f1::t_fe22ccf096909a 1-2
+contrib/omhttpfs/omhttpfs.c
+  s_6303b89c4410f1::t_f126a6f6413268 1-2
+contrib/omtcl/omtcl.c
+  s_6303b89c4410f1::t_485bfb38c61c1b 1-2
+contrib/pmaixforwardedfrom/pmaixforwardedfrom.c
+  s_6303b89c4410f1::t_a4c61a192baf7e 1-2
+contrib/pmcisconames/pmcisconames.c
+  s_6303b89c4410f1::t_7415928109e9c8 1-2
+contrib/pmdb2diag/pmdb2diag.c
+  s_6303b89c4410f1::t_e07804470e8189 1-2
+contrib/pmpanngfw/pmpanngfw.c
+  s_6303b89c4410f1::t_a9483e5ce613f0 1-2
+contrib/pmsnare/pmsnare.c
+  s_6303b89c4410f1::t_cc67730ab29700 1-2
+devtools/check-flake-evidence-coverage.py
+  s_6303b89c4410f1::t_55f71adaa4eded 2-3
+devtools/collect-flake-evidence.py
+  s_6303b89c4410f1::t_09e24e62f87f3f 2-3
+devtools/prepare-flake-evidence.py
+  s_6303b89c4410f1::t_7beee89968d48c 2-3
+devtools/tests/test_flake_evidence.py
+  s_6303b89c4410f1::t_9a5e61a29b7bcd 2-3
+grammar/parserif.h
+  s_6303b89c4410f1::t_9999e6874bf692 1-2
+packaging/docker/dev_env/rocky/pkg_base/9/extra/cleanup_repo.sh
+  s_6303b89c4410f1::t_b0439f13587b04 2-3
+packaging/docker/dev_env/rocky/pkg_base/9/extra/do_upload.sh
+  s_6303b89c4410f1::t_7b132220e7813d 2-3
+packaging/docker/dev_env/rocky/pkg_base/9/extra/do_upload_delete.sh
+  s_6303b89c4410f1::t_f87a3c820d8b04 2-3
+packaging/docker/dev_env/rocky/pkg_base/9/extra/initenv.sh
+  s_6303b89c4410f1::t_8dd26a69a4c56b 2-3
+packaging/docker/dev_env/rocky/pkg_base/9/extra/resignrepo.sh
+  s_6303b89c4410f1::t_b85c537d2e734c 2-3
+packaging/docker/dev_env/rocky/pkg_base/9/extra/sync_remote.sh
+  s_6303b89c4410f1::t_86b465f37060e3 2-3
+packaging/docker/dev_env/rocky/pkg_base/9/extra/sync_remote_delete.sh
+  s_6303b89c4410f1::t_d2517cc514bd2d 2-3
+plugins/fmhttp/fmhttp.c
+  s_6303b89c4410f1::t_169628b2b20c38 1-2
+plugins/fmpcre/fmpcre.c
+  s_6303b89c4410f1::t_5dc1cf89e32875 1-2
+plugins/im3195/im3195.c
+  s_6303b89c4410f1::t_b9eecdc10fbd44 1-2
+plugins/imbeats/seqnum.h
+  s_6303b89c4410f1::t_a6a0d000d1ef4f 1-2
+plugins/imdiag/imdiag.c
+  s_6303b89c4410f1::t_8745485a91c84b 1-2
+plugins/imdtls/imdtls.c
+  s_6303b89c4410f1::t_d5bf473c8bf21c 1-2
+plugins/imfifo/imfifo.c
+  s_6303b89c4410f1::t_5e76202f6a600e 1-2
+plugins/imfile/imfile.c
+  s_6303b89c4410f1::t_3b610300d4e237 1-2
+plugins/imjournal/dummy.c
+  s_6303b89c4410f1::t_52007e2aba9c32 1-2
+plugins/imjournal/imjournal.c
+  s_6303b89c4410f1::t_349e6da5873ac1 1-2
+plugins/imkafka/dummy.c
+  s_6303b89c4410f1::t_93f1d436c17df3 1-2
+plugins/imkafka/imkafka.c
+  s_6303b89c4410f1::t_a9abe75d7360cf 1-2
+plugins/imklog/bsd.c
+  s_6303b89c4410f1::t_e41841fa56cab9 1-2
+plugins/imklog/imklog.c
+  s_6303b89c4410f1::t_a245b24f47ae4b 1-2
+plugins/imklog/imklog.h
+  s_6303b89c4410f1::t_53bdcda890bf92 1-2
+plugins/immark/immark.c
+  s_6303b89c4410f1::t_4ed68140a9e2d0 1-2
+plugins/immark/immark.h
+  s_6303b89c4410f1::t_e8c2f4274eef09 1-2
+plugins/impstats/impstats.c
+  s_6303b89c4410f1::t_f10ac9f6dfdbb2 1-2
+plugins/impstats/impstats_push.c
+  s_6303b89c4410f1::t_6161d1a19c6ac5 1-2
+plugins/impstats/impstats_push.h
+  s_6303b89c4410f1::t_0988a6a3b89915 1-2
+plugins/impstats/prometheus_remote_write.c
+  s_6303b89c4410f1::t_4f4e1dadc054b9 1-2
+plugins/impstats/prometheus_remote_write.h
+  s_6303b89c4410f1::t_98f993148ed22b 1-2
+plugins/impstats/remote.proto
+  s_6303b89c4410f1::t_10a4062f63cd32 1-2
+plugins/imptcp/imptcp.c
+  s_6303b89c4410f1::t_b13b1263aa268d 1-2
+plugins/imrelp/imrelp.c
+  s_6303b89c4410f1::t_1260dccd479152 1-2
+plugins/imtcp/imtcp.c
+  s_6303b89c4410f1::t_78190e6b4fa21e 1-2
+plugins/mmaitag/mmaitag.c
+  s_6303b89c4410f1::t_c6bc702055dcf4 1-2
+plugins/mmanon/mmanon.c
+  s_6303b89c4410f1::t_e48f27fc0b55df 1-2
+plugins/mmaudit/mmaudit.c
+  s_6303b89c4410f1::t_2d53f1a122f86d 1-2
+plugins/mmdblookup/dummy.c
+  s_6303b89c4410f1::t_d0bf7be6a224fe 1-2
+plugins/mmdblookup/mmdblookup.c
+  s_6303b89c4410f1::t_6da0da38bcbd01 1-2
+plugins/mmexternal/mmexternal.c
+  s_6303b89c4410f1::t_2e799454ed1365 1-2
+plugins/mmfields/mmfields.c
+  s_6303b89c4410f1::t_c45f0ebd68ea8e 1-2
+plugins/mmjsonparse/mmjsonparse.c
+  s_6303b89c4410f1::t_60f3af3b18d990 1-2
+plugins/mmjsontransform/mmjsontransform.c
+  s_6303b89c4410f1::t_3164842f528767 1-2
+plugins/mmleefparse/mmleefparse.c
+  s_6303b89c4410f1::t_dba89356abcc05 1-2
+plugins/mmpstrucdata/mmpstrucdata.c
+  s_6303b89c4410f1::t_4c857d5936d891 1-2
+plugins/mmrm1stspace/mmrm1stspace.c
+  s_6303b89c4410f1::t_3841bd3e7c28e3 1-2
+plugins/mmutf8fix/mmutf8fix.c
+  s_6303b89c4410f1::t_205e41b1f0d4ba 1-2
+plugins/omawslogshlc/omawslogshlc.c
+  s_6303b89c4410f1::t_6102e9a8d8c116 1-2
+plugins/omazuredce/omazuredce.c
+  s_6303b89c4410f1::t_7174f447d633a4 1-2
+plugins/omazuredce/omazuredce_utils.h
+  s_6303b89c4410f1::t_1cf556bd6fb53c 1-2
+plugins/omazureeventhubs/omazureeventhubs.c
+  s_6303b89c4410f1::t_9d4bfaf8a69ecf 1-2
+plugins/omclickhouse/omclickhouse.c
+  s_6303b89c4410f1::t_4a1cd64bc2bbfd 1-2
+plugins/omdtls/omdtls.c
+  s_6303b89c4410f1::t_0d21da7f289adf 1-2
+plugins/omelasticsearch/omelasticsearch.c
+  s_6303b89c4410f1::t_909190c575987f 1-2
+plugins/omhdfs/omhdfs.c
+  s_6303b89c4410f1::t_13d28e64d2fe8d 1-2
+plugins/omjournal/omjournal.c
+  s_6303b89c4410f1::t_7f10c26fe48141 1-2
+plugins/omkafka/dummy.c
+  s_6303b89c4410f1::t_d09c9450e89c5e 1-2
+plugins/omkinesis/omkinesis.c
+  s_6303b89c4410f1::t_3022141715c1d1 1-2
+plugins/omlibdbi/dummy.c
+  s_6303b89c4410f1::t_ef36c46e893697 1-2
+plugins/omlibdbi/omlibdbi.c
+  s_6303b89c4410f1::t_6d74f3dfd1408c 1-2
+plugins/ommail/ommail.c
+  s_6303b89c4410f1::t_df6cb1f7a372cb 1-2
+plugins/ommongodb/ommongodb.c
+  s_6303b89c4410f1::t_801c86a075f3d9 1-2
+plugins/ommysql/ommysql.c
+  s_6303b89c4410f1::t_ecb82fc635abcc 1-2
+plugins/omotel/omotel.c
+  s_6303b89c4410f1::t_0842f069c45e9c 1-2
+plugins/omotel/omotel_http.c
+  s_6303b89c4410f1::t_0fcf3b1dbbba83 1-2
+plugins/omotel/omotel_http.h
+  s_6303b89c4410f1::t_ae5afa9ebcebfb 1-2
+plugins/omotel/otlp_json.c
+  s_6303b89c4410f1::t_2a09185ec73068 1-2
+plugins/omotel/otlp_json.h
+  s_6303b89c4410f1::t_4601bf4bdfc035 1-2
+plugins/omotel/otlp_protobuf.c
+  s_6303b89c4410f1::t_9a83f179af33fc 1-2
+plugins/omotel/otlp_protobuf.h
+  s_6303b89c4410f1::t_8426df5e4e3ef5 1-2
+plugins/omprog/omprog.c
+  s_6303b89c4410f1::t_ea2375cc7a8d25 1-2
+plugins/omrelp/omrelp.c
+  s_6303b89c4410f1::t_985e844ce7c6eb 1-2
+plugins/omruleset/omruleset.c
+  s_6303b89c4410f1::t_9d6d75de569ead 1-2
+plugins/omsendertrack/omsendertrack.c
+  s_6303b89c4410f1::t_dc6695a8209d28 1-2
+plugins/omsnmp/omsnmp.c
+  s_6303b89c4410f1::t_3d3b4dd7ca81bc 1-2
+plugins/omsnmp/omsnmp.h
+  s_6303b89c4410f1::t_a13ac2cbe98db5 1-2
+plugins/omstdout/omstdout.c
+  s_6303b89c4410f1::t_d10bdd63cfd402 1-2
+plugins/omtesting/omtesting.c
+  s_6303b89c4410f1::t_03ea343529300a 1-2
+plugins/omuxsock/omuxsock.c
+  s_6303b89c4410f1::t_f41d0bbb9c2490 1-2
+plugins/pmciscoios/pmciscoios.c
+  s_6303b89c4410f1::t_5f6a672705725c 1-2
+plugins/pmlastmsg/pmlastmsg.c
+  s_6303b89c4410f1::t_1ffabfeb284e72 1-2
+plugins/pmnormalize/pmnormalize.c
+  s_6303b89c4410f1::t_b0a655a9bceb1b 1-2
+plugins/pmnull/pmnull.c
+  s_6303b89c4410f1::t_b9746ed86021d6 1-2
+runtime/action.h
+  s_6303b89c4410f1::t_09181767b1d9c3 1-2
+runtime/atomic.h
+  s_6303b89c4410f1::t_ecb7635efca9f0 1-2
+runtime/cfsysline.c
+  s_6303b89c4410f1::t_f6d215ff40dbd6 1-2
+runtime/cfsysline.h
+  s_6303b89c4410f1::t_db7b574119200e 1-2
+runtime/conf.c
+  s_6303b89c4410f1::t_0bb4bdda1332a5 1-2
+runtime/conf.h
+  s_6303b89c4410f1::t_a3bfd33a933bdd 1-2
+runtime/cryprov.h
+  s_6303b89c4410f1::t_fcbb9a06c92e8b 1-2
+runtime/datetime.c
+  s_6303b89c4410f1::t_fb054af9f308de 1-2
+runtime/datetime.h
+  s_6303b89c4410f1::t_14bd244216f337 1-2
+runtime/debug.c
+  s_6303b89c4410f1::t_a01fa4031248c9 1-2
+runtime/debug.h
+  s_6303b89c4410f1::t_3bb7c76144b8fe 1-2
+runtime/dirty.h
+  s_6303b89c4410f1::t_de11f0ad4cf12d 1-2
+runtime/dnscache.c
+  s_6303b89c4410f1::t_0976f1790c8321 1-2
+runtime/dnscache.h
+  s_6303b89c4410f1::t_ea0f82393efe96 1-2
+runtime/dynstats.c
+  s_6303b89c4410f1::t_fae69cf4e07baf 1-2
+runtime/dynstats.h
+  s_6303b89c4410f1::t_31ad14b42510b5 1-2
+runtime/errmsg.h
+  s_6303b89c4410f1::t_b0a31343f30a6e 1-2
+runtime/glbl.c
+  s_6303b89c4410f1::t_6d42cf6f143aee 1-2
+runtime/glbl.h
+  s_6303b89c4410f1::t_9d9b191755f04b 1-2
+runtime/gss-misc.h
+  s_6303b89c4410f1::t_d67ef8253a9495 1-2
+runtime/janitor.c
+  s_6303b89c4410f1::t_a4cd8f9ef3c2d6 1-2
+runtime/janitor.h
+  s_6303b89c4410f1::t_ce052e1e2f68b5 1-2
+runtime/lib_ksils12.c
+  s_6303b89c4410f1::t_78f52b56f4827a 1-2
+runtime/lib_ksils12.h
+  s_6303b89c4410f1::t_b696b802a0be04 1-2
+runtime/libcry_common.c
+  s_6303b89c4410f1::t_8ffda781ef4e08 1-2
+runtime/libcry_common.h
+  s_6303b89c4410f1::t_5171690f34ba9a 1-2
+runtime/libgcry.c
+  s_6303b89c4410f1::t_a41bfa85494acd 1-2
+runtime/libgcry.h
+  s_6303b89c4410f1::t_fbfe6bdd6238bb 1-2
+runtime/libossl.c
+  s_6303b89c4410f1::t_989ed1977101bf 1-2
+runtime/libossl.h
+  s_6303b89c4410f1::t_7f0149375e8511 1-2
+runtime/librsksi_read.c
+  s_6303b89c4410f1::t_e7e7a07b63726b 1-2
+runtime/linkedlist.c
+  s_6303b89c4410f1::t_7bcc5b45278d23 1-2
+runtime/linkedlist.h
+  s_6303b89c4410f1::t_a69239b9ba725a 1-2
+runtime/lmcry_gcry.c
+  s_6303b89c4410f1::t_d6f8eab03ead46 1-2
+runtime/lmcry_gcry.h
+  s_6303b89c4410f1::t_a617dd9c4f8b37 1-2
+runtime/lmcry_ossl.c
+  s_6303b89c4410f1::t_ffaa5014ffff2e 1-2
+runtime/lmcry_ossl.h
+  s_6303b89c4410f1::t_a7689077b14323 1-2
+runtime/lmsig_ksi-ls12.c
+  s_6303b89c4410f1::t_47e49a7cee49e5 1-2
+runtime/lmsig_ksi-ls12.h
+  s_6303b89c4410f1::t_ada953cd9d8e3c 1-2
+runtime/lookup.c
+  s_6303b89c4410f1::t_f1739ba4994dd8 1-2
+runtime/lookup.h
+  s_6303b89c4410f1::t_59816019477a39 1-2
+runtime/module-template.h
+  s_6303b89c4410f1::t_8dc8a6c715145e 1-2
+runtime/msg_replace_helper.h
+  s_6303b89c4410f1::t_e5191dd2eedb4c 1-2
+runtime/net.c
+  s_6303b89c4410f1::t_3c1ad6e127a412 1-2
+runtime/net_ossl.c
+  s_6303b89c4410f1::t_d4f6e62504ba30 1-2
+runtime/net_ossl_store.c
+  s_6303b89c4410f1::t_c9eb4a2835cc20 1-2
+runtime/net_ossl_store.h
+  s_6303b89c4410f1::t_7d9787ad56cf26 1-2
+runtime/netns_socket.c
+  s_6303b89c4410f1::t_cf7bc335bd37a0 1-2
+runtime/netns_socket.h
+  s_6303b89c4410f1::t_8c48b3770a96ba 1-2
+runtime/nsd.h
+  s_6303b89c4410f1::t_56d404aeefa4c9 1-2
+runtime/nsd_gtls.h
+  s_6303b89c4410f1::t_f187c64aec7b87 1-2
+runtime/nsd_mbedtls.h
+  s_6303b89c4410f1::t_4fed81648e8530 1-2
+runtime/nsd_ossl.h
+  s_6303b89c4410f1::t_98f81e52ddca67 1-2
+runtime/nsd_ptcp.h
+  s_6303b89c4410f1::t_207ed11d744ecd 1-2
+runtime/obj-types.h
+  s_6303b89c4410f1::t_1da3adcac33434 1-2
+runtime/obj.c
+  s_6303b89c4410f1::t_83580aef0a52bb 1-2
+runtime/obj.h
+  s_6303b89c4410f1::t_e09f2ea96fa5f3 1-2
+runtime/objomsr.c
+  s_6303b89c4410f1::t_dfc64dbbf987af 1-2
+runtime/objomsr.h
+  s_6303b89c4410f1::t_f933be6dc29bb0 1-2
+runtime/operatingstate.c
+  s_6303b89c4410f1::t_ead13cc69de0ac 1-2
+runtime/operatingstate.h
+  s_6303b89c4410f1::t_ab3923a97b618e 1-2
+runtime/outchannel.c
+  s_6303b89c4410f1::t_9e1b73b41129e5 1-2
+runtime/outchannel.h
+  s_6303b89c4410f1::t_2392991274e41a 1-2
+runtime/parse.c
+  s_6303b89c4410f1::t_a8a519d79f8d0b 1-2
+runtime/parse.h
+  s_6303b89c4410f1::t_7c1b6cb05a3e22 1-2
+runtime/parser.h
+  s_6303b89c4410f1::t_559837ad3b12cc 1-2
+runtime/perctile_stats.c
+  s_6303b89c4410f1::t_3f3179f807bf22 1-2
+runtime/perctile_stats.h
+  s_6303b89c4410f1::t_976ea8f270690e 1-2
+runtime/prop.c
+  s_6303b89c4410f1::t_ae49731482d889 1-2
+runtime/prop.h
+  s_6303b89c4410f1::t_6ef5663f35d853 1-2
+runtime/ratelimit.c
+  s_6303b89c4410f1::t_e8fd9ce6d886bc 1-2
+runtime/ratelimit.h
+  s_6303b89c4410f1::t_b3cf234efdae61 1-2
+runtime/regexp.c
+  s_6303b89c4410f1::t_93a5124ea625cd 1-2
+runtime/regexp.h
+  s_6303b89c4410f1::t_3e5b4264cfcfc7 1-2
+runtime/rsconf.c
+  s_6303b89c4410f1::t_f010e4964768a3 1-2
+runtime/rswatch.c
+  s_6303b89c4410f1::t_a94d85bdbcca4a 1-2
+runtime/ruleset.c
+  s_6303b89c4410f1::t_f92e51f5cab6e9 1-2
+runtime/ruleset.h
+  s_6303b89c4410f1::t_0713b5b53834f3 1-2
+runtime/sigprov.h
+  s_6303b89c4410f1::t_6ee3b9a0de9783 1-2
+runtime/srUtils.h
+  s_6303b89c4410f1::t_248f6f0b906783 1-2
+runtime/statsobj.c
+  s_6303b89c4410f1::t_69cf4e14cd04f4 1-2
+runtime/statsobj.h
+  s_6303b89c4410f1::t_b84c5499c346eb 1-2
+runtime/stringbuf.c
+  s_6303b89c4410f1::t_e49d95334a9d40 1-2
+runtime/stringbuf.h
+  s_6303b89c4410f1::t_d3aee777920de6 1-2
+runtime/strms_sess.c
+  s_6303b89c4410f1::t_163e8f7bdc2716 1-2
+runtime/strms_sess.h
+  s_6303b89c4410f1::t_539652955cc702 1-2
+runtime/syslogd-types.h
+  s_6303b89c4410f1::t_d6be3595199d2b 1-2
+runtime/tcpclt.c
+  s_6303b89c4410f1::t_abbee15f9e2831 1-2
+runtime/tcpclt.h
+  s_6303b89c4410f1::t_f34a00fb6cd8fc 1-2
+runtime/tcps_sess.c
+  s_6303b89c4410f1::t_78e19570ecbfcf 1-2
+runtime/tcps_sess.h
+  s_6303b89c4410f1::t_acbd16ea2c1427 1-2
+runtime/tcpsrv.c
+  s_6303b89c4410f1::t_d50bd79a39e102 1-2
+runtime/tcpsrv.h
+  s_6303b89c4410f1::t_f8db85b8c6bbe4 1-2
+runtime/template.c
+  s_6303b89c4410f1::t_828ed1b225f028 1-2
+runtime/template.h
+  s_6303b89c4410f1::t_9eb3ac97043e87 1-2
+runtime/threads.c
+  s_6303b89c4410f1::t_82c8b5b2e79f07 1-2
+runtime/threads.h
+  s_6303b89c4410f1::t_3238f67271d0af 1-2
+runtime/timezones.c
+  s_6303b89c4410f1::t_d60463a9d48f14 1-2
+runtime/timezones.h
+  s_6303b89c4410f1::t_de8757314614be 1-2
+runtime/translate.c
+  s_6303b89c4410f1::t_1c3cdfb62126b4 1-2
+runtime/translate.h
+  s_6303b89c4410f1::t_5c924c4e6cf4a9 1-2
+runtime/unicode-helper.h
+  s_6303b89c4410f1::t_9dd14279af5976 1-2
+runtime/unlimited_select.h
+  s_6303b89c4410f1::t_ac651c34c4cf6d 1-2
+runtime/var.h
+  s_6303b89c4410f1::t_314d3d133f296d 1-2
+runtime/wti.c
+  s_6303b89c4410f1::t_c02d1b57ae04de 1-2
+runtime/wti.h
+  s_6303b89c4410f1::t_69e750ddb97415 1-2
+runtime/wtp.h
+  s_6303b89c4410f1::t_28fb86f933d39b 1-2
+runtime/yamlconf.c
+  s_6303b89c4410f1::t_81415eaad4ab4a 1-2
+runtime/yamlconf.h
+  s_6303b89c4410f1::t_7774c23682029d 1-2
+runtime/zlibw.c
+  s_6303b89c4410f1::t_341c1f9ce1059c 1-2
+runtime/zlibw.h
+  s_6303b89c4410f1::t_579c4e3dfd3b2d 1-2
+runtime/zstdw.c
+  s_6303b89c4410f1::t_2a696110fb078d 1-2
+runtime/zstdw.h
+  s_6303b89c4410f1::t_8098b26a25a83e 1-2
+tests/journal_print.c
+  s_6303b89c4410f1::t_aa1136c218afd4 1-2
+tests/miniamqpsrvr.c
+  s_6303b89c4410f1::t_4a9d9e5122de06 1-2
+tests/minitcpsrvr.c
+  s_6303b89c4410f1::t_d0541f5ee0643b 1-2
+tests/syslog_caller.c
+  s_6303b89c4410f1::t_544d4227ab8b9c 1-2
+tools/fuzz_imtcp_session.c
+  s_6303b89c4410f1::t_4b39464a0eb62f 1-2
+tools/gethostn.c
+  s_6303b89c4410f1::t_0922ed4bdc742c 1-2
+tools/iminternal.c
+  s_6303b89c4410f1::t_34e0412065e9e2 1-2
+tools/iminternal.h
+  s_6303b89c4410f1::t_16babcbc0c925b 1-2
+tools/logctl.c
+  s_6303b89c4410f1::t_50fe5b85a7946e 1-2
+tools/logsigner.c
+  s_6303b89c4410f1::t_20042ade113395 1-2
+tools/msggen.c
+  s_6303b89c4410f1::t_72bd6632451ad1 1-2
+tools/omdiscard.c
+  s_6303b89c4410f1::t_96f889da24e830 1-2
+tools/omdiscard.h
+  s_6303b89c4410f1::t_7f7ca03f3154c5 1-2
+tools/omfile.c
+  s_6303b89c4410f1::t_e0c66d16d3d00e 1-2
+tools/omfile.h
+  s_6303b89c4410f1::t_521bf0742525cb 1-2
+tools/omfwd.c
+  s_6303b89c4410f1::t_a4283618f5abe8 1-2
+tools/omfwd.h
+  s_6303b89c4410f1::t_8599a393cfcf50 1-2
+tools/ompipe.c
+  s_6303b89c4410f1::t_6c4d31faf3f487 1-2
+tools/ompipe.h
+  s_6303b89c4410f1::t_f0eb8be4d16375 1-2
+tools/omshell.c
+  s_6303b89c4410f1::t_50dc16f75c2268 1-2
+tools/omshell.h
+  s_6303b89c4410f1::t_59c600e0f81abb 1-2
+tools/omusrmsg.c
+  s_6303b89c4410f1::t_92eaefd9b9fa78 1-2
+tools/omusrmsg.h
+  s_6303b89c4410f1::t_58106f0577f989 1-2
+tools/pmrfc3164.c
+  s_6303b89c4410f1::t_ab56218bce603a 1-2
+tools/pmrfc3164.h
+  s_6303b89c4410f1::t_10decbf121a952 1-2
+tools/pmrfc5424.c
+  s_6303b89c4410f1::t_f58190d82f4993 1-2
+tools/pmrfc5424.h
+  s_6303b89c4410f1::t_a7f08532af12f9 1-2
+tools/rscryutil.c
+  s_6303b89c4410f1::t_3d0b6e63d1cb32 1-2
+tools/rsyslogd.c
+  s_6303b89c4410f1::t_29ba91721ec12c 1-2
+tools/smfile.c
+  s_6303b89c4410f1::t_d70d7b93bd719d 1-2
+tools/smfile.h
+  s_6303b89c4410f1::t_0528002b9a8ea1 1-2
+tools/smfwd.c
+  s_6303b89c4410f1::t_5d79855fbbf422 1-2
+tools/smfwd.h
+  s_6303b89c4410f1::t_6f397f842bab71 1-2
+tools/smtradfile.c
+  s_6303b89c4410f1::t_d87e14f1bbf2d2 1-2
+tools/smtradfile.h
+  s_6303b89c4410f1::t_055c1033c83193 1-2
+tools/smtradfwd.c
+  s_6303b89c4410f1::t_959c8bf269d426 1-2
+tools/smtradfwd.h
+  s_6303b89c4410f1::t_b10b6652add259 1-2
+tools/syslogd.h
+  s_6303b89c4410f1::t_07267eb81b35ee 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "585713df22e587c5111f30d16e239c37395650c7",
+  "prompts": {},
+  "sessions": {
+    "s_6303b89c4410f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a111ee-0153-7182-be29-038ea2732d1e",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

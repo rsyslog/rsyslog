@@ -1,0 +1,14 @@
+tests/rscript-json-var-eval-semantics.sh
+  h_95716f3de0caf5 6-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a56aa7153abdda6f8ad9848fc655efa75cfd9a35",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

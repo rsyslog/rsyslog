@@ -1,0 +1,19 @@
+runtime/action.c
+  s_142ee1fa291d22::t_b3da0cc881df7e 121-190,390-397,1553-1563,2442-2449
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b38f062ab26a63ea2e2bb9be4bfe41cdf07e5772",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

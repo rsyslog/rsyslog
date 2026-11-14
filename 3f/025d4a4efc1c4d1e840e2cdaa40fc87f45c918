@@ -1,0 +1,25 @@
+contrib/omczmq/omczmq.c
+  s_5e773934876cb4::t_9ab748b4896b49 42,105,139,329,515-519
+tests/Makefile.am
+  s_5e773934876cb4::t_c657396dba41ec 1550-1552,2735,3040-3049,3827-3830
+tests/omczmq-sendhwm.sh
+  s_5e773934876cb4::t_727cf68d87cc52 1-53
+tests/omczmq-socket-options-preload.c
+  s_5e773934876cb4::t_f8de2239b1c6ad 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3f025d4a4efc1c4d1e840e2cdaa40fc87f45c918",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

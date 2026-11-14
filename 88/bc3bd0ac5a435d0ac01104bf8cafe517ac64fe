@@ -1,0 +1,27 @@
+devtools/release/amazonlinux-daily-stable.sh
+  s_249598f19af6b2::t_be428808b600ec 231-252
+.github/workflows/ubuntu_daily_stable.yml
+  s_249598f19af6b2::t_f70017e339e617 364,367-381
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_249598f19af6b2::t_be428808b600ec 46-57
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_249598f19af6b2::t_be428808b600ec 19-30
+devtools/release/opensuse-daily-stable.sh
+  s_249598f19af6b2::t_be428808b600ec 159-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "88bc3bd0ac5a435d0ac01104bf8cafe517ac64fe",
+  "prompts": {},
+  "sessions": {
+    "s_249598f19af6b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018cd-3dd2-7251-a691-ad0882f16fa0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+plugins/imdiag/imdiag.c
+  h_95716f3de0caf5 99-101,511-515,562-582,734-735,1375
+tests/dynstats_prevent_premature_eviction-vg.sh
+  h_95716f3de0caf5 2-6
+tests/dynstats_prevent_premature_eviction.sh
+  h_95716f3de0caf5 2-7,33-49,51-65,71,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b25bf5fc2f03e06399b95eb6b2f1227f6d9bf43e",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

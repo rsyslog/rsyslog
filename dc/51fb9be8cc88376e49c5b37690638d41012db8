@@ -1,0 +1,14 @@
+tests/imfile-inotify-fd-release-on-delete.sh
+  h_95716f3de0caf5 28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "dc51fb9be8cc88376e49c5b37690638d41012db8",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+doc/source/rainerscript/queue_parameters.rst
+  s_923c67e7c3d373::t_925e5df69c9b12 493-497
+doc/source/configuration/modules/impstats.rst
+  s_923c67e7c3d373::t_925e5df69c9b12 413-415
+doc/source/configuration/rsyslog_statistic_counter.rst
+  s_923c67e7c3d373::t_925e5df69c9b12 67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "de91477cf442b516ddc3fab7aa2bcc13e10218a8",
+  "prompts": {},
+  "sessions": {
+    "s_923c67e7c3d373": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05dfd-c5e9-7a01-b239-97b748984633",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+tests/segmented-da-idle-cleanup-failure.sh
+  s_b8f2a1bee24eec::t_dee1c407d5410f 30-47,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "298830d39d1257b2fcf76aa93414fb7105116d4a",
+  "prompts": {},
+  "sessions": {
+    "s_b8f2a1bee24eec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04847-edef-7db3-b0b0-264b37f94699",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

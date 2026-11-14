@@ -1,0 +1,29 @@
+runtime/libcry_common.c
+  s_6224eda96fc0da::t_b947e70d5c849d 35,190-194
+tests/Makefile.am
+  s_6224eda96fc0da::t_e02ceb9d2c70b5 513,1170
+tests/perctile-invalid-percentile.sh
+  s_6224eda96fc0da::t_d8194015f7ecae 24
+  s_6224eda96fc0da::t_e02ceb9d2c70b5 1-23,25-26
+runtime/perctile_stats.c
+  s_6224eda96fc0da::t_b947e70d5c849d 591-599
+tests/queue-encryption-disk_keyprog-invalid-len.sh
+  s_6224eda96fc0da::t_d8194015f7ecae 36
+  s_6224eda96fc0da::t_e02ceb9d2c70b5 1-35,37-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "37424b4cb9d5ba931a07117fa106c01128bb54e7",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+.github/workflows/debian_repro_experiment.yml
+  h_95716f3de0caf5 50-51
+  h_95716f3de0caf5 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e942b81fbbeb316c2fd044f9a5f5d4b97b63aa7",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

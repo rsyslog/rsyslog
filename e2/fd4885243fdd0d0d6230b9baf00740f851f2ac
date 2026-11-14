@@ -1,0 +1,36 @@
+tests/minitcpsrvr.c
+  s_1331110881c407::t_ea49d5e507968c 22,283-288,290
+  s_1331110881c407::t_c98730f2ffeaf9 176-182,192-194,416
+benchmarks/segmented-diskqueue/runner.py
+  s_1331110881c407::t_18c2b700f3c564 101-102,237-238,268-276
+  s_1331110881c407::t_ea49d5e507968c 199,244-248,261
+benchmarks/segmented-diskqueue/selftest.py
+  s_1331110881c407::t_18c2b700f3c564 6,58-64,72-78,88-95,98-102
+  s_1331110881c407::t_5e3c44d2880098 96-97
+  s_1331110881c407::t_ea49d5e507968c 4-5,7,48-57,65-71,79-87
+tests/minitcpsrv_usage_output.sh
+  s_1331110881c407::t_2a405325fb30f6 19-25
+benchmarks/segmented-diskqueue/results/schema-v1.json
+  s_1331110881c407::t_ea49d5e507968c 13-27
+tests/segmented-da-idle-cleanup-failure.sh
+  s_1331110881c407::t_d0c08abebc17bb 8-9,46
+benchmarks/segmented-diskqueue/compare.py
+  s_1331110881c407::t_18c2b700f3c564 55-58,61-68
+  s_1331110881c407::t_ea49d5e507968c 46-54,59-60,69-70,75,87-88,90,94,150-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "e2fd4885243fdd0d0d6230b9baf00740f851f2ac",
+  "prompts": {},
+  "sessions": {
+    "s_1331110881c407": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f69bd-85cb-7551-9925-b0202b9462b7",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

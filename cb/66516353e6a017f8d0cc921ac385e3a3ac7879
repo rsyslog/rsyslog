@@ -1,0 +1,37 @@
+.github/actions/upload-flake-evidence/action.yml
+  s_2f89000869a42c::t_c18bea7e50791a 26
+.github/workflows/daily_focused_tests.yml
+  s_2f89000869a42c::t_16b8fd86286888 447
+.github/workflows/run_checks.yml
+  s_2f89000869a42c::t_07dec4442f729e 1111-1112,1214-1216,1298-1300,1452-1454,1702-1704,1852-1854
+AGENTS.md
+  s_2f89000869a42c::t_1e65807189e813 296-300,306-309
+devtools/check-flake-evidence-coverage.py
+  s_2f89000869a42c::t_3dbba014c465fd 2-14,38-41,57-72,76-78,82,86,89,93-96,98
+devtools/ci-flake-phase.sh
+  s_2f89000869a42c::t_96029f6e1255f6 2,73-75,78-82
+devtools/collect-flake-evidence.py
+  s_2f89000869a42c::t_9d1d5d44b4052a 2-14,20,28,125-138,154
+devtools/prepare-flake-evidence.py
+  s_2f89000869a42c::t_0468392abb6078 2-14
+devtools/run-ci.sh
+  s_2f89000869a42c::t_4b5bcee4124fe5 25,37
+devtools/tests/test_flake_evidence.py
+  s_2f89000869a42c::t_3f4921c5acf8e0 2-14,17,23,31,41-47,77-98,155-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "cb66516353e6a017f8d0cc921ac385e3a3ac7879",
+  "prompts": {},
+  "sessions": {
+    "s_2f89000869a42c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f89d2-7002-7821-8550-0d33e8527d33",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

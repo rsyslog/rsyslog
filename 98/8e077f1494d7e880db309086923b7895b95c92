@@ -1,0 +1,27 @@
+tests/Makefile.am
+  s_83566911eeff21::t_9c386bba51a027 440
+plugins/omelasticsearch/omelasticsearch.c
+  s_83566911eeff21::t_9c386bba51a027 1192,1194-1195,2220-2221
+tests/omelasticsearch-maxbytes-boundary.sh
+  s_83566911eeff21::t_ecf522f3701bac 60-61,65,91-92,94,112-113,132-133,135
+  s_83566911eeff21::t_e7689b34bd35e9 2-5,76
+  s_83566911eeff21::t_73d28704442840 11
+  s_83566911eeff21::t_788756cafb21ae 62
+  s_83566911eeff21::t_9c386bba51a027 1,6-10,12-59,63-64,66-75,77-90,93,95-111,114-131,134,136-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "988e077f1494d7e880db309086923b7895b95c92",
+  "prompts": {},
+  "sessions": {
+    "s_83566911eeff21": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a044c1-9e07-7e21-b6ec-b07c7ffff0a8",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

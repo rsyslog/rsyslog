@@ -1,0 +1,29 @@
+.agent/skills/rsyslog-release/SKILL.md
+  s_0d5683fb5e1727::t_e1cd9ee003878f 13-23
+.agent/skills/rsyslog_v8stable_patch_flow/SKILL.md
+  s_0d5683fb5e1727::t_faacc13d39b551 13-23
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_0d5683fb5e1727::t_efc40888249787 3-13
+.github/PACKAGING_STRATEGY.md
+  s_0d5683fb5e1727::t_f2e8a73d879ebc 1-219
+AGENTS.md
+  s_0d5683fb5e1727::t_d1f50c4b959708 69-76
+packaging/docker/rsyslog/README.md
+  s_0d5683fb5e1727::t_93434386a3fcd6 22-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1890d7a164daddaf34348e2d2694e95c4ebdf1cf",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
