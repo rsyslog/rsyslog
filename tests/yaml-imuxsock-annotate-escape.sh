@@ -10,6 +10,8 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS" "trusted property annotation depends on Linux credentials/procfs behavior"
 require_yaml_support
+# The sender uses Python to set PR_SET_NAME before writing to the Unix socket.
+command -v python3 >/dev/null 2>&1 || exit 77
 
 export NUMMESSAGES=4
 generate_conf --yaml-only
