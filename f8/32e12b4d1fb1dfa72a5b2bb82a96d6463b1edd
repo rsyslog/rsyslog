@@ -1,0 +1,20 @@
+plugins/imudp/imudp.c
+  h_95716f3de0caf5 190,958,1033,1672
+tests/imudp-timerequery-negative.sh
+  h_95716f3de0caf5 1-66
+tests/Makefile.am
+  h_95716f3de0caf5 634
+doc/source/reference/parameters/imudp-timerequery.rst
+  h_95716f3de0caf5 36-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f832e12b4d1fb1dfa72a5b2bb82a96d6463b1edd",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
