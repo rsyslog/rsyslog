@@ -1,0 +1,14 @@
+tests/imtcp-tls-gtls-certinfo-long-names.sh
+  h_95716f3de0caf5 92-94,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c1375d6abd11e8c35c456bcb5e37681b6701c607",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

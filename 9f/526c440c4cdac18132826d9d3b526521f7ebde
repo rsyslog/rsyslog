@@ -1,0 +1,26 @@
+doc/Makefile.am
+  h_95716f3de0caf5 1007
+doc/source/reference/parameters/omdtls-tls-permittedpeer.rst
+  h_95716f3de0caf5 3-6
+plugins/omdtls/omdtls.c
+  h_95716f3de0caf5 202-204,206,541-542,731-733,775-776,865,867,879-880
+tests/Makefile.am
+  h_95716f3de0caf5 2432-2434,2943,4423-4425
+tests/omdtls-server-identity.py
+  h_95716f3de0caf5 5-6,26-28,33-34,36-50,66-67,72-73,76-86,92-93,95-107,125-130,159
+tests/testsuites/yaml-omdtls-server-identity.yaml
+  h_95716f3de0caf5 1-21
+tests/yaml-omdtls-server-identity.sh
+  h_95716f3de0caf5 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9f526c440c4cdac18132826d9d3b526521f7ebde",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

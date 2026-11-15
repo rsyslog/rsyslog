@@ -1,0 +1,18 @@
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 86,93-100,133
+tests/Makefile.am
+  h_95716f3de0caf5 30-31
+tests/imklog_short_lines.sh
+  h_95716f3de0caf5 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "193fcf837a773e7d1ecf866759f77481e1f439bf",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
