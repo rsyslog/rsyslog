@@ -27,6 +27,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
@@ -363,6 +364,48 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * Build a hiredis format string that reproduces @p command literally.
+ *
+ * Template mode hands the rendered template to hiredis as a command line.
+ * hiredis parses that string printf-style: it splits arguments on spaces and
+ * expands '%' conversions from its variadic argument list. The rendered
+ * template routinely contains message data, so every '%' is doubled here.
+ * This keeps the space-splitting behavior template mode relies on while
+ * preventing message content from being interpreted as a conversion that
+ * would read nonexistent variadic arguments.
+ *
+ * @param command rendered template text, NUL-terminated
+ * @param out     receives a newly allocated escaped copy; caller frees
+ * @return RS_RET_OK or RS_RET_OUT_OF_MEMORY
+ */
+static rsRetVal escapeTemplateCommand(const char *const command, char **const out) {
+    DEFiRet;
+    size_t len = 0;
+    size_t nPercent = 0;
+    char *buf = NULL;
+    const char *src;
+    char *dst;
+
+    for (src = command; *src != '\0'; ++src) {
+        ++len;
+        if (*src == '%') ++nPercent;
+    }
+    if (nPercent > SIZE_MAX - len - 1) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    CHKmalloc(buf = malloc(len + nPercent + 1));
+    for (src = command, dst = buf; *src != '\0'; ++src) {
+        *dst++ = *src;
+        if (*src == '%') *dst++ = '%';
+    }
+    *dst = '\0';
+    *out = buf;
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal writeHiredis(uchar *key, uchar *message, wrkrInstanceData_t *pWrkrData) {
     DEFiRet;
     int rc, expire;
@@ -380,7 +423,9 @@ static rsRetVal writeHiredis(uchar *key, uchar *message, wrkrInstanceData_t *pWr
      * by 1 and continue. */
     switch (pWrkrData->pData->mode) {
         case OMHIREDIS_MODE_TEMPLATE:
-            rc = redisAppendCommand(pWrkrData->conn, (char *)message);
+            /* the rendered template is the format string, so escape '%' first */
+            CHKiRet(escapeTemplateCommand((const char *)message, &formattedMsg));
+            rc = redisAppendCommand(pWrkrData->conn, formattedMsg);
             break;
         case OMHIREDIS_MODE_QUEUE:
             rc = redisAppendCommand(pWrkrData->conn, pWrkrData->pData->useRPush ? "RPUSH %s %s" : "LPUSH %s %s", key,

@@ -50,3 +50,6 @@ skip imbeats-idle-between-windows.sh
 # Both frontends stay covered on Linux; neither adds a Solaris portability oracle.
 skip mmcount-distinct-values.sh
 skip yaml-mmcount-distinct-values.sh
+
+# Redis output: needs a redis-server, no portability relevance.
+skip omhiredis-*
