@@ -21,7 +21,8 @@
  * one message the way action queues (MsgAddRef) and queued rulesets
  * (MsgDup) do, while another thread replaces the snapshot the way a second
  * mmnormalize action does. ASan, LSan and TSan must stay silent and every
- * reader must observe a complete value.
+ * reader must observe a complete value. A codec round trip also checks the
+ * PRI text of a normal unparsed message.
  */
 #include "config.h"
 
@@ -36,6 +37,7 @@
 #include "template.h"
 #include "dirty.h"
 #include "rainerscript.h"
+#include "segdisk_codec.h"
 
 #define CHECK(cond)                                                                  \
     do {                                                                             \
@@ -210,6 +212,34 @@ static smsg_t *new_msg(void) {
     smsg_t *msg = NULL;
     CHECK(msgConstruct(&msg) == RS_RET_OK);
     return msg;
+}
+
+/* Replay a normal unparsed message. Both native sentinels must survive, and
+ * rendering the replayed PRI text must produce the exact fallback string. */
+static void test_unparsed_message_codec_roundtrip(void) {
+    static const char raw_msg[] = "unparsed message";
+    smsg_t *msg = new_msg();
+    smsg_t *replayed = NULL;
+    unsigned char *record = NULL;
+    size_t record_len = 0;
+    msgPropDescr_t prop = {.id = PROP_PRI_TEXT};
+    unsigned short must_free = 0;
+    rs_size_t text_len = 0;
+
+    MsgSetRawMsg(msg, raw_msg, sizeof(raw_msg) - 1);
+    CHECK(segdiskCodecEncode(msg, &record, &record_len) == RS_RET_OK);
+    CHECK(segdiskCodecDecode(record, record_len, &replayed) == RS_RET_OK);
+    CHECK(replayed->iFacility == LOG_INVLD);
+    CHECK(replayed->offMSG == -1);
+
+    uchar *text = MsgGetProp(replayed, NULL, &prop, &text_len, &must_free, NULL);
+    CHECK(must_free);
+    CHECK(strcmp((const char *)text, "invld.debug") == 0);
+
+    free(text);
+    free(record);
+    msgDestruct(&replayed);
+    msgDestruct(&msg);
 }
 
 /* Always returns a heap string the caller frees; "" when absent. */
@@ -949,6 +979,7 @@ struct unit_test {
 };
 
 static const struct unit_test unit_tests[] = {
+    {"unparsed_message_codec_roundtrip", test_unparsed_message_codec_roundtrip},
     {"turbo_only_field_getters", test_turbo_only_field_getters},
     {"jsonfind_sees_turbo_only_tree", test_jsonfind_sees_turbo_only_tree},
     {"exists_on_turbo_only", test_exists_on_turbo_only},

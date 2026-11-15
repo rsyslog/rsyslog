@@ -276,6 +276,8 @@ static rsRetVal decode_time(const unsigned char *p, uint32_t len, struct syslogT
 rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) {
     smsg_t *msg = NULL;
     uint32_t seen = 0;
+    uint32_t msg_offset = 0;
+    uint32_t after_pri_offset = 0;
     size_t pos = 0;
     rsRetVal r = msgConstructForDeserializer(&msg);
     if (r != RS_RET_OK) return r;
@@ -333,10 +335,18 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
             case F_SEVERITY:
                 NEED(TLV_U16, 2);
+                if (get16(p) > LOG_DEBUG) {
+                    r = RS_RET_INVALID_VALUE;
+                    goto fail;
+                }
                 msg->iSeverity = get16(p);
                 break;
             case F_FACILITY:
                 NEED(TLV_U16, 2);
+                if (get16(p) >= LOG_NFACILITIES && get16(p) != LOG_INVLD) {
+                    r = RS_RET_INVALID_VALUE;
+                    goto fail;
+                }
                 msg->iFacility = get16(p);
                 break;
             case F_FLAGS:
@@ -450,11 +460,11 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
             case F_MSG_OFFSET:
                 NEED(TLV_U32, 4);
-                MsgSetMSGoffs(msg, (int)get32(p));
+                msg_offset = get32(p);
                 break;
             case F_AFTER_PRI_OFFSET:
                 NEED(TLV_U32, 4);
-                if ((r = MsgSetAfterPRIOffs(msg, (int)get32(p))) != RS_RET_OK) goto fail;
+                after_pri_offset = get32(p);
                 break;
             case F_PARSE_SUCCESS:
                 NEED(TLV_U8, 1);
@@ -477,6 +487,18 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
         r = RS_RET_INVALID_VALUE;
         goto fail;
     }
+    /* TLVs may arrive in any order. Check offsets against the final raw message
+     * before invoking setters that assert their preconditions. */
+    if ((msg_offset != UINT32_MAX && (msg_offset > (uint32_t)msg->iLenRawMsg + 1u || msg_offset > INT_MAX)) ||
+        after_pri_offset > (uint32_t)msg->iLenRawMsg || after_pri_offset > INT_MAX ||
+        (after_pri_offset > 0 && (msg->pszRawMsg[0] != '<' || msg->pszRawMsg[after_pri_offset - 1] != '>'))) {
+        r = RS_RET_INVALID_VALUE;
+        goto fail;
+    }
+    MsgSetMSGoffs(msg, msg_offset == UINT32_MAX ? -1 : (int)msg_offset);
+    if ((seen & (1u << (F_AFTER_PRI_OFFSET - 1))) != 0 &&
+        (r = MsgSetAfterPRIOffs(msg, (int)after_pri_offset)) != RS_RET_OK)
+        goto fail;
     *out = msg;
     return RS_RET_OK;
 fail:
