@@ -33,7 +33,9 @@ n-times. This logic is only activated if messages come in at a very fast rate, s
 doing less frequent time calls should usually be acceptable. The default value is
 two, because we have seen that even without optimization the kernel often returns
 twice the identical time. You can set this value as high as you like, but do so at
-your own risk. The higher the value, the less precise the timestamp.
+your own risk. The higher the value, the less precise the timestamp. The value
+must not be negative; a negative value is rejected as a configuration error.
+Zero is valid and means the time is queried for every call.
 
 .. note::
    The time requery is based on executed system calls, not messages received.
