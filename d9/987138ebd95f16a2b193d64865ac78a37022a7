@@ -1,0 +1,49 @@
+runtime/parser.c
+  s_12493d1d1488ca::t_4203eafaf561b3 640-647
+  s_12493d1d1488ca::t_66fc34de1367b6 627-629
+  s_12493d1d1488ca::t_cdfe4cd95514ac 588-610,615-616,618-622,624-626,630-634,648-652,656,658-663,670,680-682
+  s_12493d1d1488ca::t_4d817490744098 617,635-639
+  s_12493d1d1488ca::t_45c76894c7a764 611-613,653-655,657
+  s_12493d1d1488ca::t_27ee438b948104 614
+  s_12493d1d1488ca::t_a2712bb9cd8d9c 623
+runtime/queue.c
+  s_12493d1d1488ca::t_a72dc913ca9a2f 3010-3015
+  s_12493d1d1488ca::t_cdfe4cd95514ac 225
+tests/Makefile.am
+  s_12493d1d1488ca::t_d0ba3d32cd328b 3847-3849
+  s_12493d1d1488ca::t_4905a3f1e0936f 107-109
+tests/main-queue-discardseverity-udp-pri.sh
+  s_12493d1d1488ca::t_01bf6565d31d5d 112
+  s_12493d1d1488ca::t_1cf8cf5cd535f9 43-46,51-65
+  s_12493d1d1488ca::t_1715a4fc853cac 13-14,68-85,139
+  s_12493d1d1488ca::t_4905a3f1e0936f 1-4,23-26,29-31,33-35,37-42,47-50,66-67,104-109,113-116,121-125,127-131,153-156,158,164,166-168
+  s_12493d1d1488ca::t_f29954d10ba3b2 5
+  s_12493d1d1488ca::t_374f58eb323ca4 36
+  s_12493d1d1488ca::t_342d08348cf689 86-103,135
+  s_12493d1d1488ca::t_427112cb9446e0 165
+  s_12493d1d1488ca::t_2be5fc5c912110 132
+  s_12493d1d1488ca::t_c8ae89fde7d6aa 9
+  s_12493d1d1488ca::t_193cedff25fc60 133
+  s_12493d1d1488ca::t_10add0ce7aa959 134
+  s_12493d1d1488ca::t_78b70c8401961e 10-12,15-22,27,32,110-111,117-120,126,138,140-141,147,151,162
+  s_12493d1d1488ca::t_3c1827793b27a4 6-8
+  s_12493d1d1488ca::t_3971e0cabe7a64 28,136-137,142-146,148-150,152,157,159-161,163
+runtime/parser.h
+  s_12493d1d1488ca::t_cdfe4cd95514ac 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d9987138ebd95f16a2b193d64865ac78a37022a7",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": null
+    }
+  }
+}

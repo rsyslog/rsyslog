@@ -1,0 +1,37 @@
+plugins/imdiag/Makefile.am
+  s_142ee1fa291d22::t_c79c7f991cf38e 5-7
+plugins/imdiag/imdiag.c
+  s_142ee1fa291d22::t_d2f6b74e96cae0 670-688,735-738
+runtime/Makefile.am
+  s_142ee1fa291d22::t_9f099d6e66e5a4 85,155-158
+runtime/queue.c
+  s_142ee1fa291d22::t_4cdba1ce101e23 3196-3199,3225,3759-3760,3773-3922,3970
+runtime/queue.h
+  s_142ee1fa291d22::t_dd042ed96de84e 345-349
+tests/Makefile.am
+  s_142ee1fa291d22::t_31e44fb906276c 70-71,3021
+tests/queue-discard-only-lease.sh
+  s_142ee1fa291d22::t_9f91ff1d254582 1-32
+tests/queue-fixedarray-outoforder.sh
+  s_142ee1fa291d22::t_e5b842147ada6a 8-12,49-53,61
+tests/queue-lease-attribution.sh
+  s_142ee1fa291d22::t_fc14e19d91db5e 1-22
+tests/unit/queue_lease_test.c
+  s_142ee1fa291d22::t_9ca38de8108468 3-4,40,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "08029d0cae15c72b161a38510b5080300db64668",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

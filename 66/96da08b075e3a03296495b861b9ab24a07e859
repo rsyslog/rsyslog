@@ -1,0 +1,33 @@
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_0aa84851f8a082 33-36,1067-1233
+doc/ai/designs/local-queue-frontends.md
+  s_142ee1fa291d22::t_b8243b7475637a 7,11,16-17
+doc/ai/designs/local-queue-implementation-plan.md
+  s_142ee1fa291d22::t_f7f6253f11eee7 7,11-12,515-530
+doc/ai/designs/local-queue-s0-contracts.md
+  s_142ee1fa291d22::t_12822647f60af1 30-33
+doc/ai/designs/local-queue-target-measurement-method.md
+  s_142ee1fa291d22::t_538e28ffd362f0 19-21,111-241
+doc/ai/module_map.yaml
+  s_142ee1fa291d22::t_3c666fe5989de2 6-8
+doc/source/concepts/queues.rst
+  s_142ee1fa291d22::t_dd579408a51dfe 28,643-771
+doc/source/rainerscript/queue_parameters.rst
+  s_142ee1fa291d22::t_b44b00a50c8b51 48-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6696da08b075e3a03296495b861b9ab24a07e859",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+tests/rscript-object-string-escapes.sh
+  s_6224eda96fc0da::t_472b41ee820531 2-6,12-14,19-24,41-42
+tests/lookup_table_rscript_reload.sh
+  s_6224eda96fc0da::t_472b41ee820531 2-6,19
+grammar/lexer.l
+  s_6224eda96fc0da::t_472b41ee820531 323,328,374,379,384,389
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "ad0adc87eb72c204f19fc1e6068e7512a1612435",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

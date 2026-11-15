@@ -1,0 +1,23 @@
+tests/mmnormalize-turbo-truncated-stat.sh
+  s_f31e60e1211a64::t_342db781c06b43 15-18,22,24,27,41-42,51-52,58
+configure.ac
+  s_f31e60e1211a64::t_342db781c06b43 1812,1816-1817,1834
+tests/Makefile.am
+  s_f31e60e1211a64::t_342db781c06b43 1796-1798,2618,3718-3722
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df168004f5cff15921628e04d8368744a505e05e",
+  "prompts": {},
+  "sessions": {
+    "s_f31e60e1211a64": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a114f8-31ad-7b51-aaec-fa4772324b64",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

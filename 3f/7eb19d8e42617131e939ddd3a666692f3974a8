@@ -1,0 +1,29 @@
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_0add9e4d30bb93 1-637
+devtools/release/fedora-daily-stable.sh
+  s_2dc01c7e3d2940::t_a9dbe44883fea0 107,118,122-137
+  s_2dc01c7e3d2940::t_23526cbe081263 84-85,87,120-121,147,153,157
+  s_2dc01c7e3d2940::t_19034d996f0c71 1-83,86,88-106,108-117,119,138-146,148-152,154-156,158-240
+.github/FEDORA_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_0add9e4d30bb93 1-89
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_1392e15214c115 21
+.github/fedora44-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_a9dbe44883fea0 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3f7eb19d8e42617131e939ddd3a666692f3974a8",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

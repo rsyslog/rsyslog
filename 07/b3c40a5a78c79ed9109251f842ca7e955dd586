@@ -1,0 +1,19 @@
+plugins/imptcp/imptcp.c
+  s_2211d00224abdf::t_8fc3303539cc39 1056
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "07b3c40a5a78c79ed9109251f842ca7e955dd586",
+  "prompts": {},
+  "sessions": {
+    "s_2211d00224abdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7fc9-8e30-7130-b847-6b5dc1a62abb",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

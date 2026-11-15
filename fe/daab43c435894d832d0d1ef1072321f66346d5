@@ -1,0 +1,27 @@
+packaging/ubuntu/jammy/v8-stable/debian/build-qpid-proton.sh
+  s_5e773934876cb4::t_9f0f57c966dd75 29-32
+packaging/ubuntu/noble/v8-stable/debian/build-qpid-proton.sh
+  s_5e773934876cb4::t_9669e597ff011e 29-32
+tests/Makefile.am
+  s_5e773934876cb4::t_86f2c2cc9a3589 29,61
+tests/ubuntu-qpid-generation-order.sh
+  s_5e773934876cb4::t_099585034c9a06 1-11
+tests/unit/qpid_generation_order.py
+  s_5e773934876cb4::t_33fc39d047c8f3 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fedaab43c435894d832d0d1ef1072321f66346d5",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

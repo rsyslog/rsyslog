@@ -1,0 +1,60 @@
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_b5c819c2a9ef7d 1850
+  s_f2c089be484e12::t_0a71e32660cfc3 1452-1515,1517-1540,1542-1556,1558-1583,1587-1613,1615-1624
+  s_f2c089be484e12::t_07aa421504b390 319-320,1516,1541,1557,1584-1586
+  s_f2c089be484e12::t_61222db63d4d83 1697-1703
+  s_f2c089be484e12::t_d6a62b7af92139 1614,1636,1638,1640,1650,1726-1729,1731,1735
+  s_f2c089be484e12::t_f5a2835bcf8f6f 1625
+tools/shadow_reload.c
+  s_f2c089be484e12::t_c8ffc4b5c8f0c9 388-391
+  s_f2c089be484e12::t_4da3f302928f6a 199-200,208
+  s_f2c089be484e12::t_a0200e92727ba4 74,84,130,159-160,209-210,399-402,457,470,521,569,840
+  s_f2c089be484e12::t_911ccecc4f8933 397-398
+  s_f2c089be484e12::t_6d8a458ac35ff4 520,568
+  s_f2c089be484e12::t_bf50f6e45f36b0 73,83,129,161-172
+  s_f2c089be484e12::t_7f986cd4c886de 456,469,518-519,839
+  s_f2c089be484e12::t_005caa3a228f0c 173-175
+tests/unit/module_reload_test.c
+  s_f2c089be484e12::t_465bf00e8ce325 90-97,157,163-164,170-171
+  s_f2c089be484e12::t_18a264ba2b2455 7
+  s_f2c089be484e12::t_f64a7cbb3fd782 158-162
+  s_f2c089be484e12::t_c7b741b3808261 98-111,172-180,195
+  s_f2c089be484e12::t_31094a0237ac6e 196
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_d096468c03138a 265-268
+  s_f2c089be484e12::t_43f46100a3298b 269-271
+runtime/module-reload.c
+  s_f2c089be484e12::t_3297cfe61a3a47 53-54,56,59-60
+  s_f2c089be484e12::t_7d3390c4d3272e 48-51,57-58,69-70,87-88
+  s_f2c089be484e12::t_7576f0cb6c6e81 52,61-65,67
+  s_f2c089be484e12::t_23a39b42852b4f 55,66,68
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_9798b955973e33 33-35,38-46,49-56,70-71
+  s_f2c089be484e12::t_63ab2fa61b71b5 36-37,47-48
+  s_f2c089be484e12::t_e6ff440f30f8a6 27-30,68-69
+  s_f2c089be484e12::t_0302bbc5e61a23 182-185
+runtime/modules.h
+  s_f2c089be484e12::t_7d3390c4d3272e 108-109,180-182,188-189,289-292
+tests/global-reloadonhup-validate-yaml.sh
+  s_f2c089be484e12::t_17d67f98c76783 19,50-60
+  s_f2c089be484e12::t_e6ff440f30f8a6 37-40,43-49,61-63,73-74,98-99
+  s_f2c089be484e12::t_f92881ee033a57 83
+  s_f2c089be484e12::t_c9effa2b41030e 75-76,78-82,84-86,100-101,113-126,138-141
+  s_f2c089be484e12::t_3ea133656b485c 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1db62fdce123778184250ec61bc0683e83db7671",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

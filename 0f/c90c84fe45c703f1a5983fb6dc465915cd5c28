@@ -1,0 +1,29 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_6b7f66b53cbb66 21-23
+devtools/prepare-flake-evidence.py
+  s_5e773934876cb4::t_1766f140e1770b 31
+devtools/tests/test_flake_evidence.py
+  s_5e773934876cb4::t_84fa8cef121641 140-182
+Makefile.am
+  s_5e773934876cb4::t_38589dc41ac2c1 7-10
+devtools/collect-flake-evidence.py
+  s_5e773934876cb4::t_9de3f7049e084c 40
+tests/flake-evidence-statuses.sh
+  s_5e773934876cb4::t_288ee7fe779557 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0fc90c84fe45c703f1a5983fb6dc465915cd5c28",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

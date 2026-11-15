@@ -1,0 +1,28 @@
+tests/rscript_is_time.sh
+  s_5e773934876cb4::t_54392be1767c40 100
+  s_5e773934876cb4::t_fe63bc3bc845b6 36-39
+  s_5e773934876cb4::t_0c99e4cb592607 4-6,23-28,44-45
+  s_5e773934876cb4::t_d52323ea6c1fe2 21-22,42-43
+tests/rscript_parse_time.sh
+  s_5e773934876cb4::t_d52323ea6c1fe2 97-98
+  s_5e773934876cb4::t_0c99e4cb592607 4-7,99-104,107-110,113-116
+  s_5e773934876cb4::t_fe63bc3bc845b6 105-106,111-112,134
+grammar/rainerscript.c
+  s_5e773934876cb4::t_2742b505c7c1ab 2889-2891,2894-2897,2936-2938,2941-2944,3004,3011
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fa0722a25e0c7e9a2e062b9938c12c7ea4c1c6b",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

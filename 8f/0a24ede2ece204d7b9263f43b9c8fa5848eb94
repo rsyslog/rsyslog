@@ -1,0 +1,25 @@
+benchmarks/concurrent-array-fanout/campaign.py
+  s_daa33b26269e69::t_6259a9eb2909a2 131-132,156-157
+  s_daa33b26269e69::t_1f4c5b8ad8f198 1-130,133-155
+benchmarks/concurrent-array-fanout/runner.py
+  s_daa33b26269e69::t_24e7a9a8af48da 625-626,669,715,721
+  s_daa33b26269e69::t_1615a18282dc67 760
+benchmarks/concurrent-array-fanout/README.md
+  s_daa33b26269e69::t_cac51ac80e836d 81-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8f0a24ede2ece204d7b9263f43b9c8fa5848eb94",
+  "prompts": {},
+  "sessions": {
+    "s_daa33b26269e69": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05bbb-f13d-7f81-83cd-f90383a7dd00",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

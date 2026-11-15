@@ -1,0 +1,56 @@
+runtime/ruleset.c
+  s_6b340ae08e941b::t_ac9083ff9569b9 298-301,303,305-307,311-328,330-333,335,337
+  s_6b340ae08e941b::t_d7723f77348c97 304,309-310,329
+tests/Makefile.am
+  s_6b340ae08e941b::t_8f07f966b7673e 743
+  s_6b340ae08e941b::t_0df0970c34e7b7 539
+tests/rscript-if-chain-snapshot-vg.sh
+  s_6b340ae08e941b::t_efcdc496cc132c 9
+  s_6b340ae08e941b::t_8f07f966b7673e 1,6-8
+  s_6b340ae08e941b::t_d7723f77348c97 2-5
+grammar/rainerscript.h
+  s_6b340ae08e941b::t_d7723f77348c97 139,218
+  s_6b340ae08e941b::t_ebdc11d489da5d 220
+  s_6b340ae08e941b::t_29210a610ecdc8 213-217,219
+  s_6b340ae08e941b::t_0629cebdcf8b67 140
+  s_6b340ae08e941b::t_3e1b93e18cf6bd 221-222
+  s_6b340ae08e941b::t_a6fb803604eeb1 210
+grammar/rainerscript.c
+  s_6b340ae08e941b::t_d123f1995c3565 5116,5996-5997,5999-6000
+  s_6b340ae08e941b::t_f6ba63d14efb70 3710-3712,3762-3781,3783-3786,3788-3792
+  s_6b340ae08e941b::t_097f715a9f68f4 3794
+  s_6b340ae08e941b::t_d7723f77348c97 3782,3787,5104,5115,5906,5952-5953,5988,5994,6001
+  s_6b340ae08e941b::t_4987f299b6b7d8 4201
+  s_6b340ae08e941b::t_7e314bf77cb0d2 5889-5895
+  s_6b340ae08e941b::t_2885fb049d7a6d 3793,5118,5887-5888,5896-5905,5907-5943,5978-5987,5989-5993,6002-6004,6062
+  s_6b340ae08e941b::t_1449a40732006d 5944-5951,5954-5977,5995,5998
+  s_6b340ae08e941b::t_983661c761fb3e 5117,6005-6008
+runtime/wti.h
+  s_6b340ae08e941b::t_11996294d328f8 157
+  s_6b340ae08e941b::t_29210a610ecdc8 32-33,98
+tests/rscript-if-chain-snapshot.sh
+  s_6b340ae08e941b::t_0df0970c34e7b7 1,6-38
+  s_6b340ae08e941b::t_d7723f77348c97 2-5
+  s_6b340ae08e941b::t_d1703633faa907 39-41
+  s_6b340ae08e941b::t_bfce7bd190c64b 42-54
+grammar/grammar.y
+  s_6b340ae08e941b::t_828e746993aa9e 91,117,128-130,170-171,179-187,199-206
+grammar/lexer.l
+  s_6b340ae08e941b::t_6eabfac2a1f7fe 411
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1838aacddab21a24f85390749a565bcc97f2e089",
+  "prompts": {},
+  "sessions": {
+    "s_6b340ae08e941b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a048bc-a478-75f3-9438-60a4c05c4b69",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,16 @@
+tests/imuxsock-use-pid-from-system.sh
+  h_95716f3de0caf5 10-14,22,26
+tests/yaml-imuxsock-use-pid-from-system.sh
+  h_95716f3de0caf5 10-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "817c4a8587536422b1b9718a94ab28d0146fec76",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

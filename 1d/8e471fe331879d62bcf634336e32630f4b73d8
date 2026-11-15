@@ -1,0 +1,24 @@
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_f8f85b4d6091c7 2-5
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_dfe490381a12fa 31-49,54-56,58
+  s_f2c089be484e12::t_466baf06340681 2-5
+tools/shadow_reload.c
+  s_f2c089be484e12::t_f8f85b4d6091c7 445-446
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1d8e471fe331879d62bcf634336e32630f4b73d8",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

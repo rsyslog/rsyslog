@@ -1,0 +1,39 @@
+doc/Makefile.am
+  s_12493d1d1488ca::t_7c7b031c5b6544 911
+tests/yaml-mmkubernetes-namespace-metadata-off.sh
+  s_12493d1d1488ca::t_7c7b031c5b6544 1,3,6-33,36-38,54-83
+  s_12493d1d1488ca::t_4819e4c9a28c6a 4-5
+  s_12493d1d1488ca::t_a577d6b0fdd2ec 39
+  s_12493d1d1488ca::t_ac6f87e7367313 2
+  s_12493d1d1488ca::t_6bf51bd0672f25 34-35,40-53
+tests/mmkubernetes-namespace-metadata-off.sh
+  s_12493d1d1488ca::t_4819e4c9a28c6a 5-6
+  s_12493d1d1488ca::t_7c7b031c5b6544 1-4,7-72
+tests/Makefile.am
+  s_12493d1d1488ca::t_7c7b031c5b6544 2259-2261
+doc/source/reference/parameters/mmkubernetes-includenamespacemetadata.rst
+  s_12493d1d1488ca::t_7c7b031c5b6544 5-56,58-62
+  s_12493d1d1488ca::t_6bf51bd0672f25 57
+  s_12493d1d1488ca::t_ad430bfffaf4a2 1-4
+doc/source/configuration/modules/mmkubernetes.rst
+  s_12493d1d1488ca::t_7c7b031c5b6544 123-126,176
+contrib/mmkubernetes/mmkubernetes.c
+  s_12493d1d1488ca::t_7c7b031c5b6544 105,164,198,245-246,274-275,654,786-787,1301,1434-1435,1610,1875-1878,1880
+  s_12493d1d1488ca::t_799fdfaa3bf30c 123,1071,1509-1511
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9a8bae08d252086775fea52ac8673bd912228900",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

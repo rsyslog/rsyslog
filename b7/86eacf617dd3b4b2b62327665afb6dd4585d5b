@@ -1,0 +1,36 @@
+doc/source/reference/parameters/mmkubernetes-kubernetesurl.rst
+  s_6224eda96fc0da::t_006176f85c8106 21,30,36-37,49
+  s_6224eda96fc0da::t_c9a9c73b1ed5c7 31-35,38,48
+  s_6224eda96fc0da::t_b202203c96c794 50
+contrib/mmkubernetes/mmkubernetes.c
+  s_6224eda96fc0da::t_30401e1a3a4e51 167-168,296-297,305,307-308,312-313,319-321,325-328,338,343-348,350,375-376
+  s_6224eda96fc0da::t_2cf359b08ca55b 333-334,336-337
+  s_6224eda96fc0da::t_e005d76859d7c5 1864,1868-1870,1917,1921-1923
+  s_6224eda96fc0da::t_afe4101bc7fcbc 1822
+  s_6224eda96fc0da::t_30aac31a11e133 139-140,223,251,295,298-304,306,309-311,314-318,322-324,329-332,335,339-342,349,351-374
+  s_6224eda96fc0da::t_30d9db44331956 2017
+  s_6224eda96fc0da::t_d0c34f69e4ae15 377,1783-1809
+  s_6224eda96fc0da::t_b98d9963df4b48 652-653,839,1295-1296,1457-1461,1463-1464,1549
+  s_6224eda96fc0da::t_ec1f56d810a5a2 378
+tests/mmkubernetes-url-failover.sh
+  s_6224eda96fc0da::t_12f2a162de250a 2-5,39
+  s_6224eda96fc0da::t_b19d7c0c847710 1,6-38,40-87
+tests/Makefile.am
+  s_6224eda96fc0da::t_b19d7c0c847710 2047-2048
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b786eacf617dd3b4b2b62327665afb6dd4585d5b",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

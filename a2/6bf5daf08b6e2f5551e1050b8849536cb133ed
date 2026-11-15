@@ -1,0 +1,27 @@
+runtime/reload-candidate.c
+  s_f8a738e4bdfaee::t_28bb5722da7c99 53-64,73-74,1357-1468,2078-2079,2248,2265-2266,2353
+runtime/reload-candidate.h
+  s_f8a738e4bdfaee::t_af7eef191fd64b 98-124,131-132
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_8540af91d69beb 5051,5070-5090
+tests/unit/reload_template_metadata_frontend_test.c
+  s_f8a738e4bdfaee::t_b8c5989ae5f369 1-220
+tests/unit/reload_template_metadata_test.c
+  s_f8a738e4bdfaee::t_d8f0d96a4dafca 1-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a26bf5daf08b6e2f5551e1050b8849536cb133ed",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

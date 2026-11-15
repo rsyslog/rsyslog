@@ -1,0 +1,35 @@
+tests/Makefile.am
+  s_f2c089be484e12::t_f25dda0bb84f21 242,848
+tests/global-reloadonhup-escapeprefix-yaml.sh
+  s_f2c089be484e12::t_f25dda0bb84f21 1-74
+runtime/glbl.h
+  s_f2c089be484e12::t_c540b036d507c9 126-127
+tools/shadow_reload.c
+  s_f2c089be484e12::t_84246eedbe5d75 111-112,504-515,533,769-789,791-793,796,1027,1041,1405-1406
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_f25dda0bb84f21 304-305
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_f25dda0bb84f21 354-357
+runtime/rsconf.h
+  s_f2c089be484e12::t_d2188b618e527c 85
+runtime/glbl.c
+  s_f2c089be484e12::t_c540b036d507c9 111,312-315,665,986-995,1904,1938
+tests/global-reloadonhup-escapeprefix-rainerscript.sh
+  s_f2c089be484e12::t_f25dda0bb84f21 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b927b1d16a5d9fde929dbc8b13cb7a2ce0b339ec",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

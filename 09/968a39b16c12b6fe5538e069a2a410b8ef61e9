@@ -1,0 +1,19 @@
+tests/tcp_forwarding_ns_tpl.sh
+  s_6303b89c4410f1::t_4e176b8117d42b 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "09968a39b16c12b6fe5538e069a2a410b8ef61e9",
+  "prompts": {},
+  "sessions": {
+    "s_6303b89c4410f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a111ee-0153-7182-be29-038ea2732d1e",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

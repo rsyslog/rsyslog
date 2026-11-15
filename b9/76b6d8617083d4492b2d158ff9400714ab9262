@@ -1,0 +1,19 @@
+tests/omhttp_server.py
+  s_80dd3f4351ea11::t_4711072f685dbe 142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b976b6d8617083d4492b2d158ff9400714ab9262",
+  "prompts": {},
+  "sessions": {
+    "s_80dd3f4351ea11": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13a28-2c75-7100-a7c8-34b2b5ed8ab9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

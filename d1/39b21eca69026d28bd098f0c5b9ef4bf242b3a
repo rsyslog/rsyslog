@@ -1,0 +1,22 @@
+tests/Makefile.am
+  s_142ee1fa291d22::t_1b072e5e6cb0de 170
+tests/local-queue-stats-reconciliation.sh
+  s_142ee1fa291d22::t_e96e4ac4f4011b 51
+  s_142ee1fa291d22::t_1b072e5e6cb0de 1-50,52-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d139b21eca69026d28bd098f0c5b9ef4bf242b3a",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

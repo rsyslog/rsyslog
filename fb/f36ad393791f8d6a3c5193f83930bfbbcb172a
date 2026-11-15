@@ -1,0 +1,22 @@
+benchmarks/ratelimit-port-keys/runner.py
+  s_008ef65e7b10ec::t_0087b39e0e20d8 8-9,23,37-38,53-94,97-108,145-148,155-159
+  s_008ef65e7b10ec::t_423a76cb5c9d42 95-96
+benchmarks/ratelimit-port-keys/README.md
+  s_008ef65e7b10ec::t_0087b39e0e20d8 15-16,22-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "fbf36ad393791f8d6a3c5193f83930bfbbcb172a",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

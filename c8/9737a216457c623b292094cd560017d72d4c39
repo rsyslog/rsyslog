@@ -1,0 +1,23 @@
+devtools/check-test-antipatterns.sh
+  s_5e773934876cb4::t_8e60dce471e1c6 94-95,97-98
+devtools/local-validation-plan.sh
+  s_5e773934876cb4::t_b27919cc2e98cb 209,270-272,396,636-638
+devtools/tests/test_test_antipatterns.py
+  s_5e773934876cb4::t_817d236aeddfb7 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c89737a216457c623b292094cd560017d72d4c39",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

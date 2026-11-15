@@ -1,0 +1,26 @@
+doc/source/reference/templates/templates-statement-property.rst
+  s_f3db7ab3045489::t_91dac69ed1d02e 119-121
+  s_f3db7ab3045489::t_2195e605f369b0 114-118
+doc/source/configuration/modules/mmjsonparse.rst
+  s_f3db7ab3045489::t_502f4a72d406d5 131-133,301-325
+doc/source/rainerscript/functions/rs-parse_json.rst
+  s_f3db7ab3045489::t_716f48dc9b61f7 29-40
+doc/source/configuration/templates.rst
+  s_f3db7ab3045489::t_6a85bae494908e 91-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8a446763c4bdef6dec90250e444c427576f69ef6",
+  "prompts": {},
+  "sessions": {
+    "s_f3db7ab3045489": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f222f-8acf-7402-8e25-189e3450b231",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

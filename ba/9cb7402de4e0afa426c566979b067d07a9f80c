@@ -1,0 +1,30 @@
+runtime/tcps_sess.c
+  s_5e773934876cb4::t_9b783a9c52c15c 678
+  s_5e773934876cb4::t_24e0ed8a22faa2 615,628,674-677,679-682
+tests/imtcp-bigmessage-octetstuffing.sh
+  s_5e773934876cb4::t_bdc47b28bbfa26 4-6,22,55
+  s_5e773934876cb4::t_9325e123cf9b92 17-18,47,56-60
+  s_5e773934876cb4::t_9b783a9c52c15c 9
+  s_5e773934876cb4::t_4e2b8f00794914 8
+runtime/tcps_sess.h
+  s_5e773934876cb4::t_edb8a1f9b633fc 64
+tests/imtcp-discard-truncated-msg.sh
+  s_5e773934876cb4::t_9b783a9c52c15c 30
+  s_5e773934876cb4::t_133ae4a4b5d374 4-6,11,19,31-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba9cb7402de4e0afa426c566979b067d07a9f80c",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

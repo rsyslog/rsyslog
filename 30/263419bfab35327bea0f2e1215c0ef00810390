@@ -1,0 +1,39 @@
+tests/Makefile.am
+  s_6adad4932dce61::t_3734a3f8db1af5 101
+  s_5e773934876cb4::t_2ba703e4275263 98-100,384,3245
+plugins/AGENTS.md
+  s_5e773934876cb4::t_fca05240184bea 132-138
+  s_5e773934876cb4::t_74ee1fac45b518 131
+tests/immark-interval-validation.sh
+  s_5e773934876cb4::t_aff5fdafb476f4 1-65
+doc/source/reference/parameters/immark-interval.rst
+  s_5e773934876cb4::t_f6c89be4cf6a54 26-28
+tests/yaml-immark-interval-validation.sh
+  s_5e773934876cb4::t_f31a09a141b4ae 1-5
+plugins/immark/immark.c
+  s_5e773934876cb4::t_f7f49400560723 211-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "30263419bfab35327bea0f2e1215c0ef00810390",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6adad4932dce61": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1592a-fed4-7232-b07f-50e20f293e24",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

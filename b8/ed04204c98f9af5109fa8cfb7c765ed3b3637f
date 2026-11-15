@@ -1,0 +1,19 @@
+tests/imtcp-stream-always-zstd-window-budget.sh
+  s_11817263318fdf::t_b2f2fb196ddbd2 118-119,145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b8ed04204c98f9af5109fa8cfb7c765ed3b3637f",
+  "prompts": {},
+  "sessions": {
+    "s_11817263318fdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0248d-e47f-7c23-a7d5-b0f7d1503b73",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

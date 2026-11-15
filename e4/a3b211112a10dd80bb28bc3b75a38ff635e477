@@ -1,0 +1,34 @@
+runtime/wti.h
+  s_53c9354de38ddb::t_a2564f69797bd6 87-88,91-93,115,124-126,130-134,142-143
+  s_53c9354de38ddb::t_fce22adb5ae000 144-145
+  s_53c9354de38ddb::t_1fddd9f8ce50a6 89-90,116-123,127-128,135-137,141
+  s_53c9354de38ddb::t_8be30b81f8b2c9 129,138-140
+runtime/wti.c
+  s_53c9354de38ddb::t_a2564f69797bd6 365,394
+  s_53c9354de38ddb::t_1fddd9f8ce50a6 359,381
+runtime/wtp.h
+  s_53c9354de38ddb::t_1fddd9f8ce50a6 58
+  s_53c9354de38ddb::t_8be30b81f8b2c9 55-57,59
+runtime/queue.c
+  s_53c9354de38ddb::t_666bba7796f790 4298,4300
+runtime/wtp.c
+  s_53c9354de38ddb::t_8be30b81f8b2c9 96,587-594
+  s_53c9354de38ddb::t_a2564f69797bd6 561,584-586,597
+  s_53c9354de38ddb::t_1fddd9f8ce50a6 95,595-596
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "e4a3b211112a10dd80bb28bc3b75a38ff635e477",
+  "prompts": {},
+  "sessions": {
+    "s_53c9354de38ddb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070da-a4a3-71b1-83ca-215b48a880c1",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

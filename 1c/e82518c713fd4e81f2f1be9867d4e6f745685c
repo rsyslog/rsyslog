@@ -1,0 +1,16 @@
+runtime/template.c
+  h_95716f3de0caf5 1174
+tests/template-json.sh
+  h_95716f3de0caf5 4-5,9-11,14-19,24,27-29,31-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ce82518c713fd4e81f2f1be9867d4e6f745685c",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

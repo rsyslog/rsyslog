@@ -1,0 +1,19 @@
+tests/override_queue_disposal.c
+  s_fa2d27bab00d3c::t_c9aaceb8c122e9 9,23,27,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f6d92057246e0620027b163b556f777e0e3aeb52",
+  "prompts": {},
+  "sessions": {
+    "s_fa2d27bab00d3c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a8fe-3f47-7dd3-90d2-eedfb415bf34",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

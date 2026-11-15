@@ -1,0 +1,18 @@
+plugins/imdtls/imdtls.c
+  h_95716f3de0caf5 105,583,677,716-722,754-756,795-797,940
+tests/imdtls-nonblocking-handshake.sh
+  h_95716f3de0caf5 18,21-39,42,49,51,53-54,67
+tests/imdtls-nonblocking-read.sh
+  h_95716f3de0caf5 23,26-53,55,61-67,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ae36932a6ac6b80c4a3e0f01745a812af411786a",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

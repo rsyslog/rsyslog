@@ -1,0 +1,19 @@
+plugins/omtesting/omtesting.c
+  s_142ee1fa291d22::t_8b54648656e121 19,87,109,360-376,423,443-444,472,613-616,653
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c952c30faa3c594b3f4369d51633df48945d7bd3",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

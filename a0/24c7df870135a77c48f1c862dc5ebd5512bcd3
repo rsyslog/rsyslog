@@ -1,0 +1,28 @@
+.github/PRIVATE_CI_TIMEOUT_POLICY.md
+  h_95716f3de0caf5 1-33
+.github/workflows/container_build.yml
+  h_95716f3de0caf5 28
+.github/workflows/imbeats.yml
+  h_95716f3de0caf5 40
+.github/workflows/imhttp_prometheus_scrape.yml
+  h_95716f3de0caf5 25
+.github/workflows/impstats_push_victoriametrics.yml
+  h_95716f3de0caf5 40
+.github/workflows/imtcp_session_fuzz.yml
+  h_95716f3de0caf5 54,121
+.github/workflows/run_checks.yml
+  h_95716f3de0caf5 326,397,459,754,844,1285,1357,1543,1876,1915-1916,1921,2010
+.github/workflows/syslog_parser_fuzz.yml
+  h_95716f3de0caf5 70,128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a024c7df870135a77c48f1c862dc5ebd5512bcd3",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

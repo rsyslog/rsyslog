@@ -1,0 +1,24 @@
+tests/yaml-mmkubernetes-token-reload.sh
+  s_0eedf0d0f806c9::t_05f4f467ef8eca 2-4,52
+  s_0eedf0d0f806c9::t_8985e4809f36e2 5-12,42,78-80,82
+  s_0eedf0d0f806c9::t_d03f4df10bc4a2 98
+  s_0eedf0d0f806c9::t_f4f5588cfa13e9 96-97
+tests/Makefile.am
+  s_0eedf0d0f806c9::t_05f4f467ef8eca 2297-2300,2534,3762-3764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d46aa0a5f4e33df056d6de66499c73c850621741",
+  "prompts": {},
+  "sessions": {
+    "s_0eedf0d0f806c9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a013c0-2e97-7571-a432-55326dc57bdd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

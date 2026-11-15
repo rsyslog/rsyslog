@@ -1,0 +1,28 @@
+devtools/release/rpm-daily-stable.sh
+  s_cd391fde8c3c6b::t_f68d3ef3b393fe 249-253
+  s_cd391fde8c3c6b::t_f2239f9351105f 241-248,254-261
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_cd391fde8c3c6b::t_f2239f9351105f 37-46,48
+  s_cd391fde8c3c6b::t_f68d3ef3b393fe 47
+.github/ubuntu-daily-stable-26.04-policy.yml
+  s_cd391fde8c3c6b::t_f2239f9351105f 8-10
+  s_cd391fde8c3c6b::t_19fbb0f2573380 7
+.github/workflows/alpine324_daily_stable.yml
+  s_cd391fde8c3c6b::t_f2239f9351105f 156-165,167-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8662279e956dec292e5c878e800e97d3157774c2",
+  "prompts": {},
+  "sessions": {
+    "s_cd391fde8c3c6b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09577-311b-73d1-8904-cb17c90642eb",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

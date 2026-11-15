@@ -1,0 +1,63 @@
+doc/source/reference/parameters/omclickhouse-template.rst
+  s_5ed310c9aa433b::t_331dacb95afd98 33-36,61
+plugins/omclickhouse/omclickhouse.c
+  s_5ed310c9aa433b::t_b81ace12028365 862
+runtime/action.c
+  s_5ed310c9aa433b::t_42febf65f49284 2715-2721
+runtime/objomsr.c
+  s_5ed310c9aa433b::t_0d73ca42785e29 145-146
+runtime/objomsr.h
+  s_5ed310c9aa433b::t_f9ba1f6bc83794 38-40
+runtime/rsconf.c
+  s_5ed310c9aa433b::t_56442cd0b01283 256
+tests/Makefile.am
+  s_5ed310c9aa433b::t_8c931a26fc4cab 1230-1231,1233,1239,2722,3618-3620,3624-3625
+tests/clickhouse-basic.sh
+  s_5ed310c9aa433b::t_7bf1344f0bec94 10
+tests/clickhouse-bulk-load.sh
+  s_5ed310c9aa433b::t_2d865f83efb41b 11
+tests/clickhouse-bulk.sh
+  s_5ed310c9aa433b::t_eda28cc9132697 10
+tests/clickhouse-errorfile.sh
+  s_5ed310c9aa433b::t_635c7be85987bb 13
+tests/clickhouse-http-status-error.sh
+  s_5ed310c9aa433b::t_ed7d2cb648dff2 25
+tests/clickhouse-limited-batch.sh
+  s_5ed310c9aa433b::t_51b8b8aa253d56 11
+tests/clickhouse-load.sh
+  s_5ed310c9aa433b::t_2fb21a58c4f95b 11
+tests/clickhouse-retry-error.sh
+  s_5ed310c9aa433b::t_5522d76a96d9b5 10
+tests/clickhouse-select.sh
+  s_5ed310c9aa433b::t_50e0392a437443 10
+tests/clickhouse-sql-escape.sh
+  s_5ed310c9aa433b::t_1d9c3ddc0411fa 1-33
+tests/clickhouse-template-option-sql.sh
+  s_5ed310c9aa433b::t_b07cfe110d8f4c 1-29
+tests/clickhouse-template-option-stdsql.sh
+  s_5ed310c9aa433b::t_2108d2dccfda9c 3-5,26-28
+tests/clickhouse-wrong-insert-syntax.sh
+  s_5ed310c9aa433b::t_38150323a0146e 12
+tests/clickhouse-wrong-quotation-marks.sh
+  s_5ed310c9aa433b::t_e040fbc975e8c8 12,30
+tests/clickhouse-wrong-template-option.sh
+  s_5ed310c9aa433b::t_d6101aa24e8fb7 30
+tests/yaml-omclickhouse-template-escaping.sh
+  s_5ed310c9aa433b::t_24caab44722ded 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4cd337b3999741898334e583d171ab0ce3497672",
+  "prompts": {},
+  "sessions": {
+    "s_5ed310c9aa433b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a173a4-dc53-7f12-bd21-78ed63504407",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

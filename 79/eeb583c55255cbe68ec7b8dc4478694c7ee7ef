@@ -1,0 +1,24 @@
+tests/omhttp_server.py
+  s_80dd3f4351ea11::t_ed1d977f76eb79 10-14,137-138,141-149,170,189
+  s_80dd3f4351ea11::t_2ab2d6b4f29281 139-140
+tests/rscript_http_request.sh
+  s_80dd3f4351ea11::t_2ab2d6b4f29281 51
+  s_80dd3f4351ea11::t_f4b528660ea4b9 3
+  s_80dd3f4351ea11::t_ed1d977f76eb79 4-9,11-17,22,28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79eeb583c55255cbe68ec7b8dc4478694c7ee7ef",
+  "prompts": {},
+  "sessions": {
+    "s_80dd3f4351ea11": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13a28-2c75-7100-a7c8-34b2b5ed8ab9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,89 @@
+tools/Makefile.am
+  s_3174538268dd29::t_930ce91fdc57b1 84-85,88,90-91
+  s_3174538268dd29::t_6db735a90e385f 86
+  s_3174538268dd29::t_03cc2734c05150 87
+  s_3174538268dd29::t_d38e18a7dd63e6 89
+tests/fuzz-syslog-message-smoke.sh
+  s_3174538268dd29::t_853f6b0e3f6563 7,14-20
+  s_3174538268dd29::t_930ce91fdc57b1 1-6,10-11,22-26
+  s_3174538268dd29::t_782fb1b5b8dc1a 8-9,21,29
+  s_3174538268dd29::t_1822a116df521d 12-13,27-28
+.github/workflows/syslog_parser_fuzz.yml
+  s_3174538268dd29::t_aebd0d9b2a4a21 1-94,96-102,104-109,111-135,137-146,148-172,174-181,183-207,211-227,229-232
+  s_3174538268dd29::t_8c16d12ae1e88c 103,136,147,173,182,208-210
+  s_3174538268dd29::t_34fec3686aff77 95,110,228
+tests/Makefile.am
+  s_3174538268dd29::t_930ce91fdc57b1 17-18,20-28,2542-2544
+  s_3174538268dd29::t_64ad2b0ad7d0d9 2545
+  s_3174538268dd29::t_465ad72418b47e 19
+tools/pmrfc5424.c
+  s_3174538268dd29::t_89de67b9c9b642 292,305-310
+  s_3174538268dd29::t_78f13500b136ac 291,293-294
+  s_3174538268dd29::t_930ce91fdc57b1 290,295-304,311-317
+tests/fuzz/corpus/syslog-message/rfc3164-no-pri
+  s_3174538268dd29::t_930ce91fdc57b1 1
+tools/pmrfc3164.h
+  s_3174538268dd29::t_89de67b9c9b642 33-37
+tools/pmrfc5424.h
+  s_3174538268dd29::t_89de67b9c9b642 33-37
+tests/fuzz/corpus/syslog-message/rfc5424-basic
+  s_3174538268dd29::t_930ce91fdc57b1 1
+tests/fuzz/corpus/syslog-message/rfc3164-short
+  s_3174538268dd29::t_930ce91fdc57b1 1
+runtime/parser.h
+  s_3174538268dd29::t_930ce91fdc57b1 76
+tests/fuzz/corpus/syslog-message/rfc5424-nil
+  s_3174538268dd29::t_930ce91fdc57b1 1
+tests/fuzz/corpus/syslog-message/rfc3164-basic
+  s_3174538268dd29::t_930ce91fdc57b1 1
+tools/pmrfc3164.c
+  s_3174538268dd29::t_93a4a9755381a0 518-520
+  s_3174538268dd29::t_154be6ec9848ab 548-549
+  s_3174538268dd29::t_465ad72418b47e 550
+  s_3174538268dd29::t_930ce91fdc57b1 547,551-554
+  s_3174538268dd29::t_89de67b9c9b642 521-546
+configure.ac
+  s_3174538268dd29::t_930ce91fdc57b1 939-952,954-959,976-980
+  s_3174538268dd29::t_9f024207008732 960-975
+  s_3174538268dd29::t_1822a116df521d 3952
+  s_3174538268dd29::t_0f324a8687167c 953
+.github/workflows/collect_flake_evidence.yml
+  s_3174538268dd29::t_aebd0d9b2a4a21 16
+runtime/parser.c
+  s_3174538268dd29::t_930ce91fdc57b1 575,651
+tools/rsyslogd.c
+  s_3174538268dd29::t_03cc2734c05150 2619-2621
+.gitignore
+  s_3174538268dd29::t_1822a116df521d 34
+tools/fuzz_rsyslog_message.c
+  s_3174538268dd29::t_78f13500b136ac 54-56
+  s_3174538268dd29::t_7c3a41fdeefaf2 11,13,57,59-68
+  s_3174538268dd29::t_89de67b9c9b642 28-33,74
+  s_3174538268dd29::t_7e834bb5a55188 69
+  s_3174538268dd29::t_1b40e4ba4a04b4 22,24
+  s_3174538268dd29::t_930ce91fdc57b1 1-10,12,14-21,23,25-27,34-53,58,70-73,75-84
+tests/fuzz/corpus/syslog-message/rfc5424-escaped-sd
+  s_3174538268dd29::t_930ce91fdc57b1 1
+tests/fuzz/corpus/syslog-message/rfc3164-rfc3339
+  s_3174538268dd29::t_930ce91fdc57b1 1
+tests/fuzz/README.md
+  s_3174538268dd29::t_465ad72418b47e 1-12,15,17-18,24-26,28-31,33-35,38-47
+  s_3174538268dd29::t_9f024207008732 19-20,23
+  s_3174538268dd29::t_1822a116df521d 13-14,16,21-22,27,32,36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "b88c6cdcd210952f7e383182c864bc1b9308a901",
+  "prompts": {},
+  "sessions": {
+    "s_3174538268dd29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f38-e8ea-7fb2-a855-adec6d97f99c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

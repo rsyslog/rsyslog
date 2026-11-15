@@ -1,0 +1,20 @@
+tests/template-property-transformations.sh
+  s_6224eda96fc0da::t_4ce23a292fa11a 268
+  s_008ef65e7b10ec::t_c0ed0775acc33b 5-10,21-23,25-27,32-33,40-41,46-50,66-67,88-89,98-99,108-116,206-208,237,240-241,254-256,258,264,273-274,278,282,285-286,294,304,309,314-319,321,346-356
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "bcb15539fe18a03f16ec32378531900736671c93",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

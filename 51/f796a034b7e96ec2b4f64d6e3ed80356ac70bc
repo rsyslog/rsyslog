@@ -1,0 +1,19 @@
+runtime/net_ossl.c
+  s_47efe9f04bf93d::t_04d1bdff3c23ae 911
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "51f796a034b7e96ec2b4f64d6e3ed80356ac70bc",
+  "prompts": {},
+  "sessions": {
+    "s_47efe9f04bf93d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4edc-4dc3-7933-96af-f54a9b9c029f",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

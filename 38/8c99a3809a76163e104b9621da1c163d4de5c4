@@ -1,0 +1,21 @@
+plugins/imdiag/imdiag.c
+  s_f8a738e4bdfaee::t_6ad36f4664a20e 939-944,1086-1115,1135
+tests/local-queue-submit-batches.sh
+  s_f8a738e4bdfaee::t_c659920010d23d 10-14,40,87-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "388c99a3809a76163e104b9621da1c163d4de5c4",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

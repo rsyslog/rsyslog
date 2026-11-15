@@ -1,0 +1,60 @@
+runtime/wti.h
+  s_53c9354de38ddb::t_a2564f69797bd6 94-96
+runtime/wti.c
+  s_53c9354de38ddb::t_a2564f69797bd6 281-282,324-325,347-350,352
+tests/override_queue_disposal.c
+  s_53c9354de38ddb::t_db3bcdb27bf1b4 24,26
+  s_53c9354de38ddb::t_ead4d3b94f3c88 1-23,25,27-56
+tests/wtp-targeted-wakeup.sh
+  s_53c9354de38ddb::t_786e87885aa2d0 3,7-9,25-27,34,36
+  s_53c9354de38ddb::t_555037d258c674 1-2,4-6,10-24,28-33,35,37-41
+tests/unit/wtp_wakeup_test.c
+  s_53c9354de38ddb::t_6b29bf2a61de18 4-7,26,57-65,139-150,154,161-166,168-169,171,173,177-179,181-182,184-191,193,195,198-201,204-205,207,209-210
+  s_53c9354de38ddb::t_70ad7f4389e6c4 1-3,8-25,27-29,31-56,73-126,131-138,151-153,155-160,167,170,172,174-176,180,183,192,194,196-197,202-203,206,208,211
+  s_53c9354de38ddb::t_13c311a41773a4 30
+  s_53c9354de38ddb::t_5024c05ef6ce72 127-130
+  s_53c9354de38ddb::t_c900d527d6af8e 66-72
+tests/Makefile.am
+  s_53c9354de38ddb::t_e9cdec5ec1b677 2801-2803,2812-2813
+  s_53c9354de38ddb::t_058636f95bb49c 71-73,2840-2845,2987
+  s_53c9354de38ddb::t_555037d258c674 68-70,1239-1240,2687-2688,2690-2691,2721-2723,2800,2986
+  s_53c9354de38ddb::t_52336c0c2d9d88 2846
+benchmarks/queue-contention/README.md
+  s_53c9354de38ddb::t_a7d2883367aa73 1-22
+benchmarks/queue-contention/compare.py
+  s_53c9354de38ddb::t_9cf44eb18d19e8 1-50
+benchmarks/queue-contention/trial.sh
+  s_53c9354de38ddb::t_2abc5870c1a4ea 1-26
+doc/ai/module_map.yaml
+  s_53c9354de38ddb::t_a1358791ea8573 11-14,21-23
+tests/queue-deferred-idle-wakeup.sh
+  s_53c9354de38ddb::t_b0eb1a83a85d84 1-40
+tests/queue-fixedarray-outoforder.sh
+  s_53c9354de38ddb::t_91b84b3fb5b6e2 1-50
+runtime/queue.c
+  s_f9e696d5e05e47::t_ae6da07635f424 3060-3093,3099-3100,3131,3157,3189,3421,3635,3641-3646,3670,3672,3684,3709,3737-3739,3761,3774,3809-3810
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a912818ba8db8cc1d1d924e966288188b94185e3",
+  "prompts": {},
+  "sessions": {
+    "s_53c9354de38ddb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070da-a4a3-71b1-83ca-215b48a880c1",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    },
+    "s_f9e696d5e05e47": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a070e9-412b-7091-b916-4e23874d0480",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_5e773934876cb4::t_47975664aed0fb 2941
+tests/unit/iminternal_lock_test.c
+  s_5e773934876cb4::t_2e1a6846c6e5ab 5-7,13,29-49,53-59,70-71,74-75,84-95,98,111-114,116-124
+tools/iminternal-lock.h
+  s_5e773934876cb4::t_e8ad7f76fafb86 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "564d8d2fd9faf4fcc4811b98d019380317a83743",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

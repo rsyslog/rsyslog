@@ -1,0 +1,22 @@
+tests/imtcp-tls-ossl-input-basic.sh
+  s_12493d1d1488ca::t_b3869c78b41872 5,16-17,35,42
+  s_12493d1d1488ca::t_c973ea7c4ef5d3 13
+  s_12493d1d1488ca::t_3ecfa2bb573a8a 6
+  s_12493d1d1488ca::t_d1d9cbfd75b54c 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3aaaa865b712d1852dcd2060e1c8297b3db831ab",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+doc/source/configuration/yaml_config.rst
+  s_923c67e7c3d373::t_800229885f8766 151
+doc/source/configuration/rsyslog_statistic_counter.rst
+  s_923c67e7c3d373::t_1d92b71cafc8a9 67,69
+tests/queue-mutex-contention-impstats-default.sh
+  s_923c67e7c3d373::t_297df0240cb295 1-34
+tests/Makefile.am
+  s_923c67e7c3d373::t_297df0240cb295 984
+  s_923c67e7c3d373::t_ae5903b4cb8052 1705
+doc/source/configuration/modules/impstats.rst
+  s_923c67e7c3d373::t_1d92b71cafc8a9 413-414,416-417
+runtime/queue.c
+  s_923c67e7c3d373::t_e40170dcc76ceb 312,482,537-538,542,2754,2787,4078-4083,5107-5108
+  s_923c67e7c3d373::t_3639bab93b9205 5234-5235
+tests/queue-mutex-contention-impstats.sh
+  s_923c67e7c3d373::t_e40170dcc76ceb 5-6,17-18,30
+doc/source/rainerscript/queue_parameters.rst
+  s_923c67e7c3d373::t_1d92b71cafc8a9 481-496,499-500
+  s_923c67e7c3d373::t_800229885f8766 497-498
+tests/yaml-queue-mutex-contention-stats.sh
+  s_923c67e7c3d373::t_96a53e12c27640 32
+  s_923c67e7c3d373::t_800229885f8766 21-24
+  s_923c67e7c3d373::t_ae5903b4cb8052 1-20,25-31,33-53
+runtime/queue.h
+  s_923c67e7c3d373::t_e40170dcc76ceb 268
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "94ccdbfd9006c1a879a1613a8354752334c16d9e",
+  "prompts": {},
+  "sessions": {
+    "s_923c67e7c3d373": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05dfd-c5e9-7a01-b239-97b748984633",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+ChangeLog
+  s_c5c49afa920bcb::t_aad7baf2b21253 106-113
+  s_c5c49afa920bcb::t_ebddc47a0f2cfa 4-10,204
+  s_c5c49afa920bcb::t_024aedf114e36d 11-105,114-134,151-203
+  s_c5c49afa920bcb::t_628bd92c5f9041 3,135-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "411518a99d7830618ba702621f22f0c81330dff1",
+  "prompts": {},
+  "sessions": {
+    "s_c5c49afa920bcb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f427b-c77f-78c0-aff7-2185071168cf",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

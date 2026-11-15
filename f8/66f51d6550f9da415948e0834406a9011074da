@@ -1,0 +1,41 @@
+plugins/AGENTS.md
+  s_5e773934876cb4::t_30843409e78c88 115-122
+plugins/omsnmp/omsnmp.c
+  s_5e773934876cb4::t_85e2aa6b8b50c9 497
+tests/Makefile.am
+  s_5e773934876cb4::t_22471b099fa17f 1154,1157-1165,2686,3492-3500,4351
+tests/omsnmp-traptype-range-vg.sh
+  s_5e773934876cb4::t_ed5f68cb74138b 1-5
+tests/omsnmp-traptype-range.sh
+  s_5e773934876cb4::t_23fbc996ff2a1f 1-93
+tests/yaml-omsnmp-traptype-range-vg.sh
+  s_5e773934876cb4::t_a3012645fef61e 1-5
+tests/yaml-omsnmp-traptype-range.sh
+  s_5e773934876cb4::t_3bdeef24246cd6 1-5
+tests/omsnmp-traptype-receiver.py
+  s_751ae91e6830e3::t_e11448ce9ff0a3 1-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f866f51d6550f9da415948e0834406a9011074da",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_751ae91e6830e3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a169b5-62ba-7143-a193-ac53d97194a8",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

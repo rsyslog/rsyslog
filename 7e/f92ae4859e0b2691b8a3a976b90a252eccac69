@@ -1,0 +1,245 @@
+tests/Makefile.am
+  s_f2c089be484e12::t_f0bdab738101e9 62-64,68-72,177,577,588,781,1043-1045,1069-1070,1164,1268,1786,1841-1842,2146,2160-2161,2197,2746-2753,2763,2768,2822-2824,2873-2883,2928-2930,2938-2939,2947,2975-2981,3121-3122,3393-3394
+  s_f2c089be484e12::t_5fe40378f661c2 243
+runtime/reload-ruleset-graph.c
+  s_f2c089be484e12::t_aee60e84423aca 193
+runtime/wtp.c
+  s_f2c089be484e12::t_45047fe3b6988b 389-391,530-532,582-584,594,603-611,613-616,620-630,639-640
+grammar/rainerscript.c
+  s_f2c089be484e12::t_375f16c76f9376 3736-3738,3788-3820,4227,5139,5155-5158,6016-6137,6172,6191
+tests/unit/reload_syntax_clone_test.c
+  s_f2c089be484e12::t_341b298dc05a84 5-7,290,299,413-415,471-472
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_4db6b7596edfc5 865-869
+  s_f2c089be484e12::t_aee60e84423aca 9-10,453-473
+  s_f2c089be484e12::t_17ad40df9878a2 474-475
+grammar/reload-syntax-clone.c
+  s_f2c089be484e12::t_73663a26174556 36,180
+grammar/grammar.y
+  s_f2c089be484e12::t_341b298dc05a84 95,121,132,146-148,195-196,204-212,224-231
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_aee60e84423aca 649
+runtime/queue.c
+  s_f2c089be484e12::t_4a667a27fabf9c 3616,3622-3626,3628
+  s_f2c089be484e12::t_45047fe3b6988b 312,482,535-567,2712-2713,2754,2787,2953-2961,3002-3004,3060-3093,3099-3100,3131,3157,3189,3421,3645,3651-3656,3678-3680,3683-3685,3697,3713,3722,3750-3752,3757,3774,3787,3822-3823,3851,4106-4112,4114,4145-4151,4357-4361,4363,4467-4468,4731,4780,5180-5181,5307-5308
+tests/global-reloadonhup-closed-dequeue-window.sh
+  s_f2c089be484e12::t_68eb6dabdc06ef 1-43
+tests/global-reloadonhup-ruleset-constructs-yaml.sh
+  s_f2c089be484e12::t_3f0a8cdbf5585f 3-5,9-10,115-167,175-176
+runtime/wti.c
+  s_f2c089be484e12::t_397ff4fa7eea42 281-282,295,325-326,348-357,359,363-372,385-387,393-394,410-412,425-426,487,503-510,530-535
+.agent/skills/rsyslog-performance/SKILL.md
+  s_f2c089be484e12::t_f04123c282dbec 59-64,85-87
+.agent/skills/rsyslog-performance/references/campaign-lessons.md
+  s_f2c089be484e12::t_b539314c9425b1 3-7
+.agent/skills/rsyslog_module/SKILL.md
+  s_f2c089be484e12::t_192099ae215a3f 21-23
+.agent/skills/rsyslog_rejected_paths/SKILL.md
+  s_f2c089be484e12::t_9223e7391572e7 1-56
+.agent/skills/rsyslog_rejected_paths/agents/openai.yaml
+  s_f2c089be484e12::t_8743b2e7aa9f9d 1-4
+.codex/pre_push_container_gate.sh
+  s_f2c089be484e12::t_c1855334e70070 250-280
+.github/OPENSUSE_DAILY_STABLE.md
+  s_f2c089be484e12::t_b7d61521563873 12-18
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_f2c089be484e12::t_4fcc535ca158c6 3-6,41-50
+.github/ubuntu-daily-stable-26.04-policy.yml
+  s_f2c089be484e12::t_2c1e01caa95014 7-10
+.github/workflows/actionlint.yml
+  s_f2c089be484e12::t_15982be74c8486 18
+.github/workflows/alpine324_daily_stable.yml
+  s_f2c089be484e12::t_a4868840e97b46 153-178
+.github/workflows/codeql.yml
+  s_f2c089be484e12::t_d6d981ce9653c3 109,116,119
+.github/workflows/doc_deploy_main.yml
+  s_f2c089be484e12::t_22165943a4e44d 100
+.github/workflows/el10_daily_stable.yml
+  s_f2c089be484e12::t_db0da7843a9335 207-233
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_f2c089be484e12::t_90b9f41322c824 215-217
+.github/workflows/run_cross_arch_weekly.yml
+  s_f2c089be484e12::t_b43250f8924b5a 48
+.gitignore
+  s_f2c089be484e12::t_6253103b85d567 138
+AGENTS.md
+  s_f2c089be484e12::t_c1ca97ae33de12 29,56-60,113,119-123
+benchmarks/queue-contention/README.md
+  s_f2c089be484e12::t_3cb74c87a0172a 1-106
+benchmarks/queue-contention/compare.py
+  s_f2c089be484e12::t_0a23ae3b69ec21 1-181
+benchmarks/queue-contention/trial-multi.sh
+  s_f2c089be484e12::t_023420dcbc2d18 1-56
+benchmarks/queue-contention/trial.sh
+  s_f2c089be484e12::t_27a23f5a46f268 1-31
+devtools/release/rpm-daily-stable.sh
+  s_f2c089be484e12::t_8157a534e89039 241-261
+doc/AGENTS.md
+  s_f2c089be484e12::t_bba153640ace27 11,16
+doc/Makefile.am
+  s_f2c089be484e12::t_d6f1fe9a8921fd 843-847
+doc/ai/AGENTS.md
+  s_f2c089be484e12::t_b3182022eb62c5 10
+doc/ai/README.md
+  s_f2c089be484e12::t_3133bf0bf057d0 16
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_bc185210cd8dac 11-12,19-27
+doc/ai/rejected_engineering_paths.md
+  s_f2c089be484e12::t_39d58870837479 1-224
+doc/source/configuration/modules/impstats.rst
+  s_f2c089be484e12::t_9e7e1fc1e043dd 413-418
+doc/source/configuration/modules/mmaitag.rst
+  s_f2c089be484e12::t_de03054fac3622 3-6,20-21,26-45,103-122,134-138
+doc/source/configuration/modules/omelasticsearch.rst
+  s_f2c089be484e12::t_26ce196fddb67d 305-317
+doc/source/configuration/rsyslog_statistic_counter.rst
+  s_f2c089be484e12::t_46fe740c29e94e 67-70
+doc/source/configuration/yaml_config.rst
+  s_f2c089be484e12::t_250ea0f339d4a1 151
+doc/source/rainerscript/control_structures.rst
+  s_f2c089be484e12::t_dc0aac8384ef25 42-54
+doc/source/rainerscript/queue_parameters.rst
+  s_f2c089be484e12::t_1021f6a4dae649 481-503,616
+doc/source/reference/parameters/imrelp-maxdatasize.rst
+  s_f2c089be484e12::t_40551f6a6c2848 4-7,35-38,49-54
+doc/source/reference/parameters/mmaitag-request-connecttimeoutms.rst
+  s_f2c089be484e12::t_8ee1f47ed35b21 1-41
+doc/source/reference/parameters/mmaitag-request-lowspeedlimit.rst
+  s_f2c089be484e12::t_435cb89426afc3 1-41
+doc/source/reference/parameters/mmaitag-request-lowspeedtime.rst
+  s_f2c089be484e12::t_c3d4e7c295bbc3 1-41
+doc/source/reference/parameters/mmaitag-request-timeoutms.rst
+  s_f2c089be484e12::t_ae7cd51641a734 1-41
+doc/source/reference/parameters/mmaitag-response-maxbytes.rst
+  s_f2c089be484e12::t_2ba59f332ba4fb 1-41
+grammar/lexer.l
+  s_f2c089be484e12::t_2c3e4c43abb6b2 292-293,418-423
+grammar/rainerscript.h
+  s_f2c089be484e12::t_650cb430d1a3db 149-150,221,224-233
+packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec
+  s_f2c089be484e12::t_6e4c6637b9af33 329-334,550-552,728,1025-1028
+plugins/imdtls/imdtls.c
+  s_f2c089be484e12::t_3b49d1ee00ed73 595,767-771,842-844
+plugins/imfile/imfile.c
+  s_f2c089be484e12::t_d9e168b3e51846 598-600,2732-2733,2735-2748,2760,2765-2775,2779
+plugins/imrelp/imrelp.c
+  s_f2c089be484e12::t_7327d172b89d85 59-61,558-563,807-820
+plugins/mmaitag/Makefile.am
+  s_f2c089be484e12::t_8d6a35ec134c27 3-4
+plugins/mmaitag/ai_provider.h
+  s_f2c089be484e12::t_553dbcce9dd021 18-28,70
+plugins/mmaitag/ai_provider_gemini.c
+  s_f2c089be484e12::t_c514d06e8429c7 12,92-105,130,138-143,152,198,230-238
+plugins/mmaitag/ai_provider_gemini_response.c
+  s_f2c089be484e12::t_4f263a63d6866e 1-51
+plugins/mmaitag/ai_provider_gemini_response.h
+  s_f2c089be484e12::t_41c2c688b41030 1-42
+plugins/mmaitag/mmaitag.c
+  s_f2c089be484e12::t_113d76b9bfac0b 33,35,43-54,66,128-132,201-234,238-242,269
+plugins/mmnormalize/mmnormalize.c
+  s_f2c089be484e12::t_45c462bc8a5f42 52-59,535-546,552-566,577-583,588,620-622,638-641
+plugins/omelasticsearch/omelasticsearch.c
+  s_f2c089be484e12::t_b58ea05785e309 85-88,92-117,2169-2178,2982-2993
+plugins/ompgsql/createDB.sql
+  s_f2c089be484e12::t_88dfad5ee0e71b 25
+plugins/ompgsql/ompgsql.c
+  s_f2c089be484e12::t_8321415b1aaff1 239-240
+runtime/AGENTS.md
+  s_f2c089be484e12::t_43b5e5bc7e36fa 54-60
+runtime/conf.c
+  s_f2c089be484e12::t_c6940727180fb0 370
+runtime/queue.h
+  s_f2c089be484e12::t_0b6fb5c7361c54 252-253,276
+runtime/ruleset.c
+  s_f2c089be484e12::t_e0e1a22855af9d 436-439,441-445,447-471,473,475
+runtime/translate.c
+  s_f2c089be484e12::t_1fc0177bc020e8 51-52,196-197,218-219,1169-1177,1179-1193,1195
+runtime/wti.h
+  s_f2c089be484e12::t_c43e37a1d0d2f2 32-33,89-103,113,126-199,246
+runtime/wtp.h
+  s_f2c089be484e12::t_a62c6b692bc666 107-108
+tests/codex-pre-push-container-gate.sh
+  s_f2c089be484e12::t_400d8b1dbd4515 6-17,31,90-122
+tests/config-translate-rs-script-expressions.sh
+  s_f2c089be484e12::t_7792ff00096e1d 7,36-42,69-75
+tests/diskqueue-oncorruption-missing-segment.sh
+  s_f2c089be484e12::t_85887a99ce5db7 4-6,66,100-103
+tests/es-basic.sh
+  s_f2c089be484e12::t_bdb4bc6b66f0f7 3-5,61-70
+tests/imdtls-permittedpeer-reject.sh
+  s_f2c089be484e12::t_f21d3fb460821e 1-54
+tests/imfile-bad-state-file.sh
+  s_f2c089be484e12::t_c52a937d182233 3-4,26,42
+tests/imfile-inotify-fd-release-on-delete.sh
+  s_f2c089be484e12::t_c08caf4409d77e 28-30
+tests/imfile-logrotate-async.sh
+  s_f2c089be484e12::t_528c7fdb26cdc4 3-6,180,184,188,192
+tests/imfile-persist-state-1.sh
+  s_f2c089be484e12::t_31f915440faf8f 2-4,30
+tests/imrelp-maxDataSize-range.sh
+  s_f2c089be484e12::t_9fce32cd056308 1-70
+tests/mmaitag-basic.sh
+  s_f2c089be484e12::t_d7470468682ee9 16-21
+tests/mmaitag-transfer-limits-invalid.sh
+  s_f2c089be484e12::t_847a71638bb1b5 1-39
+tests/mmnormalize-turbo-json-discard.sh
+  s_f2c089be484e12::t_624cc1e4eafd3a 1-41
+tests/mmnormalize-turbo-json-nested.sh
+  s_f2c089be484e12::t_62a4f3d3390696 1-49
+tests/omelasticsearch-maxbytes-boundary.sh
+  s_f2c089be484e12::t_38eed23c360a7e 6-14,17,22,34,41-42,63,72-74,93-98,118,120-121,140-169
+tests/override_queue_disposal.c
+  s_f2c089be484e12::t_a49bdea164a033 1-85
+tests/pgsql-long-syslogtag.sh
+  s_f2c089be484e12::t_e9cdf120fe9062 1-31
+tests/prifilt-trailing-separator-vg.sh
+  s_f2c089be484e12::t_16f8d216065ee4 1-20
+tests/prifilt-trailing-separator.sh
+  s_f2c089be484e12::t_c8b95544753032 1-29
+tests/queue-deferred-idle-shutdown.sh
+  s_f2c089be484e12::t_d0daa6058b6303 1-41
+tests/queue-deferred-idle-wakeup.sh
+  s_f2c089be484e12::t_fdda314524c61a 1-43
+tests/queue-fixedarray-outoforder.sh
+  s_f2c089be484e12::t_5b88079266fe7b 1-53
+tests/queue-mutex-contention-impstats-default.sh
+  s_f2c089be484e12::t_d04ec8e50270ac 1-34
+tests/queue-mutex-contention-impstats.sh
+  s_f2c089be484e12::t_68d2e154f5288b 1-33
+tests/ratelimit_hup.sh
+  s_f2c089be484e12::t_cd373288b1203a 2-7,16-19,67
+tests/rscript-if-chain-snapshot-vg.sh
+  s_f2c089be484e12::t_ea0f0213e569e8 1-9
+tests/rscript-if-chain-snapshot.sh
+  s_f2c089be484e12::t_eab42a8f635ff3 1-70
+tests/sndrcv_dtls_certvalid_permitted.sh
+  s_f2c089be484e12::t_5eaf4fd5a36434 32
+tests/testsuites/pgsql-basic.sql
+  s_f2c089be484e12::t_4c87d0e305cf84 26
+tests/unit/mmaitag_gemini_response_test.c
+  s_f2c089be484e12::t_082b1d09cd3f34 1-81
+tests/unit/wtp_wakeup_test.c
+  s_f2c089be484e12::t_bbf562966ef0e5 1-338
+tests/wtp-targeted-wakeup.sh
+  s_f2c089be484e12::t_166e0867fef4eb 1-90
+tests/yaml-imrelp-maxDataSize-range.sh
+  s_f2c089be484e12::t_143c92bfbfdf10 1-74
+tests/yaml-queue-mutex-contention-stats.sh
+  s_f2c089be484e12::t_58fb779e783a8b 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7ef92ae4859e0b2691b8a3a976b90a252eccac69",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+plugins/imptcp/imptcp.c
+  s_008ef65e7b10ec::t_cfc8b509cff5cb 321,415,743-744,748,756,771-772,812-814,820,898,925,945,1008
+  s_008ef65e7b10ec::t_d9483405642335 1669-1670,1680,1707,2116,2122,2133,2138
+tests/imptcp-fromhost-port.sh
+  s_008ef65e7b10ec::t_5b6c1290830012 1-21,24,26
+  s_008ef65e7b10ec::t_dde19330f7c932 22-23,25
+tests/Makefile.am
+  s_008ef65e7b10ec::t_5b6c1290830012 902-904,2308,3320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "fb431a9760c90c70cb1f04311e00e7e99e45cca7",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

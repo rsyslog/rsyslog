@@ -1,0 +1,29 @@
+doc/source/development/transactional_config_reload.rst
+  s_f8a738e4bdfaee::t_e0f8a339c23800 651-660
+runtime/Makefile.am
+  s_f8a738e4bdfaee::t_c23e7f4f5c57f5 63-64
+runtime/reload-parser-list.c
+  s_f8a738e4bdfaee::t_671381beaa258b 1-83
+runtime/reload-parser-list.h
+  s_f8a738e4bdfaee::t_9d2e3eac84b23e 1-35
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_222f6f86ec6cea 4941-4946
+tests/unit/reload_parser_list_test.c
+  s_f8a738e4bdfaee::t_f876bf1fe18d36 1-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c580385fa5a1bcdc2c0976771aedc73d76febddc",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

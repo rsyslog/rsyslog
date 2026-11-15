@@ -1,0 +1,25 @@
+plugins/omjournal/omjournal.c
+  s_5e773934876cb4::t_dc0db0443e0481 309-318,329-330,333-334,341,345,361,363
+tests/Makefile.am
+  s_5e773934876cb4::t_64b76663eb683b 1347-1349,2870-2877,2882
+tests/omjournal-send-errors-preload.c
+  s_5e773934876cb4::t_a01c5108847d73 1-69
+tests/omjournal-send-errors.sh
+  s_5e773934876cb4::t_189a84581fd675 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9218a876e04ec605f902e2c650d5579ac74a9710",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

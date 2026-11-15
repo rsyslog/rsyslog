@@ -1,0 +1,18 @@
+runtime/debug.h
+  h_95716f3de0caf5 81-103
+runtime/queue.c
+  h_95716f3de0caf5 554,556,560,562,568,577,3286,3289
+runtime/wti.c
+  h_95716f3de0caf5 397,407,410,413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bb8e67c1c8a8d0ec3f6b619a8764eede23f4ec2",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

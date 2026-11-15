@@ -1,0 +1,52 @@
+runtime/ruleset.c
+  s_6b340ae08e941b::t_ac9083ff9569b9 298-301,303-307,309-333,335,337
+grammar/rainerscript.c
+  s_6b340ae08e941b::t_2885fb049d7a6d 3775,5866-5871,5879-5926,5961-5977,5984-5987,6041
+  s_6b340ae08e941b::t_29210a610ecdc8 5086,5097
+  s_6b340ae08e941b::t_4987f299b6b7d8 4183
+  s_6b340ae08e941b::t_1449a40732006d 5927-5960,5978,5981
+  s_6b340ae08e941b::t_7e314bf77cb0d2 5872-5878
+  s_6e4560b726945f::t_e77eb42eb0b22d 3718-3719,3729-3731
+  s_6b340ae08e941b::t_d123f1995c3565 5979-5980,5982-5983
+  s_6b340ae08e941b::t_f6ba63d14efb70 3710-3712,3744-3774
+  s_6b340ae08e941b::t_097f715a9f68f4 3776
+grammar/rainerscript.h
+  s_6b340ae08e941b::t_29210a610ecdc8 139,209,212-220
+  s_6b340ae08e941b::t_ebdc11d489da5d 221
+tests/rscript-if-chain-snapshot-vg.sh
+  s_6b340ae08e941b::t_8f07f966b7673e 1-5
+runtime/wti.h
+  s_6b340ae08e941b::t_29210a610ecdc8 32-33,98
+  s_6b340ae08e941b::t_11996294d328f8 157
+doc/source/rainerscript/control_structures.rst
+  s_6b340ae08e941b::t_70746cc6d28a60 42-54
+tests/rscript-if-chain-snapshot.sh
+  s_6b340ae08e941b::t_0df0970c34e7b7 1-36
+tests/Makefile.am
+  s_6b340ae08e941b::t_0df0970c34e7b7 535
+  s_6b340ae08e941b::t_8f07f966b7673e 738
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "4f0678a411fc0a19041803312bf14debacce095b",
+  "prompts": {},
+  "sessions": {
+    "s_6b340ae08e941b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a048bc-a478-75f3-9438-60a4c05c4b69",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6e4560b726945f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0490a-a52f-7070-a860-07dbad0a9acd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

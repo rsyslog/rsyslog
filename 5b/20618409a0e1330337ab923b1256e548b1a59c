@@ -1,0 +1,21 @@
+tests/json-nonstring.sh
+  s_5e773934876cb4::t_8b7b12fa68cf33 48-51,55
+tests/yaml-template-list.sh
+  s_5e773934876cb4::t_bd694b8fb918db 117-120,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b20618409a0e1330337ab923b1256e548b1a59c",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

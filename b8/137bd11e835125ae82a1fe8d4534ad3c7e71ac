@@ -1,0 +1,66 @@
+plugins/imptcp/imptcp.c
+  s_6224eda96fc0da::t_cbb50794d856eb 994
+  s_6224eda96fc0da::t_817bdcb7b9fc01 993
+  s_6224eda96fc0da::t_b7435edf6a1d8c 1321,1323
+  s_6224eda96fc0da::t_c3ad23be056e82 1318-1320,1322,1324-1327,1410,1775
+  s_6224eda96fc0da::t_6029fca27c80aa 302,992
+tests/imptcp-compression-none-pmnull.sh
+  s_6224eda96fc0da::t_c303ac91a6e50d 2,4,6-8
+  s_6224eda96fc0da::t_98f320287fbfb2 1,9-15,17-57
+  s_6224eda96fc0da::t_fe5f4267024eb8 3,5,16
+tests/imptcp-stream-auto-legacy-single.sh
+  s_6224eda96fc0da::t_c303ac91a6e50d 4-7
+  s_6224eda96fc0da::t_5192860986c731 1-3,8-44
+runtime/parser.c
+  s_6224eda96fc0da::t_5fa60d3fed8fcd 276
+  s_6224eda96fc0da::t_817bdcb7b9fc01 277
+tests/imptcp-stream-auto-z-prefix.sh
+  s_6224eda96fc0da::t_5192860986c731 1-3,7-55
+  s_6224eda96fc0da::t_c303ac91a6e50d 4-6
+tests/imptcp-compression-none-legacy-single.sh
+  s_6224eda96fc0da::t_c303ac91a6e50d 4-7
+  s_6224eda96fc0da::t_f89b2b0186f44e 1-3,8-44
+tests/Makefile.am
+  s_6224eda96fc0da::t_99c2ec41b8a8c7 722-723,1343-1344,1356-1357
+  s_6224eda96fc0da::t_98f320287fbfb2 1339
+  s_6224eda96fc0da::t_f89b2b0186f44e 1340
+tests/imptcp-stream-always-z-prefix.sh
+  s_6224eda96fc0da::t_5192860986c731 1-3,8-56
+  s_6224eda96fc0da::t_c303ac91a6e50d 4-7
+runtime/msg.h
+  s_6224eda96fc0da::t_817bdcb7b9fc01 163-164
+runtime/tcps_sess.h
+  s_6224eda96fc0da::t_2e54b4e55b8f02 85
+tests/imtcp-stream-always-zlib-z-prefix.sh
+  s_6224eda96fc0da::t_5192860986c731 1-3,8-58
+  s_6224eda96fc0da::t_c303ac91a6e50d 4-7
+runtime/tcps_sess.c
+  s_6224eda96fc0da::t_898d9287f6e5a3 359,361
+  s_6224eda96fc0da::t_817bdcb7b9fc01 360
+  s_6224eda96fc0da::t_5da305a4603173 774-783
+  s_a9719629ed5597::t_a5360fc11e877a 784-785,890,955
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b8137bd11e835125ae82a1fe8d4534ad3c7e71ac",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    },
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
