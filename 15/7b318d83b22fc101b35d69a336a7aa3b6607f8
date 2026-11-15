@@ -1,0 +1,23 @@
+runtime/datetime.c
+  s_a750027fd95cd7::t_7b950083610888 1214-1218,1222
+tests/Makefile.am
+  s_a750027fd95cd7::t_241614afdc4e84 439
+tests/timereported-dateordinal-utcoffset.sh
+  s_a750027fd95cd7::t_9058a03e5b0fa1 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "157b318d83b22fc101b35d69a336a7aa3b6607f8",
+  "prompts": {},
+  "sessions": {
+    "s_a750027fd95cd7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "04300d3f-d457-5375-bc05-d3ab71b2131d",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+runtime/AGENTS.md
+  s_e305fce0846544::t_d4a4c8d31f49ab 61-63
+tests/timereported-dateordinal-utcoffset.sh
+  s_e305fce0846544::t_f7126735c62c12 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "97ce04912b7c289809854acd07682dd78b8f0006",
+  "prompts": {},
+  "sessions": {
+    "s_e305fce0846544": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f85a622-1083-59f9-9427-fc5c3b69b4fe",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+tests/omdtls-server-identity.py
+  h_95716f3de0caf5 36,44-45,55-57,90,128,130,144-149,151
+tests/testsuites/yaml-omdtls-server-identity.yaml
+  h_95716f3de0caf5 3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b06ac1a0cfcdb09f38e873b9ad8a31735dd1fdcf",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
