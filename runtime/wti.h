@@ -103,6 +103,7 @@ struct wti_s {
         uchar *pszDbgHdr; /* header string for debug messages */
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */
+        int nActWrkrInfo; /* number of entries actWrkrInfo was allocated with */
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
         /* Queue-local deferred batch cleanup is bounded by batch.maxElem. */
         smsg_t **p_deferred_msgs;
