@@ -181,6 +181,22 @@ the last event of that window. For Beats clients this equals the number of
 events in the window. ``$!metadata!imbeats!sequence`` always contains the
 sequence number as sent on the wire.
 
+When a session is closed for a reason other than a normal close by the peer or
+rsyslog shutdown, ``imbeats`` logs one message that names the peer address and
+port, the local port, the reason, and the rsyslog error code. The input name is
+part of the message only when the input's ``name`` parameter is set; inputs
+without ``name`` are identified by the local port alone.
+Typical reasons are an invalid frame type, a sequence number mismatch, a window
+or frame that exceeds the configured limits, a rejected compressed frame, an
+event that cannot be submitted, and ``idleTimeout``, ``frameTimeout``, or
+``windowTimeout`` expiry. The message never contains payload bytes.
+
+To keep a misbehaving or reconnecting peer from flooding the log, these
+messages and the ``too many sessions`` message are rate limited per input and
+reason class: at most one message is logged every 10 seconds, and the next
+message reports how many similar messages were suppressed. The statistic
+counters described below are not rate limited.
+
 
 Configuration Parameters
 ========================
