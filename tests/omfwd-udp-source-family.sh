@@ -5,7 +5,9 @@
 # use libc. The optional dual-local case also controls source DNS, observes real
 # binds, and checks each socket family. Run IPv4-first delivery and IPv6-
 # only suspension controls before the mixed-family regression. Exact received
-# payload and source address prove delivery in both sendToAll modes. A suspended-action fallback
+# payload and source address prove delivery in both sendToAll modes. YAML uses
+# action mappings so Address and udp.sendToAll exercise its parameter decoder.
+# A suspended-action fallback
 # proves the negative control was attempted. Bounded predicate waits protect
 # against hangs; no error-log silence or external DNS behavior is asserted.
 . ${srcdir:=.}/diag.sh init
@@ -48,7 +50,7 @@ run_sender() {
     if [ "${OMFWD_FAMILY_YAML:-0}" = 1 ]; then
         generate_conf 2
         add_conf 'include(file="'${RSYSLOG_DYNNAME}'.sender.yaml")
-call main' 2
+if $msg contains "msgnum:" then call main' 2
         printf '%s\n' '
 templates:
   - name: wire
@@ -59,11 +61,19 @@ templates:
     string: "suspended '$order'\n"
 rulesets:
   - name: main
-    script: |
-      if $msg contains "msgnum:" then {
-        action(type="omfwd" protocol="udp" target="'$RSYSLOG_UDP_FAMILY_TARGET'" port="'$receiver_port'" Address="'$source_address'" template="wire" udp.sendToAll="'$send_to_all'" action.resumeRetryCount="0")
-        action(type="omfile" file="'$fallback'" template="failed" action.execOnlyWhenPreviousIsSuspended="on")
-      }
+    actions:
+      - type: omfwd
+        protocol: udp
+        target: "'$RSYSLOG_UDP_FAMILY_TARGET'"
+        port: "'$receiver_port'"
+        Address: "'$source_address'"
+        template: wire
+        udp.sendToAll: "'$send_to_all'"
+        action.resumeRetryCount: "0"
+      - type: omfile
+        file: "'$fallback'"
+        template: failed
+        action.execOnlyWhenPreviousIsSuspended: "on"
 ' > "${RSYSLOG_DYNNAME}.sender.yaml"
     else
         generate_conf 2
