@@ -869,6 +869,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmanon-ipv6-uniqueretrycount.rst \
     source/reference/parameters/mmcount-appname.rst \
     source/reference/parameters/mmcount-key.rst \
+    source/reference/parameters/mmcount-maxcardinality.rst \
     source/reference/parameters/mmcount-value.rst \
     source/reference/parameters/mmdarwin-container.rst \
     source/reference/parameters/mmdarwin-fields.rst \

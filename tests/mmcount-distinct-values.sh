@@ -1,7 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # mmcount must maintain distinct counters for distinct property values even
-# when their hashes collide. "ab" and "bA" collide in hash_from_string.
+# when their hashes collide. "ab" and "bA" collide in the unkeyed
+# hash_from_string() that mmcount used before switching to a keyed hash; the
+# oracle stays valid for any hash function.
 # One injected message calls the same action four times, eliminating message
 # ordering ambiguity. The exact omfile output after synchronized shutdown must
 # show independent totals 1,1,2,2 rather than a shared 1,2,3,4 counter.
