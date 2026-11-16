@@ -119,6 +119,17 @@ records. `tests/yaml-mmaudit-auditid.sh` runs the same oracle through a YAML
 ruleset. These tests use mmaudit's supported legacy action syntax; they do not
 exercise the separately documented quoted-value limitation.
 
+### imbeats non-object metadata
+
+`tests/imbeats-metadata-non-object.sh` (run with
+`make check TESTS=imbeats-metadata-non-object.sh`, or directly via
+`./tests/imbeats-metadata-non-object.sh`) sends one Lumberjack v2 window whose
+events carry a non-object `metadata` member (string, number, array, null,
+boolean) or a non-object `metadata.imbeats`. It proves that the window is
+ACKed with the last sequence number, every event is delivered exactly once in
+order, the module-owned `$!metadata!imbeats` is present, and `%rawmsg%` keeps
+the original client payload.
+
 ## Documentation touchpoints
 - Mention significant behavior or dependency changes in `doc/` (for example,
   module reference guides or changelog entries).
