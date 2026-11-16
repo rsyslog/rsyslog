@@ -1687,6 +1687,7 @@ TESTS_IMBEATS = \
 	imbeats-seq-restart-per-window.sh \
 	imbeats-seq-invalid-in-window.sh \
 	imbeats-metadata-collision.sh \
+	imbeats-metadata-non-object.sh \
 	imbeats-elastic-agent-windows-fixture.sh \
 	imbeats-limits.sh \
 	imbeats-shutdown-open-session.sh \

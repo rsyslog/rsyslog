@@ -52,6 +52,10 @@ skip imbeats-idle-between-windows.sh
 skip imbeats-session-close-logging.sh
 skip yaml-imbeats-session-close-logging.sh
 
+# imbeats non-object metadata regression: platform-independent JSON handling in
+# the module, one loopback window; no Solaris-specific oracle.
+skip imbeats-metadata-non-object.sh
+
 # mmcount counter tests (collision counters, cardinality limit):
 # platform-independent contrib-module behavior. Both frontends stay covered on
 # Linux; none adds a Solaris portability oracle.

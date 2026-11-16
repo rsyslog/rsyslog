@@ -737,6 +737,21 @@ static rsRetVal submitEvent(session_t *const sess, const struct lj_event_s *cons
     /* TODO: representation mode is intentionally Elasticsearch-oriented for v1.
      * Revisit later whether this should be configurable (for example $! vs $!beats).
      */
+    /* The module attaches its own data below $!metadata!imbeats. A client
+     * "metadata" member that is not an object (string, number, array, null,
+     * bool) would make that attach fail after earlier events of the window
+     * were already submitted, so the sender would never get an ACK. Replace
+     * such a member with an empty object; the original text stays available
+     * in msg/rawmsg. */
+    {
+        struct fjson_object *clientMeta = NULL;
+        if (fjson_object_object_get_ex(json, "metadata", &clientMeta) &&
+            !fjson_object_is_type(clientMeta, fjson_type_object)) {
+            struct fjson_object *emptyMeta;
+            CHKmalloc(emptyMeta = json_object_new_object());
+            fjson_object_object_add(json, "metadata", emptyMeta);
+        }
+    }
     iRet = msgAddJSON(pMsg, (uchar *)"!", json, 0, 0);
     json = NULL;
     CHKiRet(iRet);
