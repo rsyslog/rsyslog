@@ -320,7 +320,7 @@ rsRetVal wtiConstructFinalize(wti_t *pThis) {
 
     /* must use calloc as we need zero-init */
     CHKmalloc(pThis->actWrkrInfo = calloc(runConf->actions.iActionNbr, sizeof(actWrkrInfo_t)));
-    pThis->nActWrkrInfo = runConf->actions.iActionNbr;
+    pThis->n_act_wrkr_info = runConf->actions.iActionNbr;
 
     if (pThis->pWtp == NULL) {
         dbgprintf("wtiConstructFinalize: pWtp not set, this may be intentional\n");
@@ -348,7 +348,7 @@ static void wtiDisposeActionState(wti_t *const pThis) {
     DBGPRINTF("DDDD: wti %p: worker cleanup action instances\n", pThis);
     /* Use the size the table was built with, not the current config's
      * action count: the two only match while the config never changes. */
-    for (i = 0; i < pThis->nActWrkrInfo; ++i) {
+    for (i = 0; i < pThis->n_act_wrkr_info; ++i) {
         wrkrInfo = &(pThis->actWrkrInfo[i]);
         dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
         if (wrkrInfo->actWrkrData != NULL) {
