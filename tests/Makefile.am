@@ -1037,6 +1037,7 @@ TESTS_DEFAULT_VALGRIND = \
 	threadingmq.sh \
 	threadingmqaq.sh \
 	func-substring-invld-startpos-vg.sh \
+	rscript-parse-error-noleak-vg.sh \
 	rscript_trim-vg.sh \
 	rscript_split-vg.sh \
 	rscript_append_json-vg.sh
