@@ -631,6 +631,7 @@ TESTS_DEFAULT = \
 	imudp_thread_hang.sh \
 	imudp-listenportfilename-secure.sh \
 	imudp-bind-failure.sh \
+	imudp-timerequery-negative.sh \
 	imudp-ratelimit-programname.sh \
 	imudp_ratelimit_name.sh \
 	omfwd_ratelimit_name.sh \
@@ -1042,6 +1043,7 @@ TESTS_LIBYAML = \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
 	yaml-allowed-sender-modern.sh \
+	yaml-imudp-timerequery-negative.sh \
 	yaml-statements-reload-lookup.sh \
 	yaml-lookup-table-duplicate.sh \
 	yaml-action-duplicate-name.sh
