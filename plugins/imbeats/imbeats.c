@@ -215,6 +215,7 @@ struct session_s {
     uint64_t lastProgressMs;
     uint64_t readStartMs;
     uint64_t windowStartMs;
+    uint64_t queuedReadyMs; /* when queued with input known to be ready, else 0 */
     int awaitingNetwork;
     int timeoutsSuspended;
     int timedOut; /* 0 or the timeout kind, see IMBEATS_TMO_* */
@@ -941,7 +942,21 @@ static int sessionExpiredLocked(const session_t *const sess, const uint64_t now)
  * being submitted would instead create an ambiguous partial-submit state
  * without an ACK, so submission is intentionally not a timeout scope. A fresh
  * idleTimeout interval begins before ACK transmission to bound peers that stop
- * reading after their batch has been accepted. */
+ * reading after their batch has been accepted.
+ *
+ * Time a session spends in the work queue waiting for a free worker is local
+ * delay, not a peer-controlled wait, provided the peer had already acted when
+ * the session was queued. That holds for epoll readiness (the peer sent data,
+ * closed, or made room for the ACK) and for a starvation-protection yield
+ * (the session was still making progress). For those hand-offs the queue time
+ * is recorded in queuedReadyMs and sessionForgiveQueueWait() moves the
+ * running deadline starts forward by the time waited before the worker checks
+ * them. The poll fallback's accept and rearm paths queue sessions without
+ * knowing whether input is available, so that queue time is not forgiven;
+ * otherwise an idle peer could keep its deadlines alive while workers are
+ * busy. The timeout scanner only inspects sessions that await network
+ * readiness; on epoll builds those are never in the work queue, and a
+ * yielded session is worker-owned on both paths. */
 
 static int sessionCheckTimeout(session_t *const sess) {
     const uint64_t now = monotonicMs();
@@ -955,6 +970,35 @@ static int sessionCheckTimeout(session_t *const sess) {
     }
     pthread_mutex_unlock(&sess->inst->mutSessions);
     return expired;
+}
+
+/* Must be called with mutSessions held. */
+static void sessionMarkQueuedReadyLocked(session_t *const sess, const uint64_t now) {
+    sess->queuedReadyMs = now;
+}
+
+static void sessionShiftDeadlineStart(uint64_t *const startMs, const uint64_t queuedMs, const uint64_t waitedMs) {
+    /* Only starts recorded before the session was queued can have accrued
+     * queue time; the result never exceeds the current time. */
+    if (*startMs != 0 && *startMs <= queuedMs) {
+        *startMs += waitedMs;
+    }
+}
+
+/* Called by the worker right after dequeueing a session and before
+ * sessionProcess() checks the deadlines. See the deadlines comment above. */
+static void sessionForgiveQueueWait(session_t *const sess) {
+    const uint64_t now = monotonicMs();
+
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    if (sess->queuedReadyMs != 0 && now > sess->queuedReadyMs) {
+        const uint64_t waited = now - sess->queuedReadyMs;
+        sessionShiftDeadlineStart(&sess->lastProgressMs, sess->queuedReadyMs, waited);
+        sessionShiftDeadlineStart(&sess->readStartMs, sess->queuedReadyMs, waited);
+        sessionShiftDeadlineStart(&sess->windowStartMs, sess->queuedReadyMs, waited);
+    }
+    sess->queuedReadyMs = 0;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
 }
 
 static void shutdownExpiredSessions(instanceConf_t *const inst) {
@@ -1544,12 +1588,19 @@ static rsRetVal rearmSession(session_t *const sess) {
 #endif
 }
 
-static int sessionClaimAwaitingNetwork(session_t *const sess) {
+/* peerReady is set only when the caller observed network readiness for the
+ * session (epoll path); the subsequent queue wait is then not charged against
+ * the session's deadlines. */
+static int sessionClaimAwaitingNetwork(session_t *const sess, const int peerReady) {
+    const uint64_t now = peerReady ? monotonicMs() : 0;
     int claimed = 0;
 
     pthread_mutex_lock(&sess->inst->mutSessions);
     if (!sess->done && sess->awaitingNetwork) {
         sess->awaitingNetwork = 0;
+        if (peerReady) {
+            sessionMarkQueuedReadyLocked(sess, now);
+        }
         claimed = 1;
     }
     pthread_mutex_unlock(&sess->inst->mutSessions);
@@ -1594,7 +1645,8 @@ static void *workerThread(void *arg) {
          * Clear its published network-wait ownership before processing so the
          * timeout scanner cannot close a worker-owned session. On epoll builds
          * the listener already made the same ownership transfer. */
-        (void)sessionClaimAwaitingNetwork(sess);
+        (void)sessionClaimAwaitingNetwork(sess, 0);
+        sessionForgiveQueueWait(sess);
         const rsRetVal iRet = sessionProcess(sess);
         if (iRet == RS_RET_RETRY) {
             const rsRetVal rearmRet = sessionRearmForNetwork(sess);
@@ -1602,6 +1654,12 @@ static void *workerThread(void *arg) {
                 closeSession(sess, rearmRet);
             }
         } else if (iRet == RS_RET_OK) {
+            /* starvation-protection yield: the session was still making
+             * progress, so its wait for the next worker is local delay */
+            const uint64_t now = monotonicMs();
+            pthread_mutex_lock(&inst->mutSessions);
+            sessionMarkQueuedReadyLocked(sess, now);
+            pthread_mutex_unlock(&inst->mutSessions);
             enqueueSession(sess);
         } else {
             closeSession(sess, iRet);
@@ -1897,7 +1955,7 @@ static void *listenerThread(void *arg) {
                     (void)rearmListener(inst, io->listener_idx);
                 }
             } else if (io->type == IMBEATS_IO_SESSION && io->sess != NULL) {
-                if (sessionClaimAwaitingNetwork(io->sess)) {
+                if (sessionClaimAwaitingNetwork(io->sess, 1)) {
                     if ((events[n].events & (EPOLLERR | EPOLLHUP)) != 0) {
                         closeSession(io->sess, RS_RET_CLOSED);
                     } else {

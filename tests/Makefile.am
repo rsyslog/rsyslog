@@ -1698,6 +1698,7 @@ TESTS_IMBEATS = \
 	imbeats-idle-between-windows.sh \
 	imbeats-multiplex-idle-sessions.sh \
 	imbeats-submit-timeout.sh \
+	imbeats-timeout-queue-wait.sh \
 	imbeats-json-trailing-data.sh \
 	imbeats-filebeat-docker.sh
 

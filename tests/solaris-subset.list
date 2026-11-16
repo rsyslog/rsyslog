@@ -56,6 +56,11 @@ skip yaml-imbeats-session-close-logging.sh
 # the module, one loopback window; no Solaris-specific oracle.
 skip imbeats-metadata-non-object.sh
 
+# imbeats work-queue wait: the forgiveness only exists on the epoll
+# dispatcher, which SunOS does not have, and the test needs several seconds of
+# omtesting sleeps plus timing margins. Covered on Linux.
+skip imbeats-timeout-queue-wait.sh
+
 # mmcount counter tests (collision counters, cardinality limit):
 # platform-independent contrib-module behavior. Both frontends stay covered on
 # Linux; none adds a Solaris portability oracle.
