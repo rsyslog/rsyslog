@@ -3,6 +3,10 @@
 .. _param-mmcount-maxcardinality:
 .. _mmcount.parameter.input.maxcardinality:
 
+.. meta::
+   :description: Reference for the mmcount maxCardinality action parameter.
+   :keywords: rsyslog, mmcount, maxCardinality, counter, cardinality limit, hash flooding
+
 maxCardinality
 ==============
 

@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# added 2026-11-16 by Rainer Gerhards, released under ASL 2.0
 # mmcount must bound the number of distinct values it tracks per action.
 # Values are taken from messages, so without a bound a sender can grow the
 # counter table without limit. With maxCardinality=2, one injected message

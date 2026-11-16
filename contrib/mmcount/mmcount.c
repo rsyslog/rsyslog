@@ -33,6 +33,8 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <json.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -63,8 +65,8 @@ typedef struct _instanceData {
     char *pszValue;
     int valueCounter;
     struct hashtable *ht;
-    unsigned int maxCardinality; /* max distinct values tracked in ht */
-    sbool cardinalityWarned; /* limit-reached warning already emitted? */
+    unsigned int max_cardinality; /* max distinct values tracked in ht */
+    sbool cardinality_warned; /* limit-reached warning already emitted? */
     pthread_mutex_t mut;
 } instanceData;
 
@@ -85,7 +87,7 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
  * lookup into a linear scan of one chain while pData->mut is held.
  * SipHash-2-4 keyed with a per-process random key removes that ability.
  */
-static uint64_t hashKey[2];
+static uint64_t hash_key[2];
 
 #define SIP_ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
 #define SIP_ROUND              \
@@ -107,7 +109,7 @@ static uint64_t hashKey[2];
     } while (0)
 
 /* SipHash-2-4 (Aumasson/Bernstein) of a NUL-terminated string, keyed with
- * hashKey. Wraparound arithmetic is intended.
+ * hash_key. Wraparound arithmetic is intended.
  */
 #if defined(__clang__)
     #pragma GCC diagnostic ignored "-Wunknown-attributes"
@@ -116,14 +118,14 @@ static unsigned int
 #if defined(__clang__)
     __attribute__((no_sanitize("unsigned-integer-overflow")))
 #endif
-    hashValueKeyed(void *k) {
+    hash_value_keyed(void *k) {
     const uchar *in = (const uchar *)k;
     const size_t len = strlen((const char *)in);
     const uchar *const end = in + (len - (len % 8));
-    uint64_t v0 = UINT64_C(0x736f6d6570736575) ^ hashKey[0];
-    uint64_t v1 = UINT64_C(0x646f72616e646f6d) ^ hashKey[1];
-    uint64_t v2 = UINT64_C(0x6c7967656e657261) ^ hashKey[0];
-    uint64_t v3 = UINT64_C(0x7465646279746573) ^ hashKey[1];
+    uint64_t v0 = UINT64_C(0x736f6d6570736575) ^ hash_key[0];
+    uint64_t v1 = UINT64_C(0x646f72616e646f6d) ^ hash_key[1];
+    uint64_t v2 = UINT64_C(0x6c7967656e657261) ^ hash_key[0];
+    uint64_t v3 = UINT64_C(0x7465646279746573) ^ hash_key[1];
     uint64_t m;
     uint64_t b = ((uint64_t)len) << 56;
     int i;
@@ -152,12 +154,28 @@ static unsigned int
 #undef SIP_ROUND
 #undef SIP_ROTL
 
-static void initHashKey(void) {
+/* Fill hash_key with 128 bits from the OS entropy pool. /dev/urandom exists
+ * on all platforms rsyslog supports; randomNumber() is only a fallback since
+ * outside Linux it is time-seeded random(). The cardinality limit still bounds
+ * the worst case in that fallback.
+ */
+static void init_hash_key(void) {
     unsigned i;
-    /* randomNumber() reads /dev/urandom where available; the runtime seeds
-     * it during startup. Collect 128 bits regardless of sizeof(long). */
-    for (i = 0; i < 2; ++i) {
-        hashKey[i] = ((uint64_t)(uint32_t)randomNumber() << 32) | (uint32_t)randomNumber();
+    int fd;
+    ssize_t r = -1;
+
+    fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+    if (fd >= 0) {
+        r = read(fd, hash_key, sizeof(hash_key));
+        close(fd);
+    }
+    if (r != (ssize_t)sizeof(hash_key)) {
+        LogMsg(errno, RS_RET_IO_ERROR, LOG_WARNING,
+               "mmcount: could not read /dev/urandom, per-value counter hash "
+               "uses a weaker fallback key");
+        for (i = 0; i < 2; ++i) {
+            hash_key[i] = ((uint64_t)(uint32_t)randomNumber() << 32) | (uint32_t)randomNumber();
+        }
     }
 }
 
@@ -230,8 +248,8 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->pszValue = NULL;
     pData->valueCounter = 0;
     pData->ht = NULL;
-    pData->maxCardinality = DFLT_MAX_CARDINALITY;
-    pData->cardinalityWarned = 0;
+    pData->max_cardinality = DFLT_MAX_CARDINALITY;
+    pData->cardinality_warned = 0;
 }
 
 BEGINnewActInst
@@ -263,7 +281,8 @@ BEGINnewActInst
             continue;
         }
         if (!strcmp(actpblk.descr[i].name, "maxcardinality")) {
-            pData->maxCardinality = (unsigned int)pvals[i].val.d.n;
+            pData->max_cardinality =
+                (pvals[i].val.d.n > (long long)UINT_MAX) ? UINT_MAX : (unsigned int)pvals[i].val.d.n;
             continue;
         }
         dbgprintf(
@@ -278,7 +297,7 @@ BEGINnewActInst
     }
 
     if (pData->pszKey != NULL && pData->pszValue == NULL) {
-        if (NULL == (pData->ht = create_hashtable(100, hashValueKeyed, key_equals_string, NULL))) {
+        if (NULL == (pData->ht = create_hashtable(100, hash_value_keyed, key_equals_string, NULL))) {
             DBGPRINTF("mmcount: error creating hash table!\n");
             ABORT_FINALIZE(RS_RET_ERR);
         }
@@ -297,7 +316,7 @@ BEGINtryResume
     CODESTARTtryResume;
 ENDtryResume
 
-static int *getCounter(instanceData *const pData, const char *str, sbool *const pbWarn) {
+static int *getCounter(instanceData *const pData, const char *str, sbool *const warn_once) {
     struct hashtable *const ht = pData->ht;
     int *pCounter;
     char *pKey;
@@ -311,10 +330,10 @@ static int *getCounter(instanceData *const pData, const char *str, sbool *const 
 
     /* Values come from messages: bound the number of tracked values so a
        sender cannot grow the table (and memory) without limit. */
-    if (hashtable_count(ht) >= pData->maxCardinality) {
-        if (!pData->cardinalityWarned) {
-            pData->cardinalityWarned = 1;
-            *pbWarn = 1; /* caller logs after releasing pData->mut */
+    if (hashtable_count(ht) >= pData->max_cardinality) {
+        if (!pData->cardinality_warned) {
+            pData->cardinality_warned = 1;
+            *warn_once = 1; /* caller logs after releasing pData->mut */
         }
         return NULL;
     }
@@ -350,7 +369,7 @@ BEGINdoAction_NoStrings
     struct json_object *keyjson = NULL;
     const char *pszValue;
     int *pCounter;
-    sbool bCardinalityWarn = 0;
+    sbool cardinality_warn = 0;
     instanceData *const pData = pWrkrData->pData;
     CODESTARTdoAction;
     appname = getAPPNAME(pMsg, LOCK_MUTEX);
@@ -397,7 +416,7 @@ BEGINdoAction_NoStrings
     }
 
     /* value is not given, so we count for each value of given key */
-    pCounter = getCounter(pData, pszValue, &bCardinalityWarn);
+    pCounter = getCounter(pData, pszValue, &cardinality_warn);
     if (pCounter) {
         (*pCounter)++;
         json = json_object_new_int(*pCounter);
@@ -405,14 +424,14 @@ BEGINdoAction_NoStrings
 finalize_it:
     pthread_mutex_unlock(&pData->mut);
 
-    if (bCardinalityWarn) {
+    if (cardinality_warn) {
         /* logged outside pData->mut: an internal message may be processed
            synchronously and pass through this action again */
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
                "mmcount: action for appname '%s', key '%s' reached "
                "maxCardinality %u; messages with further new values are "
                "not counted. This warning is emitted only once per action.",
-               pData->pszAppName, pData->pszKey, pData->maxCardinality);
+               pData->pszAppName, pData->pszKey, pData->max_cardinality);
     }
 
     if (json) {
@@ -440,6 +459,6 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    initHashKey();
+    init_hash_key();
     CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("mmcount: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit
