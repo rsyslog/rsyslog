@@ -1681,6 +1681,7 @@ TESTS_IMBEATS = \
 	imbeats-maxsessions.sh \
 	imbeats-maxsessions-cap-warning.sh \
 	imbeats-default-window-size.sh \
+	imbeats-session-close-logging.sh \
 	imbeats-idle-between-windows.sh \
 	imbeats-multiplex-idle-sessions.sh \
 	imbeats-submit-timeout.sh \

@@ -6,6 +6,7 @@
  */
 #include "config.h"
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -82,6 +83,22 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(netstrms
         typedef struct session_s session_t;
 typedef struct imbeats_io_s imbeats_io_t;
 
+/* Rate-limit classes for session-close diagnostics. Each class has its own
+ * limiter so that, for example, a flood of protocol errors does not hide a
+ * later timeout message. */
+enum imbeatsLogClass {
+    IMBEATS_LOG_PROTOCOL = 0,
+    IMBEATS_LOG_LIMIT,
+    IMBEATS_LOG_TIMEOUT,
+    IMBEATS_LOG_ERROR,
+    IMBEATS_LOG_MAXSESS,
+    IMBEATS_LOG_CLASSES
+};
+
+/* At most one message per class and instance within this interval. */
+#define IMBEATS_LOG_INTERVAL_MS 10000u
+#define IMBEATS_CLOSE_REASON_LEN 128
+
 typedef struct instanceConf_s {
     struct instanceConf_s *next;
     uchar *port;
@@ -150,6 +167,10 @@ typedef struct instanceConf_s {
     unsigned starvationMaxReads;
     unsigned maxSessions;
     unsigned activeSessions;
+    /* log rate limiter state, protected by mutSessions */
+    int logSeen[IMBEATS_LOG_CLASSES];
+    uint64_t logLastMs[IMBEATS_LOG_CLASSES];
+    unsigned logSuppressed[IMBEATS_LOG_CLASSES];
 #if defined(IMBEATS_HAVE_EPOLL)
     int epoll_fd;
 #endif
@@ -160,6 +181,8 @@ typedef struct modConfData_s {
     instanceConf_t *root;
     instanceConf_t *tail;
 } modConfData_t;
+
+enum { IMBEATS_TMO_NONE = 0, IMBEATS_TMO_IDLE, IMBEATS_TMO_FRAME, IMBEATS_TMO_WINDOW };
 
 struct session_s {
     instanceConf_t *inst;
@@ -194,7 +217,9 @@ struct session_s {
     uint64_t windowStartMs;
     int awaitingNetwork;
     int timeoutsSuspended;
-    int timedOut;
+    int timedOut; /* 0 or the timeout kind, see IMBEATS_TMO_* */
+    int closeClass;
+    char closeReason[IMBEATS_CLOSE_REASON_LEN]; /* set once, before the session is closed for an error */
     enum {
         IMBEATS_ST_READ_WINDOW_HDR,
         IMBEATS_ST_READ_WINDOW_SIZE,
@@ -300,6 +325,8 @@ static rsRetVal createInstance(instanceConf_t **const pinst);
 static rsRetVal buildListeners(instanceConf_t *inst);
 static rsRetVal destroyInstanceRuntime(instanceConf_t *inst);
 static void destroySession(session_t *sess);
+static void sessionSetCloseReason(session_t *const sess, const int logClass, const char *const fmt, ...)
+    __attribute__((format(printf, 3, 4)));
 static void shutdownSessionSocket(session_t *sess);
 static void *listenerThread(void *arg);
 static void *workerThread(void *arg);
@@ -786,6 +813,9 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
             sess->ioDirection = nextIODirection;
             return RS_RET_RETRY;
         } else {
+            if (iRet != RS_RET_CLOSED) {
+                sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "network read error");
+            }
             return iRet;
         }
     }
@@ -811,6 +841,7 @@ static rsRetVal sessionValidateBatch(session_t *const sess) {
         /* Sequence numbers restart at 1 in every window (Beats clients) or
          * continue from the last ACK (cumulative senders); see seqnum.h. */
         if (!imbeats_seq_is_expected(sess->lastAckedSeq, sess->batch.events[0].seq, idx, sess->batch.events[idx].seq)) {
+            sessionSetCloseReason(sess, IMBEATS_LOG_PROTOCOL, "sequence number mismatch in window");
             return RS_RET_INVALID_VALUE;
         }
         iRet = parseJsonEvent(&sess->batch.events[idx], &json);
@@ -822,6 +853,8 @@ static rsRetVal sessionValidateBatch(session_t *const sess) {
                 STATSCOUNTER_INC(statsCounter.ctrJsonDecodeFailures, statsCounter.mutCtrJsonDecodeFailures);
             }
             STATSCOUNTER_INC(statsCounter.ctrEventsFailed, statsCounter.mutCtrEventsFailed);
+            sessionSetCloseReason(sess, IMBEATS_LOG_PROTOCOL, "event %zu of the window is not a valid JSON object",
+                                  idx + 1);
             return iRet;
         }
     }
@@ -864,19 +897,19 @@ static int sessionExpiredLocked(const session_t *const sess, const uint64_t now)
         return sess->timedOut;
     }
     if (sess->timeoutsSuspended) {
-        return 0;
+        return IMBEATS_TMO_NONE;
     }
     if (inst->idleTimeout != 0 && sess->lastProgressMs != 0 && now >= sess->lastProgressMs &&
         now - sess->lastProgressMs >= (uint64_t)inst->idleTimeout * 1000u) {
-        return 1;
+        return IMBEATS_TMO_IDLE;
     }
     if (inst->frameTimeout != 0 && sess->readStartMs != 0 && now >= sess->readStartMs &&
         now - sess->readStartMs >= (uint64_t)inst->frameTimeout * 1000u) {
-        return 1;
+        return IMBEATS_TMO_FRAME;
     }
     if (inst->windowTimeout != 0 && sess->windowStartMs != 0 && now >= sess->windowStartMs &&
         now - sess->windowStartMs >= (uint64_t)inst->windowTimeout * 1000u) {
-        return 1;
+        return IMBEATS_TMO_WINDOW;
     }
     return 0;
 }
@@ -897,7 +930,7 @@ static int sessionCheckTimeout(session_t *const sess) {
     pthread_mutex_lock(&sess->inst->mutSessions);
     expired = sessionExpiredLocked(sess, now);
     if (expired && !sess->timedOut) {
-        sess->timedOut = 1;
+        sess->timedOut = expired;
         STATSCOUNTER_INC(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
     }
     pthread_mutex_unlock(&sess->inst->mutSessions);
@@ -910,9 +943,10 @@ static void shutdownExpiredSessions(instanceConf_t *const inst) {
 
     pthread_mutex_lock(&inst->mutSessions);
     for (sess = inst->sessions; sess != NULL; sess = sess->next) {
-        if (!sess->done && sess->awaitingNetwork && sessionExpiredLocked(sess, now)) {
+        const int expired = (!sess->done && sess->awaitingNetwork) ? sessionExpiredLocked(sess, now) : IMBEATS_TMO_NONE;
+        if (expired) {
             if (!sess->timedOut) {
-                sess->timedOut = 1;
+                sess->timedOut = expired;
                 STATSCOUNTER_INC(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
             }
             shutdownSessionSocket(sess);
@@ -929,6 +963,7 @@ static rsRetVal sessionSendAckStep(session_t *const sess) {
         iRet = netstrm.Send(sess->pStrm, sess->ack + sess->ack_off, &to_send);
         if (iRet != RS_RET_OK) {
             STATSCOUNTER_INC(statsCounter.ctrAckFailures, statsCounter.mutCtrAckFailures);
+            sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "failed to send acknowledgement");
             return iRet;
         }
         if (to_send == 0) {
@@ -941,6 +976,123 @@ static rsRetVal sessionSendAckStep(session_t *const sess) {
     STATSCOUNTER_INC(statsCounter.ctrBatchesAcked, statsCounter.mutCtrBatchesAcked);
     sessionResetForNextBatch(sess);
     return RS_RET_OK;
+}
+
+/* Record why a session is going to be closed. The text is built from
+ * constants and numeric values only, never from peer-supplied strings. The
+ * first reason recorded for a session wins. */
+static void sessionSetCloseReason(session_t *const sess, const int logClass, const char *const fmt, ...) {
+    va_list ap;
+
+    if (sess->closeReason[0] != '\0') {
+        return;
+    }
+    va_start(ap, fmt);
+    vsnprintf(sess->closeReason, sizeof(sess->closeReason), fmt, ap);
+    va_end(ap);
+    sess->closeClass = logClass;
+}
+
+/* Time-based limiter shared by the session-close and max-sessions messages:
+ * the first message of a class is logged, further ones within
+ * IMBEATS_LOG_INTERVAL_MS are only counted. Returns 1 if the caller shall log
+ * and stores the number of messages suppressed since the previous one. */
+static int instanceLogAllowed(instanceConf_t *const inst, const int logClass, unsigned *const suppressed) {
+    const uint64_t now = monotonicMs();
+    int allowed = 0;
+
+    pthread_mutex_lock(&inst->mutSessions);
+    if (!inst->logSeen[logClass] || now == 0 || now < inst->logLastMs[logClass] ||
+        now - inst->logLastMs[logClass] >= IMBEATS_LOG_INTERVAL_MS) {
+        inst->logSeen[logClass] = 1;
+        inst->logLastMs[logClass] = now;
+        *suppressed = inst->logSuppressed[logClass];
+        inst->logSuppressed[logClass] = 0;
+        allowed = 1;
+    } else if (inst->logSuppressed[logClass] < UINT_MAX) {
+        ++inst->logSuppressed[logClass];
+    }
+    pthread_mutex_unlock(&inst->mutSessions);
+    return allowed;
+}
+
+/* Explain why a session was closed for a reason other than a normal peer
+ * close or shutdown. Rate limited per instance and reason class. */
+static void sessionLogClose(session_t *const sess, const rsRetVal closeRet) {
+    instanceConf_t *const inst = sess->inst;
+    const char *reason = sess->closeReason;
+    char tmoReason[IMBEATS_CLOSE_REASON_LEN];
+    int logClass = sess->closeClass;
+    int tmoKind;
+    char tail[80] = "";
+    char localPort[16];
+    unsigned suppressed = 0;
+
+    /* name the actual local port: the configured one may be "0" (dynamic) */
+    snprintf(localPort, sizeof(localPort), "%s", (const char *)inst->port);
+    if (sess->sock >= 0) {
+        struct sockaddr_storage la;
+        socklen_t lalen = sizeof(la);
+        if (getsockname(sess->sock, (struct sockaddr *)&la, &lalen) == 0) {
+            if (la.ss_family == AF_INET) {
+                snprintf(localPort, sizeof(localPort), "%u", (unsigned)ntohs(((struct sockaddr_in *)&la)->sin_port));
+            } else if (la.ss_family == AF_INET6) {
+                snprintf(localPort, sizeof(localPort), "%u", (unsigned)ntohs(((struct sockaddr_in6 *)&la)->sin6_port));
+            }
+        }
+    }
+
+    pthread_mutex_lock(&inst->mutSessions);
+    tmoKind = sess->timedOut;
+    pthread_mutex_unlock(&inst->mutSessions);
+
+    if (tmoKind != IMBEATS_TMO_NONE) {
+        logClass = IMBEATS_LOG_TIMEOUT;
+        switch (tmoKind) {
+            case IMBEATS_TMO_IDLE:
+                snprintf(tmoReason, sizeof(tmoReason), "idle timeout (idleTimeout %u s)", inst->idleTimeout);
+                break;
+            case IMBEATS_TMO_FRAME:
+                snprintf(tmoReason, sizeof(tmoReason), "frame timeout (frameTimeout %u s)", inst->frameTimeout);
+                break;
+            default:
+                snprintf(tmoReason, sizeof(tmoReason), "window timeout (windowTimeout %u s)", inst->windowTimeout);
+                break;
+        }
+        reason = tmoReason;
+    } else if (reason[0] == '\0') {
+        if (closeRet == RS_RET_OK || closeRet == RS_RET_CLOSED) {
+            return; /* normal peer close or shutdown */
+        }
+        reason = "internal error";
+        logClass = IMBEATS_LOG_ERROR;
+    }
+
+    if (!instanceLogAllowed(inst, logClass, &suppressed)) {
+        return;
+    }
+    if (suppressed != 0) {
+        snprintf(tail, sizeof(tail), " (%u similar messages suppressed since the last report)", suppressed);
+    }
+    LogError(0, (closeRet == RS_RET_OK) ? RS_RET_CLOSED : closeRet,
+             "imbeats: closing session from %s:%s on port %s%s%s%s: %s%s",
+             (sess->fromHostIPStr != NULL) ? sess->fromHostIPStr : "?",
+             (sess->fromHostPortStr != NULL) ? sess->fromHostPortStr : "?", localPort,
+             (inst->pszInputName != NULL) ? " (input name '" : "",
+             (inst->pszInputName != NULL) ? (const char *)inst->pszInputName : "",
+             (inst->pszInputName != NULL) ? "')" : "", reason, tail);
+}
+
+static rsRetVal sessionAllocatePayloadLogged(session_t *const sess) {
+    const rsRetVal iRet = sessionAllocatePayload(sess, sess->payload_len);
+
+    if (iRet != RS_RET_OK) {
+        sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                              "cannot accept frame of %zu bytes: in-flight byte limit (maxInFlightBytes) "
+                              "reached or allocation failed",
+                              sess->payload_len);
+    }
+    return iRet;
 }
 
 static rsRetVal sessionProcess(session_t *const sess) {
@@ -965,6 +1117,7 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 CHKiRet(iRet);
                 ++reads;
                 if (sess->fixed[0] != LJ_VERSION_V2 || sess->fixed[1] != LJ_FRAME_WINDOW) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_PROTOCOL, "invalid frame type, expected a window frame");
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
                 sess->state = IMBEATS_ST_READ_WINDOW_SIZE;
@@ -976,13 +1129,26 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 ++reads;
                 memcpy(&net32, sess->fixed, sizeof(net32));
                 net32 = ntohl(net32);
-                CHKiRet(lj_parse_window_header((const unsigned char[]){LJ_VERSION_V2, LJ_FRAME_WINDOW}, net32));
+                iRet = lj_parse_window_header((const unsigned char[]){LJ_VERSION_V2, LJ_FRAME_WINDOW}, net32);
+                if (iRet != RS_RET_OK) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_PROTOCOL, "invalid window size %u", (unsigned)net32);
+                }
+                CHKiRet(iRet);
                 if (net32 > sess->inst->maxWindowSize) {
                     STATSCOUNTER_INC(statsCounter.ctrWindowsRejected, statsCounter.mutCtrWindowsRejected);
+                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT, "window size %u exceeds maxWindowSize %u",
+                                          (unsigned)net32, (unsigned)sess->inst->maxWindowSize);
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
-                CHKiRet(lj_batch_alloc(&sess->batch, net32, sess->inst->maxWindowSize, sess->inst->maxBatchBytes,
-                                       reserveInstanceBytes, releaseInstanceBytes, sess->inst));
+                iRet = lj_batch_alloc(&sess->batch, net32, sess->inst->maxWindowSize, sess->inst->maxBatchBytes,
+                                      reserveInstanceBytes, releaseInstanceBytes, sess->inst);
+                if (iRet != RS_RET_OK) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                                          "cannot accept window of %u events: in-flight byte limit "
+                                          "(maxInFlightBytes) reached or allocation failed",
+                                          (unsigned)net32);
+                }
+                CHKiRet(iRet);
                 sess->batchActive = 1;
                 sessionRecordWindowStart(sess);
                 sessionRecordFrameComplete(sess);
@@ -995,6 +1161,7 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 CHKiRet(iRet);
                 ++reads;
                 if (sess->fixed[0] != LJ_VERSION_V2) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_PROTOCOL, "unsupported protocol version in frame header");
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
                 if (sess->fixed[1] == LJ_FRAME_JSON) {
@@ -1003,6 +1170,7 @@ static rsRetVal sessionProcess(session_t *const sess) {
                     STATSCOUNTER_INC(statsCounter.ctrCompressedFrames, statsCounter.mutCtrCompressedFrames);
                     sess->state = IMBEATS_ST_READ_COMP_LEN;
                 } else {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_PROTOCOL, "invalid frame type");
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
                 break;
@@ -1024,9 +1192,12 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 sess->payload_len = ntohl(net32);
                 if (sess->payload_len == 0 || sess->payload_len > sess->inst->maxFrameSize) {
                     STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
+                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                                          "JSON frame size %zu is zero or exceeds maxFrameSize %zu", sess->payload_len,
+                                          sess->inst->maxFrameSize);
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
-                CHKiRet(sessionAllocatePayload(sess, sess->payload_len));
+                CHKiRet(sessionAllocatePayloadLogged(sess));
                 sess->state = IMBEATS_ST_READ_JSON_PAYLOAD;
                 break;
             case IMBEATS_ST_READ_JSON_PAYLOAD:
@@ -1043,6 +1214,10 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 }
                 if (iRet == RS_RET_INVALID_VALUE) {
                     STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
+                }
+                if (iRet != RS_RET_OK) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                                          "JSON event rejected (maxBatchBytes, window event count or frame limit)");
                 }
                 CHKiRet(iRet);
                 sessionRecordFrameComplete(sess);
@@ -1063,9 +1238,12 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 if (sess->payload_len == 0 || sess->payload_len > sess->inst->maxFrameSize) {
                     STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
                     STATSCOUNTER_INC(statsCounter.ctrCompressedRejected, statsCounter.mutCtrCompressedRejected);
+                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                                          "compressed frame size %zu is zero or exceeds maxFrameSize %zu",
+                                          sess->payload_len, sess->inst->maxFrameSize);
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
-                CHKiRet(sessionAllocatePayload(sess, sess->payload_len));
+                CHKiRet(sessionAllocatePayloadLogged(sess));
                 sess->state = IMBEATS_ST_READ_COMP_PAYLOAD;
                 break;
             case IMBEATS_ST_READ_COMP_PAYLOAD:
@@ -1080,6 +1258,10 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 if (iRet == RS_RET_INVALID_VALUE) {
                     STATSCOUNTER_INC(statsCounter.ctrCompressedRejected, statsCounter.mutCtrCompressedRejected);
                 }
+                if (iRet != RS_RET_OK) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                                          "compressed frame rejected (malformed data or decompression limit)");
+                }
                 CHKiRet(iRet);
                 sessionRecordFrameComplete(sess);
                 sess->state = (sess->batch.count == sess->batch.window_size) ? IMBEATS_ST_SUBMIT_EVENTS
@@ -1091,7 +1273,12 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 break;
             case IMBEATS_ST_SUBMIT_EVENTS:
                 while (sess->submitIdx < sess->batch.count) {
-                    CHKiRet(submitEvent(sess, &sess->batch.events[sess->submitIdx]));
+                    iRet = submitEvent(sess, &sess->batch.events[sess->submitIdx]);
+                    if (iRet != RS_RET_OK) {
+                        sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "failed to submit event %zu of the window",
+                                              sess->submitIdx + 1);
+                    }
+                    CHKiRet(iRet);
                     ++sess->submitIdx;
                     if (sess->inst->starvationMaxReads != 0 && ++reads >= sess->inst->starvationMaxReads) {
                         STATSCOUNTER_INC(statsCounter.ctrStarvationProtect, statsCounter.mutCtrStarvationProtect);
@@ -1107,6 +1294,7 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 ++reads;
                 break;
             default:
+                sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "invalid internal session state");
                 ABORT_FINALIZE(RS_RET_INVALID_VALUE);
         }
     }
@@ -1201,8 +1389,10 @@ static void destroySession(session_t *sess) {
     free(sess);
 }
 
-static void closeSession(session_t *const sess) {
+static void closeSession(session_t *const sess, const rsRetVal closeRet) {
     instanceConf_t *const inst = sess->inst;
+
+    sessionLogClose(sess, closeRet);
 #if defined(IMBEATS_HAVE_EPOLL)
     if (inst->epoll_fd >= 0 && sess->sock >= 0) {
         (void)epoll_ctl(inst->epoll_fd, EPOLL_CTL_DEL, sess->sock, NULL);
@@ -1294,6 +1484,7 @@ static int sessionClaimAwaitingNetwork(session_t *const sess) {
 
 static rsRetVal sessionRearmForNetwork(session_t *const sess) {
     const uint64_t now = monotonicMs();
+    int expiredKind;
     rsRetVal iRet = RS_RET_OK;
 
     /* Publish readiness ownership only after epoll has been rearmed. The
@@ -1303,9 +1494,9 @@ static rsRetVal sessionRearmForNetwork(session_t *const sess) {
     pthread_mutex_lock(&sess->inst->mutSessions);
     if (sess->done || sess->inst->shuttingDown) {
         iRet = RS_RET_CLOSED;
-    } else if (sessionExpiredLocked(sess, now)) {
+    } else if ((expiredKind = sessionExpiredLocked(sess, now)) != IMBEATS_TMO_NONE) {
         if (!sess->timedOut) {
-            sess->timedOut = 1;
+            sess->timedOut = expiredKind;
             STATSCOUNTER_INC(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
         }
         iRet = RS_RET_CLOSED;
@@ -1332,13 +1523,14 @@ static void *workerThread(void *arg) {
         (void)sessionClaimAwaitingNetwork(sess);
         const rsRetVal iRet = sessionProcess(sess);
         if (iRet == RS_RET_RETRY) {
-            if (sessionRearmForNetwork(sess) != RS_RET_OK) {
-                closeSession(sess);
+            const rsRetVal rearmRet = sessionRearmForNetwork(sess);
+            if (rearmRet != RS_RET_OK) {
+                closeSession(sess, rearmRet);
             }
         } else if (iRet == RS_RET_OK) {
             enqueueSession(sess);
         } else {
-            closeSession(sess);
+            closeSession(sess, iRet);
         }
     }
     return NULL;
@@ -1368,7 +1560,16 @@ static rsRetVal spawnSession(instanceConf_t *const inst, netstrm_t **const ppNew
     if (inst->activeSessions >= inst->maxSessions) {
         pthread_mutex_unlock(&inst->mutSessions);
         STATSCOUNTER_INC(statsCounter.ctrConnectionsRejected, statsCounter.mutCtrConnectionsRejected);
-        LogError(0, RS_RET_MAX_SESS_REACHED, "imbeats: too many sessions - dropping incoming request");
+        {
+            char tail[80] = "";
+            unsigned suppressed = 0;
+            if (instanceLogAllowed(inst, IMBEATS_LOG_MAXSESS, &suppressed)) {
+                if (suppressed != 0) {
+                    snprintf(tail, sizeof(tail), " (%u similar messages suppressed since the last report)", suppressed);
+                }
+                LogError(0, RS_RET_MAX_SESS_REACHED, "imbeats: too many sessions - dropping incoming request%s", tail);
+            }
+        }
         ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
     }
     ++inst->activeSessions;
@@ -1624,7 +1825,7 @@ static void *listenerThread(void *arg) {
             } else if (io->type == IMBEATS_IO_SESSION && io->sess != NULL) {
                 if (sessionClaimAwaitingNetwork(io->sess)) {
                     if ((events[n].events & (EPOLLERR | EPOLLHUP)) != 0) {
-                        closeSession(io->sess);
+                        closeSession(io->sess, RS_RET_CLOSED);
                     } else {
                         enqueueSession(io->sess);
                     }
