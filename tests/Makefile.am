@@ -1216,8 +1216,12 @@ TESTS_SNMP_FULL = \
 	sndrcv_omsnmpv1_udp_dynsource.sh \
 	sndrcv_omsnmpv1_udp_invalidoid.sh
 
-TESTS_MMCOUNT = mmcount-distinct-values.sh
-TESTS_MMCOUNT_YAML = yaml-mmcount-distinct-values.sh
+TESTS_MMCOUNT = \
+	mmcount-distinct-values.sh \
+	mmcount-maxcardinality.sh
+TESTS_MMCOUNT_YAML = \
+	yaml-mmcount-distinct-values.sh \
+	yaml-mmcount-maxcardinality.sh
 EXTRA_DIST += $(TESTS_MMCOUNT) $(TESTS_MMCOUNT_YAML)
 
 TESTS_MMUTF8FIX = \

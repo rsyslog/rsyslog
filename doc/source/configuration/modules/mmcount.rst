@@ -51,6 +51,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmcount-value.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmcount-maxcardinality`
+     - .. include:: ../../reference/parameters/mmcount-maxcardinality.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 .. toctree::
@@ -59,6 +63,7 @@ Action Parameters
    ../../reference/parameters/mmcount-appname
    ../../reference/parameters/mmcount-key
    ../../reference/parameters/mmcount-value
+   ../../reference/parameters/mmcount-maxcardinality
 
 
 Examples
@@ -75,6 +80,9 @@ Example usage of the module in the configuration file.
 
    # count each value of gf_code of appname gluster
    action(type="mmcount" appname="glusterd" key="!gf_code")
+
+   # count each value of gf_code, but track at most 500 distinct values
+   action(type="mmcount" appname="glusterd" key="!gf_code" maxCardinality="500")
 
    # count value 9999 of gf_code of appname gluster
    action(type="mmcount" appname="glusterfsd" key="!gf_code" value="9999")

@@ -41,3 +41,6 @@ exact message bytes against ordinary-space and dedup-off controls.
 - `tests/mmcount-distinct-values.sh` verifies independent counters for distinct
   property values with colliding hashes. Its YAML companion checks action
   parameter parity.
+- `tests/mmcount-maxcardinality.sh` verifies that `maxCardinality` bounds the
+  number of tracked values, keeps counting already tracked values, and warns
+  once. Its YAML companion checks action parameter parity.
