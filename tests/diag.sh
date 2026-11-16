@@ -17,6 +17,11 @@
 #		the testbench utilizing this, use
 #		export SUDO=sudo
 #		to activate the extra functionality.
+# SIDECAR_TEST_PYTHON
+#               Python interpreter for the optional Prometheus sidecar test,
+#               defaulting to "python3" when unset or empty. Select an interpreter
+#               with Python 3.8+ and the prometheus_client and werkzeug dependencies
+#               installed; missing prerequisites cause the test to skip.
 # RS_SORTCMD    Sort command to use (must support $RS_SORT_NUMERIC_OPT option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
 # RS_SORT_NUMERIC_OPT option to use for numerical sort, If unset "-g" is used.

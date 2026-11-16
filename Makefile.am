@@ -5,6 +5,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
 	devtools/gather-check-logs.sh \
+	sidecar/rsyslog_exporter.py \
 	devtools/record-container-validation.py \
 	README.md \
 	platform/README \
