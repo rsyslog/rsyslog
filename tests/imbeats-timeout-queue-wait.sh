@@ -17,7 +17,19 @@
 # it (the client sees EOF or reset). The 2s margin over idleTimeout and the
 # 20s client receive timeout keep the test stable on slow hosts; the sleeps
 # are fixed, so a slower host only lengthens B's queue wait.
+#
+# The forgiveness only exists on the epoll dispatcher: the portable poll
+# fallback queues sessions without readiness information and charges the wait
+# by design, so B would legitimately be closed as idle there. The test is
+# therefore skipped (77) on builds without epoll, probed the same way imbeats
+# itself decides (HAVE_SYS_EPOLL_H plus HAVE_EPOLL_CREATE).
 . ${srcdir:=.}/diag.sh init
+
+if ! grep -q '^#define HAVE_SYS_EPOLL_H 1' ../config.h ||
+	! grep -q '^#define HAVE_EPOLL_CREATE 1' ../config.h; then
+	echo "imbeats charges the work-queue wait without the epoll dispatcher"
+	exit 77
+fi
 
 generate_conf
 add_conf '

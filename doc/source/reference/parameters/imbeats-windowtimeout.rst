@@ -44,10 +44,18 @@ window timeout. The independent :ref:`param-imbeats-idletimeout` and
 :ref:`param-imbeats-frametimeout` settings may still close the session earlier.
 
 Time a session spends waiting for a free
-:ref:`worker thread <param-imbeats-workerthreads>` after the client has sent
-data is local delay and is not counted against this deadline, so busy workers do not cause well-behaved clients to time out. This
-applies where ``imbeats`` uses epoll (Linux); the portable poll fallback
-cannot tell whether a queued session has pending data and counts that time.
+:ref:`worker thread <param-imbeats-workerthreads>` is local delay and is not
+counted against this deadline in two cases: when the session became ready
+because the peer acted (it sent data, closed, or made room for an
+acknowledgement), and when the session was requeued by
+:ref:`starvation protection <param-imbeats-starvationprotection-maxreads>`
+after it had already made progress. Busy workers therefore do not turn a
+well-behaved client into a timeout.
+
+This forgiveness applies where ``imbeats`` uses epoll (Linux). The portable
+poll fallback queues sessions without knowing whether input is available, so
+its accept and re-arm hand-offs are not forgiven there and an idle peer still
+times out.
 
 Input usage
 -----------
