@@ -1,0 +1,16 @@
+plugins/imjournal/imjournal.c
+  h_95716f3de0caf5 497,501-520,522-523,525-528,530-532,534,536,538-545,547-550,552-556
+tests/imjournal-field-bounds.sh
+  h_95716f3de0caf5 144-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "41f025945387f011fc3185fea322e07c984d8daf",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
