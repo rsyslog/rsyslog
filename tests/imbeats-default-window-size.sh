@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Verify the default maxWindowSize of imbeats: a window of 2048 events (the
 # default bulk_max_size of the Beats Logstash output) is accepted when no
 # maxWindowSize is configured, and a window announcing 2049 events is
