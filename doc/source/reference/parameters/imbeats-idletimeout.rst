@@ -44,6 +44,12 @@ unacknowledged retransmission. The resumed interval also bounds a client that
 stops reading its acknowledgement. Use :ref:`param-imbeats-frametimeout` to
 place an absolute deadline on a partially received frame.
 
+Time a session spends waiting for a free
+:ref:`worker thread <param-imbeats-workerthreads>` after the client has sent
+data is local delay and is not counted against this deadline, so busy workers do not cause well-behaved clients to time out. This
+applies where ``imbeats`` uses epoll (Linux); the portable poll fallback
+cannot tell whether a queued session has pending data and counts that time.
+
 Input usage
 -----------
 .. _param-imbeats-input-idletimeout:

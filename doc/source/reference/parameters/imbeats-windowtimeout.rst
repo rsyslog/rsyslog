@@ -43,6 +43,12 @@ complete, sequence-valid batch enters submission. The value ``0`` disables the
 window timeout. The independent :ref:`param-imbeats-idletimeout` and
 :ref:`param-imbeats-frametimeout` settings may still close the session earlier.
 
+Time a session spends waiting for a free
+:ref:`worker thread <param-imbeats-workerthreads>` after the client has sent
+data is local delay and is not counted against this deadline, so busy workers do not cause well-behaved clients to time out. This
+applies where ``imbeats`` uses epoll (Linux); the portable poll fallback
+cannot tell whether a queued session has pending data and counts that time.
+
 Input usage
 -----------
 .. _param-imbeats-input-windowtimeout:
