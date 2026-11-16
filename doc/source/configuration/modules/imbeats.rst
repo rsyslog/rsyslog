@@ -56,6 +56,15 @@ common Elasticsearch-oriented pipelines:
 - listener-side session limits and worker settings bound concurrent sender
   fan-in and provide fairness between active sessions
 
+The metadata object is owned by the module: a ``metadata`` member sent by
+the client cannot override ``$!metadata!imbeats``. If a client event carries a
+top-level ``metadata`` member that is not a JSON object (for example a string,
+number, array, or ``null``), the member is replaced by an empty object in
+``$!`` so that the module metadata can be attached, and the event is accepted
+and acknowledged as usual. The original value remains visible in ``msg`` and
+``rawmsg``. A ``metadata.imbeats`` member sent by the client is likewise
+replaced by the module metadata.
+
 This default may be revisited later. A user-selectable representation mode is
 not part of the initial release.
 
