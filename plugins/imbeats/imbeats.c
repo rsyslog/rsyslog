@@ -1085,7 +1085,8 @@ static void sessionLogClose(session_t *const sess, const rsRetVal closeRet) {
     if (sess->sock >= 0) {
         struct sockaddr_storage la;
         socklen_t lalen = sizeof(la);
-        if (getsockname(sess->sock, (struct sockaddr *)&la, &lalen) == 0) {
+        memset(&la, 0, sizeof(la));
+        if (getsockname(sess->sock, (struct sockaddr *)&la, &lalen) == 0 && lalen >= sizeof(la.ss_family)) {
             if (la.ss_family == AF_INET) {
                 snprintf(localPort, sizeof(localPort), "%u", (unsigned)ntohs(((struct sockaddr_in *)&la)->sin_port));
             } else if (la.ss_family == AF_INET6) {
