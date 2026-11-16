@@ -341,7 +341,7 @@ imbeats:
     - maxCompressionRatio and maxDecompressedSize jointly bound compressed-frame expansion.
     - idleTimeout closes sessions with no byte progress; frameTimeout bounds one frame and windowTimeout bounds one advertised window with absolute deadlines that trickle traffic cannot extend. These network deadlines pause while a complete batch is submitted and resume for its ACK. A value of 0 disables the corresponding timeout.
     - JSON event payloads must be exactly one object, apart from surrounding whitespace. Malformed, non-object, trailing-content, resource-limited, or timed-out traffic is not acknowledged.
-    - Valid Lumberjack v2 W, J, and C flows retain cumulative A acknowledgement behavior.
+    - Lumberjack v2 sequence numbers are per window (1..n as sent by Beats, or continuing from the last ACK for cumulative senders) and must be consecutive; each completed window is ACKed with the sequence number of its last event.
     - TLS deployments require an installed rsyslog TLS stream-driver package or module, such as rsyslog-gnutls or rsyslog-openssl.
     - The common Elastic Agent TLS setup validates the rsyslog server certificate but does not present a client certificate; use streamDriver.authMode=anon for that pattern and stricter auth modes only with sender client certificates.
     - Compressed Lumberjack v2 frames are supported and should be tested with Beats compression enabled.

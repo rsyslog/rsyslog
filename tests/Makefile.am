@@ -1666,7 +1666,8 @@ TESTS_IMBEATS = \
 	imbeats-compressed.sh \
 	imbeats-seq-cumulative-two-windows.sh \
 	imbeats-seq-cumulative-after-multi-event-window.sh \
-	imbeats-seq-reset-rejected.sh \
+	imbeats-seq-restart-per-window.sh \
+	imbeats-seq-invalid-in-window.sh \
 	imbeats-metadata-collision.sh \
 	imbeats-elastic-agent-windows-fixture.sh \
 	imbeats-limits.sh \
