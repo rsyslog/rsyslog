@@ -808,7 +808,9 @@ static rsRetVal sessionValidateBatch(session_t *const sess) {
         struct fjson_object *json = NULL;
         rsRetVal iRet;
 
-        if (!imbeats_seq_is_expected(sess->lastAckedSeq, idx, sess->batch.events[idx].seq)) {
+        /* Sequence numbers restart at 1 in every window (Beats clients) or
+         * continue from the last ACK (cumulative senders); see seqnum.h. */
+        if (!imbeats_seq_is_expected(sess->lastAckedSeq, sess->batch.events[0].seq, idx, sess->batch.events[idx].seq)) {
             return RS_RET_INVALID_VALUE;
         }
         iRet = parseJsonEvent(&sess->batch.events[idx], &json);

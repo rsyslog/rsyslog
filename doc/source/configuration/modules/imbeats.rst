@@ -39,7 +39,7 @@ The first implementation supports:
 - ``W`` window frames
 - ``J`` JSON event frames
 - ``C`` compressed frames
-- cumulative ``A`` acknowledgements
+- ``A`` acknowledgements carrying the last sequence number of each window
 
 The first implementation intentionally optimizes the internal event shape for
 common Elasticsearch-oriented pipelines:
@@ -163,9 +163,23 @@ bytes are rejected. The original accepted JSON text remains available in
 Malformed frames, resource-limit violations, decompression-limit violations,
 and session, frame, or window timeouts fail closed. ``imbeats`` closes the affected
 session, releases its charged resources, and does not acknowledge the
-incomplete batch. Lumberjack v2 ``W``, ``J``, and ``C`` traffic retains normal
-cumulative ``A`` acknowledgement behavior when it remains within the
-configured size, resource, compression, and timeout limits.
+incomplete batch.
+
+Lumberjack v2 sequence numbers are scoped to a window. Beats and Elastic Agent
+number the events of every window ``1`` to ``n``, and ``imbeats`` accepts that
+numbering on every window of a connection. For compatibility with senders that
+continue the numbering across windows, a window may instead start at the
+sequence number following the last acknowledged one. In both cases the
+sequence numbers inside a window must increase by exactly one per event. A
+window with any other numbering, for example a gap, a duplicate, or an
+out-of-order event, is a protocol error: the session is closed and no event of
+that window is submitted or acknowledged.
+
+Once a complete window has been validated and all of its events have been
+submitted, ``imbeats`` sends one ``A`` frame carrying the sequence number of
+the last event of that window. For Beats clients this equals the number of
+events in the window. ``$!metadata!imbeats!sequence`` always contains the
+sequence number as sent on the wire.
 
 
 Configuration Parameters
