@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Verify that Lumberjack v2 sequence numbers are scoped to a window.
 #
 # Beats clients (go-lumber, used by Filebeat and Elastic Agent) number the

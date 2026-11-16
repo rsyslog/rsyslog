@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Verify that a window whose sequence numbers are not consecutive is rejected
 # as a whole: no event of that window is submitted and no ACK is sent.
 #
@@ -10,11 +11,14 @@
 #   gap:     1, 3, 4
 #   order:   1, 3, 2
 #   start:   4, 5, 6  (neither 1 nor last ACK + 1)
-# Oracle: each connection receives exactly the ACK for its valid window; the
-# invalid window gets no ACK (the server closes the connection, seen by the
-# client as EOF, reset or a 5 s receive timeout), and the output contains only
-# the events of the valid windows, so nothing of an invalid window was
-# partially accepted.
+# Oracle, all three parts required:
+#  1. each connection receives exactly the ACK for its valid window;
+#  2. the rejected window is answered by closing the connection: the client
+#     must observe EOF or a reset. Silence is NOT accepted as proof of
+#     rejection - the 5 s socket timeout fails the test, so a server that
+#     keeps a rejected session open (or stalls) cannot pass;
+#  3. the output contains only the events of the valid windows, so no event of
+#     an invalid window was partially accepted.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
@@ -37,7 +41,7 @@ input(type="imbeats"
 startup
 assign_rs_port "$RSYSLOG_DYNNAME.imbeats.port"
 
-python3 - "$RS_PORT" > "$RSYSLOG_DYNNAME.imbeats.ack" <<'PY'
+if ! python3 - "$RS_PORT" > "$RSYSLOG_DYNNAME.imbeats.ack" <<'PY'
 import json
 import socket
 import struct
@@ -51,31 +55,52 @@ def frame(seq, message):
     return b"2J" + struct.pack(">I", seq) + struct.pack(">I", len(payload)) + payload
 
 
-def recv_ack(sock):
+def recv_ack(sock, what):
+    """Read the ACK of the valid window; a missing ACK fails the test."""
     data = b""
-    try:
-        while len(data) < 6:
+    while len(data) < 6:
+        try:
             chunk = sock.recv(6 - len(data))
-            if not chunk:
-                break
-            data += chunk
-    except (ConnectionResetError, TimeoutError, socket.timeout):
-        pass
-    return data.hex() if data else "none"
+        except (ConnectionResetError, TimeoutError, socket.timeout):
+            raise SystemExit(f"{what}: no ACK for the valid window")
+        if not chunk:
+            raise SystemExit(f"{what}: connection closed before the ACK")
+        data += chunk
+    return data.hex()
+
+
+def expect_closed(sock, what):
+    """Positive oracle for the rejected window: the server must close the
+    connection. EOF and reset both qualify; the socket timeout does not, so a
+    session that is merely kept silent fails the test."""
+    try:
+        data = sock.recv(6)
+    except (ConnectionResetError, BrokenPipeError):
+        return "closed"
+    except (TimeoutError, socket.timeout):
+        raise SystemExit(f"{what}: connection was neither closed nor reset")
+    if data:
+        raise SystemExit(f"{what}: unexpected data after the invalid window: {data.hex()}")
+    return "closed"
 
 
 for name, seqs in (("gap", (1, 3, 4)), ("order", (1, 3, 2)), ("start", (4, 5, 6))):
     with socket.create_connection(("127.0.0.1", port), timeout=5) as sock:
         sock.settimeout(5)
         sock.sendall(b"2W" + struct.pack(">I", 2) + frame(1, name + "-ok-1") + frame(2, name + "-ok-2"))
-        print(name, recv_ack(sock))
+        print(name, recv_ack(sock, name))
         bad = b"".join(frame(seq, "%s-bad-%d" % (name, seq)) for seq in seqs)
         try:
             sock.sendall(b"2W" + struct.pack(">I", len(seqs)) + bad)
         except (BrokenPipeError, ConnectionResetError):
-            pass
-        print(name, recv_ack(sock))
+            # the server closed while we were still writing
+            print(name, "closed")
+            continue
+        print(name, expect_closed(sock, name))
 PY
+then
+	error_exit 1
+fi
 
 shutdown_when_empty
 wait_shutdown
@@ -90,11 +115,11 @@ EXPECTED='{"message":"gap-ok-1"}|1
 cmp_exact
 
 EXPECTED_ACK='gap 324100000002
-gap none
+gap closed
 order 324100000002
-order none
+order closed
 start 324100000002
-start none'
+start closed'
 if [ "$(cat "$RSYSLOG_DYNNAME.imbeats.ack")" != "$EXPECTED_ACK" ]; then
 	echo "FAIL: unexpected ACK sequence; expected:"
 	echo "$EXPECTED_ACK"
