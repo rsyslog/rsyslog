@@ -46,6 +46,12 @@ keep imfile-rename.sh
 # deliberate 3 s pause, no Solaris-specific need.
 skip imbeats-idle-between-windows.sh
 
+# imbeats session-close diagnostics: the message text and its rate limiter are
+# platform-independent, and both tests wait for an idleTimeout. Covered on
+# Linux for both config frontends; no Solaris portability oracle.
+skip imbeats-session-close-logging.sh
+skip yaml-imbeats-session-close-logging.sh
+
 # mmcount counter tests (collision counters, cardinality limit):
 # platform-independent contrib-module behavior. Both frontends stay covered on
 # Linux; none adds a Solaris portability oracle.

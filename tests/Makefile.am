@@ -1700,6 +1700,7 @@ TESTS_IMBEATS_IMPSTATS = \
 TESTS_IMBEATS_YAML = \
 	yaml-imbeats-basic.sh \
 	yaml-imbeats-default-window-size.sh \
+	yaml-imbeats-session-close-logging.sh \
 	yaml-imbeats-session-timeouts.sh
 
 TESTS_IMBEATS_ELASTICSEARCH = \

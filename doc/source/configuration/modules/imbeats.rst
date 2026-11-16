@@ -183,7 +183,9 @@ sequence number as sent on the wire.
 
 When a session is closed for a reason other than a normal close by the peer or
 rsyslog shutdown, ``imbeats`` logs one message that names the peer address and
-port, the local port and input name, the reason, and the rsyslog error code.
+port, the local port, the reason, and the rsyslog error code. The input name is
+part of the message only when the input's ``name`` parameter is set; inputs
+without ``name`` are identified by the local port alone.
 Typical reasons are an invalid frame type, a sequence number mismatch, a window
 or frame that exceeds the configured limits, a rejected compressed frame, an
 event that cannot be submitted, and ``idleTimeout``, ``frameTimeout``, or

@@ -887,6 +887,11 @@ static void sessionResetForNextBatch(session_t *const sess) {
     sess->pendingSeq = 0;
     sess->payload_len = 0;
     sess->ack_off = 0;
+    /* The session has completed and acknowledged a batch. Drop any reason
+     * recorded while that batch was processed so a later, unrelated close
+     * cannot report it. */
+    sess->closeReason[0] = '\0';
+    sess->closeClass = IMBEATS_LOG_PROTOCOL; /* unused while closeReason is empty */
     sess->state = IMBEATS_ST_READ_WINDOW_HDR;
 }
 
@@ -963,7 +968,13 @@ static rsRetVal sessionSendAckStep(session_t *const sess) {
         iRet = netstrm.Send(sess->pStrm, sess->ack + sess->ack_off, &to_send);
         if (iRet != RS_RET_OK) {
             STATSCOUNTER_INC(statsCounter.ctrAckFailures, statsCounter.mutCtrAckFailures);
-            sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "failed to send acknowledgement");
+            /* RS_RET_RETRY only means the stream driver must do more I/O
+             * before the ACK can be written. The session stays alive, so it
+             * must not keep a close reason that would later be reported for
+             * an unrelated close. */
+            if (iRet != RS_RET_RETRY) {
+                sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "failed to send acknowledgement");
+            }
             return iRet;
         }
         if (to_send == 0) {
@@ -991,6 +1002,47 @@ static void sessionSetCloseReason(session_t *const sess, const int logClass, con
     vsnprintf(sess->closeReason, sizeof(sess->closeReason), fmt, ap);
     va_end(ap);
     sess->closeClass = logClass;
+}
+
+/* Read-only probe of the instance in-flight budget: would reserving `amount`
+ * bytes be refused right now? reserveInstanceBytes() reports a fully used
+ * configured budget as RS_RET_OUT_OF_MEMORY, so the return code alone cannot
+ * tell a configured-limit rejection from a failed allocation. This repeats the
+ * budget check without touching any accounting and is used for diagnostic
+ * wording only, so a concurrent release in between is acceptable. */
+static int instanceInFlightBudgetFull(instanceConf_t *const inst, const size_t amount) {
+    int full;
+
+    pthread_mutex_lock(&inst->mutSessions);
+    full = (amount > inst->maxInFlightBytes || inst->inFlightBytes > inst->maxInFlightBytes - amount);
+    pthread_mutex_unlock(&inst->mutSessions);
+    return full;
+}
+
+/* Record the close reason for data that could not be buffered. `what` names
+ * the data, `amount` is the number of bytes that had to be reserved, or 0 when
+ * the caller cannot know it (the allocation happens inside a helper that grows
+ * its own buffers); in that case the message names both possible causes
+ * instead of guessing one. */
+static void sessionSetBufferCloseReason(session_t *const sess,
+                                        const rsRetVal bufferRet,
+                                        const char *const what,
+                                        const size_t amount) {
+    instanceConf_t *const inst = sess->inst;
+
+    if (bufferRet != RS_RET_OUT_OF_MEMORY) {
+        sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "cannot buffer %s (error code %d)", what, (int)bufferRet);
+    } else if (amount == 0) {
+        sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
+                              "cannot buffer %s: maxInFlightBytes %zu reached or allocation failed", what,
+                              inst->maxInFlightBytes);
+    } else if (instanceInFlightBudgetFull(inst, amount)) {
+        sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT, "cannot buffer %s of %zu bytes: maxInFlightBytes %zu reached",
+                              what, amount, inst->maxInFlightBytes);
+    } else {
+        sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "cannot buffer %s of %zu bytes: allocation failed", what,
+                              amount);
+    }
 }
 
 /* Time-based limiter shared by the session-close and max-sessions messages:
@@ -1084,13 +1136,11 @@ static void sessionLogClose(session_t *const sess, const rsRetVal closeRet) {
 }
 
 static rsRetVal sessionAllocatePayloadLogged(session_t *const sess) {
-    const rsRetVal iRet = sessionAllocatePayload(sess, sess->payload_len);
+    const size_t payloadLen = sess->payload_len;
+    const rsRetVal iRet = sessionAllocatePayload(sess, payloadLen);
 
     if (iRet != RS_RET_OK) {
-        sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
-                              "cannot accept frame of %zu bytes: in-flight byte limit (maxInFlightBytes) "
-                              "reached or allocation failed",
-                              sess->payload_len);
+        sessionSetBufferCloseReason(sess, iRet, "the frame payload", (payloadLen == SIZE_MAX) ? 0 : payloadLen + 1);
     }
     return iRet;
 }
@@ -1143,10 +1193,11 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 iRet = lj_batch_alloc(&sess->batch, net32, sess->inst->maxWindowSize, sess->inst->maxBatchBytes,
                                       reserveInstanceBytes, releaseInstanceBytes, sess->inst);
                 if (iRet != RS_RET_OK) {
-                    sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
-                                          "cannot accept window of %u events: in-flight byte limit "
-                                          "(maxInFlightBytes) reached or allocation failed",
-                                          (unsigned)net32);
+                    /* lj_batch_alloc() only validates the window parameters,
+                     * it does not allocate or charge anything yet */
+                    sessionSetCloseReason(sess, IMBEATS_LOG_ERROR,
+                                          "cannot prepare the window of %u events (error code %d)", (unsigned)net32,
+                                          (int)iRet);
                 }
                 CHKiRet(iRet);
                 sess->batchActive = 1;
@@ -1214,10 +1265,11 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 }
                 if (iRet == RS_RET_INVALID_VALUE) {
                     STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
-                }
-                if (iRet != RS_RET_OK) {
                     sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
-                                          "JSON event rejected (maxBatchBytes, window event count or frame limit)");
+                                          "the JSON event does not fit into the window: maxBatchBytes %zu reached",
+                                          sess->inst->maxBatchBytes);
+                } else if (iRet != RS_RET_OK) {
+                    sessionSetBufferCloseReason(sess, iRet, "the JSON event", 0);
                 }
                 CHKiRet(iRet);
                 sessionRecordFrameComplete(sess);
@@ -1257,10 +1309,16 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 sessionFreePayload(sess);
                 if (iRet == RS_RET_INVALID_VALUE) {
                     STATSCOUNTER_INC(statsCounter.ctrCompressedRejected, statsCounter.mutCtrCompressedRejected);
-                }
-                if (iRet != RS_RET_OK) {
+                    /* the parser reports malformed deflate data, unsupported
+                     * nesting and over-expansion with the same return code */
                     sessionSetCloseReason(sess, IMBEATS_LOG_LIMIT,
-                                          "compressed frame rejected (malformed data or decompression limit)");
+                                          "compressed frame rejected: malformed data, or expansion beyond "
+                                          "maxDecompressedSize %zu / maxCompressionRatio %u",
+                                          sess->inst->maxDecompressedSize, (unsigned)sess->inst->maxCompressionRatio);
+                } else if (iRet == RS_RET_ZLIB_ERR) {
+                    sessionSetCloseReason(sess, IMBEATS_LOG_ERROR, "cannot decompress the frame: zlib setup failed");
+                } else if (iRet != RS_RET_OK) {
+                    sessionSetBufferCloseReason(sess, iRet, "the decompressed frame", 0);
                 }
                 CHKiRet(iRet);
                 sessionRecordFrameComplete(sess);
