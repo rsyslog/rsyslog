@@ -9,6 +9,7 @@ route, and digest, or a deterministic schema-validation failure.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import tempfile
@@ -19,6 +20,7 @@ from pathlib import Path
 BUILDER = Path(__file__).resolve().parents[1] / "build-security-review-input.py"
 BOUNDARIES = ["TB-CI", "TB-PIPELINE"]
 INVARIANTS = ["SI-CI-TRUST-01", "SI-PARSER-SAFETY-01"]
+CODE_SUFFIXES = {".c", ".cc", ".cpp", ".h", ".hh", ".hpp", ".py", ".sh"}
 
 
 class SecurityReviewInputTest(unittest.TestCase):
@@ -263,6 +265,28 @@ class SecurityReviewInputTest(unittest.TestCase):
                     self.assertTrue(
                         any(repository.glob(hint)), f"missing test hint for {component['id']}: {hint}"
                     )
+
+    def test_checked_in_source_files_are_mapped(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        listed = subprocess.run(
+            ["git", "ls-files", "-z"], cwd=repository, capture_output=True, check=False
+        )
+        if listed.returncode != 0:
+            self.skipTest("not a git checkout")
+        spec = importlib.util.spec_from_file_location("security_review_input", BUILDER)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        components = json.loads(
+            (repository / "doc/security/threat-model-components.json").read_text(encoding="utf-8")
+        )["components"]
+        unmapped = [
+            path
+            for path in listed.stdout.decode("utf-8", "surrogateescape").split("\0")
+            if Path(path).suffix in CODE_SUFFIXES
+            and builder.is_reviewable(path, [], set())
+            and not builder.match_components(path, components)
+        ]
+        self.assertEqual([], unmapped, "add these paths to doc/security/threat-model-components.json")
 
     def test_unknown_source_path_is_conservatively_unmapped(self) -> None:
         self.write("plugins/newinput/newinput.c", "int newinput;\n")
