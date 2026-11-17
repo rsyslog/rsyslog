@@ -18,6 +18,7 @@
 #include "pmrfc3164.h"
 #include "pmrfc5424.h"
 #include "rsconf.h"
+#include "fuzz_moddir.h"
 
 DEFobjCurrIf(obj);
 
@@ -57,18 +58,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 
 int LLVMFuzzerInitialize(int *argc __attribute__((unused)), char ***argv) {
     const char *errObj = "rsyslog runtime";
-    const char *slash;
-    static char modulePath[PATH_MAX];
-    int len;
 
-    slash = strrchr((*argv)[0], '/');
-    if (slash == NULL) {
-        len = snprintf(modulePath, sizeof(modulePath), "runtime/.libs");
-    } else {
-        len = snprintf(modulePath, sizeof(modulePath), "%.*s/../runtime/.libs", (int)(slash - (*argv)[0]), (*argv)[0]);
-    }
-    if (len < 0 || (size_t)len >= sizeof(modulePath) || setenv("RSYSLOG_MODDIR", modulePath, 1) != 0) abort();
-
+    fuzzSetModuleDir((*argv)[0]);
     fuzzAbortOnError(rsrtInit(&errObj, &obj));
     fuzzAbortOnError(pmrfc3164FuzzInit());
     fuzzAbortOnError(pmrfc5424FuzzInit());
