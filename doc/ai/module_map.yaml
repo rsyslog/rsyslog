@@ -227,6 +227,16 @@ omfwd:
   paths: ["plugins/omfwd/"]
   requires_serialization: false
 
+omclickhouse:
+  paths: ["plugins/omclickhouse/"]
+  requires_serialization: false
+  locks:
+    - type: mutex
+      field: pData.mutErrFile
+  notes:
+    - Each worker owns its CURL handles, header lists, reply buffer, batch buffer, and maxConsecutiveRejects count; action configuration is immutable after newActInst().
+    - The error file descriptor is shared by the workers of an action and is opened, written, and closed on HUP under mutErrFile.
+
 omelasticsearch:
   paths: ["plugins/omelasticsearch/"]
   requires_serialization: false

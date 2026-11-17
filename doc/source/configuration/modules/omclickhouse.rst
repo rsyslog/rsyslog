@@ -18,10 +18,19 @@ This module provides native support for logging to
 To enable the module use "--enable-clickhouse" while configuring rsyslog.
 Tests for the testbench can be enabled with "--enable-clickhouse-tests".
 
+The module supports two insert formats, selected with
+:ref:`param-omclickhouse-format`. With ``values``, the default, the template
+renders a complete ``INSERT ... VALUES`` statement. With ``jsoneachrow``, the
+template renders one JSON object per message and the module builds the
+``INSERT ... FORMAT JSONEachRow`` statement for :ref:`param-omclickhouse-table`.
+
 
 Notable Features
 ================
 
+- JSONEachRow inserts (:ref:`param-omclickhouse-format`), with optional
+  :ref:`gzip compression <param-omclickhouse-compression>` and
+  :ref:`asynchronous inserts <param-omclickhouse-asyncinsert>`
 - :ref:`omclickhouse-error-handling`
 - :ref:`omclickhouse-statistic-counter`
 
@@ -47,12 +56,24 @@ Action Parameters
      - .. include:: ../../reference/parameters/omclickhouse-allowunsignedcerts.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omclickhouse-asyncinsert`
+     - .. include:: ../../reference/parameters/omclickhouse-asyncinsert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omclickhouse-bulkmode`
      - .. include:: ../../reference/parameters/omclickhouse-bulkmode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omclickhouse-compression`
+     - .. include:: ../../reference/parameters/omclickhouse-compression.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omclickhouse-errorfile`
      - .. include:: ../../reference/parameters/omclickhouse-errorfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omclickhouse-format`
+     - .. include:: ../../reference/parameters/omclickhouse-format.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omclickhouse-healthchecktimeout`
@@ -83,6 +104,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omclickhouse-skipverifyhost.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omclickhouse-table`
+     - .. include:: ../../reference/parameters/omclickhouse-table.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omclickhouse-template`
      - .. include:: ../../reference/parameters/omclickhouse-template.rst
         :start-after: .. summary-start
@@ -104,8 +129,11 @@ Action Parameters
    :hidden:
 
    ../../reference/parameters/omclickhouse-allowunsignedcerts
+   ../../reference/parameters/omclickhouse-asyncinsert
    ../../reference/parameters/omclickhouse-bulkmode
+   ../../reference/parameters/omclickhouse-compression
    ../../reference/parameters/omclickhouse-errorfile
+   ../../reference/parameters/omclickhouse-format
    ../../reference/parameters/omclickhouse-healthchecktimeout
    ../../reference/parameters/omclickhouse-maxbytes
    ../../reference/parameters/omclickhouse-maxconsecutiverejects
@@ -113,6 +141,7 @@ Action Parameters
    ../../reference/parameters/omclickhouse-pwd
    ../../reference/parameters/omclickhouse-server
    ../../reference/parameters/omclickhouse-skipverifyhost
+   ../../reference/parameters/omclickhouse-table
    ../../reference/parameters/omclickhouse-template
    ../../reference/parameters/omclickhouse-timeout
    ../../reference/parameters/omclickhouse-usehttps
@@ -251,5 +280,31 @@ rejects are written to the error file.
 
    module(load="omclickhouse")
    action(type="omclickhouse" maxBytes="10mb" errorFile="clickhouse-error.log")
+
+
+Example 4
+---------
+
+This example posts events as JSONEachRow. The ``option.jsonf`` list template
+renders one escaped JSON object per event. ``asyncInsert`` and gzip apply only
+because they are set here. Rows that ClickHouse rejects are written to the
+error file. Other failures suspend the action until the batch can be retried.
+
+.. code-block:: rsyslog
+
+   module(load="omclickhouse")
+   template(name="ClickHouseJson" type="list" option.jsonf="on") {
+       property(outname="message" name="msg" format="jsonf")
+       property(outname="host" name="hostname" format="jsonf")
+   }
+   action(type="omclickhouse"
+          server="127.0.0.1"
+          useHttps="off"
+          format="jsoneachrow"
+          table="rsyslog.events"
+          template="ClickHouseJson"
+          asyncInsert="on"
+          compression="gzip"
+          errorFile="/var/log/clickhouse-error.json")
 
 

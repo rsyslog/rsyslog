@@ -15,7 +15,8 @@ whose body contains that text, before any other rule, with --fail-status (503
 by default) and no code, as a server that is down or restarting while that
 batch is sent. --fail-match answers the first
 --fail-match-count inserts whose body contains that text the same way.
-Other inserts return 200. Each response closes the connection so the
+Other inserts return 200. Gzip request bodies are stored uncompressed. Each
+response closes the connection so the
 single-threaded server can accept the next one. The listen port is written
 only after the socket is bound.
 """
@@ -23,6 +24,7 @@ only after the socket is bound.
 import argparse
 import json
 import os
+import zlib
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
@@ -69,6 +71,14 @@ class Recorder(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0") or 0)
         raw = self.rfile.read(length)
+        encoding = (self.headers.get("Content-Encoding") or "").lower()
+        if encoding == "gzip":
+            try:
+                raw = zlib.decompress(raw, 16 + zlib.MAX_WBITS)
+            except zlib.error as exc:
+                self._record("insert", 500, "gzip decode failed: {0}".format(exc))
+                self._send(500, b"gzip decode failed")
+                return
         text = raw.decode("utf-8", "replace")
         if text == "SELECT 1":
             self._record("health", 200, text)

@@ -1333,11 +1333,14 @@ TESTS_CLICKHOUSE_HTTP = \
 	clickhouse-http-not-insert.sh \
 	clickhouse-http-not-insert-nobulk.sh \
 	clickhouse-http-errorfile-unwritable.sh \
-	clickhouse-http-retry-backoff.sh
+	clickhouse-http-retry-backoff.sh \
+	clickhouse-jsoneachrow.sh
 
 CLICKHOUSE_HTTP_STUB = clickhouse_http_stub.py
 
-TESTS_CLICKHOUSE_HTTP_LIBYAML = yaml-omclickhouse-maxconsecutiverejects.sh
+TESTS_CLICKHOUSE_HTTP_LIBYAML = \
+	yaml-omclickhouse-maxconsecutiverejects.sh \
+	yaml-omclickhouse-jsoneachrow.sh
 
 TESTS_LIBFAKETIME = \
 	action-retry-clock-jump.sh \

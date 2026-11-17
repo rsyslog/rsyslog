@@ -988,8 +988,11 @@ EXTRA_DIST = \
     source/reference/parameters/omkinesis-timeout.rst \
     source/reference/parameters/omkinesis-max_record_size.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
+    source/reference/parameters/omclickhouse-asyncinsert.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
+    source/reference/parameters/omclickhouse-compression.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \
+    source/reference/parameters/omclickhouse-format.rst \
     source/reference/parameters/omclickhouse-healthchecktimeout.rst \
     source/reference/parameters/omclickhouse-maxbytes.rst \
     source/reference/parameters/omclickhouse-maxconsecutiverejects.rst \
@@ -997,6 +1000,7 @@ EXTRA_DIST = \
     source/reference/parameters/omclickhouse-pwd.rst \
     source/reference/parameters/omclickhouse-server.rst \
     source/reference/parameters/omclickhouse-skipverifyhost.rst \
+    source/reference/parameters/omclickhouse-table.rst \
     source/reference/parameters/omclickhouse-template.rst \
     source/reference/parameters/omclickhouse-timeout.rst \
     source/reference/parameters/omclickhouse-usehttps.rst \
