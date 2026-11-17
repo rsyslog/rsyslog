@@ -655,6 +655,13 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
     int err;
     SSL *ssl = inst->dtlsClients[idx]->sslClient;
     DBGPRINTF("imdtls: DEBUG Check Client activity on index %d.\n", idx);
+    if (revents & (POLLERR | POLLHUP | POLLNVAL)) {
+        /* A queued socket error stays pending and makes poll() return
+         * immediately again. Reap the session instead of repolling it. */
+        DBGPRINTF("imdtls: socket error events 0x%x on index %d, removing client.\n", (unsigned)revents, idx);
+        DTLScleanupSession(inst, idx);
+        return;
+    }
     if (revents & (POLLIN | POLLOUT)) {
         if (ssl == NULL) {
             DBGPRINTF("imdtls: DTLSHandleSessions MISSING SSL OBJ for index %d.\n", idx);
