@@ -1,0 +1,19 @@
+plugins/imdtls/imdtls.c
+  s_2414784e87421b::t_277a65ff1ea72b 658-664
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bee5bc96773d79fcda4bd13e23226f8c19cbe648",
+  "prompts": {},
+  "sessions": {
+    "s_2414784e87421b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7bdd8e06-7e6c-5ff5-bc44-6477b0ffe399",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
