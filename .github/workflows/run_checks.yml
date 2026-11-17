@@ -520,7 +520,7 @@ jobs:
       # regressions on the host, without the optional-tool skip wrappers.
       - name: Set up pinned Node for coverage contracts
         if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.22.1'
           package-manager-cache: false
