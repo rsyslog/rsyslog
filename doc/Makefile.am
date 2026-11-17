@@ -992,6 +992,7 @@ EXTRA_DIST = \
     source/reference/parameters/omclickhouse-errorfile.rst \
     source/reference/parameters/omclickhouse-healthchecktimeout.rst \
     source/reference/parameters/omclickhouse-maxbytes.rst \
+    source/reference/parameters/omclickhouse-maxconsecutiverejects.rst \
     source/reference/parameters/omclickhouse-port.rst \
     source/reference/parameters/omclickhouse-pwd.rst \
     source/reference/parameters/omclickhouse-server.rst \

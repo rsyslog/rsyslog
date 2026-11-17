@@ -26,6 +26,6 @@ injectmsg
 shutdown_when_empty
 wait_shutdown
 
-content_check "omclickhouse: checkConn failed."
+content_check "omclickhouse: checkConn failed: "
 
 exit_test

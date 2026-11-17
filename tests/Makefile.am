@@ -1294,7 +1294,6 @@ TESTS_CLICKHOUSE = \
 	clickhouse-template-option-stdsql.sh \
 	clickhouse-template-type-plugin.sh \
 	clickhouse-template-type-subtree.sh \
-	clickhouse-http-status-error.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-dflt-tpl.sh \
@@ -1316,6 +1315,29 @@ TESTS_CLICKHOUSE_VALGRIND = \
 	clickhouse-load-vg.sh \
 	clickhouse-bulk-vg.sh \
 	clickhouse-bulk-load-vg.sh
+
+# HTTP stub tests. They do not need a live ClickHouse server. Run them
+# whenever the module itself is built.
+TESTS_CLICKHOUSE_HTTP = \
+	clickhouse-http-status-error.sh \
+	clickhouse-http-status-error-404.sh \
+	clickhouse-http-poison-row.sh \
+	clickhouse-http-poison-row-nobulk.sh \
+	clickhouse-http-poison-row-maxbytes.sh \
+	clickhouse-http-poison-row-constraint.sh \
+	clickhouse-http-poison-row-nocode.sh \
+	clickhouse-http-poison-row-after-outage.sh \
+	clickhouse-http-reject-limit.sh \
+	clickhouse-http-flush-retry.sh \
+	clickhouse-http-flush-split.sh \
+	clickhouse-http-not-insert.sh \
+	clickhouse-http-not-insert-nobulk.sh \
+	clickhouse-http-errorfile-unwritable.sh \
+	clickhouse-http-retry-backoff.sh
+
+CLICKHOUSE_HTTP_STUB = clickhouse_http_stub.py
+
+TESTS_CLICKHOUSE_HTTP_LIBYAML = yaml-omclickhouse-maxconsecutiverejects.sh
 
 TESTS_LIBFAKETIME = \
 	action-retry-clock-jump.sh \
@@ -2832,6 +2854,9 @@ EXTRA_DIST += $(TESTS_MMANON)
 EXTRA_DIST += $(TESTS_CLICKHOUSE_LIBYAML)
 EXTRA_DIST += $(TESTS_CLICKHOUSE)
 EXTRA_DIST += $(TESTS_CLICKHOUSE_VALGRIND)
+EXTRA_DIST += $(TESTS_CLICKHOUSE_HTTP)
+EXTRA_DIST += $(CLICKHOUSE_HTTP_STUB)
+EXTRA_DIST += $(TESTS_CLICKHOUSE_HTTP_LIBYAML)
 EXTRA_DIST += $(TESTS_LIBFAKETIME)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_FAKETIME)
 EXTRA_DIST += $(TESTS_PGSQL)
@@ -3767,6 +3792,13 @@ TESTS += $(TESTS_MMANON)
 endif # if ENABLE_MMANON
 
 
+
+if ENABLE_CLICKHOUSE
+TESTS += $(TESTS_CLICKHOUSE_HTTP)
+if HAVE_LIBYAML
+TESTS += $(TESTS_CLICKHOUSE_HTTP_LIBYAML)
+endif
+endif
 
 if ENABLE_CLICKHOUSE_TESTS
 TESTS += $(TESTS_CLICKHOUSE)

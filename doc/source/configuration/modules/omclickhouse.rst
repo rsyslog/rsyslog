@@ -22,6 +22,7 @@ Tests for the testbench can be enabled with "--enable-clickhouse-tests".
 Notable Features
 ================
 
+- :ref:`omclickhouse-error-handling`
 - :ref:`omclickhouse-statistic-counter`
 
 
@@ -60,6 +61,10 @@ Action Parameters
         :end-before: .. summary-end
    * - :ref:`param-omclickhouse-maxbytes`
      - .. include:: ../../reference/parameters/omclickhouse-maxbytes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omclickhouse-maxconsecutiverejects`
+     - .. include:: ../../reference/parameters/omclickhouse-maxconsecutiverejects.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omclickhouse-port`
@@ -103,6 +108,7 @@ Action Parameters
    ../../reference/parameters/omclickhouse-errorfile
    ../../reference/parameters/omclickhouse-healthchecktimeout
    ../../reference/parameters/omclickhouse-maxbytes
+   ../../reference/parameters/omclickhouse-maxconsecutiverejects
    ../../reference/parameters/omclickhouse-port
    ../../reference/parameters/omclickhouse-pwd
    ../../reference/parameters/omclickhouse-server
@@ -111,6 +117,61 @@ Action Parameters
    ../../reference/parameters/omclickhouse-timeout
    ../../reference/parameters/omclickhouse-usehttps
    ../../reference/parameters/omclickhouse-user
+
+
+.. _omclickhouse-error-handling:
+
+Error Handling
+==============
+
+omclickhouse sorts a failed insert by the ClickHouse exception code. ClickHouse
+sends it in the ``X-ClickHouse-Exception-Code`` header and at the start of the
+reply (``Code: N.``). The HTTP status alone is not enough: a violated CHECK
+constraint is HTTP 500 and a bad token in a ``VALUES`` row is HTTP 404.
+
+- Codes caused by the content of a row are data errors: the ``CANNOT_PARSE_*``
+  family, ``INCORRECT_DATA``, ``TYPE_MISMATCH``, ``CANNOT_CONVERT_TYPE``,
+  ``VALUE_IS_OUT_OF_RANGE_OF_DATA_TYPE``,
+  ``CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN``, ``TOO_LARGE_STRING_SIZE``,
+  ``VIOLATED_CONSTRAINT``, and, for ``VALUES`` rows, ``SYNTAX_ERROR`` and
+  ``UNKNOWN_IDENTIFIER``. A reply without a code is a data error when its
+  status is 400 or 413.
+- When a bulk batch fails with a data error, omclickhouse sends its rows
+  again one at a time. Rows that ClickHouse accepts are inserted. Rows it
+  still rejects are written to :ref:`param-omclickhouse-errorfile`, if set,
+  and dropped, so one bad record does not block the queue. ClickHouse inserts
+  all rows of a request or none, so this does not insert a row twice. A
+  request sent early because the batch reached
+  :ref:`param-omclickhouse-maxbytes` is handled the same way. A row is
+  dropped only after its error-file record is written; if the file cannot be
+  written, the action suspends and keeps the row queued. With
+  ``format="values"``, a row that is not an ``INSERT`` statement is rejected
+  the same way without being sent.
+- :ref:`param-omclickhouse-maxconsecutiverejects` limits how many rows are
+  dropped in a row. A schema change or a broken template rejects every row;
+  past the limit the action suspends instead of dropping them.
+- Every other failure suspends the action: connection errors, a missing
+  table or column, wrong credentials, a read-only user, an unknown setting,
+  memory or part limits, and server errors. A single such failure is retried
+  at once; after two in a row the action waits ``action.resumeInterval``
+  before it checks the server again, even though a plain connection check
+  would succeed.
+- ``action.resumeRetryCount`` decides when a suspended batch is discarded.
+  With the default ``"0"`` the engine discards it. With a positive count it
+  discards it after that many failed connection checks; with ``"-1"`` it
+  never does. When ClickHouse answers the connection check but keeps failing
+  the insert, each successful check starts a new retry cycle, so a positive
+  count does not run out: the rows are retried every
+  ``action.resumeInterval`` until ClickHouse accepts them. Give the action a
+  disk-assisted queue
+  (``queue.type`` and ``queue.filename``) when events must survive a long
+  outage or a restart.
+- Delivery is at least once. When a message suspends the action in the
+  middle of a transaction, the rsyslog core retries the transaction from its
+  first message, so a message that was already inserted, or already written
+  to the error file, can be sent again. A request sent early because of
+  ``maxBytes`` that fails for any reason other than bad data keeps its rows,
+  and they are sent with the rest of the transaction.
 
 
 .. _omclickhouse-statistic-counter:
@@ -183,8 +244,8 @@ the REST URL.
 Example 3
 ---------
 
-This example will send messages in batches up to 10MB.
-If an error occurs it will be written in the error file.
+This example sends messages in batches of up to 10MB. Rows that ClickHouse
+rejects are written to the error file.
 
 .. code-block:: none
 

@@ -14,8 +14,7 @@ errorFile
 
 .. summary-start
 
-Specifies a file that receives bulk-mode failures along with the ClickHouse
-error response.
+Records each request that ClickHouse rejects as bad data, with the reply.
 
 .. summary-end
 
@@ -30,22 +29,33 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-If specified, records failed in bulk mode are written to this file, including
-their error cause. Rsyslog itself does not process the file any more, but the
-idea behind that mechanism is that the user can create a script to
-periodically inspect the error file and react appropriately. As the complete
-request is included, it is possible to simply resubmit messages from that
-script.
+If specified, each request whose data ClickHouse finally rejects appends one
+JSON object to this file. The object holds the request URL and body
+(``request.url`` and ``request.postdata``), the HTTP status
+(``http_status``), and the ClickHouse reply (``reply``). Rsyslog does not read the file
+again. A script can inspect it and resubmit the records once the cause is
+fixed.
 
 .. note::
-   When rsyslog has problems connecting to ClickHouse, a general error is
-   assumed. However, if we receive negative responses during batch
-   processing, we assume an error in the data itself (like a mandatory field
-   is not filled in, a format error or something along those lines). Such
-   errors cannot be solved by simply resubmitting the record. As such, they
-   are written to the error file so that the user (script) can examine them
-   and act appropriately. Note that e.g. after search index reconfiguration
-   (e.g. dropping the mandatory attribute) a resubmit may be successful.
+   A data error is a ClickHouse exception code caused by the content of a row
+   (for example ``CANNOT_PARSE_INPUT_ASSERTION_FAILED``, ``INCORRECT_DATA``,
+   or ``VIOLATED_CONSTRAINT``), or HTTP status 400 or 413 when the reply has
+   no code. See :ref:`omclickhouse-error-handling`. When a bulk batch fails
+   with a data error, nothing is written yet: omclickhouse sends its rows
+   again one at a time. Rows that ClickHouse accepts are inserted. Rows it
+   still rejects are written here and dropped, so one bad record does not
+   block the queue. Without bulk mode each message is its own request and a
+   rejection is written at once.
+
+   With ``format="values"``, a row that is not an ``INSERT`` statement is
+   rejected by omclickhouse itself and written here with ``http_status`` 0.
+
+   A row is dropped only after its record is written. If this file cannot be
+   opened or written, the action suspends and keeps the row queued until the
+   record succeeds. Rows held back by
+   :ref:`param-omclickhouse-maxconsecutiverejects` are not written here; they
+   stay queued. Every other failure suspends the action,
+   keeps the batch queued, and is not written here.
 
 Input usage
 -----------
