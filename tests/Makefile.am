@@ -2484,9 +2484,15 @@ TESTS_IMDTLS = \
 	imdtls-basic.sh \
 	imdtls-basic-tlscommands.sh \
 	imdtls-basic-timeout.sh \
+	imdtls-nonblocking-handshake.sh \
+	imdtls-nonblocking-read.sh \
 	imdtls-error-cert.sh \
 	imdtls-permittedpeer-reject.sh \
+	imdtls-permittedpeer-late-handshake.sh \
 	imdtls-sessionbreak.sh
+
+TESTS_IMDTLS_YAML = \
+	yaml-imdtls-permittedpeer-late-handshake.sh
 
 TESTS_IMDTLS_VALGRIND = \
 	imdtls-basic-vg.sh \
@@ -3014,6 +3020,10 @@ EXTRA_DIST += $(TESTS_RELP_GNUTLS)
 EXTRA_DIST += $(TESTS_RELP_GNUTLS_CFG)
 EXTRA_DIST += $(TESTS_RELP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMDTLS)
+EXTRA_DIST += $(TESTS_IMDTLS_YAML)
+EXTRA_DIST += testsuites/yaml-imdtls-permittedpeer-late-handshake.yaml
+EXTRA_DIST += imdtls-two-flight-proxy.py
+EXTRA_DIST += imdtls-permittedpeer-pacing-proxy.py
 EXTRA_DIST += $(TESTS_IMDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS_VALGRIND)
@@ -4553,6 +4563,9 @@ endif
 
 if ENABLE_IMDTLS
 TESTS += $(TESTS_IMDTLS)
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMDTLS_YAML)
+endif # HAVE_LIBYAML
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMDTLS_VALGRIND)
 endif # HAVE_VALGRIND
