@@ -8,8 +8,9 @@
  *  - packaged: "<directory of the binary>/rsyslog-modules". OSS-Fuzz and
  *    similar runners ship only the fuzzer output directory, so the build
  *    script copies the modules next to the binaries.
- *  - build tree: "<top_builddir>/runtime/.libs", derived from the "/tools/"
- *    component of the binary path, or "../runtime/.libs" relative to it.
+ *  - build tree: "<top_builddir>/runtime/.libs", derived from the last
+ *    "/tools/" component of the binary path, or "../runtime/.libs" relative
+ *    to it.
  *
  * Copyright 2026 Rainer Gerhards and Others
  *
@@ -37,14 +38,17 @@
 #include <unistd.h>
 
 /* Set RSYSLOG_MODDIR for the binary named by argv0; aborts on failure. */
-static void fuzzSetModuleDir(const char *const argv0) {
+static void fuzz_set_module_dir(const char *const argv0) {
     static char executable_path[PATH_MAX];
     static char module_path[PATH_MAX];
     const char *slash;
     const char *tools_dir;
     int len;
 
-    if (realpath(argv0, executable_path) == NULL) {
+    /* Prefer the kernel's view of the executable: argv0 may be a bare name
+     * found through PATH, which realpath() cannot resolve from another
+     * working directory. */
+    if (realpath("/proc/self/exe", executable_path) == NULL && realpath(argv0, executable_path) == NULL) {
         len = snprintf(executable_path, sizeof(executable_path), "%s", argv0);
         if (len < 0 || (size_t)len >= sizeof(executable_path)) abort();
     }
@@ -60,7 +64,12 @@ static void fuzzSetModuleDir(const char *const argv0) {
         }
     }
 
-    tools_dir = strstr(executable_path, "/tools/");
+    /* Use the "/tools/" component nearest the binary; an ancestor directory
+     * may also be named "tools". */
+    tools_dir = NULL;
+    for (const char *p = executable_path; (p = strstr(p, "/tools/")) != NULL; p += sizeof("/tools/") - 1) {
+        tools_dir = p;
+    }
     if (tools_dir != NULL) {
         len = snprintf(module_path, sizeof(module_path), "%.*s/runtime/.libs", (int)(tools_dir - executable_path),
                        executable_path);

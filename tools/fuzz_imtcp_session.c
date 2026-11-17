@@ -55,7 +55,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 int LLVMFuzzerInitialize(int *argc __attribute__((unused)), char ***argv) {
     const char *err_obj = "rsyslog runtime";
 
-    fuzzSetModuleDir((*argv)[0]);
+    fuzz_set_module_dir((*argv)[0]);
     fuzzAbortOnError(rsrtInit(&err_obj, &obj));
     fuzzAbortOnError(tcps_sessFuzzInit());
     rsrtSetErrLogger(fuzzIgnoreExpectedError);

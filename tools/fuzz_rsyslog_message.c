@@ -59,7 +59,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 int LLVMFuzzerInitialize(int *argc __attribute__((unused)), char ***argv) {
     const char *errObj = "rsyslog runtime";
 
-    fuzzSetModuleDir((*argv)[0]);
+    fuzz_set_module_dir((*argv)[0]);
     fuzzAbortOnError(rsrtInit(&errObj, &obj));
     fuzzAbortOnError(pmrfc3164FuzzInit());
     fuzzAbortOnError(pmrfc5424FuzzInit());
