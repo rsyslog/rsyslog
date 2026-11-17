@@ -734,6 +734,7 @@ TESTS_DEFAULT = \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_annotate_large.sh \
+	imuxsock_annotate_escape.sh \
 	imuxsock-NUL.sh \
 	imuxsock-pri-digit-limit.sh \
 	imuxsock_traillf.sh \
@@ -1022,6 +1023,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	yaml-imuxsock-annotate-escape.sh \
 	yaml-ompipe-module-template.sh \
 	config-translate-rs-to-yaml.sh \
 	$(TESTS_IMUXSOCK_FIXPID_YAML) \
@@ -2914,6 +2916,7 @@ EXTRA_DIST += $(TESTS_OMAZUREDCE_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAZUREDCE_YAML)
 EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
+EXTRA_DIST += testsuites/yaml-imuxsock-annotate-escape.yaml
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC)
 EXTRA_DIST += $(TESTS_OMAWSLOGSHLC_IMTCP)
 EXTRA_DIST += $(TESTS_OMKINESIS) $(TESTS_OMKINESIS_YAML) omkinesis-mock-common.sh omkinesis-mock-server.py

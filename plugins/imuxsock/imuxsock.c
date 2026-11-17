@@ -903,29 +903,40 @@ finalize_it:
  * It is assumed the output buffer is large enough. Returns the number of
  * characters added.
  */
-static int copyescaped(uchar *dstbuf, uchar *inbuf, int inlen) {
+static size_t copyescaped(uchar *dstbuf, const uchar *inbuf, const int inlen) {
+    static const uchar hex[] = "0123456789abcdef";
     int iDst, iSrc;
 
     *dstbuf = '"';
-    for (iDst = 1, iSrc = 0; iSrc < inlen; ++iDst, ++iSrc) {
+    for (iDst = 1, iSrc = 0; iSrc < inlen; ++iSrc) {
         if (inbuf[iSrc] == '"' || inbuf[iSrc] == '\\') {
             dstbuf[iDst++] = '\\';
+            dstbuf[iDst++] = inbuf[iSrc];
+        } else if (iscntrl((unsigned char)inbuf[iSrc])) {
+            dstbuf[iDst++] = '\\';
+            dstbuf[iDst++] = 'x';
+            dstbuf[iDst++] = hex[inbuf[iSrc] >> 4];
+            dstbuf[iDst++] = hex[inbuf[iSrc] & 0x0f];
+        } else {
+            dstbuf[iDst++] = inbuf[iSrc];
         }
-        dstbuf[iDst] = inbuf[iSrc];
     }
     dstbuf[iDst++] = '"';
-    return iDst;
+    return (size_t)iDst;
 }
 
 
-static size_t escapedLen(uchar *inbuf, int inlen) {
+static size_t escapedLen(const uchar *inbuf, const int inlen) {
     size_t len = 2; /* surrounding quotes */
 
     for (int i = 0; i < inlen; ++i) {
         if (inbuf[i] == '"' || inbuf[i] == '\\') {
+            len += 2;
+        } else if (iscntrl((unsigned char)inbuf[i])) {
+            len += 4; /* \xNN */
+        } else {
             ++len;
         }
-        ++len;
     }
     return len;
 }
@@ -940,6 +951,68 @@ static rsRetVal appendTrustedProp(
     }
     memcpy(dst + *offs, src, len);
     *offs += len;
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal ensureTrustedPropSpace(
+    uchar **const dst, size_t *const dstLen, uchar *const stackDst, const size_t used, const size_t extra) {
+    uchar *newDst;
+    size_t needed;
+    size_t newLen;
+    DEFiRet;
+
+    if (extra > (size_t)-1 - used) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    needed = used + extra;
+    if (needed <= *dstLen) {
+        FINALIZE;
+    }
+
+    newLen = *dstLen;
+    while (newLen < needed) {
+        if (newLen > (size_t)-1 / 2) {
+            newLen = needed;
+        } else {
+            newLen *= 2;
+        }
+    }
+
+    if (*dst == stackDst) {
+        CHKmalloc(newDst = malloc(newLen));
+        memcpy(newDst, *dst, used);
+    } else {
+        CHKmalloc(newDst = realloc(*dst, newLen));
+    }
+    *dst = newDst;
+    *dstLen = newLen;
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal appendEscapedTrustedProp(uchar **const dst,
+                                         size_t *const dstLen,
+                                         uchar *const stackDst,
+                                         size_t *const offs,
+                                         const uchar *const name,
+                                         const size_t nameLen,
+                                         const uchar *const value,
+                                         const int valueLen) {
+    size_t escaped;
+    DEFiRet;
+
+    escaped = escapedLen(value, valueLen);
+    if (nameLen > (size_t)-1 - escaped || nameLen + escaped > (size_t)-1 - 2) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKiRet(ensureTrustedPropSpace(dst, dstLen, stackDst, *offs, nameLen + escaped + 2));
+    CHKiRet(appendTrustedProp(*dst, *dstLen, offs, name, nameLen));
+    *offs += copyescaped(*dst + *offs, value, valueLen);
 
 finalize_it:
     RETiRet;
@@ -1058,22 +1131,17 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         } else {
             uchar msgbuf[8192];
             uchar *pmsgbuf = msgbuf;
-            const size_t trustedPropBufLen = sizeof(propBuf) - 1;
-            const size_t trustedPropMaxExtra = 3 + /* " @[" */
-                                               96 + /* _PID/_UID/_GID tags plus maximum decimal values */
-                                               7 + trustedPropBufLen + /* _COMM= */
-                                               6 + trustedPropBufLen + /* _EXE= */
-                                               10 + 2 + 2 * trustedPropBufLen + /* _CMDLINE= plus escaped value */
-                                               2; /* closing bracket and NUL */
+            const size_t trustedPropFixedExtra = 3 + /* " @[" */
+                                                 96 + /* _PID/_UID/_GID tags plus maximum decimal values */
+                                                 2; /* closing bracket and NUL */
             size_t msgbuf_size = sizeof(msgbuf);
             size_t toffs; /* offset for trusted properties */
-            size_t escaped;
 
-            if ((size_t)lenRcv > (size_t)-1 - trustedPropMaxExtra) {
+            if ((size_t)lenRcv > (size_t)-1 - trustedPropFixedExtra) {
                 ABORT_FINALIZE(RS_RET_ERR);
             }
-            if ((size_t)lenRcv + trustedPropMaxExtra > sizeof(msgbuf)) {
-                msgbuf_size = (size_t)lenRcv + trustedPropMaxExtra;
+            if ((size_t)lenRcv + trustedPropFixedExtra > sizeof(msgbuf)) {
+                msgbuf_size = (size_t)lenRcv + trustedPropFixedExtra;
                 CHKmalloc(pmsgbuf = malloc(msgbuf_size));
             }
 
@@ -1093,30 +1161,25 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
             }
 
             if (getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _COMM=", 7)) != RS_RET_OK ||
-                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                if ((iRet = appendEscapedTrustedProp(&pmsgbuf, &msgbuf_size, msgbuf, &toffs, (uchar *)" _COMM=", 7,
+                                                     propBuf, lenProp)) != RS_RET_OK) {
                     if (pmsgbuf != msgbuf) free(pmsgbuf);
                     FINALIZE;
                 }
             }
             if (getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _EXE=", 6)) != RS_RET_OK ||
-                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                if ((iRet = appendEscapedTrustedProp(&pmsgbuf, &msgbuf_size, msgbuf, &toffs, (uchar *)" _EXE=", 6,
+                                                     propBuf, lenProp)) != RS_RET_OK) {
                     if (pmsgbuf != msgbuf) free(pmsgbuf);
                     FINALIZE;
                 }
             }
             if (getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _CMDLINE=", 10)) != RS_RET_OK) {
+                if ((iRet = appendEscapedTrustedProp(&pmsgbuf, &msgbuf_size, msgbuf, &toffs, (uchar *)" _CMDLINE=", 10,
+                                                     propBuf, lenProp)) != RS_RET_OK) {
                     if (pmsgbuf != msgbuf) free(pmsgbuf);
                     FINALIZE;
                 }
-                escaped = escapedLen(propBuf, lenProp);
-                if (escaped > msgbuf_size || toffs > msgbuf_size - escaped) {
-                    if (pmsgbuf != msgbuf) free(pmsgbuf);
-                    ABORT_FINALIZE(RS_RET_ERR);
-                }
-                toffs += (size_t)copyescaped(pmsgbuf + toffs, propBuf, lenProp);
             }
 
             /* finalize string */
