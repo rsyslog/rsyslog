@@ -29,6 +29,10 @@ TESTS_MINITCP_EXCLUSIVE = minitcpsrv-exclusive-port.sh
 EXTRA_DIST += $(TESTS_MINITCP_EXCLUSIVE)
 TESTS_IMFILE_FSTAT_RELEVANCE = imfile-fstat-relevance.sh
 EXTRA_DIST += $(TESTS_IMFILE_FSTAT_RELEVANCE)
+TESTS_IMUXSOCK_FIXPID = imuxsock-use-pid-from-system.sh
+TESTS_IMUXSOCK_FIXPID_YAML = yaml-imuxsock-use-pid-from-system.sh
+EXTRA_DIST += $(TESTS_IMUXSOCK_FIXPID) $(TESTS_IMUXSOCK_FIXPID_YAML) \
+	testsuites/yaml-imuxsock-use-pid-from-system.yaml
 
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
@@ -1020,6 +1024,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 TESTS_LIBYAML = \
 	yaml-ompipe-module-template.sh \
 	config-translate-rs-to-yaml.sh \
+	$(TESTS_IMUXSOCK_FIXPID_YAML) \
 	yaml-imuxsock-socket-path-checks.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
@@ -3571,6 +3576,7 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
+TESTS += $(TESTS_IMUXSOCK_FIXPID)
 TESTS += $(TESTS_MERMAID_OFFLINE)
 TESTS += $(TESTS_QUEUE_BENCHMARK_ORACLE)
 TESTS += $(TESTS_QUEUE_LEASE)

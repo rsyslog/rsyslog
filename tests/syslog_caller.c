@@ -13,6 +13,7 @@
  * -L generated message length for Unix datagram mode
  * -n send a short Unix datagram message with an embedded NUL byte
  * -w milliseconds to wait after sending messages
+ * -R exact raw message to send in Unix datagram mode
  *
  * Part of the testbench for rsyslog.
  *
@@ -55,7 +56,9 @@
 static enum { FMT_NATIVE, FMT_SYSLOG_INJECT_L, FMT_SYSLOG_INJECT_C } fmt = FMT_NATIVE;
 
 static void usage(void) {
-    fprintf(stderr, "usage: syslog_caller [-m messages] [-s severity] [-u socket] [-L length] [-w milliseconds]\n");
+    fprintf(stderr,
+            "usage: syslog_caller [-m messages] [-s severity] [-u socket] [-L length] [-w milliseconds] "
+            "[-R raw-message]\n");
     exit(1);
 }
 
@@ -115,8 +118,12 @@ static size_t genRawMsg(
  * iRun: message sequence number used by the generated text format.
  * msgLen: payload length for raw/fill mode; 0 uses formatted text mode.
  */
-static void sendRawUnix(
-    const char *sockName, const int sev, const int iRun, const size_t msgLen, const int embeddedNul) {
+static void sendRawUnix(const char *sockName,
+                        const int sev,
+                        const int iRun,
+                        const size_t msgLen,
+                        const int embeddedNul,
+                        const char *rawMsg) {
     int sock;
     struct sockaddr_un sa;
     char msgbuf[4096];
@@ -134,7 +141,17 @@ static void sendRawUnix(
     sa.sun_family = AF_UNIX;
     strncpy(sa.sun_path, sockName, sizeof(sa.sun_path) - 1);
     sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
-    lenMsg = genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen, embeddedNul);
+    if (rawMsg == NULL) {
+        lenMsg = genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen, embeddedNul);
+    } else {
+        lenMsg = strlen(rawMsg);
+        if (lenMsg >= sizeof(msgbuf)) {
+            fprintf(stderr, "raw Unix datagram message is too long\n");
+            close(sock);
+            exit(1);
+        }
+        memcpy(msgbuf, rawMsg, lenMsg);
+    }
     if (sendto(sock, msgbuf, lenMsg, 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
         perror("sendto");
         close(sock);
@@ -171,6 +188,7 @@ int main(int argc, char *argv[]) {
     size_t msgLen = 0;
     int waitMs = 0;
     int embeddedNul = 0;
+    const char *rawMsg = NULL;
 #ifdef HAVE_LIBLOGGING_STDLOG
     stdlog_channel_t logchan = NULL;
     const char *chandesc = "syslog:";
@@ -179,9 +197,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_LIBLOGGING_STDLOG
     stdlog_init(STDLOG_USE_DFLT_OPTS);
-    while ((opt = getopt(argc, argv, "m:s:C:f:u:L:nw:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:s:C:f:u:L:nw:R:")) != -1) {
 #else
-    while ((opt = getopt(argc, argv, "m:s:u:L:nw:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:s:u:L:nw:R:")) != -1) {
 #endif
         switch (opt) {
             case 's':
@@ -211,6 +229,9 @@ int main(int argc, char *argv[]) {
             case 'n':
                 embeddedNul = 1;
                 break;
+            case 'R':
+                rawMsg = optarg;
+                break;
 #ifdef HAVE_LIBLOGGING_STDLOG
             case 'C':
                 chandesc = optarg;
@@ -232,7 +253,7 @@ int main(int argc, char *argv[]) {
 
     if (unixSockName != NULL) {
         for (i = 0; i < msgs; ++i) {
-            sendRawUnix(unixSockName, sev, i, msgLen, embeddedNul);
+            sendRawUnix(unixSockName, sev, i, msgLen, embeddedNul, rawMsg);
             if (bRollingSev) sev++;
         }
         if (waitMs > 0) usleep((unsigned int)waitMs * 1000U);
