@@ -112,6 +112,10 @@ print(n)
 PY
 }
 
+if [ -n "${CH_ERRFILE_MODE:-}" ]; then
+    : > "$errfile"
+    chmod "$CH_ERRFILE_MODE" "$errfile"
+fi
 startup
 injectmsg 0 3
 wait_file_lines --count-function count_accepted_rows "$record" 2 30
@@ -125,6 +129,7 @@ content_check "omclickhouse: ClickHouse rejected the data with HTTP status ${rej
 python3 - "$record" "$errfile" "$reject_status" "$reject_body" "${CH_ALLOW_DUPLICATES:-0}" \
     "${CH_OUTAGE:-0}" <<'PY' || error_exit 1
 import json
+import os
 import re
 import sys
 
@@ -159,6 +164,10 @@ if outage > 0:
         sys.exit(1)
 if not any(rows(rec["body"]) == ["00000001"] for rec in failed):
     sys.stderr.write("bad row was never rejected alone: {0}\n".format(json.dumps(failed)))
+    sys.exit(1)
+mode = os.stat(errfile).st_mode & 0o777
+if mode != 0o600:
+    sys.stderr.write("error file mode {0:o}\n".format(mode))
     sys.exit(1)
 errs = [json.loads(line) for line in open(errfile, encoding="utf-8") if line.strip()]
 if not errs or any(rows(e["request"]["postdata"]) != ["00000001"] for e in errs):

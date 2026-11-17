@@ -237,7 +237,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tserver='%s'\n", pData->serverBaseUrl);
     dbgprintf("\tport='%d'\n", pData->port);
     dbgprintf("\tuser='%s'\n", pData->user);
-    dbgprintf("\tpwd='%s'\n", pData->pwd);
+    dbgprintf("\tpwd='%s'\n", (pData->pwd == NULL || pData->pwd[0] == '\0') ? "" : "[redacted]");
     dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
     dbgprintf("\ttimeout=%lu\n", pData->timeout);
     dbgprintf("\ttemplate='%s'\n", pData->tplName);
@@ -372,11 +372,33 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
 
 
     if (pData->fdErrFile == -1) {
-        pData->fdErrFile = open((char *)pData->errorFile, O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE | O_CLOEXEC,
-                                S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+        pData->fdErrFile =
+            open((char *)pData->errorFile, O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE | O_CLOEXEC, S_IRUSR | S_IWUSR);
         if (pData->fdErrFile == -1) {
             LogError(errno, RS_RET_ERR, "omclickhouse: error opening error file %s", pData->errorFile);
             ABORT_FINALIZE(RS_RET_ERR);
+        }
+        /* The mode argument applies only when the file is created. A regular
+         * file that group or others may read is tightened to 0600; if that
+         * fails, no rejected row is written to it. A device or a FIFO keeps
+         * its mode.
+         */
+        struct stat st;
+        if (fstat(pData->fdErrFile, &st) != 0) {
+            LogError(errno, RS_RET_IO_ERROR, "omclickhouse: cannot stat error file %s", pData->errorFile);
+            close(pData->fdErrFile);
+            pData->fdErrFile = -1;
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        if (S_ISREG(st.st_mode) && (st.st_mode & (S_IRWXG | S_IRWXO)) != 0 &&
+            fchmod(pData->fdErrFile, S_IRUSR | S_IWUSR) != 0) {
+            LogError(errno, RS_RET_IO_ERROR,
+                     "omclickhouse: error file %s is open to group or others and its mode cannot be set to "
+                     "0600, not writing rejected rows to it",
+                     pData->errorFile);
+            close(pData->fdErrFile);
+            pData->fdErrFile = -1;
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
         }
     }
 
@@ -384,7 +406,6 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
-    dbgprintf("omclickhouse: message sent: '%s'\n", reqmsg);
     dbgprintf("omclickhouse: error record: '%s'\n", rendered);
     toWrite = strlen(rendered) + 1;
     /* Note: we overwrite the '\0' terminator with '\n' -- so we avoid

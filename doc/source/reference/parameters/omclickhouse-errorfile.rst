@@ -32,7 +32,8 @@ Description
 If specified, each request whose data ClickHouse finally rejects appends one
 JSON object to this file. The object holds the request URL and body
 (``request.url`` and ``request.postdata``), the HTTP status
-(``http_status``), and the ClickHouse reply (``reply``). Rsyslog does not read the file
+(``http_status``), and the ClickHouse reply (``reply``). The file is kept
+at mode 0600 because it contains event data. Rsyslog does not read the file
 again. A script can inspect it and resubmit the records once the cause is
 fixed.
 
