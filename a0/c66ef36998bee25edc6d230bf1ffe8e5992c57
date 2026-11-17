@@ -1,0 +1,32 @@
+contrib/imdocker/imdocker.c
+  s_6224eda96fc0da::t_504a1b51c3885f 1230-1234,1236-1242,1246,1253,1270,1279,1283,1288,1290,1292-1294,1298,1305,1312-1313,1403,1441
+  s_6224eda96fc0da::t_ff6234834d4b55 1142-1145
+contrib/omhttp/omhttp.c
+  s_6224eda96fc0da::t_95973364457830 2363,2386
+tests/action-ratelimit-pace.sh
+  s_6224eda96fc0da::t_2b4f6f0602e408 33
+doc/source/conf.py
+  s_6224eda96fc0da::t_ad4b88a9a89ac3 218-286,297,314,363,369-373
+runtime/action.c
+  s_6224eda96fc0da::t_2b4f6f0602e408 574,582,721,731,733-735
+plugins/imfile/imfile.c
+  s_6224eda96fc0da::t_fee1bdd0414ecd 1620-1633,1653,1672
+.github/workflows/run_checks.yml
+  s_6224eda96fc0da::t_95973364457830 769-775
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "a0c66ef36998bee25edc6d230bf1ffe8e5992c57",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

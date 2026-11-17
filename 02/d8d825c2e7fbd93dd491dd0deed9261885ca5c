@@ -1,0 +1,23 @@
+tests/imfile-bad-state-file.sh
+  s_93f01af3679066::t_8be79179bd4526 3-4,26,42
+tests/imfile-persist-state-1.sh
+  s_93f01af3679066::t_8be79179bd4526 2-4,30
+tests/diskqueue-oncorruption-missing-segment.sh
+  s_93f01af3679066::t_8be79179bd4526 4-6,100-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "02d8d825c2e7fbd93dd491dd0deed9261885ca5c",
+  "prompts": {},
+  "sessions": {
+    "s_93f01af3679066": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0526f-7050-7ca0-8b16-908c16907bef",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

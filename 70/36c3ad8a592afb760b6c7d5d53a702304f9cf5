@@ -1,0 +1,23 @@
+.github/workflows/codeql.yml
+  s_142ee1fa291d22::t_28279c62b8b356 109,116,119
+tests/Makefile.am
+  s_142ee1fa291d22::t_3dabefc789b660 2917-2918
+tests/override_queue_disposal.c
+  s_142ee1fa291d22::t_3b7cd31be89c9a 22,34-48,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7036c3ad8a592afb760b6c7d5d53a702304f9cf5",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

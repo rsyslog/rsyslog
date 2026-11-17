@@ -1,0 +1,32 @@
+doc/ai/module_map.yaml
+  s_c1b658479c8fb4::t_9b8cd7a56fa8c2 59-60
+runtime/msg.c
+  s_c1b658479c8fb4::t_9b8cd7a56fa8c2 30-42,965-967,1056,1061-1065,1072-1073,1088-1090
+  s_0eedf0d0f806c9::t_9298c05f6a15fc 1091
+runtime/msg.h
+  s_c1b658479c8fb4::t_9b8cd7a56fa8c2 197-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c3cc3a3392ed47c1fa6598340de0f912b1d13e90",
+  "prompts": {},
+  "sessions": {
+    "s_0eedf0d0f806c9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a013c0-2e97-7571-a432-55326dc57bdd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_c1b658479c8fb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01452-32a5-78d0-bb34-5f531d641ae2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

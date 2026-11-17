@@ -1,0 +1,21 @@
+plugins/imptcp/imptcp.c
+  s_008ef65e7b10ec::t_b61aa1dfba424c 907-908,2124-2127,2134-2136
+benchmarks/ratelimit-port-keys/runner.py
+  s_008ef65e7b10ec::t_b61aa1dfba424c 39-40,43-44,46-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9f3904d256f803d0265950231242b1ce339c4995",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+tests/testsuites/perf-omprog-delay.py
+  s_12493d1d1488ca::t_4ee42df3b45ce9 1-98
+tests/README
+  s_18723db397e337::t_cb5157537e99dd 50-135
+tests/perf-da-diskqueue-tcp.sh
+  s_18723db397e337::t_542d5b13240c00 1-261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "bae6905d70b9cc3539553f11f563a2b8408ade6e",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_18723db397e337": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f65f9-b5e7-7e43-b45a-810ea8baeeae",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

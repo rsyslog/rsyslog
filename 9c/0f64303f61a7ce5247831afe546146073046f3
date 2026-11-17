@@ -1,0 +1,63 @@
+runtime/rsconf.c
+  s_803c46ee5c71ef::t_abddd9090fbde3 387
+  s_803c46ee5c71ef::t_f983692a1bdb5e 527-528,542,545,548,557,560,563,566,569,593
+runtime/action.c
+  s_803c46ee5c71ef::t_0c53cd980a561d 93,179,322,329,378-379,509-521,604-610,775-783,1985-1991,2007-2008,2423,2461-2462,2470-2472
+  s_6224eda96fc0da::t_2b4f6f0602e408 611-621,745-771,773-774
+  s_803c46ee5c71ef::t_abddd9090fbde3 772
+tests/action-ratelimit-pace.sh
+  s_6224eda96fc0da::t_2b4f6f0602e408 33
+  s_803c46ee5c71ef::t_0d5f84cc582eff 1-32,34-40
+doc/source/configuration/actions.rst
+  s_803c46ee5c71ef::t_4546bf716239f8 188-195
+doc/source/rainerscript/configuration_objects/ratelimit.rst
+  s_803c46ee5c71ef::t_df5667600fa99e 8-11,137-138,169-213
+runtime/action.h
+  s_803c46ee5c71ef::t_8b7057571b2067 43-44,100-101,124-127
+runtime/ratelimit.c
+  s_803c46ee5c71ef::t_a7d6d34f37c21c 269-270,274-275,463-494,659-673,1364-1365,1376-1378,1381-1414,1418-1437,1447-1449,1613-1615,1625-1626,1639-1640,1667-1701,1736-1737,1829-1834,1849-1853,1873-1877,2039-2110,2407-2408
+runtime/ratelimit.h
+  s_803c46ee5c71ef::t_7323b556aa187c 34-40,43-45,115-120,133-135,143-149
+tests/Makefile.am
+  s_803c46ee5c71ef::t_3fa01930a589bc 656-659
+tests/action-ratelimit-drop.sh
+  s_803c46ee5c71ef::t_781c38bd603a6d 1-31
+tests/action-ratelimit-reload.sh
+  s_803c46ee5c71ef::t_5fcf1a497e9b8f 1-57
+tests/action-ratelimit-validation.sh
+  s_803c46ee5c71ef::t_d0949c28cbb401 1-86
+tests/stats-cee-vg.sh
+  s_803c46ee5c71ef::t_bbd233e98b8102 6,35
+tests/stats-cee.sh
+  s_803c46ee5c71ef::t_c2809636f877de 27
+tests/stats-json-es.sh
+  s_803c46ee5c71ef::t_6abc5262daa14e 27
+tests/stats-json-vg.sh
+  s_803c46ee5c71ef::t_ab2efe4281a149 6,35
+tests/stats-json.sh
+  s_803c46ee5c71ef::t_7f63c77c8c0c1b 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9c0f64303f61a7ce5247831afe546146073046f3",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_803c46ee5c71ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f324b-f577-70e2-8f89-8f2cd080d20e",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,64 @@
+tools/rsyslogd.c
+  s_f2c089be484e12::t_78e0b551f6ae3b 2410-2412
+benchmarks/imtcp-ruleset-reload/selftest.py
+  s_f2c089be484e12::t_53407cb6717b5e 4,38,54-58,63-68,70,81-85,110-118
+runtime/module-reload.c
+  s_f2c089be484e12::t_78e0b551f6ae3b 25-26
+tests/diag.sh
+  s_f2c089be484e12::t_41fe236a5122cd 2505,2531
+  s_f2c089be484e12::t_87f73bed6f098a 2510
+benchmarks/imtcp-ruleset-reload/runner.py
+  s_f2c089be484e12::t_6575abe0aba072 152-160,163-164,210-212,214-216,222,229-231,235-236,240
+runtime/glbl.c
+  s_f2c089be484e12::t_917c6709db3840 1574
+runtime/modules.h
+  s_f2c089be484e12::t_78e0b551f6ae3b 105-108,246-247
+runtime/rsconf.c
+  s_f2c089be484e12::t_78e0b551f6ae3b 1397,1399-1401
+tools/shadow_reload.c
+  s_f2c089be484e12::t_78e0b551f6ae3b 16,45,75,78-80,184,241-251,269,274
+tests/unit/module_reload_test.c
+  s_f2c089be484e12::t_7b7b93efa97592 31-44,88-95
+  s_f2c089be484e12::t_e68ac75e2fc302 96
+tests/unit/reload_report_test.c
+  s_f2c089be484e12::t_7b7b93efa97592 99,241-248
+  s_f2c089be484e12::t_9c94f3aa04999a 249
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_6ed96d46ea53bf 231-233,247-251
+  s_f2c089be484e12::t_16469c38af658a 252
+plugins/imdiag/imdiag.c
+  s_f2c089be484e12::t_41fe236a5122cd 476-479
+  s_f2c089be484e12::t_ff5d812cb34543 528,530,535-537,541-542,554,556-561,565
+benchmarks/imtcp-ruleset-reload/trial.sh
+  s_f2c089be484e12::t_fdb9e251a77e47 9,40,75,85,101,109-111,132,171
+  s_f2c089be484e12::t_917c6709db3840 21,25-33,80-81,104,106-107
+  s_f2c089be484e12::t_2510012e25f5cb 22-24
+benchmarks/imtcp-ruleset-reload/acceptance.py
+  s_f2c089be484e12::t_9b750ee9f170eb 45-47
+  s_f2c089be484e12::t_0e785de2dd81c8 50,61
+  s_f2c089be484e12::t_906506356253d7 69-74,80
+  s_f2c089be484e12::t_cc7fbce6fadf7f 4,8-13,32-34,42-44,55-57,60,62-66
+runtime/reload-report.c
+  s_f2c089be484e12::t_78e0b551f6ae3b 88-93,182-187
+  s_f2c089be484e12::t_99d75bf01161f0 188
+benchmarks/imtcp-ruleset-reload/compare.py
+  s_f2c089be484e12::t_81e573d5bcf6f9 149-158
+  s_f2c089be484e12::t_0e785de2dd81c8 7
+  s_f2c089be484e12::t_cc7fbce6fadf7f 11-12,59-68,80-81,91-92,95-105,117-118,147-148,159,170,196-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "6c4aa8fc35709d8e5da3ae3d57523f21d827c657",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+devtools/release/candidate-kinesis/service/README.md
+  s_0d5683fb5e1727::t_aa4a05ced254d4 1-3
+  s_0d5683fb5e1727::t_63ee1bebdc8951 4-45
+  s_0d5683fb5e1727::t_78adb8369a38ed 46-49
+devtools/release/candidate-kinesis/debian/run.sh
+  s_0d5683fb5e1727::t_ff3727b4ee6c2e 8-11
+devtools/release/candidate-kinesis/service/test-service.sh
+  s_0d5683fb5e1727::t_05ae14d898c900 34-35,110-115
+  s_0d5683fb5e1727::t_fdb881b47da391 1-33,36-40,43-63,65-98,101-109,116-123
+  s_0d5683fb5e1727::t_983b2a4fc31b27 41-42,64,99-100
+devtools/release/candidate-kinesis/service/Dockerfile
+  s_0d5683fb5e1727::t_3f1ef27b5c8cb0 1-5
+.github/PACKAGING_IMPLEMENTATION.md
+  s_0d5683fb5e1727::t_2e8e0e0f827ee7 63-64,166-176
+devtools/release/candidate-kinesis/VALIDATION.md
+  s_0d5683fb5e1727::t_3c9565760bac71 28-34,135-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8d4de39f47d58c7afdd0b730940a560a0764a50",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_41b995fcc6f588::t_160af4be5cf500 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "fab505de944d3144b325e28397a8a8a578be8001",
+  "prompts": {},
+  "sessions": {
+    "s_41b995fcc6f588": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6691-5cc5-7943-b583-9f0e7f26659a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

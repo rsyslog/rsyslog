@@ -1,0 +1,19 @@
+doc/source/rainerscript/control_structures.rst
+  s_6b340ae08e941b::t_70746cc6d28a60 42-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "2caffb74eafd1f163f64f0e4fc4e1cf3b944cd48",
+  "prompts": {},
+  "sessions": {
+    "s_6b340ae08e941b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a048bc-a478-75f3-9438-60a4c05c4b69",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

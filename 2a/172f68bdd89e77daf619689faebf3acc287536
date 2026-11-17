@@ -1,0 +1,585 @@
+.agent/skills/rsyslog_config/SKILL.md
+  s_6303b89c4410f1::t_a20d7d5eae34cc 10,33,42,55-56,58-59,64-65,88
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_6303b89c4410f1::t_8e02ee7269aa20 607-683
+.agent/skills/rsyslog_module/SKILL.md
+  s_6303b89c4410f1::t_136c263e5d2eee 26-30,51-54
+.codex/pre_push_container_gate.sh
+  s_6303b89c4410f1::t_ff5e65952182ba 12,71-81,84-85,87-90,94-98,100-122,128,215,218-224,228,232,237,240-241,243-271,290-296,302-319,323-332,336-348,379-410,412-426,432,437-438,449-450,461-467
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_6303b89c4410f1::t_e7ab54923f132e 65-70,80-81,85-107
+.github/OPENSUSE_DAILY_STABLE.md
+  s_6303b89c4410f1::t_49a42d9a8a2a86 20-24
+.github/actionlint.yaml
+  s_6303b89c4410f1::t_45917451193d39 1-6
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_6303b89c4410f1::t_431734bdff98a5 12-29,76-81
+.github/debian-daily-stable-13-policy.yml
+  s_6303b89c4410f1::t_3c1bd83c8e814f 10-25,43-48
+.github/el10-daily-stable-policy.yml
+  s_6303b89c4410f1::t_2b40ce5c09a5da 28-33,66-71
+.github/fedora44-daily-stable-policy.yml
+  s_6303b89c4410f1::t_84941d35942399 20-25
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_6303b89c4410f1::t_ef86e4fce41eec 20-25,57-62
+.github/requirements-zizmor.txt
+  s_6303b89c4410f1::t_57b07c8ea0b7cc 1
+.github/scripts/debian_package_build.sh
+  s_6303b89c4410f1::t_d7d41de5ca4bdd 4-5,426-437
+.github/scripts/report-daily-stable-failure.js
+  s_6303b89c4410f1::t_c8dbe89e31f2d7 1-199
+.github/ubuntu-daily-stable-26.04-policy.yml
+  s_6303b89c4410f1::t_221ca3a5ee32dc 26-29,41-46
+.github/workflows/actionlint.yml
+  s_6303b89c4410f1::t_6bd4d2629b5707 18
+.github/workflows/alpine324_daily_stable.yml
+  s_6303b89c4410f1::t_a5dc0687cdc1b2 304,570,583,587-592,603-614
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_6303b89c4410f1::t_59a36ca118d1dc 138-143,198,260,676,689,693-698,709-720
+.github/workflows/ci_codestyle_check.yml
+  s_6303b89c4410f1::t_517b0c49220dfc 31-32,52-57
+.github/workflows/codeql.yml
+  s_6303b89c4410f1::t_49bcd130080f26 109,116,119
+.github/workflows/daily_focused_tests.yml
+  s_6303b89c4410f1::t_604b048bada754 396,407
+.github/workflows/debian_daily_stable.yml
+  s_6303b89c4410f1::t_45585e7d6d3735 161-166,293,733,750,754-759,770-781
+.github/workflows/doc_build.yml
+  s_6303b89c4410f1::t_8ea2ba19cb09f0 191,203
+.github/workflows/el10_daily_stable.yml
+  s_6303b89c4410f1::t_9a2fe211b0b5d6 141-146,209,266-272,295,694,707,711-716,727-738
+.github/workflows/fedora44_daily_stable.yml
+  s_6303b89c4410f1::t_92fbe3e6ea5b07 138-143,198,259,675,688,692-697,708-719
+.github/workflows/imbeats.yml
+  s_6303b89c4410f1::t_111192268b45f4 118
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_6303b89c4410f1::t_2a03a9c3dcd3b6 48
+.github/workflows/impstats_push_victoriametrics.yml
+  s_6303b89c4410f1::t_7c1ef0736ccac6 178
+.github/workflows/imtcp_session_fuzz.yml
+  s_6303b89c4410f1::t_69c081de3677ef 107,201
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_6303b89c4410f1::t_0f0064a46f4f36 138-143,210,278,696,709,713-718,729-740
+.github/workflows/run_checks.yml
+  s_6303b89c4410f1::t_3982cfdba30d69 663,1129,1232,1316,1470,1639,1643,1657-1663,1666-1667,1678-1682,1696-1698,1736,1886
+.github/workflows/run_cross_arch_weekly.yml
+  s_6303b89c4410f1::t_f1a22d0469dd49 48,53,56,146
+.github/workflows/run_distro_daily.yml
+  s_6303b89c4410f1::t_396482d9c3d4ff 124
+.github/workflows/run_macos_weekly.yml
+  s_6303b89c4410f1::t_f6ebca19ee2294 143
+.github/workflows/syslog_parser_fuzz.yml
+  s_6303b89c4410f1::t_acf684ede656a4 112,230
+.github/workflows/ubuntu_daily_stable.yml
+  s_6303b89c4410f1::t_0e2097b10b3646 162-167,294,745,762,766-771,782-793
+.gitignore
+  s_6303b89c4410f1::t_131f09fe854403 142,157-159
+ChangeLog
+  s_6303b89c4410f1::t_7c3e4b1b42f861 4-9
+Makefile.am
+  s_6303b89c4410f1::t_8e8293d61bcc82 7,22-25
+benchmarks/queue-contention/README.md
+  s_6303b89c4410f1::t_bfb136e4b46653 33-68,72-77,86-168,229-232
+benchmarks/queue-contention/compare-latency.py
+  s_6303b89c4410f1::t_1850e9d77937d8 1-160
+benchmarks/queue-contention/compare.py
+  s_6303b89c4410f1::t_e3dbe1711cbd1e 15-16,28-48,53-56,62-87,98-104,110,124-125,133-160,174,180-185,187-188,195-197,199-202,223,227,233,235-241,244-249,266-268
+benchmarks/queue-contention/docker_image.py
+  s_6303b89c4410f1::t_6006654adf9546 1-17
+benchmarks/queue-contention/evidence/local-queue-s0/s0-balanced-session1.json
+  s_6303b89c4410f1::t_efd3caa05deefd 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-balanced-session2.json
+  s_6303b89c4410f1::t_86c287218869a1 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-batch-diagnostic.json
+  s_6303b89c4410f1::t_1a1b07c5e505dc 1-68
+benchmarks/queue-contention/evidence/local-queue-s0/s0-impstats-diagnostic.json
+  s_6303b89c4410f1::t_bd5df4750a9e69 1-292
+benchmarks/queue-contention/evidence/local-queue-s0/s0-low-session1.json
+  s_6303b89c4410f1::t_9c4b62275bc7fb 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-low-session2.json
+  s_6303b89c4410f1::t_1bab052ccb42c6 1-492
+benchmarks/queue-contention/evidence/local-queue-s0/s0-skew-session1.json
+  s_6303b89c4410f1::t_49b133f0e63e5f 1-492
+benchmarks/queue-contention/evidence/local-queue-s1/s1-balanced-session1-retry.json
+  s_6303b89c4410f1::t_d144cb1158a5d4 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-balanced-session1.json
+  s_6303b89c4410f1::t_aa76b954922225 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-balanced-session2.json
+  s_6303b89c4410f1::t_f3982a004ff7ef 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-low-session1.json
+  s_6303b89c4410f1::t_58ae48ce903412 1-497
+benchmarks/queue-contention/evidence/local-queue-s1/s1-low-session2.json
+  s_6303b89c4410f1::t_c96ca80cc9bc47 1-497
+benchmarks/queue-contention/latency-observer-selftest.py
+  s_6303b89c4410f1::t_c4c427c8e414a5 1-115
+benchmarks/queue-contention/latency-observer.py
+  s_6303b89c4410f1::t_91a1d20af97828 1-277
+benchmarks/queue-contention/selftest.sh
+  s_6303b89c4410f1::t_fd372dbd79af78 1-30
+benchmarks/queue-contention/trial-latency.sh
+  s_6303b89c4410f1::t_9e2fcb4a6146b6 1-73
+benchmarks/queue-contention/trial-multi.sh
+  s_6303b89c4410f1::t_faf8c09a3509af 8-12,19-27,32-109,114,116-154,158-160,163-165,168,173,175-176,179-195,197-201
+benchmarks/queue-contention/trial.sh
+  s_6303b89c4410f1::t_daba4028f25cfd 11-16,19-22,25-27
+configure.ac
+  s_6303b89c4410f1::t_f58834ca21807b 67-69,72,74,1813-1824,1839
+contrib/imczmq/imczmq.c
+  s_6303b89c4410f1::t_32ec4e6e7dc2f2 192,198,314,333-334,357,427,429
+contrib/imhiredis/imhiredis.c
+  s_6303b89c4410f1::t_ffc20037d05840 123,147,697-701,705-709,712,787,805,828,831-838
+devtools/check-flake-evidence-coverage.py
+  s_6303b89c4410f1::t_6d34b262f78daf 45
+devtools/check-raw-atomics.py
+  s_6303b89c4410f1::t_8d8c4cc2a30536 1-263
+devtools/ci/Dockerfile.arm
+  s_6303b89c4410f1::t_e10ab86f8fb635 5-6
+devtools/local-validation-plan.sh
+  s_6303b89c4410f1::t_132b821a84289b 209,287,392-404,631
+devtools/raw-atomics-baseline.txt
+  s_6303b89c4410f1::t_72a8b3aaba83ce 1-36
+devtools/record-container-validation.py
+  s_6303b89c4410f1::t_4d2d9c804b5c4c 1-181
+devtools/release/amazonlinux-daily-stable.sh
+  s_6303b89c4410f1::t_538f340e42045f 110-111
+devtools/release/check-optional-module-policy.py
+  s_6303b89c4410f1::t_5109d0949dcd00 1-102
+devtools/release/fedora-daily-stable.sh
+  s_6303b89c4410f1::t_f133f58ca461cb 110-111
+devtools/release/opensuse-daily-stable.sh
+  s_6303b89c4410f1::t_a5f5af77cf48dc 209-226
+devtools/release/rpm-daily-stable.sh
+  s_6303b89c4410f1::t_a582cd7bfec3bf 113-114
+devtools/release/rpm-disable-optional-modules.py
+  s_6303b89c4410f1::t_dda2657b04bd7a 1-63
+devtools/release/upstream_patch_detect.py
+  s_6303b89c4410f1::t_70ee6a57cdc52e 1-155
+devtools/release/validate-rpm-baseline-patches.py
+  s_6303b89c4410f1::t_a27c81f9a05451 21-27,32,37-39,45-48,100-103,106-131,137-142,147
+devtools/run-configure.sh
+  s_6303b89c4410f1::t_83dd61a2defa00 26
+devtools/run-rpm-build.sh
+  s_6303b89c4410f1::t_bf8f7b088f0f10 30-62,96-97
+doc/Makefile.am
+  s_6303b89c4410f1::t_d9fb26b37415be 64,1410-1419
+doc/ai/README.md
+  s_6303b89c4410f1::t_3e13f12c3031df 25-39,55
+doc/ai/designs/local-queue-execution-ledger.md
+  s_6303b89c4410f1::t_636210b305e73b 1-1227
+doc/ai/designs/local-queue-frontends.md
+  s_6303b89c4410f1::t_23816d1cbd47a4 1-1178
+doc/ai/designs/local-queue-implementation-plan.md
+  s_6303b89c4410f1::t_c394241f9ea1e0 1-729
+doc/ai/designs/local-queue-related-work.md
+  s_6303b89c4410f1::t_20e8be0c8753d6 1-156
+doc/ai/designs/local-queue-s0-contracts.md
+  s_6303b89c4410f1::t_1ad4b8b01b2fdb 1-399
+doc/ai/designs/local-queue-s0-ownership.md
+  s_6303b89c4410f1::t_b8a7f9223879a0 1-234
+doc/ai/designs/local-queue-s2-integration-notes.md
+  s_6303b89c4410f1::t_b2e9319019b169 1-454
+doc/ai/designs/local-queue-target-measurement-method.md
+  s_6303b89c4410f1::t_c16ead6ca957f6 1-239
+doc/ai/module_map.yaml
+  s_6303b89c4410f1::t_ae8ca7c0768daf 6-8,12-18,27-105,108-113,121-127
+doc/source/concepts/queues.rst
+  s_6303b89c4410f1::t_313c918d06cca8 30,645-774
+doc/source/development/doc_style_guide.rst
+  s_6303b89c4410f1::t_861234d8cbeb12 111
+doc/source/rainerscript/global.rst
+  s_6303b89c4410f1::t_e85744a56a8dc9 619-634
+doc/source/rainerscript/queue_parameters.rst
+  s_6303b89c4410f1::t_2a89d1f499f26c 50-125
+grammar/rainerscript.c
+  s_6303b89c4410f1::t_ea5678f39aa762 65,1807-1823,1836-1838,1842,1844,1858-1859,1884-1891,2525,2539,2541-2542,2550-2553,2558,2563-2579,2582,4564-4647,5536
+grammar/rainerscript.h
+  s_6303b89c4410f1::t_3fb19e0ae5c419 391-392
+plugins/AGENTS.md
+  s_6303b89c4410f1::t_90788167960afc 85-89
+plugins/imbeats/imbeats.c
+  s_6303b89c4410f1::t_862e4451fa1035 134-138,1548-1557,1564,1574,1585,1634-1641,1643,1657,1669-1672,1707-1708,1927-1928,1941-1951,1964,1966-1981
+plugins/imdiag/Makefile.am
+  s_6303b89c4410f1::t_acdcaec68e5c43 5-7
+plugins/imdiag/imdiag.c
+  s_6303b89c4410f1::t_4e6f5b0336d98f 66-72,84-88,111-113,523-527,574-594,710-1332,1369-1370,1381-1394,1928-1930,1979-1981,2030
+plugins/imdtls/imdtls.c
+  s_6303b89c4410f1::t_3e2b492b04c92b 111,124,143,198,205,209,290,367-369,447-452,905,1010,1101-1106,1122-1133,1201-1207,1219,1229,1231,1233
+plugins/imfifo/imfifo.c
+  s_6303b89c4410f1::t_ac8ac6442a3525 302,318,328,335,343,452,485
+plugins/imkafka/imkafka.c
+  s_6303b89c4410f1::t_9453e4fbe93be3 1116
+plugins/impstats/impstats.c
+  s_6303b89c4410f1::t_e0e4cd95338b3c 834-846,849
+plugins/imptcp/imptcp.c
+  s_6303b89c4410f1::t_271590dcff3a1c 49,360,529-615,740-743,798,809-810,2140,2142,2145,2151,2157-2163,2165,2176,2181-2182,2192,2205,2207-2208,2214-2216,2789-2790,2858,2868
+plugins/imrelp/imrelp.c
+  s_6303b89c4410f1::t_f1348384fc2a81 392,849-850
+plugins/imtcp/imtcp.c
+  s_6303b89c4410f1::t_61bffc604ac168 853-856,1361-1362
+plugins/imudp/imudp.c
+  s_6303b89c4410f1::t_f18b647c89e0d4 503-505,529-542,1360-1361,1372,1488,1532
+plugins/imuxsock/imuxsock.c
+  s_6303b89c4410f1::t_8c4bc425176114 161,524,545-548,560,1285,1359,1364-1365,1369-1370,1379-1389,1686-1687
+plugins/mmnormalize/mmnormalize.c
+  s_6303b89c4410f1::t_b824c6f84e478e 71,92-100,729-744,1100-1103,1171-1180
+plugins/omelasticsearch/omelasticsearch.c
+  s_6303b89c4410f1::t_33660ae5a0a112 2925-2950
+plugins/omtesting/omtesting.c
+  s_6303b89c4410f1::t_f19996a9020185 20-21,56-57,59,67-70,80-89,103-109,133,218-361,407-408,425-429,453-454,473-477,480,489-512,591-601,618-655,658
+runtime/AGENTS.md
+  s_6303b89c4410f1::t_4ccbac2961f4ad 28,40-49,52-54,61-64
+runtime/Makefile.am
+  s_6303b89c4410f1::t_28fa6755b34284 80-86,156-159,343-345
+runtime/action.c
+  s_6303b89c4410f1::t_70dc9275ee8a15 64,87,120-191,391-398,1554-1564,2041-2044,2060-2066,2447-2468,2472-2479,2507-2512,2568-2571
+runtime/action.h
+  s_6303b89c4410f1::t_f575b31f15ad20 77
+runtime/cfsysline.c
+  s_6303b89c4410f1::t_37fb3e4bafba84 33,262-265
+runtime/glbl.c
+  s_6303b89c4410f1::t_0cdcb79c08c637 180,1565-1576
+runtime/im-helper.h
+  s_6303b89c4410f1::t_4e9547a8d0f8cc 53-59
+runtime/net.c
+  s_6303b89c4410f1::t_86bf48f934143d 1535-1542
+runtime/net_ossl.c
+  s_6303b89c4410f1::t_b41f8ea998140c 898,913-916,918,924-928,930,1134-1136,1145-1147,1149,1153-1158,1160,1164-1166,1168,1448,1684-1685,1690-1691,1694-1710,2226,2236,2310
+runtime/nsd_ptcp.c
+  s_6303b89c4410f1::t_cc187a1b8c4ea2 42-45,65-157,816-820
+runtime/perctile_ringbuf.c
+  s_6303b89c4410f1::t_ac0d48efb102ea 1,4,21,25,27-28,30-40,42-51,56-57,62-65,67-69,72-77,82-84,86,89,91-93,95-106,110-112,114,118,121
+runtime/perctile_ringbuf.h
+  s_6303b89c4410f1::t_0018e722a5af8d 1-5,7-8,12-13,15-17,28
+runtime/perctile_stats.c
+  s_6303b89c4410f1::t_10a4dfe56dd928 369,413
+runtime/queue.c
+  s_6303b89c4410f1::t_e62cf5ae0c9fbf 209-211,226,251,319-324,346,553,597-620,694-706,733-751,766,770,884-885,988,1043-1049,1114,1127-1129,1354,1947-1950,1965-1969,1971-1981,1988,2222-2226,2426,2477-2478,2708-2813,2817-2818,3007-3008,3290-3376,3384,3393-3405,3427,3430-3433,3441-3442,3445-3446,3460,3463,3493,3497-3502,3514-3515,3776,3782-3788,3888-3891,3901-3904,3944-3963,3971,3986-3989,3996-4003,4031,4037-4046,4052-4258,4302-4304,4309-4318,4337-4342,4367-4385,4387-4415,4425-4428,4431,4444,4455-4460,4511-4513,4549-4554,4569-4575,4674,4678,4702-4705,4746,4748,4761-4768,4873-4877,4881-4930,5090-5107,5109,5117-5120,5126-5166,5171-5191,5193-5194,5198,5204-5205,5208-5211,5215,5219,5254,5282-5287,5299,5364-5376,5378-5384,5388-5391,5397-5398,5427-5428,5485-5486,5503-5508,5514,5537-5540,5543-5551,5566-5572,5577-5693,5714,5762-5763,5789-5807,5817,5944,6035,6048-6126,6136,6139-6168,6179-6183,6185-6223,6274-6276,6366-6367,6447-6452,6563
+runtime/queue.h
+  s_6303b89c4410f1::t_36dbadc6f9f240 45,100-121,127-129,312,318,325-327,363-367
+runtime/queue_lease.h
+  s_6303b89c4410f1::t_06faa7e78dff0f 1-48
+runtime/queue_local.c
+  s_6303b89c4410f1::t_9cec3e6a580924 1-1876
+runtime/queue_local.h
+  s_6303b89c4410f1::t_a7bc7478646408 1-142
+runtime/queue_local_stats.c
+  s_6303b89c4410f1::t_925a5ac792a27d 1-771
+runtime/queue_local_stats.h
+  s_6303b89c4410f1::t_15065bf986192e 1-91
+runtime/queue_spsc.c
+  s_6303b89c4410f1::t_4d6632cf9f550f 1-176
+runtime/queue_spsc.h
+  s_6303b89c4410f1::t_e5fab8cd317f0c 1-75
+runtime/rsconf.c
+  s_6303b89c4410f1::t_6a92dc6c240528 490-492,798,803,806,818,828,1033,1046,1052-1054,1093-1095,1101-1102,1120,1126,1136,1145-1150,1164,1173-1174,1182,1293,1298-1299,1303,1305,1779,1783,1801-1806
+runtime/rsconf.h
+  s_6303b89c4410f1::t_ed77687a3a6ca9 111-113,278-283
+runtime/rsyslog.h
+  s_6303b89c4410f1::t_bd5a5a0b9283a3 745-746
+runtime/ruleset.c
+  s_6303b89c4410f1::t_3a9c2d10cdc778 45,51,57-58,63,166-170,175,933-1339,1534,1544
+runtime/ruleset.h
+  s_6303b89c4410f1::t_44af0079eb9836 103-106,108
+runtime/statsobj.c
+  s_6303b89c4410f1::t_fe9d6d81f88162 165-166,183-199,841-843,886-888,950-952,1153
+runtime/statsobj.h
+  s_6303b89c4410f1::t_d2018dc47e5303 144-152,179-187,250,260,334
+runtime/stream.c
+  s_6303b89c4410f1::t_45fd7c9410b5d6 289-291,446-470,1445-1447,1726-1729
+runtime/stream.h
+  s_6303b89c4410f1::t_8ef72b3ffb01e9 181,249-252
+runtime/tcps_sess.c
+  s_6303b89c4410f1::t_3a0c0856eb4f74 520-521,524
+runtime/tcpsrv.c
+  s_6303b89c4410f1::t_9daccaa63cad53 74,506,696,706,711,720-721,1239-1244,1251,1460,1557-1561,1573-1584,1628-1632,1678-1687,1689-1717,1780-1786,1865,1905-1915,1979-1980
+runtime/threads.c
+  s_6303b89c4410f1::t_69f4df4693bee6 36,53-64,265,288-290,302,304-308,310-311,313,315-319,321,324-337
+runtime/threads.h
+  s_6303b89c4410f1::t_fd878daa0ad449 56-57
+runtime/wti.c
+  s_6303b89c4410f1::t_f321beaac9a8cc 54,299-302,340-373,399-410,413,508,543-549,551,588-589
+runtime/wti.h
+  s_6303b89c4410f1::t_e847372cd74a5b 35-37,88-93,96-102,122-128,159-166,177,187,230-254
+runtime/wtp.c
+  s_6303b89c4410f1::t_52a6af7f446686 133,137-147,166,169-177,190-194,290,347,357-433,440,459-462,464-473,481-506,523-525,527-528,589-605,607-608,611-612,616-618,769-784,806
+runtime/wtp.h
+  s_6303b89c4410f1::t_6b2200aa41517b 56,65,108-114
+tests/Makefile.am
+  s_6303b89c4410f1::t_14c2b98463bbeb 17-24,28-31,42-43,78-80,87-94,97-105,107-109,195-280,293,352,377,506,571,698,1008,1049-1053,1531,1568,1726,1929-1931,2637-2638,2753,2851,2854-2857,2884-2888,2982-2985,2988,2997-2998,3011-3039,3097-3130,3241-3247,3249,3298,3342,3396-3400,3943-3947
+tests/codex-pre-push-container-gate.sh
+  s_6303b89c4410f1::t_deb253f7c64dc5 11-19,39-40,45-48,52-53,55,61,70,78-84,104-105,139-221
+tests/daily-stable-failure-report.sh
+  s_6303b89c4410f1::t_9052557b97975e 1-171
+tests/daily-stable-package-drift.sh
+  s_6303b89c4410f1::t_06ff763761ee64 1-157
+tests/diag.sh
+  s_6303b89c4410f1::t_511f9dbbe711ed 188-200,4314-4322,4330,4332-4334,4336-4369,4405-4409
+tests/diskqueue-serializer-abi.sh
+  s_6303b89c4410f1::t_ca3a18d7fd15c7 1-27
+tests/dynstats_prevent_premature_eviction-vg.sh
+  s_6303b89c4410f1::t_86e2b34014c873 3-6
+tests/dynstats_prevent_premature_eviction.sh
+  s_6303b89c4410f1::t_78727310b87e58 3-8,34-50,52-66,72,76
+tests/fuzz/README.md
+  s_6303b89c4410f1::t_4fa071175b2632 81-83
+tests/fuzz/corpus/imtcp-session/regex-framing-zstd-no-newline-oct10.hex
+  s_6303b89c4410f1::t_28972b1e01f0b7 1-14
+tests/fuzz/corpus/imtcp-session/regex-framing-zstd-no-newline-oct13.hex
+  s_6303b89c4410f1::t_e02ffbf554ea1a 1-34
+tests/fuzz/prepare-imtcp-session-corpus.py
+  s_6303b89c4410f1::t_9513bf8abf760e 16-19
+tests/imbeats-bind-failure.sh
+  s_6303b89c4410f1::t_9edeacfbf4699d 1-163
+tests/imczmq-startup-failure.sh
+  s_6303b89c4410f1::t_00870b39a11881 1-60
+tests/imfifo-startup-failure.sh
+  s_6303b89c4410f1::t_a89aaac012e1e9 1-60
+tests/imptcp-bind-failure.sh
+  s_6303b89c4410f1::t_611eba6761c3f6 1-165
+tests/imtcp-bind-failure.sh
+  s_6303b89c4410f1::t_48c5c33449be37 1-248
+tests/imtcp-poll-shutdown-workset.sh
+  s_6303b89c4410f1::t_af9a4513d33b86 1-23
+tests/imudp-bind-failure.sh
+  s_6303b89c4410f1::t_d5705d2e827277 1-183
+tests/known_issues.supp
+  s_6303b89c4410f1::t_fd3b88dbff6c91 92,96
+tests/local-queue-be-force-term-actions.sh
+  s_6303b89c4410f1::t_623f473129bd27 1-221
+tests/local-queue-common.sh
+  s_6303b89c4410f1::t_1ab8e1a99163f6 1-170
+tests/local-queue-config-yaml.sh
+  s_6303b89c4410f1::t_420194656f2992 1-5
+tests/local-queue-config.sh
+  s_6303b89c4410f1::t_8095243aaf7d2d 1-290
+tests/local-queue-force-term-actions.sh
+  s_6303b89c4410f1::t_012d225b8e4515 1-100
+tests/local-queue-global-input-force-term.sh
+  s_6303b89c4410f1::t_cf672fcbe7f97d 1-7
+tests/local-queue-global-shutdown-loss-report-linkedlist.sh
+  s_6303b89c4410f1::t_3e728dc3aaea79 1-8
+tests/local-queue-global-shutdown-loss-report.sh
+  s_6303b89c4410f1::t_9fc3070ba3a3a7 1-80
+tests/local-queue-help-capacity.sh
+  s_6303b89c4410f1::t_95b82768043eb6 1-7
+tests/local-queue-help-wake-after.sh
+  s_6303b89c4410f1::t_4fd717dbfb589f 1-6
+tests/local-queue-help-wake-before.sh
+  s_6303b89c4410f1::t_9adcd2c05a3354 1-6
+tests/local-queue-help-wake-handoff.sh
+  s_6303b89c4410f1::t_a2cd252727bf11 1-71
+tests/local-queue-helper-cancel-actions.sh
+  s_6303b89c4410f1::t_6650cef406baac 1-8
+tests/local-queue-helper-force-term-actions.sh
+  s_6303b89c4410f1::t_b241cd0cb81b66 1-7
+tests/local-queue-helper-replay-actions.sh
+  s_6303b89c4410f1::t_acaeea6a3c371c 1-10
+tests/local-queue-helping-default.sh
+  s_6303b89c4410f1::t_5afec4d050def1 1-5
+tests/local-queue-helping.sh
+  s_6303b89c4410f1::t_39d3e418e749cb 1-149
+tests/local-queue-imtcp-cache-failure.sh
+  s_6303b89c4410f1::t_79b301c873ec1f 1-5
+tests/local-queue-imtcp-internal.sh
+  s_6303b89c4410f1::t_cfe2cd4a68a4e4 1-65
+tests/local-queue-imtcp-partial-batch.sh
+  s_6303b89c4410f1::t_60963304e3f8fd 1-69
+tests/local-queue-imtcp-producer-exit.sh
+  s_6303b89c4410f1::t_9ba7ee8a4db3d8 1-76
+tests/local-queue-imtcp-registration.sh
+  s_6303b89c4410f1::t_d8fa9558987c9a 1-51
+tests/local-queue-imtcp-shutdown-multi-fe.sh
+  s_6303b89c4410f1::t_242bd92bd3e71a 1-88
+tests/local-queue-imtcp-shutdown.sh
+  s_6303b89c4410f1::t_477d8fe3efc09f 1-48
+tests/local-queue-imtcp-tiered.sh
+  s_6303b89c4410f1::t_0e257866fd0ca7 1-76
+tests/local-queue-imtcp-tls-failure.sh
+  s_6303b89c4410f1::t_c185aaa4776bac 1-56
+tests/local-queue-imtcp-worker-failure.sh
+  s_6303b89c4410f1::t_f9c19c5f1b346e 1-5
+tests/local-queue-input-force-term.sh
+  s_6303b89c4410f1::t_edfafd5de03790 1-41
+tests/local-queue-known-success.sh
+  s_6303b89c4410f1::t_6479bfee416508 1-109
+tests/local-queue-omfile-activation.sh
+  s_6303b89c4410f1::t_0179ca39ee3441 1-116
+tests/local-queue-omfile-cancel-preload.c
+  s_6303b89c4410f1::t_40ce8511cd685c 1-131
+tests/local-queue-omfile-cancel.sh
+  s_6303b89c4410f1::t_5fbc29cfa5ae6f 1-73
+tests/local-queue-omfile-hup.sh
+  s_6303b89c4410f1::t_df9fe309ad7607 1-70
+tests/local-queue-redirect-publication.sh
+  s_6303b89c4410f1::t_f0b4aed6a4a675 1-35
+tests/local-queue-s4-config-yaml.sh
+  s_6303b89c4410f1::t_afecad74cb623d 1-4
+tests/local-queue-s4-config.sh
+  s_6303b89c4410f1::t_42050ef418c8d2 1-66
+tests/local-queue-s4-direct-main.sh
+  s_6303b89c4410f1::t_f464c291c9f42c 1-6
+tests/local-queue-s4-global-boundary.sh
+  s_6303b89c4410f1::t_cc549e96d048bf 1-6
+tests/local-queue-s4-graph.sh
+  s_6303b89c4410f1::t_814b0becf40d21 1-86
+tests/local-queue-s4-output-es-partial.sh
+  s_6303b89c4410f1::t_91073c35a768a9 1-6
+tests/local-queue-s4-output-es.sh
+  s_6303b89c4410f1::t_12fdc7b249bb5d 1-150
+tests/local-queue-s4-output-tcp-fallback.sh
+  s_6303b89c4410f1::t_4405f2869c76b5 1-45
+tests/local-queue-s4-output-tcp-recovery.sh
+  s_6303b89c4410f1::t_511086c264ec9b 1-51
+tests/local-queue-s4-output-tcp.sh
+  s_6303b89c4410f1::t_c4523b3f523c29 1-74
+tests/local-queue-s4-shutdown.sh
+  s_6303b89c4410f1::t_2893fa1a849619 1-74
+tests/local-queue-s5-da-emergency-lease.sh
+  s_6303b89c4410f1::t_d76ae7c49f6c26 1-79
+tests/local-queue-s5-graph-shutdown.sh
+  s_6303b89c4410f1::t_0c694070ef85de 1-103
+tests/local-queue-s5-persistence.sh
+  s_6303b89c4410f1::t_3619f67c34b2c6 1-150
+tests/local-queue-s5-save-disabled.sh
+  s_6303b89c4410f1::t_469da4e696d03e 1-6
+tests/local-queue-s5-segmented-graph-shutdown.sh
+  s_6303b89c4410f1::t_e77a69bb36edb7 1-4
+tests/local-queue-s5-segmented-persistence.sh
+  s_6303b89c4410f1::t_79183a8e3f845e 1-5
+tests/local-queue-s5-segmented-save-disabled.sh
+  s_6303b89c4410f1::t_b88438f7ee5193 1-6
+tests/local-queue-s5-segmented-spill.sh
+  s_6303b89c4410f1::t_963703123760c7 1-4
+tests/local-queue-s5-segmented-store-failure.sh
+  s_6303b89c4410f1::t_8f8019da7ea858 1-4
+tests/local-queue-s5-spill.sh
+  s_6303b89c4410f1::t_3867e88b553a3a 1-94
+tests/local-queue-s5-store-failure.sh
+  s_6303b89c4410f1::t_102662fe9c16f1 1-92
+tests/local-queue-s6-discard.sh
+  s_6303b89c4410f1::t_6616936b8a4a38 1-70
+tests/local-queue-s6-linkedlist-discard.sh
+  s_6303b89c4410f1::t_99b7576b6d4412 1-4
+tests/local-queue-s6-linkedlist-help-capacity.sh
+  s_6303b89c4410f1::t_0aa50ddd33d053 1-5
+tests/local-queue-s6-linkedlist-oom.sh
+  s_6303b89c4410f1::t_44f5bc16fb5e98 1-68
+tests/local-queue-s6-linkedlist-persistence.sh
+  s_6303b89c4410f1::t_54107cff210201 1-5
+tests/local-queue-s6-linkedlist-retry-oom.sh
+  s_6303b89c4410f1::t_837a217096dd9a 1-7
+tests/local-queue-s6-linkedlist-segmented-persistence.sh
+  s_6303b89c4410f1::t_18935e6ac9e7e5 1-6
+tests/local-queue-s6-linkedlist-stats.sh
+  s_6303b89c4410f1::t_62454ad1937aac 1-5
+tests/local-queue-s6-linkedlist-tiered.sh
+  s_6303b89c4410f1::t_dc329db80930fc 1-5
+tests/local-queue-s6-min-batch.sh
+  s_6303b89c4410f1::t_90e6735743fdcb 1-6
+tests/local-queue-s6-sampling-retry.sh
+  s_6303b89c4410f1::t_21e7af597c1e4d 1-6
+tests/local-queue-s6-sampling.sh
+  s_6303b89c4410f1::t_86bae4ddc8ee24 1-6
+tests/local-queue-s6-schedule.sh
+  s_6303b89c4410f1::t_8a91bf1f622ac7 1-60
+tests/local-queue-s6-segmented-sampling.sh
+  s_6303b89c4410f1::t_782c53d5267551 1-6
+tests/local-queue-s6-slowdown.sh
+  s_6303b89c4410f1::t_c0234a50425c39 1-66
+tests/local-queue-shutdown-loss-report.sh
+  s_6303b89c4410f1::t_f6cc912ba5ecd3 1-9
+tests/local-queue-startup-failure.sh
+  s_6303b89c4410f1::t_fc60d4e1856148 1-139
+tests/local-queue-stats-lifetime.sh
+  s_6303b89c4410f1::t_f07f03395de989 1-33
+tests/local-queue-stats-reconciliation.sh
+  s_6303b89c4410f1::t_b4da6066c70094 1-102
+tests/local-queue-submit-batches.sh
+  s_6303b89c4410f1::t_1ae8e1ab1ea1cc 1-87
+tests/miniamqpsrvr.c
+  s_6303b89c4410f1::t_1ef172548897ce 495,596-599
+tests/minitcpsrv-reconnect.sh
+  s_6303b89c4410f1::t_570642678bae1a 1-90
+tests/minitcpsrvr.c
+  s_6303b89c4410f1::t_19909cabbd0c1e 41,423-425
+tests/mmnormalize-turbo-hup-tsan.sh
+  s_6303b89c4410f1::t_0765c932216a2b 87-90
+tests/mmnormalize-turbo-truncated-stat.sh
+  s_6303b89c4410f1::t_1905589b7ae119 1-63
+tests/omhttp_server.py
+  s_6303b89c4410f1::t_132e7c43137dfe 10-14,137-149,170,189
+tests/omkinesis-mock-common.sh
+  s_6303b89c4410f1::t_5be6ac8bd39b24 9-10,17-18
+tests/omkinesis-mock-server.py
+  s_6303b89c4410f1::t_cf8b9e28cb18be 7,26-36
+tests/ompipe-legacy-path-length-vg.sh
+  s_6303b89c4410f1::t_a1d07f440a2718 1-20
+tests/ompipe-legacy-path-length.sh
+  s_6303b89c4410f1::t_03c37365e2bb28 1-60
+tests/pmrfc3164-SquareBracketsInHostname-oversize.sh
+  s_6303b89c4410f1::t_b44f555802735f 1-47
+tests/queue-benchmark-latency-oracle.sh
+  s_6303b89c4410f1::t_76501038ec7387 1-70
+tests/queue-benchmark-oracle.sh
+  s_6303b89c4410f1::t_394ab3313b2592 1-8
+tests/queue-benchmark-throughput-config.sh
+  s_6303b89c4410f1::t_1b3b097f81a611 1-58
+tests/queue-benchmark-throughput-local.sh
+  s_6303b89c4410f1::t_3e72c0a97f4d73 1-26
+tests/queue-discard-only-lease.sh
+  s_6303b89c4410f1::t_b6cadc069af56e 1-32
+tests/queue-fixedarray-outoforder.sh
+  s_6303b89c4410f1::t_2d095852c17da5 9-13,21,40-41,50-54,62
+tests/queue-lease-attribution.sh
+  s_6303b89c4410f1::t_6da8283d283f21 1-37
+tests/record-container-validation.sh
+  s_6303b89c4410f1::t_301fee8e94faf4 1-145
+tests/rpm-baseline-patch-policy.sh
+  s_6303b89c4410f1::t_3ace179b06bd8c 10-16,18,184-241
+tests/rscript-json-var-eval-semantics.sh
+  s_6303b89c4410f1::t_be7b87bf38e42b 7-10,13-17,20,46,65-68
+tests/rscript-replace-result-limit.sh
+  s_6303b89c4410f1::t_9140a4258c54d4 1-36
+tests/rscript_http_request.sh
+  s_6303b89c4410f1::t_79de71999bc539 4-10,12-18,23,29-30,52
+tests/unit/perctile_ringbuf_test.c
+  s_6303b89c4410f1::t_7582dbd752478d 1-108
+tests/unit/queue_lease_test.c
+  s_6303b89c4410f1::t_4dbc834daed764 1-56
+tests/unit/queue_spsc_test.c
+  s_6303b89c4410f1::t_f8f772cacda205 1-414
+tests/unit/wtp_wakeup_test.c
+  s_6303b89c4410f1::t_530a6ed20e0322 5-7,102,239-284,300
+tests/wtp-exiting-worker-restart.sh
+  s_6303b89c4410f1::t_e712fc4983fdd6 1-88
+tests/wtp-targeted-wakeup.sh
+  s_6303b89c4410f1::t_9224d63a95be15 11-15,22,34-35,54
+tests/yaml-local-queue-omfile-activation.sh
+  s_6303b89c4410f1::t_b843147353c6bf 1-5
+tools/omfile.c
+  s_6303b89c4410f1::t_dfabaf1903704f 47,87,167-169,562,1011,1361-1362,1420-1422,1572,1638-1648,1651-1652,1662,1666-1667,1681-1682,1686,1688,1706,1922-1925,2219,2233-2262,2265-2266
+tools/omfwd.c
+  s_6303b89c4410f1::t_8b5dfb0ad80a8a 1695,1703-1709,1723,1771,1864-1866,1973,2083-2084,2096,2929-2937,2940
+tools/ompipe.c
+  s_6303b89c4410f1::t_485e6e886330d9 385
+tools/pmrfc3164.c
+  s_6303b89c4410f1::t_4f08f96e6c4607 436-441
+tools/rsyslogd.c
+  s_6303b89c4410f1::t_ec6b7d11279899 1002-1004,1018-1022,1025-1033,1775-1778,1885,1897-1902,2567-2569,2724-2727
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a172f68bdd89e77daf619689faebf3acc287536",
+  "prompts": {},
+  "sessions": {
+    "s_6303b89c4410f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a111ee-0153-7182-be29-038ea2732d1e",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

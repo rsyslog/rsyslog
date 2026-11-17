@@ -1,0 +1,29 @@
+doc/source/reference/parameters/imtcp-failonbinderror.rst
+  s_b3a84b787ce0a4::t_9e677e2c429fc0 32-36
+runtime/tcpsrv.c
+  s_b3a84b787ce0a4::t_f0722a633e8b45 729,1829
+runtime/nsd_ptcp.c
+  s_b3a84b787ce0a4::t_9e677e2c429fc0 146,149-151
+tests/imtcp-bind-failure.sh
+  s_b3a84b787ce0a4::t_9e677e2c429fc0 3
+plugins/imtcp/imtcp.c
+  s_b3a84b787ce0a4::t_f0722a633e8b45 561-562
+runtime/tcpsrv.h
+  s_b3a84b787ce0a4::t_f0722a633e8b45 229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1c9d9b6c24f16da0b63633556d61a1222e95375",
+  "prompts": {},
+  "sessions": {
+    "s_b3a84b787ce0a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1171d-f404-7460-9f79-add73811d246",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

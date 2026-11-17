@@ -1,0 +1,36 @@
+tests/solaris/prep-librelp.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 6,9,13
+tests/travis/install.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 42,48
+tests/action-tx-errfile.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 7-10
+tests/travis/run-cron.sh
+  s_21a8eefcb5d3df::t_7bd41b94a13701 24-25
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 31
+tests/CI/prep-libfastjson.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 7,10,15
+tests/CI/prep-libestr.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 7,10,17
+tests/CI/prep-liblogging.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 7,10,15
+tests/solaris/prep-libfastjson.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 6,9,12
+tests/CI/gather_all_logs.sh
+  s_21a8eefcb5d3df::t_a9c7f4b517b220 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "77e2d0c6fef4c772797b31225150e4b67baf6de9",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

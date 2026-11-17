@@ -1,0 +1,32 @@
+doc/Makefile.am
+  h_95716f3de0caf5 987
+doc/source/configuration/modules/omdtls.rst
+  h_95716f3de0caf5 83-86,115
+doc/source/reference/parameters/omdtls-tls-permittedpeer.rst
+  h_95716f3de0caf5 1-75
+plugins/omdtls/omdtls.c
+  h_95716f3de0caf5 72,82,104,156-160,285,330-333,406-423,426,495-500,512-513,545,569,648,700-718,754-756,848,850,862-863
+tests/Makefile.am
+  h_95716f3de0caf5 2140-2142
+tests/omdtls-permittedpeer-authmode-invalid.sh
+  h_95716f3de0caf5 1-22
+tests/sndrcv_dtls_certvalid.sh
+  h_95716f3de0caf5 3-5,64-65
+tests/sndrcv_dtls_certvalid_permitted.sh
+  h_95716f3de0caf5 3-5,68-69
+tests/sndrcv_dtls_name_not_permitted.sh
+  h_95716f3de0caf5 1-62
+tests/yaml-omdtls-permittedpeer.sh
+  h_95716f3de0caf5 1-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "129104c579220ba6b81c37b8e7fbafa8aba08081",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

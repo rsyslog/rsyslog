@@ -1,0 +1,46 @@
+grammar/reload-ruleset-materializer.c
+  s_f8a738e4bdfaee::t_54c6c233e54aa3 68-69,165,167,200,202,237-240,292-293,318,424-433,475-507,511-512,515-520,522-523,527-541
+grammar/Makefile.am
+  s_f8a738e4bdfaee::t_9c1d89e076b522 24-25
+tests/unit/reload_callgraph_fence_test.c
+  s_f8a738e4bdfaee::t_84c8f0444d9ba0 1-189
+tests/testsuites/reload-callgraph-latch.sh
+  s_f8a738e4bdfaee::t_77ecf78bee2551 1-10
+tests/global-reloadonhup-callgraph-rainerscript.sh
+  s_f8a738e4bdfaee::t_4b753ecc06f020 1-189
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_8ef53370cf2cf9 1442,1468,4824-4837
+runtime/AGENTS.md
+  s_f8a738e4bdfaee::t_a27bf33c856779 88-95
+grammar/rainerscript.c
+  s_f8a738e4bdfaee::t_d5968f9404b7d6 6388-6389
+grammar/reload-call-binding.h
+  s_f8a738e4bdfaee::t_499b7f6e072987 1-42
+tests/unit/reload_call_binding_test.c
+  s_f8a738e4bdfaee::t_eac50902662634 1-66
+grammar/reload-ruleset-materializer.h
+  s_f8a738e4bdfaee::t_dbea4c4daef30e 69-72
+tests/global-reloadonhup-callgraph-yaml.sh
+  s_f8a738e4bdfaee::t_a3f676857f09ec 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "016a296a6b1d021ffc39e6961b167416671f9ae7",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

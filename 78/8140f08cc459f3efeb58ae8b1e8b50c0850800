@@ -1,0 +1,31 @@
+doc/source/reference/parameters/imfile-addmetadata.rst
+  s_6224eda96fc0da::t_52cce8fd0f95d7 33-41
+tests/imfile-metadata-line-number.sh
+  s_6224eda96fc0da::t_ff774db633e119 1-38,40-42
+  s_6224eda96fc0da::t_3b7c2853c4bb5e 39
+tests/imfile-no-monitor-config-check.sh
+  s_6224eda96fc0da::t_ff774db633e119 1-20
+tests/Makefile.am
+  s_6224eda96fc0da::t_fc2120dd2fa39b 1737-1738
+plugins/imfile/imfile.c
+  s_6224eda96fc0da::t_fee1bdd0414ecd 1578-1580,1582,1615-1620,1622-1629
+  s_6224eda96fc0da::t_83089658ebefd8 222,1571,1573
+  s_6224eda96fc0da::t_2809f4165851de 2438-2440
+  s_6224eda96fc0da::t_525239ab08aecc 1727-1735,1891,1900,3088-3089
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "788140f08cc459f3efeb58ae8b1e8b50c0850800",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

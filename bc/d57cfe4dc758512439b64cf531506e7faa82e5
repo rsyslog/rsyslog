@@ -1,0 +1,41 @@
+.github/FEDORA_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_0f837a2a7bbeed 65,69-74
+.github/AMAZONLINUX_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_0f837a2a7bbeed 66,70-75
+.github/ALPINE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_0f837a2a7bbeed 58,62-67
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 77-88
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 88-99
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 76-87
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 76-87
+.github/DEBIAN_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_0f837a2a7bbeed 74-77
+.github/OPENSUSE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_0f837a2a7bbeed 75,79-84
+.github/workflows/alpine324_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 77-88
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 87-98
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_aff035a18fc495 76-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "bcd57cfe4dc758512439b64cf531506e7faa82e5",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

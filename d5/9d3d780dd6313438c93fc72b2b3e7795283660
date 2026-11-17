@@ -1,0 +1,20 @@
+plugins/omtesting/omtesting.c
+  h_95716f3de0caf5 69,80-82,84,106,190-215,231-235,250-254,256-278,280-284,292,370-379
+runtime/action.c
+  h_95716f3de0caf5 837-839,2344
+tests/Makefile.am
+  h_95716f3de0caf5 463
+tests/action-reporting-concurrency-tsan.sh
+  h_95716f3de0caf5 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d59d3d780dd6313438c93fc72b2b3e7795283660",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

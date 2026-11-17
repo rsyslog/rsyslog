@@ -1,0 +1,87 @@
+tests/omsendertrack-statefile-recovery-vg.sh
+  s_debe127c3dbc4c::t_5e6e8208d51486 1-3
+ChangeLog
+  s_debe127c3dbc4c::t_ecd656d4c32502 5-9
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 4
+doc/Makefile.am
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 1217
+plugins/omsendertrack/omsendertrack.c
+  s_debe127c3dbc4c::t_59cce372ea3cc7 338,345-353
+  s_debe127c3dbc4c::t_a8c63cd89c4877 287
+  s_debe127c3dbc4c::t_7714a2302e4cbe 138,179,200,370,473,664,820,1033,1079-1080
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 101,135-136,561,563,1032,1074-1075
+  s_debe127c3dbc4c::t_e9371606e56204 321-323,325-329,335-337,339-344,354,358-361
+  s_debe127c3dbc4c::t_b332b6eec2d0c0 696,698-699
+  s_debe127c3dbc4c::t_b11ee8a906e42b 723-724
+  s_debe127c3dbc4c::t_42ce1b03069865 205-209,219-236,238-266,268-270,272-286,288,290-291,294-308,310-312,314-320,324,330-334,355-357,362-364,374-380,384-391,393-394,397-398,403-411,414-419,421-440,443-457,459-463,465-468,471-472,491-492,494-495,498-500,503,523,525-528,559-560,562,564-572
+  s_debe127c3dbc4c::t_28c56e63a4584f 670-672,675,683-686,688-695,700-703,706-710,715-717,719-721,733,766-771,777-789,794-803,806,810-811,817-818
+  s_debe127c3dbc4c::t_5da97303473cd6 210-218,309,313
+  s_debe127c3dbc4c::t_a6e2ae436329b2 46-47,102
+  s_debe127c3dbc4c::t_9c64cb9c9ef016 237,267,271,289,292-293,373,392,396,400,420,469-470,490,573-574,697,704-705,807
+  s_52daf9b39e2b17::t_8703d41e352309 722
+  s_debe127c3dbc4c::t_f81a342b93acea 85-91
+  s_debe127c3dbc4c::t_e12dd9ba512471 395,399,401-402,474,489,575-576,578
+  s_debe127c3dbc4c::t_ecd656d4c32502 476-488,743-746,753-759,761-764,772-776,1100
+  s_debe127c3dbc4c::t_2722747933b088 475,529-530,547,550-551,577,581-582,590,601,666,725,734-735
+  s_debe127c3dbc4c::t_8ab3f8ebbed40c 105,586-589,602,726,982-985,990-992,994-996
+  s_debe127c3dbc4c::t_a39760291e4962 548,600
+  s_debe127c3dbc4c::t_523e3b10b9d9c8 189-190,192,197-199
+tests/Makefile.am
+  s_debe127c3dbc4c::t_5e6e8208d51486 668-669,673-677,2415,2943-2945
+tests/omsendertrack-statefile-recovery.sh
+  s_debe127c3dbc4c::t_18de3e57e56cbf 71-73
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 20,74,79
+  s_debe127c3dbc4c::t_370d7311567133 2-5,45-48,65
+  s_debe127c3dbc4c::t_89e10596acc6c9 37,69,78
+  s_debe127c3dbc4c::t_5e6e8208d51486 1,6-19,21-36,38-42,49-64,66-68,70,75-77,80-81
+  s_debe127c3dbc4c::t_1157d0d9248970 43-44
+doc/source/reference/parameters/omsendertrack-cmdfile.rst
+  s_debe127c3dbc4c::t_9c64cb9c9ef016 24,26
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 4-7,32-35
+  s_debe127c3dbc4c::t_0a9a60dee74558 17
+doc/source/reference/parameters/omsendertrack-statefile.rst
+  s_debe127c3dbc4c::t_ecd656d4c32502 42-45,51
+  s_debe127c3dbc4c::t_0b9017a63a90f5 57
+  s_debe127c3dbc4c::t_1f3834c4e9ee4a 46
+  s_debe127c3dbc4c::t_81eb6a38341fbb 47-50,53-55
+  s_debe127c3dbc4c::t_9c64cb9c9ef016 25,27
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 4-7,38-40,58-59
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 41
+  s_debe127c3dbc4c::t_c178fa205b79f5 56
+tests/yaml-omsendertrack-statefile-recovery.sh
+  s_debe127c3dbc4c::t_5e6e8208d51486 1,3,5-11,16-19,26-31,35-38,42-45,47-52
+  s_debe127c3dbc4c::t_70238309db1a14 12-15,40-41
+  s_debe127c3dbc4c::t_18de3e57e56cbf 39
+  s_debe127c3dbc4c::t_ae793f7d1c085c 4,32-34
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 2,25,46
+  s_debe127c3dbc4c::t_1b250ac08863c2 20-24
+doc/source/reference/parameters/omsendertrack-ignoreinvalidstatefile.rst
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 1-67
+doc/source/configuration/modules/omsendertrack.rst
+  s_debe127c3dbc4c::t_6d8dc7a59b5c42 5-8,12-18,68-69,72-74,94-96,103-106,148-149,180,185-188,193,195-197,247-250,252
+  s_debe127c3dbc4c::t_efa4356f2fa9e8 70-71,146-147,161,251,313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "3d4e577b451f09be5626ee0bd7f6f14b66226c21",
+  "prompts": {},
+  "sessions": {
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_debe127c3dbc4c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02d9b-0263-7be2-bd1f-e337b5c159a2",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

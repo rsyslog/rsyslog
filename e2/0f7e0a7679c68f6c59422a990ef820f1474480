@@ -1,0 +1,34 @@
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_be881a4a9f143f 1-412,418-568,572-655
+  s_2dc01c7e3d2940::t_3b067b8574e308 413-417
+  s_2dc01c7e3d2940::t_bed4863d3c00bc 569-571
+devtools/release/opensuse-daily-stable.sh
+  s_2dc01c7e3d2940::t_7cfe5f76ea3b20 1-133,135-141,157-265
+  s_2dc01c7e3d2940::t_26f1e34658dcad 134
+  s_2dc01c7e3d2940::t_d60afe09b6ce85 142-156
+.github/OPENSUSE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_c5e658844d7f94 1-100
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_ef15a1cee0f271 21
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_d60afe09b6ce85 15-17
+  s_2dc01c7e3d2940::t_1726fbbf6626f2 1,19
+  s_2dc01c7e3d2940::t_26f1e34658dcad 2-5,14,18
+  s_2dc01c7e3d2940::t_92248d6e39d73c 6-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e20f7e0a7679c68f6c59422a990ef820f1474480",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

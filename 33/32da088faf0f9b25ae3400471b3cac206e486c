@@ -1,0 +1,19 @@
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_238303c88f7925 193-194,225-226,237-248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3332da088faf0f9b25ae3400471b3cac206e486c",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

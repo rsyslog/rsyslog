@@ -1,0 +1,44 @@
+benchmarks/queue-contention/README.md
+  s_142ee1fa291d22::t_28df5d1f3ecf32 33-56
+benchmarks/queue-contention/latency-observer.py
+  s_142ee1fa291d22::t_6472093289c718 29-32,120
+  s_142ee1fa291d22::t_dc239b9cc0398f 1-28,33-119,121-127,131-134,136-144,157,165-166
+  s_142ee1fa291d22::t_b4133b29b62fd5 128-130,135,145-156,158-164,167-168
+benchmarks/queue-contention/latency-observer-selftest.py
+  s_142ee1fa291d22::t_d17815e8a8bd95 1-5,7,9,11-34
+  s_142ee1fa291d22::t_7bc303f84c67da 6,8,10,36-55
+  s_142ee1fa291d22::t_6472093289c718 35
+  s_142ee1fa291d22::t_9c65d7a50520d8 56-62
+tests/queue-benchmark-latency-oracle.sh
+  s_142ee1fa291d22::t_d17815e8a8bd95 1-8
+tests/Makefile.am
+  s_142ee1fa291d22::t_fff5f3d74627ab 71-74
+benchmarks/queue-contention/trial-latency.sh
+  s_142ee1fa291d22::t_aef50680d93301 27-28
+  s_142ee1fa291d22::t_45f9bf45cec0ba 11,15-16,18-19,33
+  s_142ee1fa291d22::t_d17815e8a8bd95 1-10,24-26,29-32,34,36-43
+  s_142ee1fa291d22::t_0707dffd01560e 12,20-23,35
+  s_142ee1fa291d22::t_42fe9d8df0e6b5 13-14
+  s_142ee1fa291d22::t_182f202df061b0 17
+benchmarks/queue-contention/compare-latency.py
+  s_142ee1fa291d22::t_b4133b29b62fd5 17-30,37-40,60-61,74-75,91-94,96-98,100-101
+  s_142ee1fa291d22::t_fff5f3d74627ab 1-16,31-36,41-53,55-59,62-73,76-88,95,99,102
+  s_142ee1fa291d22::t_45f9bf45cec0ba 89-90
+  s_142ee1fa291d22::t_0707dffd01560e 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "098b090e5c0dcbaa782866641233f62336c4a5ce",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

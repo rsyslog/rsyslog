@@ -1,0 +1,41 @@
+tests/local-queue-imtcp-shutdown.sh
+  s_142ee1fa291d22::t_77d54a84702c83 1,8-39,42-43,45-47
+  s_142ee1fa291d22::t_eb2c1b99d779da 2,5-7,40-41
+  s_142ee1fa291d22::t_121d99231ba0ff 3-4,44
+tests/local-queue-imtcp-registration.sh
+  s_142ee1fa291d22::t_6fca696dbfe17e 40
+  s_142ee1fa291d22::t_b6c3f9e8faf575 1-5,7-39,42-47
+  s_142ee1fa291d22::t_f7c05de0f44238 6,41
+tests/local-queue-common.sh
+  s_142ee1fa291d22::t_77d54a84702c83 1-33,64-69
+  s_142ee1fa291d22::t_6fca696dbfe17e 34-63
+tests/Makefile.am
+  s_142ee1fa291d22::t_f4760f0e0a26e9 161-167,2902-2908
+tests/local-queue-imtcp-partial-batch.sh
+  s_142ee1fa291d22::t_77d54a84702c83 1-48
+tests/local-queue-imtcp-tiered.sh
+  s_142ee1fa291d22::t_b6c3f9e8faf575 11
+  s_142ee1fa291d22::t_77d54a84702c83 1-10,12-65
+plugins/omtesting/omtesting.c
+  s_142ee1fa291d22::t_514dfe39c9c6f3 18
+  s_142ee1fa291d22::t_20352cdfbae4e4 276-277,343-345,369,388-389,400-423,502-505,534-537
+  s_142ee1fa291d22::t_d5ad7ca7f754d4 53-54,56,77-85,99-100,208-275
+  s_142ee1fa291d22::t_47dfe8623857b5 64-67
+  s_142ee1fa291d22::t_e8413f3c464c8e 278-280,326,538-539
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0bcc872c81201164a223902368437426b1bf99a1",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+plugins/AGENTS.md
+  s_562c2fe9031ed0::t_d4f5e4a78aeb2a 131-139
+plugins/imtcp/imtcp.c
+  s_5e773934876cb4::t_f12877ba5d5294 169,637,767,969,971,976,979
+tests/Makefile.am
+  s_562c2fe9031ed0::t_71c4c538b675e8 1937,2208
+tests/imtcp-permittedpeer-invalid-input.sh
+  s_3e98cfc4c194e7::t_715bc7b50e92e2 1-41
+tests/yaml-tls-permittedpeer-invalid.sh
+  s_3e98cfc4c194e7::t_883b0a489d54cc 1-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6b46542ec42e92314e0d9c1e2f35b9253c888d3",
+  "prompts": {},
+  "sessions": {
+    "s_3e98cfc4c194e7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1acbf-59da-7e52-9ffb-619411629390",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_562c2fe9031ed0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1acbf-1843-7940-9a04-6822ab4533ec",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

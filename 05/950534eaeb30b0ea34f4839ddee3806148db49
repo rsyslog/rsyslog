@@ -1,0 +1,32 @@
+contrib/mmkubernetes/mmkubernetes.c
+  s_6224eda96fc0da::t_30401e1a3a4e51 43,166-167,294-322,324-327,329-330,342-352,372-387
+  s_6224eda96fc0da::t_afe4101bc7fcbc 1831
+  s_6224eda96fc0da::t_30d9db44331956 2026
+  s_6224eda96fc0da::t_2cf359b08ca55b 353-371
+  s_6224eda96fc0da::t_d0c34f69e4ae15 388,1792-1818
+  s_6224eda96fc0da::t_fb69102d03ee0b 323,328,331-341
+  s_6224eda96fc0da::t_17bdd2da15f9c3 850,1475
+  s_6224eda96fc0da::t_e005d76859d7c5 1873,1877-1879,1926,1930-1932
+doc/source/reference/parameters/mmkubernetes-kubernetesurl.rst
+  s_6224eda96fc0da::t_c9a9c73b1ed5c7 21,30-37,47-48
+tests/mmkubernetes-url-failover.sh
+  s_6224eda96fc0da::t_b19d7c0c847710 1-86
+tests/Makefile.am
+  s_6224eda96fc0da::t_b19d7c0c847710 2047-2048
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "05950534eaeb30b0ea34f4839ddee3806148db49",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

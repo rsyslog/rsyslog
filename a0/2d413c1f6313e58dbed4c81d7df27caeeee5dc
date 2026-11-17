@@ -1,0 +1,21 @@
+tests/rsyslog-segqueue-tool.py
+  s_5e773934876cb4::t_cf6f5d5437b353 6-7,123-194
+tools/rsyslog-segqueue
+  s_5e773934876cb4::t_3ec5245744c17d 1207-1210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a02d413c1f6313e58dbed4c81d7df27caeeee5dc",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

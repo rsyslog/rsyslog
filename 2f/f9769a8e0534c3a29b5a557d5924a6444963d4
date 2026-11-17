@@ -1,0 +1,32 @@
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_cce3b9500aefdc::t_d4ae60178b9aca 4-6
+  s_142ee1fa291d22::t_3dedd09ddefb54 3
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_cce3b9500aefdc::t_d4ae60178b9aca 215-217
+.github/OPENSUSE_DAILY_STABLE.md
+  s_cce3b9500aefdc::t_d4ae60178b9aca 12-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2ff9769a8e0534c3a29b5a557d5924a6444963d4",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_cce3b9500aefdc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a968-2537-78b0-9442-1cdf99f1ade2",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

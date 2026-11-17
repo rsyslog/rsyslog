@@ -1,0 +1,30 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_1bee1f1294ffec 962
+contrib/omhttp/omhttp.c
+  s_6224eda96fc0da::t_c7da7f7beb2e3b 1080-1084
+tests/omhttp_server.py
+  s_6224eda96fc0da::t_6acbcb356dc0de 10-11,65-66
+  s_6224eda96fc0da::t_0ece44faf5e99d 63-64,67-76,155-158,168-170
+tests/omhttp-retry-ruleset-recovery.sh
+  s_6224eda96fc0da::t_877a76fad162d0 69-70
+  s_6224eda96fc0da::t_c8241e6bc5374d 31
+  s_6224eda96fc0da::t_23817fd442fed1 28-29
+  s_6224eda96fc0da::t_5870fede1447f8 1-27,30,32-44,46-61,63-68,71-81
+  s_6224eda96fc0da::t_2367ebf67f78e9 45,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ae062493ffa4d82007a90ec7de9b66c420b08595",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

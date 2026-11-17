@@ -1,0 +1,43 @@
+.gitignore
+  s_d7272bc53775bd::t_5c9a541ba84810 138
+tests/Makefile.am
+  s_d7272bc53775bd::t_f395021f236c59 172
+  s_d7272bc53775bd::t_5c9a541ba84810 2681-2682,2685-2686
+  s_d7272bc53775bd::t_aedb351339f68d 2778-2788
+doc/source/configuration/modules/mmaitag.rst
+  s_d7272bc53775bd::t_aedb351339f68d 3,5-6,27-39
+  s_d7272bc53775bd::t_22fcaf82598a40 4,20-21,26
+  s_d7272bc53775bd::t_325f136a97de5c 40
+plugins/mmaitag/ai_provider_gemini_response.h
+  s_d7272bc53775bd::t_aedb351339f68d 2-26
+  s_d7272bc53775bd::t_f395021f236c59 1
+plugins/mmaitag/Makefile.am
+  s_d7272bc53775bd::t_aedb351339f68d 3-4
+plugins/mmaitag/ai_provider_gemini_response.c
+  s_d7272bc53775bd::t_948edf6f196d3b 27
+  s_d7272bc53775bd::t_f395021f236c59 1
+  s_d7272bc53775bd::t_aedb351339f68d 2-26,28-40
+tests/unit/mmaitag_gemini_response_test.c
+  s_d7272bc53775bd::t_f395021f236c59 1,22-24,26-27
+  s_d7272bc53775bd::t_aedb351339f68d 2-21,25,28-31,34-52,62-65
+  s_d7272bc53775bd::t_948edf6f196d3b 32-33,53-61
+plugins/mmaitag/ai_provider_gemini.c
+  s_d7272bc53775bd::t_aedb351339f68d 12,92-108,133,141-146,155,201,233,236-237,239,241
+  s_d7272bc53775bd::t_c2a6f8c8ff654f 234-235,238,240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "59d34806903e54e6bda17b9071b9f700fc4078f4",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

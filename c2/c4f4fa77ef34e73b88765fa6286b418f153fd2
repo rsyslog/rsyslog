@@ -1,0 +1,19 @@
+plugins/mmnormalize/mmnormalize.c
+  s_8641b8fb44298b::t_dc70ea08accbb5 557-558,568,599
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "c2c4f4fa77ef34e73b88765fa6286b418f153fd2",
+  "prompts": {},
+  "sessions": {
+    "s_8641b8fb44298b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6ee9-08f2-7f91-9f4e-4b068beae36a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

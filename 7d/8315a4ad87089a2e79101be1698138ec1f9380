@@ -1,0 +1,38 @@
+tests/diag.sh
+  s_21a8eefcb5d3df::t_81ddc50acfc7c5 3311,3333-3335,3366
+  s_21a8eefcb5d3df::t_62a231f35314a6 3323,3332,3380,3389-3391,3397,3404,3409
+  s_21a8eefcb5d3df::t_548f06ef1ad638 3398
+  s_21a8eefcb5d3df::t_14b4cac2ce5d63 3308-3310
+  s_21a8eefcb5d3df::t_1be1bb173bb842 3322
+  s_21a8eefcb5d3df::t_7b0c89db695cba 3388
+  s_21a8eefcb5d3df::t_4c158b2569c4c3 3318-3320
+  s_21a8eefcb5d3df::t_d704272481666b 3321,3385-3387
+  s_21a8eefcb5d3df::t_d9d02481d7fd08 3381-3384
+  s_21a8eefcb5d3df::t_80048eda3e159c 3400
+  s_21a8eefcb5d3df::t_ce50625e6e93e9 3336-3365
+  s_21a8eefcb5d3df::t_b8fc3818600d37 3405-3408
+  s_21a8eefcb5d3df::t_60852b15683adf 3324-3330
+  s_21a8eefcb5d3df::t_fa40546062fe58 3367
+  s_21a8eefcb5d3df::t_10c4458eb9da79 3377-3379
+  s_21a8eefcb5d3df::t_6d06c7237605cc 3392-3396
+  s_21a8eefcb5d3df::t_178ab4e9b0673b 3307,3312-3317
+  s_21a8eefcb5d3df::t_88b00b62b3409c 3401-3403
+  s_21a8eefcb5d3df::t_e0310c96168d95 3306
+  s_21a8eefcb5d3df::t_305690d8622ee4 3331
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "7d8315a4ad87089a2e79101be1698138ec1f9380",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+tests/clickhouse-template-option-stdsql.sh
+  s_6224eda96fc0da::t_20d3683fd464cb 1-25,27-30
+  s_6224eda96fc0da::t_5693bee203451b 26
+doc/source/reference/parameters/omclickhouse-template.rst
+  s_6224eda96fc0da::t_20d3683fd464cb 31-33,58-60
+tests/Makefile.am
+  s_6224eda96fc0da::t_20d3683fd464cb 764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1987dc3efb93b5a9c7d6069330f5ed614050412e",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

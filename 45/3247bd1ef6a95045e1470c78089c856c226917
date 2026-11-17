@@ -1,0 +1,65 @@
+runtime/rshash.h
+  s_f67b54b127aca7::t_ac34c795315bf1 41-43
+tests/mmkubernetes.supp
+  s_f67b54b127aca7::t_3323f7aff08432 2,5
+runtime/dnscache.c
+  s_f67b54b127aca7::t_5dd62af5d741be 44,63,153,175,362,384,390,398
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_ac34c795315bf1 9,56
+runtime/hashtable.h
+  s_f67b54b127aca7::t_6d4e369e466a8c 8
+runtime/ratelimit.h
+  s_f67b54b127aca7::t_5dd62af5d741be 27,63-64,96
+runtime/ratelimit.c
+  s_f67b54b127aca7::t_d2812cc86b5ed3 48,204,207,225,238,242,246,290,463,583-584,609-610,850,917,1014,1023,1096,1198-1199,1229
+  s_f67b54b127aca7::t_e333c8666e4450 1230,1243,1411,1440,1443,1450,1459,1490,1606,1654,1677,1680,1702,1720,2317
+contrib/mmkubernetes/mmkubernetes.c
+  s_f67b54b127aca7::t_d2812cc86b5ed3 121-122,1029,1036,1055-1056,1071-1072,1086-1087,1134,1144,1158,1162,1164,1208,1217
+plugins/imuxsock/imuxsock.c
+  s_f67b54b127aca7::t_5dd62af5d741be 149,410-411,640,667,688,709,732,754
+  s_f67b54b127aca7::t_98d567e45a964b 755,1293
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_d2812cc86b5ed3 80-81,83-84,88-98,326
+contrib/imdocker/imdocker.c
+  s_f67b54b127aca7::t_f7377f974559a9 144-145,725-726,752,757,778,804,826,841,853,857,859,874,881,888,892,1593,1607,1653,1693,1857
+contrib/mmcount/mmcount.c
+  s_f67b54b127aca7::t_0c18f2c36cfee7 41,62,193,212,220,240
+contrib/mmsequence/mmsequence.c
+  s_f67b54b127aca7::t_83a8f215d69cdc 46,92,237,263,267,286
+plugins/mmanon/mmanon.c
+  s_f67b54b127aca7::t_bc5d5c2562bd92 43,106,120-121,133-134,246,249,252,255,258,1038,1050,1068,1079,1518,1520,1552,1561,1569,1580,1598,1606,1616
+plugins/omhdfs/omhdfs.c
+  s_f67b54b127aca7::t_2ed6a8384db8c5 65,436,453,472-473,495,512
+plugins/omsendertrack/omsendertrack.c
+  s_f67b54b127aca7::t_5719c28b334d7b 95,200,331,442,447,591,598,691
+runtime/dynstats.c
+  s_f67b54b127aca7::t_6134ec53c30aa5 118,304,306,328,338,993,1055,1063,1079,1126,1205
+runtime/dynstats.h
+  s_f67b54b127aca7::t_bd28202732cf5d 22,24
+runtime/perctile_stats.c
+  s_f67b54b127aca7::t_7464516d6c9abb 138,144,207,298,331,441,529
+runtime/perctile_stats.h
+  s_f67b54b127aca7::t_5e26f650819a90 22,58
+runtime/regexp.c
+  s_f67b54b127aca7::t_675cb65c5bad3a 62,65,142,144,148,166,204,220,223,251,331-332,337-338,354
+runtime/rshash.c
+  s_f67b54b127aca7::t_110d570e94f418 21,26,31,39,44,48,62,70,93,98,109,150,180,186,197,236,264,283-284,286,357,371,444,454
+runtime/statsobj.c
+  s_f67b54b127aca7::t_0cdb47f2feefdd 80,568,836,845,917,1000,1014
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "453247bd1ef6a95045e1470c78089c856c226917",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

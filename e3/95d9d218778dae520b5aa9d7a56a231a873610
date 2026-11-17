@@ -1,0 +1,23 @@
+grammar/rainerscript.c
+  s_5e773934876cb4::t_1926d59cacd0fb 3009-3011
+  s_5e773934876cb4::t_d5df73c026de0d 3012-3013
+tests/rscript_is_time.sh
+  s_5e773934876cb4::t_1db75d8aefefaa 4,41-42,61-64,69-70
+  s_5e773934876cb4::t_001501155b8f1c 5,65-68,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e395d9d218778dae520b5aa9d7a56a231a873610",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

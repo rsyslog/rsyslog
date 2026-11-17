@@ -1,0 +1,39 @@
+runtime/glbl.c
+  s_f9a225f27c1ee9::t_1276117fcf6377 176,1179,1558-1559
+plugins/imfile/imfile.c
+  s_f9a225f27c1ee9::t_b4ce2704b5516f 2912-2915
+tests/Makefile.am
+  s_f9a225f27c1ee9::t_07b17a64d9ce47 331,658
+tests/global-systemd-notifyreadydelay-yaml.sh
+  s_f9a225f27c1ee9::t_07b17a64d9ce47 1-44
+doc/source/rainerscript/global.rst
+  s_f9a225f27c1ee9::t_e2334fc3828dba 130-141
+tools/rsyslogd.c
+  s_f9a225f27c1ee9::t_a314449d2bbd51 2669-2671
+  s_f9a225f27c1ee9::t_b4ce2704b5516f 2677-2679
+tests/global-systemd-notifyreadydelay-rainerscript.sh
+  s_f9a225f27c1ee9::t_07b17a64d9ce47 1-34
+runtime/rsconf.h
+  s_f9a225f27c1ee9::t_b4ce2704b5516f 324
+  s_f9a225f27c1ee9::t_1276117fcf6377 116,325
+runtime/rsconf.c
+  s_f9a225f27c1ee9::t_b4ce2704b5516f 104-105,133-135,139-140,190-197
+  s_f9a225f27c1ee9::t_ec1e7e7b11da49 93-97,99-101,103,106-126,129-131,136-138,141-143,148-150,159,165-166,170-172
+  s_f9a225f27c1ee9::t_e03fd0e5bc6c06 160-164,167-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e671f885037435884f070493be753eb021e26e79",
+  "prompts": {},
+  "sessions": {
+    "s_f9a225f27c1ee9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4091-59e1-7ab3-9274-286a5e80b3fa",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

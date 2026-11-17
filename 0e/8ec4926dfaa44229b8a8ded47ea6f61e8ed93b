@@ -1,0 +1,22 @@
+tests/action-retry-clock-jump.sh
+  s_5e773934876cb4::t_d1f7d8a5eaa642 10-11,23-28,30-31,33-35,37,61,63-76
+  s_5e773934876cb4::t_67842c9806a905 29,32,36,44,49,58
+  s_5e773934876cb4::t_3e2ad8c9f1ebb2 38-43,45-48,50-57,59-60,62
+  s_5e773934876cb4::t_d2aaff60926688 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e8ec4926dfaa44229b8a8ded47ea6f61e8ed93b",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+.github/PACKAGING_FOUNDATION.md
+  s_0d5683fb5e1727::t_3468833b7cddf0 1-206
+.github/packaging-targets.json
+  s_0d5683fb5e1727::t_b448cea4f4eabb 1-702
+.github/workflows/alpine324_daily_stable.yml
+  s_0d5683fb5e1727::t_3c30e00e9a1cfe 22-26,61-62,70-71,78-81,109,111-128,136,149-153
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_0d5683fb5e1727::t_3cc3688fa72eb5 22-26,60-61,69-70,77-80,108,110-127,135,147-151
+.github/workflows/debian_daily_stable.yml
+  s_0d5683fb5e1727::t_71144b03548bc6 28-32,70-71,79-80,87-90,120,122-139,147,162-166
+.github/workflows/el10_daily_stable.yml
+  s_0d5683fb5e1727::t_fb19e2e05ebbbc 22-26,60-61,69-70,77-80,108,110-127,135,148-152
+.github/workflows/fedora44_daily_stable.yml
+  s_0d5683fb5e1727::t_41046cecf2ad91 22-26,60-61,69-70,77-80,108,110-127,135,147-151
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_0d5683fb5e1727::t_086b16ade7e811 22-26,60-61,69-70,77-80,108,110-127,135,147-151
+.github/workflows/packaging_candidates.yml
+  s_0d5683fb5e1727::t_7736b0ec386072 1-129
+.github/workflows/ubuntu_daily_stable.yml
+  s_0d5683fb5e1727::t_13bd4295a5cf44 28-32,71-72,80-81,88-91,121,123-140,148,163-167
+AGENTS.md
+  s_0d5683fb5e1727::t_642b21c65efb69 75-77
+Makefile.am
+  s_0d5683fb5e1727::t_f304b6900cbc77 22-23
+devtools/release/package-candidate-plan.py
+  s_0d5683fb5e1727::t_fdb7708f74c800 1-178
+tests/Makefile.am
+  s_0d5683fb5e1727::t_f0c4c97e5c06fa 29
+tests/package-candidate-plan.sh
+  s_0d5683fb5e1727::t_8ac3b4de91d851 1-169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1283cc8b58caa1afca0a3271846ce1eba1be1ba",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

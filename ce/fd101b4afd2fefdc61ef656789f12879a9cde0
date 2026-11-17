@@ -1,0 +1,52 @@
+plugins/mmaitag/ai_provider.h
+  s_d7272bc53775bd::t_89c29bc76e8175 19-28,70
+  s_d7272bc53775bd::t_217f4339aaf382 18
+plugins/mmaitag/ai_provider_gemini_response.h
+  s_d7272bc53775bd::t_89c29bc76e8175 2-12,28-31
+  s_d7272bc53775bd::t_ee8c57381b9fbd 32
+doc/source/reference/parameters/mmaitag-request-lowspeedlimit.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+plugins/mmaitag/mmaitag.c
+  s_d7272bc53775bd::t_3a16ba69237306 43-54,210
+  s_d7272bc53775bd::t_cba18bc973aa7b 33
+  s_d7272bc53775bd::t_89c29bc76e8175 35,66,128-132,201-209,211-234,238-242,269
+doc/source/configuration/modules/mmaitag.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 32-40,103-122,134-138
+tests/mmaitag-transfer-limits-invalid.sh
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-39
+tests/unit/mmaitag_gemini_response_test.c
+  s_d7272bc53775bd::t_89c29bc76e8175 2-12,52-56
+doc/source/reference/parameters/mmaitag-request-timeoutms.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+plugins/mmaitag/ai_provider_gemini.c
+  s_d7272bc53775bd::t_89c29bc76e8175 92,98-99,101-102
+  s_d7272bc53775bd::t_7ba655969a32a8 103,138,152
+doc/source/reference/parameters/mmaitag-request-connecttimeoutms.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+tests/Makefile.am
+  s_d7272bc53775bd::t_2b5089cb15a40e 1024-1025
+doc/source/reference/parameters/mmaitag-request-lowspeedtime.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+plugins/mmaitag/ai_provider_gemini_response.c
+  s_d7272bc53775bd::t_89c29bc76e8175 2-12
+tests/mmaitag-basic.sh
+  s_d7272bc53775bd::t_2b5089cb15a40e 16-21
+doc/source/reference/parameters/mmaitag-response-maxbytes.rst
+  s_d7272bc53775bd::t_2b5089cb15a40e 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cefd101b4afd2fefdc61ef656789f12879a9cde0",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

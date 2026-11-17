@@ -1,0 +1,40 @@
+runtime/hashtable.h
+  s_008ef65e7b10ec::t_56d55e5dd4c0fe 106
+runtime/msg.h
+  s_008ef65e7b10ec::t_f45f12fa70a03b 257
+doc/ai/module_map.yaml
+  s_008ef65e7b10ec::t_371b0370a9e12f 39
+runtime/prop.h
+  s_008ef65e7b10ec::t_d6b3956dda860b 37-38,79-81
+  s_008ef65e7b10ec::t_1f58f313751dda 82
+runtime/msg.c
+  s_008ef65e7b10ec::t_f45f12fa70a03b 2404-2405,2433,2436,2441-2442
+  s_008ef65e7b10ec::t_5f889920f30677 2443-2445
+runtime/ratelimit.c
+  s_008ef65e7b10ec::t_1c46f3cd5d98c6 345,1051-1056,1089,1513
+  s_008ef65e7b10ec::t_cd9cfefae861a0 2655-2656,2673,2680-2684,2727-2729,2732-2734
+  s_008ef65e7b10ec::t_429465bd292c47 1959-1964,1982-1987
+  s_008ef65e7b10ec::t_cc5763be5b8ea6 2737-2738,2742-2743,2832-2833
+runtime/hashtable.c
+  s_008ef65e7b10ec::t_56d55e5dd4c0fe 84-87
+  s_008ef65e7b10ec::t_d68d552ffea66c 88-92
+runtime/prop.c
+  s_008ef65e7b10ec::t_d6b3956dda860b 44,56-57,82,100-111
+  s_008ef65e7b10ec::t_ebd70866585321 112-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "63f470c78032389d59d8a7de8a62bedb866c95bc",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

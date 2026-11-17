@@ -1,0 +1,30 @@
+runtime/translate.c
+  s_138344b887d01a::t_8eaf74fab0c8d9 1170-1177,1179-1190,1192-1193
+  s_138344b887d01a::t_8e61ffc679b9a0 1169,1191,1195
+tests/rscript-if-chain-snapshot.sh
+  s_138344b887d01a::t_ab17c0e40c5ca1 23-24
+  s_138344b887d01a::t_8eaf74fab0c8d9 45-49,51-58,67
+  s_138344b887d01a::t_ba5f44f844ea6b 50,68
+tests/config-translate-rs-script-expressions.sh
+  s_138344b887d01a::t_8eaf74fab0c8d9 7,36-42,69-75
+grammar/rainerscript.c
+  s_138344b887d01a::t_8eaf74fab0c8d9 6043
+grammar/lexer.l
+  s_138344b887d01a::t_8eaf74fab0c8d9 287-288,413-418
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "62732b2b2cdb63ce29076f8d1e5a8af0dcd9a487",
+  "prompts": {},
+  "sessions": {
+    "s_138344b887d01a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07768-9374-7a80-b6b3-482327dc8b69",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

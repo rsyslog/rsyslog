@@ -1,0 +1,31 @@
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 679-691
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 593-604
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 647-658
+devtools/release/alpine-daily-stable.sh
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 224-236
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 680-692
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 627-638
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_5e4c672148f9a1 626-637
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "417ccb361a6260746220758c2c94fa54c963ea6c",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

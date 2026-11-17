@@ -1,0 +1,45 @@
+plugins/imuxsock/imuxsock.c
+  s_f67b54b127aca7::t_306b0c23f70437 668-671,1296-1297
+runtime/rshash.c
+  s_f67b54b127aca7::t_a130c34111f503 550,554,604,609,630,634
+  s_f67b54b127aca7::t_b06409a0748249 44,70-73,95-96,540,545,553,608,633
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_48100185f1af16 160,162,168-170,173
+  s_f67b54b127aca7::t_e575ecda5c4dc6 484
+  s_f67b54b127aca7::t_f259e8ba30331f 30,157-159,161,165-167,171-172,375-378,383-386,391-395,411,415
+runtime/rshash.h
+  s_f67b54b127aca7::t_bce978ea25d65a 65-69,78-82,93-94
+  s_f67b54b127aca7::t_dd84c932d27a14 95
+tests/unit/hashtable_hooks_test.c
+  s_f67b54b127aca7::t_424bd945305c9b 344-345
+runtime/regexp.c
+  s_f67b54b127aca7::t_7c1888f850f452 158,252-255,261-266,271
+  s_f67b54b127aca7::t_c4a636006f7063 136-137
+  s_f67b54b127aca7::t_bad27e054b354c 150,154-157
+runtime/perctile_stats.c
+  s_f67b54b127aca7::t_c1fb443489d358 138
+plugins/mmanon/mmanon.c
+  s_f67b54b127aca7::t_803e972a3d55bd 1518-1519,1548-1550
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_1266ba4806cc52 66
+runtime/hashtable.c
+  s_f67b54b127aca7::t_e093a0713a8498 2,4
+tests/hashtable_stress_test.c
+  s_f67b54b127aca7::t_cd14b55e426d2e 245-253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "e25dcc73b72d9c52f8741f9e90a82e0f2b998af5",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

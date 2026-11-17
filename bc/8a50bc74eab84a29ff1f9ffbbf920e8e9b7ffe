@@ -1,0 +1,19 @@
+contrib/imdocker/imdocker.c
+  s_f67b54b127aca7::t_f10ec914827d49 155-156,860
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "bc8a50bc74eab84a29ff1f9ffbbf920e8e9b7ffe",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

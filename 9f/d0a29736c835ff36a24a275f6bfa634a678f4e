@@ -1,0 +1,19 @@
+tests/clickhouse-wrong-quotation-marks.sh
+  s_5e773934876cb4::t_67c42c6df0a4d0 5-6,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9fd0a29736c835ff36a24a275f6bfa634a678f4e",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

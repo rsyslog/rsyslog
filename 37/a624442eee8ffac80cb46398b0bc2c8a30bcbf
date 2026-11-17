@@ -1,0 +1,57 @@
+doc/source/development/dev_testbench.rst
+  s_6224eda96fc0da::t_3943e076a97e26 94-113
+tests/imdiag-proper-termination-timeoutguard.sh
+  s_e1bc3bab0b4eb3::t_878a98c188ab89 1-39
+tests/Makefile.am
+  s_e1bc3bab0b4eb3::t_673d2d741940ed 311
+doc/source/reference/parameters/imdiag-properterminationfile.rst
+  s_e1bc3bab0b4eb3::t_9842a310dcd333 1-63
+plugins/imdiag/imdiag.c
+  s_e1bc3bab0b4eb3::t_ec8d63a9527eb2 107-111,121,135,823-826,828-833,843,848-855,872-875,877-888,929,958-959,1025-1027,1061,1147-1161
+tools/rsyslogd.c
+  s_e1bc3bab0b4eb3::t_e3debe3ccdac8e 53,214,2428-2512,2689
+tests/diag.sh
+  s_2e888d0bafbab5::t_309b31bdb136d8 444-445,469-470,490-491,524-574,2039-2047
+tests/AGENTS.md
+  s_6224eda96fc0da::t_7f8858c9aaef1b 60-68
+doc/Makefile.am
+  s_e1bc3bab0b4eb3::t_bd70b5b3a37e4a 504
+doc/source/configuration/modules/imdiag.rst
+  s_e1bc3bab0b4eb3::t_4e915bca44204c 47-50,138,156
+runtime/rsyslog.h
+  s_e1bc3bab0b4eb3::t_01d94dcef852ed 956-971
+tests/omkafka-unreachable-shutdown.sh
+  s_e1bc3bab0b4eb3::t_e29181eeb69280 3-7,16,53-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "37a624442eee8ffac80cb46398b0bc2c8a30bcbf",
+  "prompts": {},
+  "sessions": {
+    "s_2e888d0bafbab5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f02dd-92ae-7020-8310-99dd6e196029",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_e1bc3bab0b4eb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eff87-c605-7251-88e6-f834c8ca0205",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
