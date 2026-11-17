@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """Forward only the first two client DTLS datagrams; keep returning server flights."""
 import select
 import socket
@@ -34,4 +35,4 @@ while time.monotonic() < until:
             data = upstream.recv(65535)
             if client:
                 listener.sendto(data, client)
-                print(f"SERVER {len(data)}", flush=True)
+                print(f"SERVER {forwarded} {len(data)}", flush=True)
