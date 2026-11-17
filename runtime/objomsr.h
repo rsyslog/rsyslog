@@ -35,7 +35,9 @@
 #define OMSR_TPL_AS_JSON 8 /* introduced in 6.5.1, 2012-09-02 */
 /** Template is used to render a dynamic file name. */
 #define OMSR_TPL_AS_DYNAFILE 16
-/* next option is 32, 64, ... */
+/** Template must use SQL_ESCAPE, which also escapes backslashes. */
+#define OMSR_RQD_TPL_OPT_SQL_BACKSLASH 32
+/* next option is 64, 128, ... */
 
 struct omodStringRequest_s { /* strings requested by output module for doAction() */
     int iNumEntries; /* number of array entries for data elements below */

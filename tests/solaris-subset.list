@@ -41,3 +41,36 @@ keep imfile-readmode2.sh
 keep imfile-endregex.sh
 keep imfile-truncate.sh
 keep imfile-rename.sh
+
+# imbeats timeout regression: platform-independent timer semantics, includes a
+# deliberate 3 s pause, no Solaris-specific need.
+skip imbeats-idle-between-windows.sh
+
+# imbeats session-close diagnostics: the message text and its rate limiter are
+# platform-independent, and both tests wait for an idleTimeout. Covered on
+# Linux for both config frontends; no Solaris portability oracle.
+skip imbeats-session-close-logging.sh
+skip yaml-imbeats-session-close-logging.sh
+
+# imbeats non-object metadata regression: platform-independent JSON handling in
+# the module, one loopback window; no Solaris-specific oracle.
+skip imbeats-metadata-non-object.sh
+
+# imbeats work-queue wait: the forgiveness only exists on the epoll
+# dispatcher, which SunOS does not have, and the test needs several seconds of
+# omtesting sleeps plus timing margins. Covered on Linux.
+skip imbeats-timeout-queue-wait.sh
+
+# mmcount counter tests (collision counters, cardinality limit):
+# platform-independent contrib-module behavior. Both frontends stay covered on
+# Linux; none adds a Solaris portability oracle.
+skip mmcount-*
+skip yaml-mmcount-*
+
+# Redis output: needs a redis-server, no portability relevance.
+skip omhiredis-*
+
+# mmjsonparse scan counters are platform-independent; both configuration
+# frontends remain covered on Linux without growing the reduced Solaris run.
+skip mmjsonparse-find-json-scan-stats.sh
+skip yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh

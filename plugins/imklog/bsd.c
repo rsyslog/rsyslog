@@ -30,6 +30,7 @@
 #ifdef HAVE_CONFIG_H
     #include "config.h"
 #endif
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -160,6 +161,25 @@ static uchar *GetPath(modConfData_t *pModConf) {
     return pModConf->pszPath ? pModConf->pszPath : (uchar *)_PATH_KLOG;
 }
 
+#ifdef OS_LINUX
+static int origConsoleLogLevel = -1; /* console log level before we changed it, -1 if unknown */
+
+/* obtain the current console log level, which is the first field of
+ * /proc/sys/kernel/printk (there is no klogctl() action to query it).
+ * Returns -1 if it cannot be determined.
+ */
+static int getConsoleLogLevel(void) {
+    FILE *fp;
+    int level = -1;
+
+    if ((fp = fopen("/proc/sys/kernel/printk", "r")) != NULL) {
+        if (fscanf(fp, "%d", &level) != 1) level = -1;
+        fclose(fp);
+    }
+    return level;
+}
+#endif /* #ifdef OS_LINUX */
+
 /* open the kernel log - will be called inside the willRun() imklog
  * entry point. -- rgerhards, 2008-04-09
  */
@@ -177,12 +197,26 @@ rsRetVal klogWillRunPrePrivDrop(modConfData_t *pModConf) {
 #ifdef OS_LINUX
     /* Set level of kernel console messaging.. */
     if (pModConf->console_log_level != -1) {
-        int r = klogctl(8, NULL, pModConf->console_log_level);
+        int r;
+        /* remember the current level so that klogAfterRun() can restore it */
+        origConsoleLogLevel = getConsoleLogLevel();
+        r = klogctl(8, NULL, pModConf->console_log_level);
         if (r != 0) {
             imklogLogIntMsg(LOG_WARNING, "imklog: cannot set console log level: %s",
                             rs_strerror_r(errno, errmsg, sizeof(errmsg)));
             /* make sure we do not try to re-set! */
             pModConf->console_log_level = -1;
+        } else if (origConsoleLogLevel == -1) {
+            imklogLogIntMsg(LOG_WARNING,
+                            "imklog: cannot determine previous console log level, "
+                            "it will not be restored on shutdown");
+        } else if (origConsoleLogLevel < 1 || origConsoleLogLevel > 8) {
+            /* klogctl() only accepts levels 1..8 */
+            imklogLogIntMsg(LOG_WARNING,
+                            "imklog: previous console log level %d is outside the settable "
+                            "range 1..8, it will not be restored on shutdown",
+                            origConsoleLogLevel);
+            origConsoleLogLevel = -1;
         }
     }
 #endif /* #ifdef OS_LINUX */
@@ -279,8 +313,16 @@ rsRetVal ATTR_NONNULL() klogAfterRun(modConfData_t *const pModConf __attribute__
     DEFiRet;
     if (fklog != -1) close(fklog);
 #ifdef OS_LINUX
-    /* Turn on logging of messages to console, but only if a log level was speficied */
-    if (pModConf->console_log_level != -1) klogctl(7, NULL, 0);
+    /* Restore the console log level we changed at startup. This needs the
+     * privilege to change it (CAP_SYSLOG), which may have been dropped.
+     */
+    if (pModConf->console_log_level != -1 && origConsoleLogLevel != -1) {
+        if (klogctl(8, NULL, origConsoleLogLevel) != 0) {
+            char errmsg[2048];
+            imklogLogIntMsg(LOG_WARNING, "imklog: cannot restore console log level to %d: %s", origConsoleLogLevel,
+                            rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+        }
+    }
 #endif
     RETiRet;
 }

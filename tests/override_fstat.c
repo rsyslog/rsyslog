@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
-/* Both names are wrapped and _FILE_OFFSET_BITS is kept undefined: with it,
- * glibc redirects fstat() to fstat64(), which rsyslogd calls on LP64 too.
+/* Keep the compiler's file-offset/time ABI feature macros intact. On 32-bit
+ * glibc, _TIME_BITS=64 requires _FILE_OFFSET_BITS=64. Do not include sys/stat.h:
+ * it redirects both public fstat names to __fstat64_time64 in that mode. This
+ * interposer needs their separate linker names and never inspects a stat buffer,
+ * so use opaque ABI-specific types and forward each buffer to the same symbol.
  */
-#undef _FILE_OFFSET_BITS
 #define _GNU_SOURCE
 
 #include <dlfcn.h>
@@ -13,8 +15,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
+
+struct stat;
+struct stat64;
+struct __stat64_t64;
 
 typedef int (*fstat_func_t)(int fd, struct stat *buf);
 typedef int (*fstat64_func_t)(int fd, struct stat64 *buf);
@@ -104,6 +109,28 @@ int fstat64(int fd, struct stat64 *buf) {
         return -1;
     }
     return real_fstat64(fd, buf);
+}
+
+/* glibc's time64 ABI on 32-bit targets has a different buffer layout from
+ * legacy fstat64. Forward it unchanged to its matching libc entry point.
+ */
+typedef int (*fstat64_time64_func_t)(int fd, struct __stat64_t64 *buf);
+
+int __fstat64_time64(int fd, struct __stat64_t64 *buf) {
+    static fstat64_time64_func_t real_fstat64_time64;
+
+    if (real_fstat64_time64 == NULL) {
+        real_fstat64_time64 = (fstat64_time64_func_t)dlsym(RTLD_NEXT, "__fstat64_time64");
+        if (real_fstat64_time64 == NULL) {
+            errno = ENOSYS;
+            return -1;
+        }
+    }
+    if (should_fail(fd)) {
+        errno = EIO;
+        return -1;
+    }
+    return real_fstat64_time64(fd, buf);
 }
 
 /* Before glibc 2.33, fstat() and fstat64() are inline wrappers linked into

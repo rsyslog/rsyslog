@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Assign a syslog facility to Docker logs using standard names or numeric facility ordinals.
+   :keywords: rsyslog, imdocker, DefaultFacility, syslog facility, facility ordinal
+
 .. _param-imdocker-defaultfacility:
 .. _imdocker.parameter.module.defaultfacility:
 
@@ -27,8 +31,17 @@ This parameter applies to :doc:`../../configuration/modules/imdocker`.
 
 Description
 -----------
-The syslog facility to be assigned to log messages. Textual names such as
-``user`` are suggested, though numeric values are also accepted.
+The syslog facility to be assigned to log messages. Standard facility names
+such as ``kern``, ``user``, ``mail``, ``daemon``, and ``local0`` through
+``local7`` are accepted without regard to case. Textual names are recommended.
+
+Numeric strings are facility **ordinals**, not PRI-encoded facility values.
+For example, ``DefaultFacility="user"`` and ``DefaultFacility="1"`` both
+select facility 1, while ``DefaultFacility="8"`` selects facility 8.
+Similarly, ``"mail"`` selects facility 2 and ``"16"`` selects facility 16
+(``local0``). The facility contribution to a message PRI is the ordinal
+multiplied by 8; the severity is then added. Keep numeric values quoted in
+RainerScript, as in these examples.
 
 Module usage
 ------------

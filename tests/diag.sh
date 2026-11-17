@@ -17,6 +17,11 @@
 #		the testbench utilizing this, use
 #		export SUDO=sudo
 #		to activate the extra functionality.
+# SIDECAR_TEST_PYTHON
+#               Python interpreter for the optional Prometheus sidecar test,
+#               defaulting to "python3" when unset or empty. Select an interpreter
+#               with Python 3.8+ and the prometheus_client and werkzeug dependencies
+#               installed; missing prerequisites cause the test to skip.
 # RS_SORTCMD    Sort command to use (must support $RS_SORT_NUMERIC_OPT option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
 # RS_SORT_NUMERIC_OPT option to use for numerical sort, If unset "-g" is used.
@@ -3099,6 +3104,7 @@ module_needs_testing() {
 				;;
 			imfile:plugins/imfile/*|\
 			imfile:tests/*imfile*.sh|\
+			imfile:tests/override_fstat.c|\
 			imfile:tests/testsuites/imfile*|\
 			imfile:tests/testsuites/*imfile*)
 				return 0
@@ -5809,6 +5815,10 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 			echo "testbench: TZ env var not set, setting it to UTC"
 			export TZ=UTC
 		fi
+		# The testbench only talks to local servers. A CI worker-wide http_proxy
+		# (the Solaris builder has one) must not capture these requests.
+		export no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}${NO_PROXY:+,$NO_PROXY}"
+		export NO_PROXY="$no_proxy"
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		# Note: Setting per-process core_pattern would require root privileges via
 		# /proc/sys/kernel/core_pattern, which is not available in standard test environments.

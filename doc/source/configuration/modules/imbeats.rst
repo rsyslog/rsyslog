@@ -39,7 +39,7 @@ The first implementation supports:
 - ``W`` window frames
 - ``J`` JSON event frames
 - ``C`` compressed frames
-- cumulative ``A`` acknowledgements
+- ``A`` acknowledgements carrying the last sequence number of each window
 
 The first implementation intentionally optimizes the internal event shape for
 common Elasticsearch-oriented pipelines:
@@ -55,6 +55,16 @@ common Elasticsearch-oriented pipelines:
   stop making progress or retain incomplete protocol state for too long
 - listener-side session limits and worker settings bound concurrent sender
   fan-in and provide fairness between active sessions
+
+Only ``$!metadata!imbeats`` is owned by the module. A ``metadata`` member sent
+by the client is otherwise preserved: if it is a JSON object, its members other
+than ``imbeats`` stay available below ``$!metadata``, and a ``metadata.imbeats``
+member sent by the client is always overwritten by the module metadata. If the
+top-level ``metadata`` member is not a JSON object (for example a string,
+number, array, boolean, or ``null``), it is replaced by an empty object in
+``$!`` so that the module metadata can be attached, and the event is accepted
+and acknowledged as usual. The original value remains visible in ``msg`` and
+``rawmsg``.
 
 This default may be revisited later. A user-selectable representation mode is
 not part of the initial release.
@@ -163,9 +173,39 @@ bytes are rejected. The original accepted JSON text remains available in
 Malformed frames, resource-limit violations, decompression-limit violations,
 and session, frame, or window timeouts fail closed. ``imbeats`` closes the affected
 session, releases its charged resources, and does not acknowledge the
-incomplete batch. Lumberjack v2 ``W``, ``J``, and ``C`` traffic retains normal
-cumulative ``A`` acknowledgement behavior when it remains within the
-configured size, resource, compression, and timeout limits.
+incomplete batch.
+
+Lumberjack v2 sequence numbers are scoped to a window. Beats and Elastic Agent
+number the events of every window ``1`` to ``n``, and ``imbeats`` accepts that
+numbering on every window of a connection. For compatibility with senders that
+continue the numbering across windows, a window may instead start at the
+sequence number following the last acknowledged one. In both cases the
+sequence numbers inside a window must increase by exactly one per event. A
+window with any other numbering, for example a gap, a duplicate, or an
+out-of-order event, is a protocol error: the session is closed and no event of
+that window is submitted or acknowledged.
+
+Once a complete window has been validated and all of its events have been
+submitted, ``imbeats`` sends one ``A`` frame carrying the sequence number of
+the last event of that window. For Beats clients this equals the number of
+events in the window. ``$!metadata!imbeats!sequence`` always contains the
+sequence number as sent on the wire.
+
+When a session is closed for a reason other than a normal close by the peer or
+rsyslog shutdown, ``imbeats`` logs one message that names the peer address and
+port, the local port, the reason, and the rsyslog error code. The input name is
+part of the message only when the input's ``name`` parameter is set; inputs
+without ``name`` are identified by the local port alone.
+Typical reasons are an invalid frame type, a sequence number mismatch, a window
+or frame that exceeds the configured limits, a rejected compressed frame, an
+event that cannot be submitted, and ``idleTimeout``, ``frameTimeout``, or
+``windowTimeout`` expiry. The message never contains payload bytes.
+
+To keep a misbehaving or reconnecting peer from flooding the log, these
+messages and the ``too many sessions`` message are rate limited per input and
+reason class: at most one message is logged every 10 seconds, and the next
+message reports how many similar messages were suppressed. The statistic
+counters described below are not rate limited.
 
 
 Configuration Parameters

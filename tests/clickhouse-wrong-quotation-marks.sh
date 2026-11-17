@@ -1,6 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # add 2018-12-19 by Pascal Withopf, released under ASL 2.0
+# Verify SQL escaping preserves an apostrophe in an INSERT message.
+# After queue drain and shutdown, compare the raw selected row exactly;
+# TabSeparatedRaw avoids TabSeparated apostrophe escaping in the output oracle.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -9,7 +12,7 @@ module(load="../plugins/omclickhouse/.libs/omclickhouse")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 
-template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.quotation (id, severity, message) VALUES ( 1, '
+template(name="outfmt" option.sql="on" type="string" string="INSERT INTO rsyslog.quotation (id, severity, message) VALUES ( 1, '
 add_conf "%syslogseverity%, '%msg%')"
 add_conf '")
 
@@ -25,9 +28,9 @@ startup
 tcpflood -m1 -M "\"<130>Mar 10 01:00:00 172.20.245.8 tag:it's a test\""
 shutdown_when_empty
 wait_shutdown
-clickhouse-client --query="SELECT id, severity, message FROM rsyslog.quotation" > $RSYSLOG_OUT_LOG
+clickhouse-client --query="SELECT id, severity, message FROM rsyslog.quotation FORMAT TabSeparatedRaw" > $RSYSLOG_OUT_LOG
 
-export EXPECTED="1	2	it\\'s a test"
+export EXPECTED="1	2	it's a test"
 cmp_exact $RSYSLOG_OUT_LOG
 
 clickhouse-client --query="DROP TABLE rsyslog.quotation"

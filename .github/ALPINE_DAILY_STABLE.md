@@ -40,14 +40,17 @@ snapshots/YYYY-MM-DD/PACKAGE_VERSION/aarch64/
 Each APK is built and installed on a native runner of the matching
 architecture.
 
-APK files and snapshots are immutable and retained for 90 days (see the retention rule in
+APK files and snapshots are immutable and retained for the retention period (see the retention rule in
 DAILY_STABLE_PACKAGE_ARCHIVE.md).
 The workflow merges the previous signed index with each new package set so
 older daily versions remain installable until pruned. Only the small mutable APK index and
 public signing key request a 60-second metadata cache override. DigitalOcean's
 CDN currently enforces a one-hour minimum TTL, so consumers can see a newly
 published index up to one hour later.
-The ordered APK version contains the UTC date and GitHub run/attempt serial;
+The ordered APK version contains the UTC date and GitHub run/attempt serial
+(15 digits in total, as apk-tools rejects very long numeric components;
+the build fails above run 99999 or attempt 99). Older 20-digit versions sort
+above new ones until pruned;
 the manifest records the exact rsyslog source commit.
 
 ## Signing

@@ -27,3 +27,20 @@ AI agents working in `contrib/` MUST follow the standardized skills in `.agent/s
 
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](../CONTRIBUTING.md).*
+
+## Batch-report whitespace regression
+
+`tests/imbatchreport-newline-state.sh` and its pure-YAML companion
+`tests/yaml-imbatchreport-newline-state-yamlonly.sh` verify that trailing-space
+deduplication preserves every encoded newline, including consecutive blank
+lines. Each dedup mode runs in a separate single-input daemon and compares
+exact message bytes against ordinary-space and dedup-off controls.
+
+## Focused coverage
+
+- `tests/mmcount-distinct-values.sh` verifies independent counters for distinct
+  property values with colliding hashes. Its YAML companion checks action
+  parameter parity.
+- `tests/mmcount-maxcardinality.sh` verifies that `maxCardinality` bounds the
+  number of tracked values, keeps counting already tracked values, and warns
+  once. Its YAML companion checks action parameter parity.

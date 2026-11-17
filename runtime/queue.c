@@ -240,6 +240,16 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 
 #ifdef ENABLE_IMDIAG
     unsigned int iOverallQueueSize = 0;
+    #ifdef HAVE_ATOMIC_BUILTINS
+        #define OVERALL_QSIZE_MUT NULL /* unused: atomic builtins need no mutex */
+    #else
+/* Without atomic builtins (e.g. SunStudio on Solaris) the ATOMIC_* macros fall
+ * back to a mutex. The process-wide counter is shared by workers of many
+ * queues, each holding a different queue mutex, so it needs its own one;
+ * unprotected updates lose counts and imdiag never sees an empty queue. */
+static pthread_mutex_t mut_overall_queue_size = PTHREAD_MUTEX_INITIALIZER;
+        #define OVERALL_QSIZE_MUT (&mut_overall_queue_size)
+    #endif
 #endif
 
 #define OVERSIZE_QUEUE_WATERMARK 500000 /* when is a queue considered to be "overly large"? */
@@ -1215,11 +1225,7 @@ static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOve
     if (pThis->iQueueSize > 0) {
 #ifdef ENABLE_IMDIAG
         if (adjustOverallQueueSize) {
-    #ifdef HAVE_ATOMIC_BUILTINS
-            ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
-    #else
-            iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
-    #endif
+            ATOMIC_SUB_unsigned(&iOverallQueueSize, pThis->iQueueSize, OVERALL_QSIZE_MUT);
         }
 #endif
         pThis->iQueueSize = 0;
@@ -1235,11 +1241,7 @@ static void qqueueSubtractOverallQueueSize(const int nElem) {
         return;
     }
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
-    #else
-    iOverallQueueSize -= nElem; /* racy, but we can't wait for a mutex! */
-    #endif
+    ATOMIC_SUB_unsigned(&iOverallQueueSize, nElem, OVERALL_QSIZE_MUT);
 #endif
 }
 
@@ -1248,11 +1250,7 @@ static void qqueueAddOverallQueueSize(const int nElem) {
         return;
     }
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_ADD(iOverallQueueSize, nElem);
-    #else
-    iOverallQueueSize += nElem; /* racy, but we can't wait for a mutex! */
-    #endif
+    ATOMIC_ADD_unsigned(&iOverallQueueSize, nElem, OVERALL_QSIZE_MUT);
 #endif
 }
 
@@ -2437,12 +2435,7 @@ static rsRetVal qqueueAddStored(qqueue_t *pThis, smsg_t *pMsg) {
     if (pThis->qType != QUEUETYPE_DIRECT) {
         ATOMIC_INC(&pThis->iQueueSize, &pThis->mutQueueSize);
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-        /* mutex is never used due to conditional compilation */
-        ATOMIC_INC(&iOverallQueueSize, &NULL);
-    #else
-        ++iOverallQueueSize; /* racy, but we can't wait for a mutex! */
-    #endif
+        ATOMIC_INC(&iOverallQueueSize, OVERALL_QSIZE_MUT);
 #endif
     }
 
@@ -3177,12 +3170,7 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
     /* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
     ATOMIC_SUB(&pThis->iQueueSize, nElem, &pThis->mutQueueSize);
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    /* mutex is never used due to conditional compilation */
-    ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
-    #else
-    iOverallQueueSize -= nElem; /* racy, but we can't wait for a mutex! */
-    #endif
+    ATOMIC_SUB_unsigned(&iOverallQueueSize, nElem, OVERALL_QSIZE_MUT);
 #endif
     ATOMIC_SUB(&pThis->nLogDeq, nElem, &pThis->mutLogDeq);
     DBGPRINTF("doDeleteBatch: delete batch from store, new sizes: log %d, phys %d\n", getLogicalQueueSize(pThis),
@@ -3267,8 +3255,8 @@ finalize_it:
 }
 
 
-/* Concurrency & Locking: completed batch references move to a worker-owned
- * buffer under the queue mutex, after store commit. The buffer holds at most
+/* Concurrency & Locking: local queue backends move completed batch references
+ * to a worker-owned buffer under the queue mutex, after store commit. The buffer holds at most
  * one batch and is drained without the queue mutex and with cancellation
  * disabled. No other worker, producer, or shutdown path accesses this buffer.
  */
@@ -3290,15 +3278,21 @@ static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) 
     }
 }
 
-static void qqueueDeferBatch(wti_t *const pWti) {
+/* Classic queues destroy completed messages here, under the queue mutex.
+ * Deferring this to unlocked per-worker disposal (454b340a1) made workers
+ * free concurrently and contend on malloc arena locks with the next batch's
+ * allocations, costing ~40% CPU on JSON-heavy rulesets (issue #7884).
+ * Serialized release under the mutex is cheaper there. Local queue backends
+ * still defer through p_deferred_msgs; see qqueueCompleteLocalBackend().
+ */
+static void qqueueDisposeBatch(wti_t *const pWti) {
     batch_t *const pBatch = &pWti->batch;
     assert(pWti->n_deferred_msgs == 0);
     assert(pBatch->nElem <= pBatch->maxElem);
     for (int i = 0; i < pBatch->nElem; ++i) {
-        pWti->p_deferred_msgs[i] = pBatch->pElem[i].pMsg;
+        msgDestruct(&pBatch->pElem[i].pMsg);
         pBatch->pElem[i].pMsg = NULL;
     }
-    pWti->n_deferred_msgs = pBatch->nElem;
     pBatch->nElem = pBatch->nElemDeq = 0;
 }
 
@@ -3440,7 +3434,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         }
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
         if (diskOwner != NULL) qqueueLocalDiskTerminal(diskOwner, diskTerminal, diskDiscarded);
-        qqueueDeferBatch(pWti);
+        qqueueDisposeBatch(pWti);
         pBatch->storeData = NULL;
         if (hadResponsibility) {
             iRet = qqueueClearWtiSource(pThis, pWti);
@@ -3494,7 +3488,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     iRet = DeleteBatchFromQStore(pThis, pBatch);
     if (iRet == RS_RET_OK && diskOwner != NULL) qqueueLocalDiskTerminal(diskOwner, diskTerminal, diskDiscarded);
 
-    qqueueDeferBatch(pWti);
+    qqueueDisposeBatch(pWti);
     if (iRet == RS_RET_OK && hadResponsibility) iRet = qqueueClearWtiSource(pThis, pWti);
 
     RETiRet;
@@ -3796,11 +3790,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
 
     /* If messages where DISCARDED, we need to substract them from the OverallQueueSize */
 #ifdef ENABLE_IMDIAG
-    #ifdef HAVE_ATOMIC_BUILTINS
-    ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
-    #else
-    iOverallQueueSize -= nDiscarded; /* racy, but we can't wait for a mutex! */
-    #endif
+    ATOMIC_SUB_unsigned(&iOverallQueueSize, nDiscarded, OVERALL_QSIZE_MUT);
     DBGOPRINT((obj_t *)pThis, "dequeued %d discarded %d QueueSize %d consumable elements, szlog %d sz phys %d\n",
               nDequeued, nDiscarded, iOverallQueueSize, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 #else
@@ -4064,8 +4054,8 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
 
     int iCancelStateSave;
     qqueue_t *const pSource = pWti->source_queue;
-    /* DeleteProcessedBatch() defers final message destruction by resetting
-     * the batch counters, so retain the dequeue count for checkpointing. */
+    /* DeleteProcessedBatch() resets the batch counters, so retain the
+     * dequeue count for checkpointing. */
     const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
