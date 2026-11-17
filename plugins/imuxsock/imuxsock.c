@@ -1141,7 +1141,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         pMsg->msgFlags = pLstn->flags;
     }
 
-    if (pLstn->bUseSpecialParser && priValid) {
+    if (pLstn->bUseSpecialParser) {
         /* this is the legacy "log socket" parser which was written on the assumption
          * that the log socket format would be fixed. While many folks said so, it
          * seems to be different in practice, and this is why we now have choices...
