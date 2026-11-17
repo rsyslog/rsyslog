@@ -152,6 +152,11 @@ severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
 
+## imuxsock PRI digit coverage
+
+`tests/imuxsock-pri-digit-limit.sh` sends an overlong numeric PRI field through
+a real Unix socket. Run it in an instrumented build when checking integer
+arithmetic in the receive path.
 ## Module regression coverage
 
 - `tests/mmjsonparse-find-json-scan-stats.sh` and its pure-YAML companion

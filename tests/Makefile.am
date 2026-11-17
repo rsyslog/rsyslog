@@ -728,6 +728,7 @@ TESTS_DEFAULT = \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_annotate_large.sh \
 	imuxsock-NUL.sh \
+	imuxsock-pri-digit-limit.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_syssock.sh \
