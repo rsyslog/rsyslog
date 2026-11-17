@@ -4,6 +4,8 @@
 # frontend passes Annotate and ParseTrusted parameters to the same protected
 # plain and JSON paths. The stimuli and assertions cover duplicate-looking
 # fields, delimiters, quoting, controls, long encoded values, and JSON parity.
+# Every complete annotation is compared with independently escaped sender
+# metadata captured before transmission, including field order and boundaries.
 # Each sender blocks on its own FIFO after sending; wait_file_lines proves that
 # rsyslog consumed the message before the FIFO release, and wait verifies a
 # clean helper exit. The 30-second wait is only a loaded-CI hang ceiling.
@@ -24,6 +26,8 @@ startup
 sender="$RSYSLOG_DYNNAME-sender.py"
 cat > "$sender" <<'PY'
 import ctypes
+import os
+import pathlib
 import socket
 import sys
 
@@ -31,6 +35,29 @@ PR_SET_NAME = 15
 sock_path, process_name, marker, hold_path = sys.argv[1:]
 if ctypes.CDLL(None).prctl(PR_SET_NAME, process_name.encode(), 0, 0, 0) != 0:
     raise OSError(ctypes.get_errno(), "prctl(PR_SET_NAME) failed")
+# Match the documented procfs property boundary: at most 1023 bytes, stop
+# at newline, and render other ASCII controls as spaces for comm/cmdline.
+def proc_property(name):
+    data = pathlib.Path("/proc/self/" + name).read_bytes()[:1023].split(b"\n", 1)[0]
+    return bytes(32 if byte < 32 or byte == 127 else byte for byte in data).decode()
+
+
+def quoted(value):
+    escapes = {chr(byte): "\\x%02x" % byte for byte in range(32)}
+    escapes.update({chr(127): "\\x7f", '"': '\\"', "\\": "\\\\"})
+    return '"' + value.translate(str.maketrans(escapes)) + '"'
+
+
+comm = proc_property("comm")
+exe = os.readlink("/proc/self/exe")[:1023]
+cmd = proc_property("cmdline")
+raw = "<13>" + marker
+if sock_path.endswith("-json.sock"):
+    expected = "|".join((raw, comm, exe, cmd))
+else:
+    expected = (f"{raw} @[_PID={os.getpid()} _UID={os.getuid()} _GID={os.getgid()}"
+                f" _COMM={quoted(comm)} _EXE={quoted(exe)} _CMDLINE={quoted(cmd)}]")
+pathlib.Path(hold_path + ".expected").write_text(expected + "\n")
 with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as client:
     client.sendto(("<13>" + marker).encode(), sock_path)
 with open(hold_path, "rb", buffering=0) as hold:
@@ -76,16 +103,8 @@ send_and_hold "$RSYSLOG_DYNNAME-json.sock" "x _UID=0 _GID=0" "w259-yaml-json" "$
 shutdown_when_empty
 wait_shutdown
 
-content_check '<13>w259-yaml-duplicate @['
-content_check '_COMM="x _UID=0 _GID=0"'
-check_not_present '_COMM=x _UID=0'
-content_check '<13>w259-yaml-special @['
-content_check '_COMM="q\"\\] name"'
-content_check 'exe \"quote\"\\slash] control\x0atail" _CMDLINE='
-content_check '<13>w259-yaml-long'
-content_check 'TAIL" _CMDLINE='
-content_check 'x\x0ax\x0ax'
-content_check '<13>w259-yaml-json|x _UID=0 _GID=0|'
+cat "$RSYSLOG_DYNNAME-"{1..4}.hold.expected > "$RSYSLOG_DYNNAME.expected"
+cmp_exact_file "$RSYSLOG_DYNNAME.expected" "$RSYSLOG_OUT_LOG"
 
 rm -rf "$sender" "$special_exe" "$RSYSLOG_DYNNAME-long"
 exit_test
