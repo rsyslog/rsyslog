@@ -69,3 +69,8 @@ skip yaml-mmcount-*
 
 # Redis output: needs a redis-server, no portability relevance.
 skip omhiredis-*
+
+# mmjsonparse scan counters are platform-independent; both configuration
+# frontends remain covered on Linux without growing the reduced Solaris run.
+skip mmjsonparse-find-json-scan-stats.sh
+skip yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh
