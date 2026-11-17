@@ -1,4 +1,5 @@
 TEST_EXTENSIONS=.sh
+TESTS_WEEKDAY_RANGE = timereported-weekday-range.sh
 EXTRA_DIST = \
 	testsuites/imtcp-bind-failure-common.sh \
 	tabescape_dflt.sh \
@@ -14,6 +15,7 @@ EXTRA_DIST = \
 	proprepltest-rfctag-udp.sh \
 	proprepltest-rfctag.sh \
 	unit/README.md
+EXTRA_DIST += $(TESTS_WEEKDAY_RANGE)
 
 TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_PRI_RANGE)
@@ -448,6 +450,7 @@ TESTS_DEFAULT = \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
+	$(TESTS_WEEKDAY_RANGE) \
 	timereported-dateordinal-utcoffset.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
