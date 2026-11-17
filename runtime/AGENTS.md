@@ -68,6 +68,10 @@ collection, and process orchestration).
   in `tests/diskqueue-serializer-abi.sh`, including reduced macOS builds.
 - `datetime.c` weekday remainder bounds and template name/number formatting
   are covered by `tests/timereported-weekday-range.sh`.
+- Bounded negative UTC-epoch crossings in `datetime.c` are covered by
+  `tests/timestamp-unixtimestamp-offset.sh` (RainerScript) and
+  `tests/yaml-timestamp-unixtimestamp-offset.sh` (native YAML string/list
+  templates), with minus-one, zero, and positive controls.
 - `datetime.c` `date-ordinal` handling of UTC offsets (both signs, large
   positive offsets on 1 January) and the 23:59:59 end-of-day boundary is
   covered by `tests/timereported-dateordinal-utcoffset.sh`.
