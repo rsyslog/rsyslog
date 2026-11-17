@@ -7,6 +7,7 @@
 generate_conf
 add_conf '
 set $!backslash = "a \\ \"b\" c / d";
+set $!all_mixed = "\"\\\"";
 set $!all_quotes = "\"\"\"";
 set $!all_slashes = "\\\\\\";
 
@@ -17,6 +18,8 @@ template(name="json" type="list" option.json="on") {
         property(name="$!all_quotes")
         constant(value="\",\"slashes\":\"")
         property(name="$!all_slashes")
+        constant(value="\",\"mixed\":\"")
+        property(name="$!all_mixed")
         constant(value="\"}\n")
 }
 
@@ -28,6 +31,7 @@ injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
 
-printf '%s\n' '{"backslash":"a \\ \"b\" c / d","quotes":"\"\"\"","slashes":"\\\\\\"}' | cmp - "$RSYSLOG_OUT_LOG" || error_exit 1
+export EXPECTED='{"backslash":"a \\ \"b\" c / d","quotes":"\"\"\"","slashes":"\\\\\\","mixed":"\"\\\""}'
+cmp_exact
 
 exit_test
