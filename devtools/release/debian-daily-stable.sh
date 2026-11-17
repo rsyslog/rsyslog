@@ -11,8 +11,15 @@ Commands:
   build-package <workspace> <source-dir> <dist-tarball> <artifact-dir> <version> <build-log>
   manifest <artifact-dir> <version> <suite> <arch> <channel> <distro> <distro-version>
   generate-repo <artifact-dir> <repo-dir> <suite> <component> <arch>
+  fetch-verified-indexes <repo-url> <repo-dir> <suite> <component> <expected-key-fingerprint> <arch>...
   verify-repo <repo-url> <suite> <component> <arch> <version> <expected-key-fingerprint> [require-source-package]
   self-test
+
+Environment:
+  ARCHIVE_RELEASE_VALID_SECONDS  generate-repo: add Valid-Until (now + seconds)
+                                 to Release and InRelease; unset adds none
+  ARCHIVE_REQUIRE_VALID_UNTIL    verify-repo: when "true", the signed
+                                 InRelease must carry a future Valid-Until
 EOF
 }
 
@@ -385,6 +392,7 @@ cmd_generate_repo() {
   local arch="$5"
   local key_fpr dist_dir pool_dir binary_dir source_dir
   local packages_file sources_file
+  local -a valid_args=()
 
   [ -d "$artifact_dir" ] ||
     die "missing artifact directory: $artifact_dir"
@@ -392,6 +400,11 @@ cmd_generate_repo() {
     die "no .deb artifacts in $artifact_dir"
   command -v apt-ftparchive >/dev/null 2>&1 ||
     die "apt-ftparchive not found; install apt-utils"
+  if [ -n "${ARCHIVE_RELEASE_VALID_SECONDS:-}" ]; then
+    [[ "$ARCHIVE_RELEASE_VALID_SECONDS" =~ ^[1-9][0-9]*$ ]] ||
+      die "ARCHIVE_RELEASE_VALID_SECONDS must be a positive number of seconds"
+    valid_args=(-o "APT::FTPArchive::Release::ValidTime=$ARCHIVE_RELEASE_VALID_SECONDS")
+  fi
 
   pool_dir="$repo_dir/pool/$component/r/rsyslog"
   dist_dir="$repo_dir/dists/$suite"
@@ -439,6 +452,7 @@ cmd_generate_repo() {
       -o "APT::FTPArchive::Release::Components=$component" \
       -o "APT::FTPArchive::Release::Acquire-By-Hash=yes" \
       -o "APT::FTPArchive::Release::Description=rsyslog ${PACKAGE_DISTRO_LABEL:-Debian} daily stable packages" \
+      "${valid_args[@]}" \
       release "dists/$suite" > "dists/$suite/Release"
   )
 
@@ -455,6 +469,167 @@ cmd_generate_repo() {
     --clearsign --output "$dist_dir/InRelease" "$dist_dir/Release"
   gpg --batch --yes "${extra_gpg_args[@]}" --local-user "$key_fpr" \
     --detach-sign --armor --output "$dist_dir/Release.gpg" "$dist_dir/Release"
+}
+
+log_warning() {
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then
+    echo "::warning::$*"
+  else
+    echo "WARNING: $*" >&2
+  fi
+}
+
+# Download <url> to <file>.  Returns 0 on success, 4 if the server answered
+# HTTP 404 and 1 on any other failure.  <file> exists only on success.
+http_fetch() {
+  local url="$1"
+  local out="$2"
+  local code rc=0
+
+  code="$(
+    curl -sS -L --fail --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
+      -H 'Cache-Control: no-cache' \
+      -o "$out" -w '%{http_code}' "$url"
+  )" || rc=$?
+  [ "$rc" -ne 0 ] || return 0
+  rm -f "$out"
+  [ "$code" != 404 ] || return 4
+  echo "download of $url failed (curl exit $rc, HTTP ${code:-none})" >&2
+  return 1
+}
+
+# Print "<sha256> <size>" for <path> from the SHA256 section of a verified
+# Release text.  Exit 1 if the path is not listed, 2 if listed twice.
+release_sha256_entry() {
+  awk -v path="$2" '
+    /^[^ \t]/ { in_sha = ($0 == "SHA256:"); next }
+    in_sha && NF == 3 && $3 == path { entry = $1 " " $2; found++ }
+    END {
+      if (found == 1) print entry
+      exit (found == 0 ? 1 : (found == 1 ? 0 : 2))
+    }' "$1"
+}
+
+# Check <file> against "<sha256> <size>".
+file_matches_entry() {
+  local file="$1"
+  local entry="$2"
+  local actual
+
+  actual="$(sha256sum "$file" | awk '{print $1}') $(wc -c < "$file" | tr -d ' ')"
+  [ "$actual" = "$entry" ]
+}
+
+# Read the current indexes of a published archive into <repo-dir> so that
+# generate-repo can merge the new build into them.  The published InRelease
+# must verify with the archive signing key from the local GPG keyring, and
+# every downloaded index must match the SHA-256 and size listed in it.  Any
+# failure is fatal; only an InRelease answered with HTTP 404 (a first
+# publication into an empty prefix) starts from empty indexes.
+cmd_fetch_verified_indexes() (
+  [ "$#" -ge 6 ] ||
+    die "usage: fetch-verified-indexes <repo-url> <repo-dir> <suite> <component> <expected-key-fingerprint> <arch>..."
+  local repo_url="${1%/}"
+  local repo_dir="$2"
+  local suite="$3"
+  local component="$4"
+  local expected_key_fpr="$5"
+  local tmp_dir cleanup_command rc actual_key_fpr arch rel entry
+  local -a index_paths=()
+  shift 5
+
+  for tool in curl gpg gpgv sha256sum; do
+    command -v "$tool" >/dev/null 2>&1 || die "$tool not found"
+  done
+  for arch in "$@"; do
+    index_paths+=("$component/binary-$arch/Packages.xz")
+  done
+  index_paths+=("$component/source/Sources.xz")
+
+  tmp_dir="$(mktemp -d)"
+  printf -v cleanup_command 'rm -rf -- %q' "$tmp_dir"
+  # Expand now because function-local variables are unavailable to an EXIT trap.
+  # shellcheck disable=SC2064
+  trap "$cleanup_command" EXIT
+
+  # Never merge into indexes left over from an earlier attempt.
+  for rel in "${index_paths[@]}"; do
+    mkdir -p "$repo_dir/dists/$suite/$(dirname "$rel")"
+    rm -f "$repo_dir/dists/$suite/${rel%.xz}" \
+      "$repo_dir/dists/$suite/${rel%.xz}.gz" \
+      "$repo_dir/dists/$suite/$rel"
+  done
+
+  gpg --batch --export "$expected_key_fpr" > "$tmp_dir/keyring.gpg"
+  [ -s "$tmp_dir/keyring.gpg" ] ||
+    die "archive signing key $expected_key_fpr is not in the local keyring"
+  actual_key_fpr="$(
+    gpg --batch --show-keys --with-colons "$tmp_dir/keyring.gpg" |
+      awk -F: '$1 == "pub" { keys++ } $1 == "fpr" && !fpr { fpr = $10 }
+        END { if (keys == 1) print fpr }'
+  )"
+  [ "${actual_key_fpr^^}" = "${expected_key_fpr^^}" ] ||
+    die "exported keyring does not hold exactly the key $expected_key_fpr"
+
+  rc=0
+  http_fetch "$repo_url/dists/$suite/InRelease" "$tmp_dir/InRelease" || rc=$?
+  case "$rc" in
+    0) ;;
+    4)
+      log_warning "$repo_url/dists/$suite/InRelease does not exist (HTTP 404):" \
+        "first publication into an empty archive prefix, starting from empty indexes"
+      exit 0
+      ;;
+    *) die "cannot read the current archive state from $repo_url" ;;
+  esac
+
+  gpgv --keyring "$tmp_dir/keyring.gpg" --output "$tmp_dir/Release" \
+    "$tmp_dir/InRelease" ||
+    die "published InRelease does not verify with archive key $expected_key_fpr"
+  awk -v suite="$suite" '$1 == "Codename:" && $2 == suite { found = 1 }
+    /^$/ { exit } END { exit !found }' "$tmp_dir/Release" ||
+    die "published InRelease is not for suite $suite"
+
+  for rel in "${index_paths[@]}"; do
+    rc=0
+    entry="$(release_sha256_entry "$tmp_dir/Release" "$rel")" || rc=$?
+    case "$rc" in
+      0) ;;
+      1)
+        log_warning "$rel is not listed in the published InRelease, starting it empty"
+        continue
+        ;;
+      *) die "$rel is listed more than once in the published InRelease" ;;
+    esac
+    http_fetch "$repo_url/dists/$suite/$rel" "$tmp_dir/index" ||
+      die "cannot download $rel listed in the published InRelease"
+    file_matches_entry "$tmp_dir/index" "$entry" ||
+      die "$rel does not match the SHA-256 and size in the published InRelease"
+    mkdir -p "$tmp_dir/verified/$(dirname "$rel")"
+    mv "$tmp_dir/index" "$tmp_dir/verified/$rel"
+    echo "Verified current $rel ($entry)"
+  done
+  # Only a completely verified set reaches <repo-dir>.
+  for rel in "${index_paths[@]}"; do
+    [ ! -f "$tmp_dir/verified/$rel" ] ||
+      mv "$tmp_dir/verified/$rel" "$repo_dir/dists/$suite/$rel"
+  done
+)
+
+# Fail unless a verified Release text carries a Valid-Until in the future.
+check_valid_until() {
+  local release="$1"
+  local valid_until expiry
+
+  valid_until="$(
+    awk '/^$/ { exit } /^Valid-Until: / { sub(/^Valid-Until: /, ""); print; exit }' \
+      "$release"
+  )"
+  [ -n "$valid_until" ] || die "signed InRelease has no Valid-Until field"
+  expiry="$(date -u -d "$valid_until" +%s)" ||
+    die "cannot parse Valid-Until: $valid_until"
+  [ "$expiry" -gt "$(date -u +%s)" ] ||
+    die "signed InRelease expired at $valid_until"
 }
 
 cmd_verify_repo() (
@@ -502,6 +677,12 @@ cmd_verify_repo() (
   [ "${actual_key_fpr^^}" = "${expected_key_fpr^^}" ] ||
     die "published signing key fingerprint $actual_key_fpr does not match expected $expected_key_fpr"
   gpgv --keyring "$tmp_dir/repo-key.gpg" "$tmp_dir/InRelease"
+  if [ "${ARCHIVE_REQUIRE_VALID_UNTIL:-false}" = true ]; then
+    gpgv --keyring "$tmp_dir/repo-key.gpg" --output "$tmp_dir/Release" \
+      "$tmp_dir/InRelease" 2>/dev/null ||
+      die "InRelease signature does not verify"
+    check_valid_until "$tmp_dir/Release"
+  fi
 
   curl -fsSL "$repo_url/$packages_url_path" -o "$tmp_dir/Packages.xz"
   packages_hash="$(sha256sum "$tmp_dir/Packages.xz" | awk '{print $1}')"
@@ -560,7 +741,7 @@ build_self_test_deb() {
 
 cmd_self_test() (
   local tmp_dir repo_dir first_artifacts second_artifacts first_all_artifacts second_all_artifacts
-  local first_source_artifacts second_source_artifacts fingerprint
+  local first_source_artifacts second_source_artifacts third_artifacts fingerprint
   local test_suite test_version
   local cleanup_command
 
@@ -588,7 +769,8 @@ cmd_self_test() (
   second_all_artifacts="$tmp_dir/artifacts-all-arm64"
   first_source_artifacts="$tmp_dir/artifacts-source-amd64"
   second_source_artifacts="$tmp_dir/artifacts-source-arm64"
-  mkdir -p "$repo_dir" "$first_artifacts" "$second_artifacts" \
+  third_artifacts="$tmp_dir/artifacts-3"
+  mkdir -p "$repo_dir" "$first_artifacts" "$second_artifacts" "$third_artifacts" \
     "$first_all_artifacts" "$second_all_artifacts" \
     "$first_source_artifacts" "$second_source_artifacts"
   export GNUPGHOME="$tmp_dir/gnupg"
@@ -668,6 +850,30 @@ cmd_self_test() (
   cmd_verify_repo "file://$repo_dir" "$test_suite" main arm64 \
     "1.0~daily2" "$fingerprint"
 
+  # The publisher reads the current indexes back through the signed
+  # InRelease; they must arrive unchanged.
+  cmd_fetch_verified_indexes "file://$repo_dir" "$tmp_dir/fetched" \
+    "$test_suite" main "$fingerprint" amd64 arm64
+  for rel in main/binary-amd64/Packages.xz main/binary-arm64/Packages.xz \
+    main/source/Sources.xz; do
+    cmp -s "$repo_dir/dists/$test_suite/$rel" \
+      "$tmp_dir/fetched/dists/$test_suite/$rel" ||
+      die "fetch-verified-indexes did not reproduce $rel"
+  done
+
+  # Valid-Until is opt-in: absent by default, required only on request.
+  if ARCHIVE_REQUIRE_VALID_UNTIL=true cmd_verify_repo "file://$repo_dir" \
+    "$test_suite" main amd64 "1.0~daily2" "$fingerprint" 2>/dev/null; then
+    die "verify-repo accepted an InRelease without Valid-Until"
+  fi
+  build_self_test_deb "$third_artifacts" "1.0~daily3" amd64
+  ARCHIVE_RELEASE_VALID_SECONDS=604800 \
+    cmd_generate_repo "$third_artifacts" "$repo_dir" "$test_suite" main amd64
+  grep -q '^Valid-Until: ' "$repo_dir/dists/$test_suite/InRelease" ||
+    die "ARCHIVE_RELEASE_VALID_SECONDS did not add Valid-Until"
+  ARCHIVE_REQUIRE_VALID_UNTIL=true cmd_verify_repo "file://$repo_dir" \
+    "$test_suite" main amd64 "1.0~daily3" "$fingerprint"
+
   rm -rf "$tmp_dir"
   trap - EXIT
   echo "${PACKAGE_DISTRO_LABEL:-Debian} daily stable archive self-test passed."
@@ -680,6 +886,7 @@ case "$command" in
   build-package) shift; cmd_build_package "$@" ;;
   manifest) shift; cmd_manifest "$@" ;;
   generate-repo) shift; cmd_generate_repo "$@" ;;
+  fetch-verified-indexes) shift; cmd_fetch_verified_indexes "$@" ;;
   verify-repo) shift; cmd_verify_repo "$@" ;;
   self-test) shift; cmd_self_test "$@" ;;
   *) usage; exit 2 ;;

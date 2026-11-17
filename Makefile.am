@@ -26,7 +26,9 @@ EXTRA_DIST = \
 	devtools/release/rpm-disable-optional-modules.py \
 	devtools/release/check-optional-module-policy.py \
 	devtools/release/archive-store.sh \
-	devtools/release/archive-store-server.sh
+	devtools/release/archive-store-server.sh \
+	devtools/release/archive-publication.sh \
+	devtools/release/debian-daily-stable.sh
 
 EXTRA_DIST += \
 	devtools/prepare-flake-evidence.py \
