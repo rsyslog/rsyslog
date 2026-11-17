@@ -37,6 +37,11 @@ collection, and process orchestration).
   - Directly invoke the most relevant shell test under `tests/` (e.g. `./tests/queue-persist.sh`).
   - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
+- JSONF `dataType="auto"` numeric conversion is covered by
+  `tests/jsonf-auto-leading-zero.sh` and
+  `tests/yaml-jsonf-auto-leading-zero.sh` for RainerScript and YAML templates.
+  They check leading-zero normalization (including all-zero strings), exact
+  integer values beyond native integer ranges, and unchanged string controls.
 - Local-graph full-queue input termination and accepted worker handoff have
   deterministic coverage in `tests/local-queue-input-force-term.sh` and
   `tests/local-queue-global-input-force-term.sh` (imdiag and impstats required).
