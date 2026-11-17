@@ -1,0 +1,23 @@
+plugins/imuxsock/imuxsock.c
+  s_3aa9d0dbe5c8fb::t_164ca1bf8b6438 1182-1194
+tests/imuxsock-timestamp-rewrite.py
+  s_3aa9d0dbe5c8fb::t_cc3d94aaf587b4 3,20-23,34,50-62,67-70,73-75
+tests/imuxsock-timestamp-rewrite.sh
+  s_3aa9d0dbe5c8fb::t_47db920b98d085 4-6,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "42a8a14d661c1a0453d1afcfc3ce0bbfd83b78e4",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

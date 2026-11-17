@@ -1,0 +1,407 @@
+plugins/AGENTS.md
+  s_3aa9d0dbe5c8fb::t_460f74bc11e19e 106-109,114-132,160-165
+plugins/imuxsock/imuxsock.c
+  s_3aa9d0dbe5c8fb::t_460f74bc11e19e 982-983
+tests/imuxsock-pri-digit-limit.sh
+  s_3aa9d0dbe5c8fb::t_460f74bc11e19e 5-7,12,17-18,21,28,36-40
+.agent/skills/rsyslog-security-audit/SKILL.md
+  s_3aa9d0dbe5c8fb::t_4e86f5d0810f60 123-131,158-175,215-217,222-230,234-235,293-308,330-331,335-340,366-369
+.github/ALPINE_DAILY_STABLE.md
+  s_3aa9d0dbe5c8fb::t_230184f0d20720 43,50-53
+.github/AMAZONLINUX_DAILY_STABLE.md
+  s_3aa9d0dbe5c8fb::t_a96e3cefda9e70 53
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_3aa9d0dbe5c8fb::t_4cbf967e92c278 56-103,114-120
+.github/DEBIAN_DAILY_STABLE.md
+  s_3aa9d0dbe5c8fb::t_1cd04727dec038 44
+.github/FEDORA_DAILY_STABLE.md
+  s_3aa9d0dbe5c8fb::t_e73d2fdf94dbfd 53
+.github/OPENSUSE_DAILY_STABLE.md
+  s_3aa9d0dbe5c8fb::t_24e4603c2d08a5 68
+AGENTS.md
+  s_3aa9d0dbe5c8fb::t_4564394979cf0a 101
+ChangeLog
+  s_3aa9d0dbe5c8fb::t_34380f3bd9b952 4-8
+KNOWN_ISSUES
+  s_3aa9d0dbe5c8fb::t_d0de659ebb8b68 7-29
+Makefile.am
+  s_3aa9d0dbe5c8fb::t_bc403a0957617e 8
+contrib/AGENTS.md
+  s_3aa9d0dbe5c8fb::t_f5a0064958f8b4 30-46
+contrib/imbatchreport/imbatchreport.c
+  s_3aa9d0dbe5c8fb::t_4a024c6e617322 230,262-267,346
+contrib/imdocker/imdocker.c
+  s_3aa9d0dbe5c8fb::t_ac02cd90384419 272,1055-1064
+contrib/mmcount/mmcount.c
+  s_3aa9d0dbe5c8fb::t_5f3e6eba94e393 36-37,50,68-69,83-181,189,234,251-252,283-287,300,319-320,322,324-326,331-340,343,372,419,427-436,462
+contrib/omhiredis/omhiredis.c
+  s_3aa9d0dbe5c8fb::t_7bf197e35461cf 30,367-408,426-428
+devtools/release/alpine-daily-stable.sh
+  s_3aa9d0dbe5c8fb::t_d93a15e198e76b 47-50
+devtools/tests/test_security_review_input.py
+  s_3aa9d0dbe5c8fb::t_50a80ed22d2cfe 12,23,269-290
+doc/Makefile.am
+  s_3aa9d0dbe5c8fb::t_14d5218fa756b5 677-678,872
+doc/ai/designs/local-queue-frontends.md
+  s_3aa9d0dbe5c8fb::t_1b7f16eae2760d 1032-1033
+doc/ai/designs/local-queue-s0-ownership.md
+  s_3aa9d0dbe5c8fb::t_ac73a7b5772bbc 224
+doc/ai/module_map.yaml
+  s_3aa9d0dbe5c8fb::t_70a308d02400ac 128,342,344
+doc/security/project-threat-model.md
+  s_3aa9d0dbe5c8fb::t_1aa712f92b10fa 3,23,33-34,38,48,53-73,124-126,134-143,157-161,179,185-187,194-206,274-276,290-295,322-324,335-344,353-354,358
+doc/security/threat-model-components.json
+  s_3aa9d0dbe5c8fb::t_62c1c41049d5cb 3,7-8,11,13-23,27,31-52,57,61-62,65-74,77,81-82,85-104,107,117,125-134,137,147,151-152,162-172,175-184,187,192,197,201,205-214
+doc/source/configuration/modules/imbeats.rst
+  s_3aa9d0dbe5c8fb::t_f54bba11a7025d 42,59-68,176-208
+doc/source/configuration/modules/imptcp.rst
+  s_3aa9d0dbe5c8fb::t_4594701d8f1a08 187-194,251-253,259-261,339-340
+doc/source/configuration/modules/mmcount.rst
+  s_3aa9d0dbe5c8fb::t_1ab199ddc183a5 54-57,66,84-86
+doc/source/configuration/modules/mmleefparse.rst
+  s_3aa9d0dbe5c8fb::t_66e179f2719ce1 114-119
+doc/source/configuration/modules/omfwd.rst
+  s_3aa9d0dbe5c8fb::t_6755048099b14a 455-542
+doc/source/configuration/modules/ompipe.rst
+  s_3aa9d0dbe5c8fb::t_b6de99eddd82dd 18-20,27
+doc/source/licensing.rst
+  s_3aa9d0dbe5c8fb::t_d493f43c96ac03 3-8,12-18,62-65,67-72
+doc/source/rainerscript/functions/mo-http_request.rst
+  s_3aa9d0dbe5c8fb::t_61ed01eb67df39 20-41
+doc/source/reference/parameters/imbeats-frametimeout.rst
+  s_3aa9d0dbe5c8fb::t_13d9ca31b689d9 44-57
+doc/source/reference/parameters/imbeats-idletimeout.rst
+  s_3aa9d0dbe5c8fb::t_64c8e205ac88a4 47-60
+doc/source/reference/parameters/imbeats-maxwindowsize.rst
+  s_3aa9d0dbe5c8fb::t_fd8485f7360d1e 28,37-44,52
+doc/source/reference/parameters/imbeats-windowtimeout.rst
+  s_3aa9d0dbe5c8fb::t_9d261b5aee150e 46-59
+doc/source/reference/parameters/imdocker-defaultfacility.rst
+  s_3aa9d0dbe5c8fb::t_15fabaeefcad54 3-6,34-44
+doc/source/reference/parameters/imjournal-persiststateinterval.rst
+  s_3aa9d0dbe5c8fb::t_8f7732af8e2cdf 38-42
+doc/source/reference/parameters/imklog-consoleloglevel.rst
+  s_3aa9d0dbe5c8fb::t_d426551f37370c 39-44
+doc/source/reference/parameters/imptcp-compression-maxdecompressedbytesperreceive.rst
+  s_3aa9d0dbe5c8fb::t_d7af098e11c806 1-79
+doc/source/reference/parameters/imptcp-compression-maxexpansionratio.rst
+  s_3aa9d0dbe5c8fb::t_ebc9a84d890bc5 1-81
+doc/source/reference/parameters/imptcp-compression-mode.rst
+  s_3aa9d0dbe5c8fb::t_e3f716f316226a 54-59,114-116
+doc/source/reference/parameters/imudp-timerequery.rst
+  s_3aa9d0dbe5c8fb::t_d01f41ad09e28a 36-38
+doc/source/reference/parameters/mmcount-maxcardinality.rst
+  s_3aa9d0dbe5c8fb::t_d33be2156af92a 1-61
+doc/source/reference/parameters/omclickhouse-template.rst
+  s_3aa9d0dbe5c8fb::t_aec0edb3df5b0b 33-38,63
+grammar/rainerscript.c
+  s_3aa9d0dbe5c8fb::t_e45378ac099a47 1685,1693,1705,1728,1921-1928,1934-1937,3981,5772,5776,5781,5788,5792,5797
+plugins/fmhttp/fmhttp.c
+  s_3aa9d0dbe5c8fb::t_7bec0f131ba9f6 50-57,61,64-104,129-132,155,164-169,171-179
+plugins/imbeats/imbeats.c
+  s_3aa9d0dbe5c8fb::t_aa053c372c3914 9,56,86-101,170-173,185-186,218,221-223,329-330,741-755,807-812,823-825,832-834,857-860,872-873,906-910,921,925,929,933,945-959,968,975-1003,1010-1011,1013,1030-1036,1051-1207,1230,1242-1246,1249-1250,1253-1262,1275,1284,1306-1308,1311,1328-1332,1353-1355,1358,1372-1381,1394-1399,1415,1510,1512-1513,1591-1595,1601-1603,1612,1622,1624,1648-1649,1652-1654,1657-1662,1665,1695-1704,1958,1960
+plugins/imbeats/seqnum.h
+  s_3aa9d0dbe5c8fb::t_4b0bb97a0bbf12 30-62,64,67-68
+plugins/imjournal/imjournal.c
+  s_3aa9d0dbe5c8fb::t_f7d23fbfa92509 847-862,867,1277-1280
+plugins/imklog/bsd.c
+  s_3aa9d0dbe5c8fb::t_54e6dc78046926 33,164-182,200-203,209-219,316-325
+plugins/imptcp/imptcp.c
+  s_3aa9d0dbe5c8fb::t_ea1a89a863cc03 129-136,169-170,238-239,318,324-326,1486-1531,1563-1567,1585,1672,1936-1939,1941,1959,2060-2061,2687-2690
+plugins/imudp/imudp.c
+  s_3aa9d0dbe5c8fb::t_7402ef13f97d76 190,958,1033,1672
+plugins/mmaudit/mmaudit.c
+  s_3aa9d0dbe5c8fb::t_ceabb5a65dc79c 234
+plugins/mmjsonparse/mmjsonparse.c
+  s_3aa9d0dbe5c8fb::t_0432bc378008c8 291-292
+plugins/mmleefparse/mmleefparse.c
+  s_3aa9d0dbe5c8fb::t_0fb790220356ff 162-165
+plugins/omclickhouse/omclickhouse.c
+  s_3aa9d0dbe5c8fb::t_bbc9f11f8e66a1 862
+plugins/omudpspoof/omudpspoof.c
+  s_3aa9d0dbe5c8fb::t_5c7bff6b153943 707
+plugins/pmnull/pmnull.c
+  s_3aa9d0dbe5c8fb::t_6396acd5a1abac 107
+runtime/AGENTS.md
+  s_3aa9d0dbe5c8fb::t_81858b967b52f7 57-59,64-66
+runtime/action.c
+  s_3aa9d0dbe5c8fb::t_ea4ec3c4f06a83 2715-2728
+runtime/atomic.h
+  s_3aa9d0dbe5c8fb::t_24d34910d2c2c5 67,290-295
+runtime/datetime.c
+  s_3aa9d0dbe5c8fb::t_e5de2c58bddb48 1214-1218,1222
+runtime/msg.c
+  s_3aa9d0dbe5c8fb::t_b9afb8f78b3f3f 4588
+runtime/nsd_gtls.c
+  s_3aa9d0dbe5c8fb::t_9075f9ca957cfb 369-391,407,424,443-446,448-455,459-466,475-478,505,1372-1387,1399,1487,1500,1513,1518,1522
+runtime/objomsr.c
+  s_3aa9d0dbe5c8fb::t_0dfbf0ea46b847 145-146
+runtime/objomsr.h
+  s_3aa9d0dbe5c8fb::t_d5325e65754f49 38-40
+runtime/queue.c
+  s_3aa9d0dbe5c8fb::t_196f623a237aa3 243-252,1228,1244,1253,2438,3173,3258-3259,3281-3288,3293,3437,3491,3793,4057-4058
+runtime/rsconf.c
+  s_3aa9d0dbe5c8fb::t_d474322ef0a4ba 256
+sidecar/rsyslog_exporter.py
+  s_3aa9d0dbe5c8fb::t_ee9d31ce849a1d 66,314-316,318-319,323-329
+sidecar/tests/run-validate.sh
+  s_3aa9d0dbe5c8fb::t_890f0ef5f8ff60 8,22-25
+tests/CI/ubuntu20.04.supp
+  s_3aa9d0dbe5c8fb::t_0b52b718a8dbc6 61-76
+tests/Makefile.am
+  s_3aa9d0dbe5c8fb::t_a2269de23d2c6b 18-23,28-29,35-36,107-110,114-118,123-127,163-165,434,451,492-496,649,768,844,1018,1059,1063,1238-1245,1302-1303,1305,1307-1308,1313,1405-1406,1433,1438-1440,1634-1637,1697-1698,1700,1706-1708,1711,1726-1727,1787,1805,1844-1846,1891-1893,1913-1915,2007-2015,2115-2118,2138-2140,2241-2246,2360-2369,2727,2742,2747-2748,2865,2885,2934,2948-2950,2969-2970,2982-2983,2991,3020,3073-3084,3295,3297,3338-3341,3352-3357,3387-3405,3572,3581,3638,3781-3787,3833-3835,3839-3840,3981-3987,3991-3993,4127-4131,4239,4292,4294-4304,4370-4376,4378-4381,4396-4401,4445-4448,4481,4556-4559,4599-4601
+tests/clickhouse-basic.sh
+  s_3aa9d0dbe5c8fb::t_66bd39064f54c7 4-5,12
+tests/clickhouse-bulk-load.sh
+  s_3aa9d0dbe5c8fb::t_3a8a8e1497020f 4-5,13
+tests/clickhouse-bulk.sh
+  s_3aa9d0dbe5c8fb::t_e634ce04a2e9ee 4-5,12
+tests/clickhouse-errorfile.sh
+  s_3aa9d0dbe5c8fb::t_a87195f621960d 4-6,16
+tests/clickhouse-http-status-error.sh
+  s_3aa9d0dbe5c8fb::t_c3f23c3ec695b8 25
+tests/clickhouse-limited-batch.sh
+  s_3aa9d0dbe5c8fb::t_4c69a292a6a06f 4-5,13
+tests/clickhouse-load.sh
+  s_3aa9d0dbe5c8fb::t_b53f3399c42dbb 4-5,13
+tests/clickhouse-retry-error.sh
+  s_3aa9d0dbe5c8fb::t_5dc8b9ffe674ec 4-6,13
+tests/clickhouse-select.sh
+  s_3aa9d0dbe5c8fb::t_3d9dbf7989e0bb 4-6,13
+tests/clickhouse-sql-escape.sh
+  s_3aa9d0dbe5c8fb::t_da93af44c562a6 1-35
+tests/clickhouse-template-option-sql.sh
+  s_3aa9d0dbe5c8fb::t_36f6204ea4f3b6 1-31
+tests/clickhouse-template-option-stdsql.sh
+  s_3aa9d0dbe5c8fb::t_36fc979a77009d 3-7,28-30
+tests/clickhouse-template-type-plugin.sh
+  s_3aa9d0dbe5c8fb::t_31508c387c9401 1-24
+tests/clickhouse-template-type-subtree.sh
+  s_3aa9d0dbe5c8fb::t_9d6ede64b61650 1-24
+tests/clickhouse-wrong-insert-syntax.sh
+  s_3aa9d0dbe5c8fb::t_a891dd1bc49ffa 4-7,16
+tests/clickhouse-wrong-quotation-marks.sh
+  s_3aa9d0dbe5c8fb::t_51f11ade816e75 4-6,15,31,33
+tests/clickhouse-wrong-template-option.sh
+  s_3aa9d0dbe5c8fb::t_1287b55aa0e390 4-6,33
+tests/diag.sh
+  s_3aa9d0dbe5c8fb::t_67336e6e80fcf6 20-24,3107,5818-5821
+tests/imbatchreport-newline-state.sh
+  s_3aa9d0dbe5c8fb::t_346b0774b5307c 1-83
+tests/imbatchreport_structdata_nokeys.sh
+  s_3aa9d0dbe5c8fb::t_9507db411461a3 1-52
+tests/imbeats-default-window-size.sh
+  s_3aa9d0dbe5c8fb::t_f35c396bf1aab3 1-83
+tests/imbeats-idle-between-windows.sh
+  s_3aa9d0dbe5c8fb::t_c2704ad93ff7f7 3-7,14,23-25,31,36,46-57,59-62,69-70,73-74
+tests/imbeats-metadata-non-object.sh
+  s_3aa9d0dbe5c8fb::t_8802e8d18e162a 1-96
+tests/imbeats-seq-cumulative-after-multi-event-window.sh
+  s_3aa9d0dbe5c8fb::t_5b5f5601a8ed15 3-7
+tests/imbeats-seq-cumulative-two-windows.sh
+  s_3aa9d0dbe5c8fb::t_a5c9cac149ba81 3-8
+tests/imbeats-seq-invalid-in-window.sh
+  s_3aa9d0dbe5c8fb::t_6c0d8eb698e964 1-131
+tests/imbeats-seq-restart-per-window.sh
+  s_3aa9d0dbe5c8fb::t_d5adf52eb15246 1-112
+tests/imbeats-session-close-logging.sh
+  s_3aa9d0dbe5c8fb::t_32e39ae0bdca55 1-147
+tests/imbeats-timeout-queue-wait.sh
+  s_3aa9d0dbe5c8fb::t_831a1687e8d9e2 1-134
+tests/imdocker-defaultfacility.sh
+  s_3aa9d0dbe5c8fb::t_38f589bef95915 1-116
+tests/imdocker-facility-server.py
+  s_3aa9d0dbe5c8fb::t_6941ea51f53457 1-45
+tests/imfile-fstat-relevance.sh
+  s_3aa9d0dbe5c8fb::t_790c6470f26a38 1-28
+tests/imjournal-persiststateinterval-zero.sh
+  s_3aa9d0dbe5c8fb::t_a2c2953dbdc551 1-108
+tests/imklog-consoleloglevel-restore.sh
+  s_3aa9d0dbe5c8fb::t_24850fca3224ee 3-11,14-22,25-29,32-37
+tests/imklog-klogctl-preload.c
+  s_3aa9d0dbe5c8fb::t_219d5276d1f2b8 2-4,11-19
+tests/imptcp-stream-always-zlib-expansion-guard.sh
+  s_3aa9d0dbe5c8fb::t_5e24dbfcd696e9 1-62
+tests/imptcp-stream-always-zlib-per-receive-guard.sh
+  s_3aa9d0dbe5c8fb::t_6f90ec1a0d1bd2 1-64
+tests/imptcp-stream-always-zlib-within-limits.sh
+  s_3aa9d0dbe5c8fb::t_65657404ec3b37 1-62
+tests/imrelp-tls-chainedcert.sh
+  s_3aa9d0dbe5c8fb::t_cd9e09b8870bae 6-10
+tests/imrelp-tls-mixed-chainedcert.sh
+  s_3aa9d0dbe5c8fb::t_7ce45c5ab5eb7b 6-10
+tests/imrelp-tls-mixed-chainedcert2.sh
+  s_3aa9d0dbe5c8fb::t_9b71c3998b1e19 6-9
+tests/imtcp-bind-failure.sh
+  s_3aa9d0dbe5c8fb::t_275ce71b0d7db3 9-10,110
+tests/imtcp-tls-gtls-certinfo-long-names-vg.sh
+  s_3aa9d0dbe5c8fb::t_aa5937afb08334 1-7
+tests/imtcp-tls-gtls-certinfo-long-names.sh
+  s_3aa9d0dbe5c8fb::t_3ce3f8e95fdcfa 1-103
+tests/imudp-timerequery-negative.sh
+  s_3aa9d0dbe5c8fb::t_8e52615baca61a 1-66
+tests/local-queue-imtcp-registration.sh
+  s_3aa9d0dbe5c8fb::t_33213256718546 2-10,14,31,42-43,45-50
+tests/local-validation-log-preservation.sh
+  s_3aa9d0dbe5c8fb::t_ca05c55620c88a 12-14
+tests/mmaudit-auditid.sh
+  s_3aa9d0dbe5c8fb::t_474618066499f2 1-96
+tests/mmcount-distinct-values.sh
+  s_3aa9d0dbe5c8fb::t_5940c8d5257b6a 3-9,11-13,16-17,19-50,52,55-56
+tests/mmcount-maxcardinality.sh
+  s_3aa9d0dbe5c8fb::t_e79f45039812a3 1-78
+tests/mmjsonparse-find-json-scan-stats.sh
+  s_3aa9d0dbe5c8fb::t_97b717e108a074 1-102
+tests/mmleefparse-delimiter-backslash.sh
+  s_3aa9d0dbe5c8fb::t_2d10e517603de5 1-106
+tests/omfwd-hash-stream-compression-rejected.sh
+  s_3aa9d0dbe5c8fb::t_380ac7ca9bdc8c 1-50
+tests/omfwd-hash-tls-retry-exhausted.sh
+  s_3aa9d0dbe5c8fb::t_1076c02c516eda 1-12
+tests/omfwd-hash-tls-retry-midbatch.sh
+  s_3aa9d0dbe5c8fb::t_6f85edf5b14d39 1-12
+tests/omfwd-hash-tls-retry-oversize-exhausted.sh
+  s_3aa9d0dbe5c8fb::t_0134e527301651 1-15
+tests/omfwd-hash-tls-retry-oversize-partial.sh
+  s_3aa9d0dbe5c8fb::t_0b54e08fdc5428 1-14
+tests/omfwd-hash-tls-retry-oversize.sh
+  s_3aa9d0dbe5c8fb::t_7399d4fa61dd0c 1-14
+tests/omfwd-hash-tls-retry-partial.sh
+  s_3aa9d0dbe5c8fb::t_e92cee90c68983 1-11
+tests/omfwd-hash-tls-retry.sh
+  s_3aa9d0dbe5c8fb::t_a7c8bc16d3e3ec 1-130
+tests/omfwd-hash-udp-rejected.sh
+  s_3aa9d0dbe5c8fb::t_e13fdb650c609d 1-63
+tests/omfwd-lb-2target-hash-distinct-keys.sh
+  s_3aa9d0dbe5c8fb::t_98ea3aa14eee82 1-98
+tests/omfwd-lb-2target-hash-failover.sh
+  s_3aa9d0dbe5c8fb::t_70aa412ec21a6e 1-94
+tests/omfwd-lb-2target-hash.sh
+  s_3aa9d0dbe5c8fb::t_d25decec19659f 1-63
+tests/omfwd-udp-source-address.sh
+  s_3aa9d0dbe5c8fb::t_798d0e51aafc10 1-34
+tests/omfwd-udp-source-family-dual-local.sh
+  s_3aa9d0dbe5c8fb::t_d18bf76d95205e 1-8
+tests/omfwd-udp-source-family-sendall.sh
+  s_3aa9d0dbe5c8fb::t_0dad63f26e8773 1-6
+tests/omfwd-udp-source-family.sh
+  s_3aa9d0dbe5c8fb::t_44d1fe4f5320c7 1-120
+tests/omfwd-udp-source-socket-failure-vg.sh
+  s_3aa9d0dbe5c8fb::t_8c16991457b46b 1-7
+tests/omfwd-udp-source-socket-failure.sh
+  s_3aa9d0dbe5c8fb::t_899d8af55d3d9a 1-83
+tests/omhiredis-template-percent-vg.sh
+  s_3aa9d0dbe5c8fb::t_c97ffe760d8fc1 1-8
+tests/omhiredis-template-percent.sh
+  s_3aa9d0dbe5c8fb::t_0883ff99c2abfd 1-51
+tests/ompipe-default-template.sh
+  s_3aa9d0dbe5c8fb::t_9386863a650d66 1-6
+tests/ompipe-module-template.sh
+  s_3aa9d0dbe5c8fb::t_d73912d5e75816 1-109
+tests/omudpspoof-module-template-default.sh
+  s_3aa9d0dbe5c8fb::t_ca5b0c1421421b 1-70
+tests/override_fstat.c
+  s_3aa9d0dbe5c8fb::t_e2944865bed29d 3-7,20-23,114-135
+tests/override_omfwd_udp_family.c
+  s_3aa9d0dbe5c8fb::t_820ca7ab53d239 1-113
+tests/override_ossl_send_retry.c
+  s_3aa9d0dbe5c8fb::t_6639b0c1b0c6b6 1-233
+tests/pmnull-basic-vg.sh
+  s_3aa9d0dbe5c8fb::t_227412f7d07297 1-5
+tests/pmnull-basic.sh
+  s_3aa9d0dbe5c8fb::t_c1c444cee4e0d1 4-9,11-53,56-66,69,71-76,79-82
+tests/rscript-numeric-comparison.sh
+  s_3aa9d0dbe5c8fb::t_1d5428a072a2aa 1-57
+tests/rscript-pri-optimizer-range.sh
+  s_3aa9d0dbe5c8fb::t_df850ec3f7cc48 1-72
+tests/rscript_http_request-protocols.sh
+  s_3aa9d0dbe5c8fb::t_954f64e91641d8 1-49
+tests/rscript_parse_json.sh
+  s_3aa9d0dbe5c8fb::t_7e818c06df332a 4-6,16-27,37
+tests/rscript_re_extract.sh
+  s_3aa9d0dbe5c8fb::t_80770843780c4d 4-6,13,18,21-50,59-60
+tests/segmented-da-idle-timeout-values.sh
+  s_3aa9d0dbe5c8fb::t_d7bdc5b4cb06d3 6-17,22-24,46,52,64-68,70-73
+tests/segmented-da-tcp-spill-exact.sh
+  s_3aa9d0dbe5c8fb::t_a5399078cd038e 15,17
+tests/sidecar-prometheus-labels.py
+  s_3aa9d0dbe5c8fb::t_53628e0ff8f251 1-91
+tests/sidecar-prometheus-labels.sh
+  s_3aa9d0dbe5c8fb::t_63aa3d1499aa6d 1-15
+tests/solaris-subset.list
+  s_3aa9d0dbe5c8fb::t_b1dc32e7f04701 44-76
+tests/template-fixedwidth-empty.sh
+  s_3aa9d0dbe5c8fb::t_4be09b64487fa7 1-99
+tests/test_id.c
+  s_3aa9d0dbe5c8fb::t_2e11a1873f2544 32-33
+tests/testsuites/yaml-omudpspoof-module-template-default.yaml
+  s_3aa9d0dbe5c8fb::t_f9db9f5dda4192 1-26
+tests/timereported-dateordinal-utcoffset.sh
+  s_3aa9d0dbe5c8fb::t_2f485954f274a5 1-49
+tests/unit/imbeats_seq_test.c
+  s_3aa9d0dbe5c8fb::t_40a3eee203d7a9 10,15,17-18,24-58
+tests/yaml-imbatchreport-newline-state-yamlonly.sh
+  s_3aa9d0dbe5c8fb::t_e2d05e355572ad 1-6
+tests/yaml-imbeats-default-window-size.sh
+  s_3aa9d0dbe5c8fb::t_ebbcfd12803075 1-87
+tests/yaml-imbeats-session-close-logging.sh
+  s_3aa9d0dbe5c8fb::t_98e92ff17ac04d 1-107
+tests/yaml-imdocker-defaultfacility.sh
+  s_3aa9d0dbe5c8fb::t_eeae4cf1c7bbb1 1-5
+tests/yaml-imjournal-persiststateinterval-zero.sh
+  s_3aa9d0dbe5c8fb::t_c488d308303aa9 1-9
+tests/yaml-imptcp-stream-always-zlib-limits.sh
+  s_3aa9d0dbe5c8fb::t_39672bb7aa381c 1-119
+tests/yaml-imudp-timerequery-negative.sh
+  s_3aa9d0dbe5c8fb::t_4704abafac77c2 1-55
+tests/yaml-mmaudit-auditid.sh
+  s_3aa9d0dbe5c8fb::t_f0429eed5d7bf8 1-5
+tests/yaml-mmcount-distinct-values.sh
+  s_3aa9d0dbe5c8fb::t_600f9f9a71ba24 1-5
+tests/yaml-mmcount-maxcardinality.sh
+  s_3aa9d0dbe5c8fb::t_6ef77884424f72 1-7
+tests/yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh
+  s_3aa9d0dbe5c8fb::t_a9f6f224872a2e 1-5
+tests/yaml-mmleefparse-delimiter-backslash.sh
+  s_3aa9d0dbe5c8fb::t_b72b79d3cbb9ac 1-6
+tests/yaml-omclickhouse-template-escaping.sh
+  s_3aa9d0dbe5c8fb::t_14061250a6bf68 1-39
+tests/yaml-omfwd-udp-source-family-sendall.sh
+  s_3aa9d0dbe5c8fb::t_a9599b0d709af7 1-7
+tests/yaml-omfwd-udp-source-family.sh
+  s_3aa9d0dbe5c8fb::t_b6464080ca0f13 1-6
+tests/yaml-omfwd-udp-source-socket-failure.sh
+  s_3aa9d0dbe5c8fb::t_3bc4a0a2ed1710 1-6
+tests/yaml-ompipe-module-template.sh
+  s_3aa9d0dbe5c8fb::t_b517b9c04f6424 1-6
+tests/yaml-omudpspoof-module-template-default.sh
+  s_3aa9d0dbe5c8fb::t_ea78d26fc229a0 1-52
+tests/yaml-pmnull-basic-vg.sh
+  s_3aa9d0dbe5c8fb::t_75e2cd757bd31d 1-5
+tests/yaml-pmnull-basic.sh
+  s_3aa9d0dbe5c8fb::t_751353f515183a 1-5
+tests/yaml-template-fixedwidth-empty.sh
+  s_3aa9d0dbe5c8fb::t_0d52bbd8adba16 1-5
+tools/AGENTS.md
+  s_3aa9d0dbe5c8fb::t_64a051ea27d646 18-24,45-56
+tools/omfwd.c
+  s_3aa9d0dbe5c8fb::t_e14f741fdcb8fb 162-166,183,196-219,317-318,853-854,870-871,885-887,1017-1018,1056-1057,1116,1137,1200-1201,1203,1338,1341-1353,1362-1368,1381,1598-1610,1622-1623,1628-1646,1920,1922-1948,1968-1970,2016-2049,2126-2153,2159-2164,2166-2169,2214-2228,2235-2237,2239-2242,2245-2257,2260-2281,2287-2295,2310-2316,2319-2320,2324-2336,2365-2373,2378,2380-2384,2388,2390-2399,2874-2891,2992-3019,3023-3025
+tools/ompipe.c
+  s_3aa9d0dbe5c8fb::t_b0bea059e4d143 363
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce64d91470eefb945e7ce56efefdf043e3ee2a73",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
