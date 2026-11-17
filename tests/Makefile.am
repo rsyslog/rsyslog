@@ -737,6 +737,7 @@ TESTS_DEFAULT = \
 	imuxsock_annotate_escape.sh \
 	imuxsock-NUL.sh \
 	imuxsock-pri-digit-limit.sh \
+	imuxsock-timestamp-rewrite.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_syssock.sh \
@@ -955,6 +956,7 @@ TESTS_OSSL_WRONG_OPT = \
 
 TESTS_DEFAULT_VALGRIND = \
 	imuxsock-NUL-vg.sh \
+	imuxsock-timestamp-rewrite-vg.sh \
 	omusrmsg-noabort-vg.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
@@ -1025,6 +1027,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 TESTS_LIBYAML = \
 	yaml-imuxsock-annotate-escape.sh \
 	yaml-ompipe-module-template.sh \
+	yaml-imuxsock-timestamp-rewrite.sh \
 	config-translate-rs-to-yaml.sh \
 	$(TESTS_IMUXSOCK_FIXPID_YAML) \
 	yaml-imuxsock-socket-path-checks.sh \
@@ -4995,3 +4998,5 @@ inputfilegen_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
+
+EXTRA_DIST += imuxsock-timestamp-rewrite.py

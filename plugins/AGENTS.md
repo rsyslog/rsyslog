@@ -163,3 +163,9 @@ arithmetic in the receive path.
   verify that `scan.truncated` counts byte-window cutoffs rather than completed
   unsuccessful searches. They also assert exact message bytes, parse outcomes,
   and lengths for final-brace, boundary, ordinary-miss, and valid-object cases.
+
+## imuxsock timestamp rewrite coverage
+
+`tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
+companion exercise malformed PRI and short/variable-width timestamps through
+real Unix sockets, checking raw-message preservation and tag/body cursors.
