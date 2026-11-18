@@ -1463,11 +1463,16 @@ TESTS_IMJOURNAL = \
 	imjournal-namespace-remote-conflict.sh \
 	imjournal-persiststateinterval-zero.sh \
 	imjournal-statefile.sh \
+	imjournal-statefile-directory.sh \
+	imjournal-statefile-fifo.sh \
 	imjournal-statefile-symlink.sh \
 	imjournal_ratelimit_name.sh
 
 TESTS_IMJOURNAL_YAML = \
 	yaml-imjournal-persiststateinterval-zero.sh
+
+TESTS_IMJOURNAL_LIBYAML = \
+	yaml-imjournal-statefile-directory.sh
 
 TESTS_IMJOURNAL_VALGRIND = \
 	imjournal-basic-vg.sh \
@@ -2923,6 +2928,7 @@ EXTRA_DIST += $(TESTS_OMHTTP_FLAKY)
 EXTRA_DIST += $(TESTS_OMHTTP_FLAKY_VALGRIND)
 EXTRA_DIST += $(TESTS_IMJOURNAL)
 EXTRA_DIST += $(TESTS_IMJOURNAL_YAML)
+EXTRA_DIST += $(TESTS_IMJOURNAL_LIBYAML)
 EXTRA_DIST += $(TESTS_IMJOURNAL_VALGRIND)
 EXTRA_DIST += $(TESTS_OMJOURNAL)
 EXTRA_DIST += $(TESTS_IMPROG)
@@ -4072,6 +4078,7 @@ if ENABLE_IMJOURNAL
 TESTS += $(TESTS_IMJOURNAL)
 if HAVE_LIBYAML
 TESTS += $(TESTS_IMJOURNAL_YAML)
+TESTS += $(TESTS_IMJOURNAL_LIBYAML)
 endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMJOURNAL_VALGRIND)

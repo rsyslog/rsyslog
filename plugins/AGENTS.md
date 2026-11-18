@@ -116,6 +116,23 @@ support expectations change.
   document setup steps in the module metadata and reference any helper scripts
   placed under `tests/`.
 
+### imjournal state-file paths
+
+`tests/imjournal-statefile-directory.sh` checks a directory at the configured
+state-file path. `tests/imjournal-statefile-fifo.sh` checks a FIFO without a
+writer. `tests/yaml-imjournal-statefile-directory.sh` loads imjournal and its
+parameters from an included YAML file and repeats the directory scenario.
+With the default `IgnoreNonValidStatefile` setting, each test checks that
+imjournal delivers the journal message exactly once and preserves the path's
+original type after shutdown.
+
+Configure with `--enable-testbench --enable-imjournal` and libyaml support.
+Run the tests on a host with a readable systemd journal:
+
+```sh
+make check TESTS="imjournal-statefile-directory.sh imjournal-statefile-fifo.sh yaml-imjournal-statefile-directory.sh"
+```
+
 ### mmaudit audit identifiers
 
 `tests/mmaudit-auditid.sh` verifies complete audit IDs, numeric types, body
