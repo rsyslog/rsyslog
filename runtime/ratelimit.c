@@ -2402,16 +2402,27 @@ static void tellLostCnt(ratelimit_t *ratelimit) {
     }
 }
 
+static void logFirstRatelimitDrop(ratelimit_t *ratelimit, const char *source_label) {
+    uchar msgbuf[1024];
+
+    snprintf((char *)msgbuf, sizeof(msgbuf), "%s from <%s>: begin to drop messages due to rate-limiting",
+             ratelimit->name, source_label);
+    logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG | LOG_INFO, msgbuf, 0);
+}
+
 /* Linux-like ratelimiting, modelled after the linux kernel
  * returns 1 if message is within rate limit and shall be
  * processed, 0 otherwise.
  * This implementation is NOT THREAD-SAFE and must not
  * be called concurrently.
  */
-static int ATTR_NONNULL()
-    withinRatelimit(ratelimit_t *__restrict__ const ratelimit, time_t tt, const char *const appname) {
+static int ATTR_NONNULL(1) withinRatelimit(ratelimit_t *__restrict__ const ratelimit,
+                                           time_t tt,
+                                           const char *const appname,
+                                           sbool *first_drop) {
     int ret;
-    uchar msgbuf[1024];
+
+    if (first_drop != NULL) *first_drop = 0;
 
     if (ratelimit->bThreadSafe) {
         pthread_mutex_lock(&ratelimit->mut);
@@ -2453,9 +2464,10 @@ static int ATTR_NONNULL()
     } else {
         ratelimit->missed++;
         if (ratelimit->missed == 1) {
-            snprintf((char *)msgbuf, sizeof(msgbuf), "%s from <%s>: begin to drop messages due to rate-limiting",
-                     ratelimit->name, appname);
-            logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG | LOG_INFO, msgbuf, 0);
+            if (first_drop != NULL)
+                *first_drop = 1;
+            else
+                logFirstRatelimitDrop(ratelimit, appname);
         }
         ret = 0;
     }
@@ -2478,7 +2490,7 @@ finalize_it:
 rsRetVal ratelimitMsgCount(ratelimit_t *__restrict__ const ratelimit, time_t tt, const char *const appname) {
     DEFiRet;
     if (ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut)) {
-        if (withinRatelimit(ratelimit, tt, appname) == 0) {
+        if (withinRatelimit(ratelimit, tt, appname, NULL) == 0) {
             ABORT_FINALIZE(RS_RET_DISCARDMSG);
         }
     }
@@ -2592,7 +2604,8 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
     threshold = ratelimitSharedLoadSeverity(&ratelimit->pShared->severity, &ratelimit->pShared->mut);
 
     if (runConf->globals.bReduceRepeatMsgs || threshold > 0) {
-        /* consider early parsing only if really needed */
+        /* Repeated-message comparison and positive severity thresholds need
+         * parsed message fields before the rate-limit decision. */
         if ((pMsg->msgFlags & NEEDS_PARSING) != 0) {
             if ((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK) {
                 DBGPRINTF("Message discarded, parsing error %d\n", localRet);
@@ -2605,9 +2618,19 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
     /* Only the messages having severity level at or below the
      * treshold (the value is >=) are subject to ratelimiting. */
     if (interval && (severity >= threshold)) {
-        char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
-        snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
-        if (withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
+        sbool first_drop;
+        if (withinRatelimit(ratelimit, pMsg->ttGenTime, NULL, &first_drop) == 0) {
+            if (first_drop) {
+                char namebuf[512]; /* hostname and APP-NAME are bounded by their field limits */
+                if ((pMsg->msgFlags & NEEDS_PARSING) != 0 && parser.ParseMsg(pMsg) != RS_RET_OK) {
+                    /* Admission is already decided; a malformed dropped message
+                     * cannot change that decision or supply a parsed label. */
+                    snprintf(namebuf, sizeof namebuf, "unparsed");
+                } else {
+                    snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
+                }
+                logFirstRatelimitDrop(ratelimit, namebuf);
+            }
             msgDestruct(&pMsg);
             ABORT_FINALIZE(RS_RET_DISCARDMSG);
         }

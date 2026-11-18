@@ -98,6 +98,11 @@ support expectations change.
   touching `grammar/` or adding a new top-level config construct.
 
 ## Testing expectations
+
+- `tests/omfile-legacy-dynafile-programname.sh` requires imtcp and covers
+  legacy dynafile APP-NAME, disabled limiter defaults, and first-drop labels
+  for enabled limits. `tests/yaml-imtcp-ratelimit-first-drop.sh` also requires
+  libyaml and checks the YAML interval and burst configuration.
 - Prefer module-focused tests in `tests/` named after the module (e.g.
   `omxyz-basic.sh`).
 - Ensure new tests run cleanly when invoked directly via `./tests/<script>.sh`.

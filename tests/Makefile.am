@@ -1100,6 +1100,7 @@ TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
 
 TESTS_IMTCP = \
 	smtradfile-final-lf.sh \
+	omfile-legacy-dynafile-programname.sh \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
 	smfile-final-lf.sh \
@@ -1202,6 +1203,7 @@ TESTS_IMTCP_STREAM_ALWAYS_OSSL = \
 	imtcp-stream-always-zlib-tls-ossl.sh
 
 TESTS_IMTCP_YAML = \
+	yaml-imtcp-ratelimit-first-drop.sh \
 	yaml-parser-drop-trailing-cr.sh \
 	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
@@ -2877,6 +2879,7 @@ EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_GNUTLS)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_MBEDTLS)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_OSSL)
 EXTRA_DIST += $(TESTS_IMTCP_YAML)
+EXTRA_DIST += testsuites/imtcp-ratelimit-first-drop.yaml
 EXTRA_DIST += $(TESTS_IMTCP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMTCP_IMPSTATS)
 EXTRA_DIST += $(TESTS_RATELIMIT)
