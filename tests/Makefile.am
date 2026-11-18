@@ -124,6 +124,9 @@ TESTS_MMAUDIT = mmaudit-auditid.sh
 TESTS_MMAUDIT_YAML = yaml-mmaudit-auditid.sh
 EXTRA_DIST += $(TESTS_MMAUDIT) $(TESTS_MMAUDIT_YAML)
 
+TESTS_RSCRIPT_FNMATCH = rscript_fnmatch.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_FNMATCH)
+
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
@@ -476,6 +479,7 @@ TESTS_DEFAULT = \
 	hostname-with-slash-dflt-slash-valid.sh \
 	empty-app-name.sh \
 	endswith-basic.sh \
+	$(TESTS_RSCRIPT_FNMATCH) \
 	contains-longer-needle.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
