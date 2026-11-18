@@ -1,0 +1,20 @@
+runtime/queue.c
+  s_9591331cc7634e::t_46e6d8683d06e7 3280-3284
+  s_9591331cc7634e::t_90f7881ef8edda 3279
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04e513c15e663f756bece4b1bec625452cb9a40e",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
