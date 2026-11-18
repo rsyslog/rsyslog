@@ -1029,9 +1029,8 @@ Use exact ID multiset coverage for loss/duplication checks; do not assert global
 output order. For intentionally retry-ambiguous remote outcomes, define the
 allowed duplicate set rather than using an unjustified exactly-once oracle.
 Add ASan/UBSan and TSan coverage for ownership and interleavings. Existing useful
-regressions include [FixedArray out-of-order retirement](../../../tests/queue-fixedarray-outoforder.sh),
-[deferred idle shutdown](../../../tests/queue-deferred-idle-shutdown.sh), and
-[classic DA retry/restart](../../../tests/classic-da-retry-restart.sh).
+regressions include [FixedArray out-of-order retirement](../../../tests/queue-fixedarray-outoforder.sh)
+and [classic DA retry/restart](../../../tests/classic-da-retry-restart.sh).
 
 ## 20. Performance hypotheses and acceptance method
 

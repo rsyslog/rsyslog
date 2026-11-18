@@ -394,7 +394,7 @@ static void wtiWorkerCancelCleanup(void *arg) {
      * batch: an enqueue during batch cleanup must wake or replace another
      * consumer instead of counting this cancelling worker.
      */
-    d_pthread_mutex_lock(pWtp->pmutUsr);
+    if (d_pthread_mutex_lock(pWtp->pmutUsr) == 0) d_tsan_acquire_mutex(pWtp->pmutUsr);
     wtiMarkExiting(pThis);
     if (qqueueLocalWorker(pThis)) {
         /* A cancellation after successful return (for example slowdown)
@@ -404,11 +404,13 @@ static void wtiWorkerCancelCleanup(void *arg) {
          * their messages. Dispose those caches before source completion can
          * release terminal references. The retained lease stays in this wti
          * until joined-worker maintenance reconciles it. */
+        d_tsan_release_mutex(pWtp->pmutUsr);
         d_pthread_mutex_unlock(pWtp->pmutUsr);
         wtiDisposeActionState(pThis);
-        d_pthread_mutex_lock(pWtp->pmutUsr);
+        if (d_pthread_mutex_lock(pWtp->pmutUsr) == 0) d_tsan_acquire_mutex(pWtp->pmutUsr);
     }
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+    d_tsan_release_mutex(pWtp->pmutUsr);
     d_pthread_mutex_unlock(pWtp->pmutUsr);
     qqueueLocalProducerExit(NULL);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
@@ -530,7 +532,11 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
         if (terminateRet == RS_RET_TERMINATE_NOW) {
         terminate_now:
-            /* we now need to free the old batch */
+            /* Terminal batch disposal may release pmutUsr to destroy deferred
+             * messages. Publish retirement first, as cancellation cleanup does:
+             * a producer entering that window must hand start advice to this
+             * exiting slot instead of counting it as consuming queue work. */
+            wtiMarkExiting(pThis);
             localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
             DBGOPRINT((obj_t *)pThis,
                       "terminating worker because of "

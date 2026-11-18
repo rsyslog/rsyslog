@@ -37,6 +37,11 @@ collection, and process orchestration).
   - Directly invoke the most relevant shell test under `tests/` (e.g. `./tests/queue-persist.sh`).
   - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
+- JSONF `dataType="auto"` numeric conversion is covered by
+  `tests/jsonf-auto-leading-zero.sh` and
+  `tests/yaml-jsonf-auto-leading-zero.sh` for RainerScript and YAML templates.
+  They check leading-zero normalization (including all-zero strings), exact
+  integer values beyond native integer ranges, and unchanged string controls.
 - Local-graph full-queue input termination and accepted worker handoff have
   deterministic coverage in `tests/local-queue-input-force-term.sh` and
   `tests/local-queue-global-input-force-term.sh` (imdiag and impstats required).
@@ -54,10 +59,28 @@ collection, and process orchestration).
   `stream.c` size-limit rotation with `asyncWriting="on"`, i.e. that the async
   writer thread survives a rotation. `tests/omfile-sizelimitcmd-many.sh` covers
   the same rotation path with the default synchronous writer.
+- `tests/imtcp-tls-gtls-certinfo-long-names.sh` (and its `-vg` wrapper)
+  covers the `nsd_gtls.c` peer certificate-info dump with a long DN and SAN,
+  i.e. the name buffer growth path (GnuTLS tests and imtcp required).
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 - Classic disk-queue serializer callback ABI and message round-trip coverage is
   in `tests/diskqueue-serializer-abi.sh`, including reduced macOS builds.
+- `datetime.c` weekday remainder bounds and template name/number formatting
+  are covered by `tests/timereported-weekday-range.sh`.
+- Bounded negative UTC-epoch crossings in `datetime.c` are covered by
+  `tests/timestamp-unixtimestamp-offset.sh` (RainerScript) and
+  `tests/yaml-timestamp-unixtimestamp-offset.sh` (native YAML string/list
+  templates), with minus-one, zero, and positive controls.
+- `datetime.c` `date-ordinal` handling of UTC offsets (both signs, large
+  positive offsets on 1 January) and the 23:59:59 end-of-day boundary is
+  covered by `tests/timereported-dateordinal-utcoffset.sh`.
+
+- The shared input rate limiter has imtcp coverage in
+  `tests/omfile-legacy-dynafile-programname.sh` for default-disabled limits,
+  APP-NAME on the first drop, and the fallback label on parse failure.
+  `tests/yaml-imtcp-ratelimit-first-drop.sh` covers burst-one admission and the
+  first-drop label through YAML and requires imtcp and libyaml.
 
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in

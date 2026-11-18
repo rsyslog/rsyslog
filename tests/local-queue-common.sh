@@ -38,6 +38,7 @@ localq_wait_stats() {
 }
 
 # Wait for a numeric counter to exceed another counter or a literal bound.
+# Only key=value tokens are counters; timestamp fields must not replace a bound.
 # Callers establish a stable phase: for example the held dedicated callback
 # fixes BE active holdings while any producer may add pending BE inventory.
 localq_wait_stats_greater() {
@@ -49,9 +50,9 @@ localq_wait_stats_greater() {
         read -r left_count right_count < <(printf '%s\n' "$line" | awk -v lhs="$left" -v rhs="$right" '
             BEGIN { r = rhs ~ /^[0-9]+$/ ? rhs : "" }
             { for (i = 1; i <= NF; ++i) {
-                split($i, field, "=")
+                if (split($i, field, "=") != 2) continue
                 if (field[1] == lhs) l = field[2]
-                if (field[1] == rhs) r = field[2]
+                if (rhs !~ /^[0-9]+$/ && field[1] == rhs) r = field[2]
             } }
             END { print l, r }')
         if [[ "$left_count" =~ ^[0-9]+$ && "$right_count" =~ ^[0-9]+$ ]] &&

@@ -1,50 +1,110 @@
 {
   "schema_version": 1,
-  "model_revision": 1,
+  "model_revision": 2,
   "components": [
     {
       "id": "core-message-pipeline",
-      "paths": ["runtime/parser.*", "runtime/msg.*", "runtime/ruleset.*", "tools/pm*.c", "tools/rsyslogd.c"],
-      "boundaries": ["TB-PIPELINE", "TB-NET-IN", "TB-LOCAL-IN"],
+      "paths": ["runtime/parser.*", "runtime/msg.*", "runtime/msg_replace_helper.h", "runtime/ruleset.*", "runtime/datetime.*", "runtime/parse.*", "runtime/prop.*", "runtime/stringbuf.*", "runtime/var.*", "runtime/strgen.*", "runtime/batch.h", "runtime/action.*", "tools/pm*", "tools/sm*", "tools/syslogd.*", "tools/iminternal.*", "tools/rsyslogd.c"],
+      "boundaries": ["TB-PIPELINE", "TB-NET-IN", "TB-LOCAL-IN", "TB-OUTBOUND"],
       "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-MESSAGE-TRUST-01"],
       "exposure": "shared-runtime",
-      "evidence": ["tools/rsyslogd.c", "runtime/parser.c", "runtime/msg.c"],
+      "evidence": ["tools/rsyslogd.c", "runtime/parser.c", "runtime/msg.c", "runtime/datetime.c", "runtime/action.c"],
       "test_hints": ["tests/fuzz-syslog-message-smoke.sh", "tests/validation-run.sh"],
-      "requires_lead": false
+      "requires_lead": true
+    },
+    {
+      "id": "shared-input-controls",
+      "paths": ["runtime/ratelimit.*", "runtime/zlibw.*", "runtime/zstdw.*", "runtime/dnscache.*", "runtime/im-helper.h"],
+      "boundaries": ["TB-NET-IN", "TB-LOCAL-IN", "TB-PIPELINE"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-MESSAGE-TRUST-01"],
+      "exposure": "shared-runtime",
+      "evidence": ["runtime/ratelimit.c", "runtime/zstdw.c", "runtime/dnscache.c"],
+      "test_hints": ["tests/ratelimit_name.sh", "tests/dnscache-TTL-0.sh"],
+      "requires_lead": true
     },
     {
       "id": "network-inputs",
-      "paths": ["plugins/imtcp/**", "plugins/imptcp/**", "plugins/imudp/**", "plugins/imrelp/**", "plugins/imdtls/**", "plugins/imgssapi/**", "plugins/imbeats/**"],
+      "paths": ["plugins/imtcp/**", "plugins/imptcp/**", "plugins/imudp/**", "plugins/imrelp/**", "plugins/imdtls/**", "plugins/imgssapi/**", "plugins/imbeats/**", "plugins/imkafka/**", "plugins/im3195/**", "contrib/impcap/**", "contrib/imczmq/**", "contrib/imhiredis/**"],
       "boundaries": ["TB-NET-IN", "TB-PIPELINE", "TB-MODULE"],
       "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01"],
       "exposure": "explicitly-enabled-network-input",
-      "evidence": ["plugins/imtcp/imtcp.c", "plugins/imbeats/imbeats.c"],
-      "test_hints": ["tests/imtcp-basic.sh", "tests/imptcp-basic-hup.sh", "tests/imudp_error_msg.sh"],
+      "evidence": ["plugins/imtcp/imtcp.c", "plugins/imbeats/imbeats.c", "contrib/impcap/impcap.c"],
+      "test_hints": ["tests/imtcp-basic.sh", "tests/imptcp-basic-hup.sh", "tests/imudp_error_msg.sh", "tests/impcap_basic_dns.sh", "tests/imkafka.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "local-inputs",
+      "paths": ["plugins/imuxsock/**", "plugins/imjournal/**", "plugins/imklog/**", "plugins/imsolaris/**", "plugins/immark/**", "contrib/imkmsg/**", "contrib/imdocker/**", "contrib/imtuxedoulog/**", "contrib/imbatchreport/**"],
+      "boundaries": ["TB-LOCAL-IN", "TB-PIPELINE", "TB-MODULE"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-MESSAGE-TRUST-01"],
+      "exposure": "local-producer-input",
+      "evidence": ["plugins/imuxsock/imuxsock.c", "plugins/imjournal/imjournal.c", "plugins/imklog/imklog.c"],
+      "test_hints": ["tests/imuxsock_logger.sh", "tests/imjournal-basic.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "message-modification-modules",
+      "paths": ["plugins/mm*", "plugins/pm*", "contrib/mm*", "contrib/pm*"],
+      "boundaries": ["TB-PIPELINE", "TB-MODULE"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-MESSAGE-TRUST-01"],
+      "exposure": "optional-message-parser",
+      "evidence": ["plugins/mmjsonparse/mmjsonparse.c", "plugins/mmpstrucdata/mmpstrucdata.c", "plugins/mmnormalize/mmnormalize.c"],
+      "test_hints": ["tests/mmjsonparse_simple.sh", "tests/mmpstrucdata.sh", "tests/pmnull-basic.sh"],
       "requires_lead": false
     },
     {
       "id": "rainerscript-runtime-expressions",
-      "paths": ["grammar/rainerscript.c", "grammar/rainerscript.h"],
+      "paths": ["grammar/rainerscript.c", "grammar/rainerscript.h", "runtime/regexp.*", "runtime/lookup.*", "runtime/hashtable*", "runtime/dynstats.*", "runtime/perctile_*"],
       "boundaries": ["TB-PIPELINE", "TB-CONFIG"],
       "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-MESSAGE-TRUST-01"],
       "exposure": "shared-expression-runtime",
-      "evidence": ["grammar/rainerscript.c"],
-      "test_hints": ["tests/rscript*.sh"],
+      "evidence": ["grammar/rainerscript.c", "runtime/lookup.c"],
+      "test_hints": ["tests/rscript*.sh", "tests/lookup_table.sh", "tests/dynstats.sh"],
       "requires_lead": false
     },
     {
-      "id": "transport-security",
-      "paths": ["runtime/net.*", "runtime/netstrm.*", "runtime/netstrms.*", "runtime/nsd*", "runtime/tcpsrv.*", "runtime/tcps_sess.*", "tools/omfwd.c", "plugins/omrelp/**"],
-      "boundaries": ["TB-NET-IN", "TB-OUTBOUND"],
-      "invariants": ["SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01", "SI-INPUT-BOUNDS-01"],
-      "exposure": "configured-network-transport",
-      "evidence": ["runtime/nsd_ossl.c", "runtime/nsd_gtls.c", "runtime/net.c"],
-      "test_hints": ["tests/imtcp-tls-ossl-basic.sh", "tests/imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh"],
+      "id": "expression-function-modules",
+      "paths": ["plugins/fm*", "contrib/fm*", "contrib/ffaup/**"],
+      "boundaries": ["TB-PIPELINE", "TB-OUTBOUND", "TB-MODULE"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-MESSAGE-TRUST-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "optional-expression-function",
+      "evidence": ["plugins/fmpcre/fmpcre.c", "contrib/fmhash/fmhash.c"],
+      "test_hints": ["tests/ffmpcre-basic.sh"],
       "requires_lead": true
     },
     {
+      "id": "transport-security",
+      "paths": ["runtime/net.*", "runtime/net_ossl*", "runtime/netns_socket.*", "runtime/netstrm.*", "runtime/netstrms.*", "runtime/nsd*", "runtime/tcpsrv.*", "runtime/tcps_sess.*", "runtime/strms_sess.*", "runtime/tcpclt.*", "runtime/gss-*", "tools/omfwd.*", "plugins/omrelp/**", "plugins/omdtls/**", "plugins/omgssapi/**"],
+      "boundaries": ["TB-NET-IN", "TB-OUTBOUND"],
+      "invariants": ["SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01", "SI-INPUT-BOUNDS-01"],
+      "exposure": "configured-network-transport",
+      "evidence": ["runtime/nsd_ossl.c", "runtime/nsd_gtls.c", "runtime/net_ossl.c", "runtime/net.c"],
+      "test_hints": ["tests/imtcp-tls-ossl-basic.sh", "tests/imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh", "tests/imdtls-permittedpeer-reject.sh", "tests/sndrcv_relp.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "remote-outputs",
+      "paths": ["plugins/omelasticsearch/**", "plugins/omkafka/**", "plugins/ommysql/**", "plugins/ompgsql/**", "plugins/omlibdbi/**", "plugins/ommongodb/**", "plugins/omclickhouse/**", "plugins/omotel/**", "plugins/omazure*", "plugins/omawslogshlc/**", "plugins/omkinesis/**", "plugins/omhdfs/**", "plugins/ommail/**", "plugins/omsnmp/**", "plugins/omudpspoof/**", "contrib/omhttpfs/**", "contrib/omrabbitmq/**", "contrib/omamqp1/**", "contrib/omhiredis/**", "contrib/omczmq/**", "tools/logctl.c"],
+      "boundaries": ["TB-OUTBOUND", "TB-PIPELINE", "TB-MODULE"],
+      "invariants": ["SI-MESSAGE-TRUST-01", "SI-SECRET-HANDLING-01", "SI-INPUT-BOUNDS-01", "SI-PEER-IDENTITY-01"],
+      "exposure": "operator-selected-destination",
+      "evidence": ["plugins/omelasticsearch/omelasticsearch.c", "plugins/ommysql/ommysql.c", "plugins/omkafka/omkafka.c"],
+      "test_hints": ["tests/es-basic.sh", "tests/mysql-basic.sh", "tests/pgsql-basic.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "local-outputs-and-statistics",
+      "paths": ["tools/omusrmsg.*", "tools/omdiscard.*", "plugins/omstdout/**", "plugins/omjournal/**", "plugins/omuxsock/**", "plugins/omruleset/**", "plugins/omsendertrack/**", "plugins/impstats/**", "runtime/statsobj.*"],
+      "boundaries": ["TB-STORAGE", "TB-PIPELINE", "TB-OUTBOUND"],
+      "invariants": ["SI-MESSAGE-TRUST-01", "SI-PATH-CONTROL-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "configured-local-sink",
+      "evidence": ["tools/omusrmsg.c", "plugins/impstats/impstats.c"],
+      "test_hints": ["tests/omusrmsg-noabort.sh", "tests/omstdout-basic.sh", "tests/impstats-hup.sh"],
+      "requires_lead": false
+    },
+    {
       "id": "configuration-and-modules",
-      "paths": ["grammar/**", "runtime/conf.*", "runtime/glbl.*", "runtime/modules.*", "runtime/rsconf.*", "runtime/yamlconf.*", "tools/rsyslogd.c"],
+      "paths": ["grammar/**", "runtime/conf.*", "runtime/cfsysline.*", "runtime/outchannel.*", "runtime/glbl.*", "runtime/modules.*", "runtime/module-template.h", "runtime/rsconf.*", "runtime/yamlconf.*", "runtime/rswatch.*", "tools/rsyslogd.c"],
       "boundaries": ["TB-CONFIG", "TB-MODULE", "TB-PRIV"],
       "invariants": ["SI-CONFIG-AUTHORITY-01", "SI-PRIV-DROP-01", "SI-SECRET-HANDLING-01"],
       "exposure": "administrator-controlled",
@@ -54,7 +114,7 @@
     },
     {
       "id": "queues-and-state",
-      "paths": ["runtime/queue*", "runtime/segdisk_store*", "runtime/wti.*", "runtime/wtp.*", "tools/rsyslog-segqueue*"],
+      "paths": ["runtime/queue*", "runtime/compat_queue.h", "runtime/segdisk_*", "runtime/wti.*", "runtime/wtp.*", "tools/rsyslog-segqueue*"],
       "boundaries": ["TB-PIPELINE", "TB-STORAGE"],
       "invariants": ["SI-QUEUE-INTEGRITY-01", "SI-INPUT-BOUNDS-01", "SI-MESSAGE-TRUST-01"],
       "exposure": "shared-runtime-and-local-storage",
@@ -63,8 +123,18 @@
       "requires_lead": true
     },
     {
+      "id": "storage-encryption-and-signing",
+      "paths": ["runtime/lmcry_*", "runtime/libcry_common.*", "runtime/libgcry*", "runtime/libossl.*", "runtime/cryprov.h", "runtime/sigprov.h", "runtime/lmsig_*", "runtime/lib_ksi*", "runtime/librsksi*", "tools/rscryutil.c", "tools/logsigner.c"],
+      "boundaries": ["TB-STORAGE", "TB-CONFIG"],
+      "invariants": ["SI-STORAGE-PROTECTION-01", "SI-SECRET-HANDLING-01", "SI-QUEUE-INTEGRITY-01"],
+      "exposure": "optional-storage-protection",
+      "evidence": ["runtime/lmcry_gcry.c", "runtime/lmcry_ossl.c", "runtime/lmsig_ksi-ls12.c"],
+      "test_hints": ["tests/queue-encryption-disk.sh", "tests/lmsig_ksi_ls12.sh"],
+      "requires_lead": true
+    },
+    {
       "id": "filesystem-inputs-and-outputs",
-      "paths": ["plugins/imfile/**", "plugins/imfifo/**", "tools/omfile.c", "tools/ompipe.c", "runtime/stream.*", "runtime/template.*"],
+      "paths": ["plugins/imfile/**", "plugins/imfifo/**", "tools/omfile.*", "tools/ompipe.*", "runtime/stream.*", "runtime/template.*"],
       "boundaries": ["TB-LOCAL-IN", "TB-STORAGE", "TB-PIPELINE"],
       "invariants": ["SI-PATH-CONTROL-01", "SI-MESSAGE-TRUST-01", "SI-INPUT-BOUNDS-01"],
       "exposure": "configured-local-filesystem",
@@ -74,12 +144,12 @@
     },
     {
       "id": "external-programs",
-      "paths": ["contrib/improg/**", "plugins/mmexternal/**", "plugins/omprog/**", "tools/omshell.c", "tools/ompipe.c"],
+      "paths": ["contrib/improg/**", "contrib/omtcl/**", "plugins/mmexternal/**", "plugins/omprog/**", "plugins/external/**", "tools/omshell.*", "tools/ompipe.*", "runtime/srutils.c", "runtime/srUtils.h", "runtime/stream.*"],
       "boundaries": ["TB-EXEC", "TB-LOCAL-IN", "TB-OUTBOUND"],
       "invariants": ["SI-EXEC-DATA-01", "SI-MESSAGE-TRUST-01", "SI-SECRET-HANDLING-01"],
       "exposure": "administrator-configured-helper",
-      "evidence": ["plugins/omprog/omprog.c", "plugins/mmexternal/mmexternal.c"],
-      "test_hints": ["tests/omprog-defaults.sh", "tests/mmexternal-single-instance.sh"],
+      "evidence": ["plugins/omprog/omprog.c", "plugins/mmexternal/mmexternal.c", "runtime/srutils.c"],
+      "test_hints": ["tests/omprog-defaults.sh", "tests/mmexternal-single-instance.sh", "tests/omtcl.sh"],
       "requires_lead": true
     },
     {
@@ -89,27 +159,57 @@
       "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-PEER-IDENTITY-01", "SI-SECRET-HANDLING-01"],
       "exposure": "optional-contrib-component",
       "evidence": ["contrib/imhttp/imhttp.c", "contrib/omhttp/omhttp.c"],
-      "test_hints": [],
+      "test_hints": ["tests/imhttp-post-payload-basic-auth-challenge.sh", "tests/omhttp-basic.sh"],
       "requires_lead": false
     },
     {
+      "id": "runtime-support",
+      "paths": ["runtime/rsyslog.*", "runtime/obj*", "runtime/threads.*", "runtime/debug.*", "runtime/errmsg.*", "runtime/linkedlist.*", "runtime/janitor.*", "runtime/operatingstate.*", "runtime/timezones.*", "runtime/translate.*", "runtime/atomic.h", "runtime/dirty.h", "runtime/syslogd-types.h", "runtime/typedefs.h", "runtime/unicode-helper.h", "runtime/unlimited_select.h", "compat/**"],
+      "boundaries": ["TB-PIPELINE"],
+      "invariants": ["SI-PARSER-SAFETY-01", "SI-INPUT-BOUNDS-01"],
+      "exposure": "shared-runtime",
+      "evidence": ["runtime/obj.c", "runtime/threads.c"],
+      "test_hints": ["tests/validation-run.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "deployment-artifacts",
+      "paths": ["packaging/**", "sidecar/**", "deploy/**"],
+      "boundaries": ["TB-CI", "TB-NET-IN", "TB-PRIV"],
+      "invariants": ["SI-CI-TRUST-01", "SI-SECRET-HANDLING-01", "SI-PRIV-DROP-01"],
+      "exposure": "released-package-or-container",
+      "evidence": ["packaging/docker", "sidecar/rsyslog_exporter.py"],
+      "test_hints": [],
+      "requires_lead": true
+    },
+    {
       "id": "ci-build-and-release",
-      "paths": [".github/**", "packaging/**", "devtools/**", "scripts/**", "Makefile.am", "configure.ac", "m4/**"],
+      "paths": [".github/**", "packaging/**", "devtools/**", "scripts/**", ".agent/**", ".codex/**", "Makefile.am", "configure.ac", "autogen.sh", "m4/**"],
       "boundaries": ["TB-CI", "TB-MODULE"],
       "invariants": ["SI-CI-TRUST-01", "SI-CONFIG-AUTHORITY-01", "SI-SECRET-HANDLING-01"],
       "exposure": "repository-and-release-automation",
       "evidence": [".github/workflows/codeql.yml", ".github/workflows/draft_release.yml"],
-      "test_hints": ["python3 devtools/check-flake-evidence-coverage.py"],
+      "test_hints": ["python3 devtools/check-flake-evidence-coverage.py", "python3 devtools/tests/test_security_review_input.py"],
       "requires_lead": true
     },
     {
       "id": "test-infrastructure",
-      "paths": ["tests/**"],
+      "paths": ["tests/**", "plugins/imdiag/**", "plugins/omtesting/**", "tools/fuzz_*", "tools/msggen.c", "tools/gethostn.c", "tools/coreanalysis.sh", "benchmarks/**", "diag.sh", "test-vm-push-local.sh"],
       "boundaries": ["TB-CI"],
       "invariants": ["SI-CI-TRUST-01", "SI-INPUT-BOUNDS-01"],
       "exposure": "developer-and-ci",
-      "evidence": ["tests/AGENTS.md", "tests/diag.sh"],
+      "evidence": ["tests/AGENTS.md", "tests/diag.sh", "plugins/imdiag/imdiag.c"],
       "test_hints": ["devtools/check-test-antipatterns.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "documentation-examples",
+      "paths": ["doc/source/**"],
+      "boundaries": ["TB-CONFIG"],
+      "invariants": ["SI-MESSAGE-TRUST-01", "SI-SECRET-HANDLING-01", "SI-TLS-EFFECTIVE-01"],
+      "exposure": "operator-guidance",
+      "evidence": ["doc/source/concepts/log_pipeline/index.rst"],
+      "test_hints": [],
       "requires_lead": false
     },
     {

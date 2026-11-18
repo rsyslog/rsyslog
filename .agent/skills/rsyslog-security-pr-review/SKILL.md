@@ -38,6 +38,8 @@ Read `SECURITY.md`, `doc/ai/security_triage_rubric.md`, and the relevant parts o
 `doc/security/threat-model-components.json`. Inspect the current PR delta plus
 the smallest supporting source needed to trace changed trust boundaries and
 invariants. Do not turn an ordinary PR review into a full-repository scan.
+For a deliberate deep audit of a whole component, use
+[`rsyslog-security-audit`](../rsyslog-security-audit/SKILL.md).
 
 For each candidate finding, record:
 

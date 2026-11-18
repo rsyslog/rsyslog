@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
         }
         if (val != i) {
             if (val == i - increment && dupsPermitted) {
-                --i;
+                i -= increment;
                 ++nDups;
             } else {
                 printf("read value %d, but expected value %d\n", val, i);

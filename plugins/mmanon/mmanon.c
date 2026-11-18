@@ -1756,7 +1756,7 @@ static int syntax_embedded(const uchar *const __restrict__ buf,
 
     while (*nprocessed < buflen) {
         numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 1);
-        if (numLen > 0) {  // found a valid num
+        if (numLen > 0 && numLen < 5) {  // found a valid IPv6 group
             if ((ipParts == 6 && hadAbbrev) || ipParts > 6) {  // is 6 since the first part of
                 // IPv4 will also result in a valid hexvalue
                 isIP = 0;
@@ -1929,7 +1929,9 @@ static void anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMs
 
     int syn = syntax_embedded(*msg + offset, *pLenMsg - offset, &iplen, &v4Start);
     if (syn) {
-        assert(iplen < sizeof(address));
+        if (iplen >= sizeof(address)) {
+            return;
+        }
         getip(*msg + offset, iplen, address);
         offset += iplen;
         process_embedded(address, pWrkrData, v4Start);

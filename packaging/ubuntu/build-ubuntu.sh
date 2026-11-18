@@ -112,8 +112,11 @@ if [ -f "rsyslog-${VERSION}/debian/source/include-binaries" ] && \
   mkdir -p "rsyslog-${VERSION}/debian/qpid-proton"
   if [ ! -f "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" ]; then
     echo "== Fetch qpid-proton tarball =="
-    wget -q -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
-      https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
+    # Bound each mirror attempt so an unavailable archive cannot stall CI.
+    wget -q --timeout=30 --tries=2 -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
+      https://dlcdn.apache.org/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz ||
+      wget -q --timeout=30 --tries=2 -O "rsyslog-${VERSION}/debian/qpid-proton/qpid-proton-0.40.0.tar.gz" \
+        https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
     (cd "rsyslog-${VERSION}/debian/qpid-proton" && \
       echo '3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz' | sha512sum -c -)
   fi
@@ -340,8 +343,11 @@ done
 # Re-fetch qpid-proton tarball in container to avoid corruption from Windows host mount
 if [ -f debian/source/include-binaries ] && grep -q qpid-proton debian/source/include-binaries; then
   mkdir -p debian/qpid-proton
-  wget -q -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
-    https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
+  # Use the same bounded primary and archive fallback as the host fetch.
+  wget -q --timeout=30 --tries=2 -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
+    https://dlcdn.apache.org/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz ||
+    wget -q --timeout=30 --tries=2 -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
+      https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
   (cd debian/qpid-proton && echo "3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz" | sha512sum -c -)
 fi
 apt_retry_with_fallback "mk-build-deps" \

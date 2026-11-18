@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Set the tag prefix for the next legacy mmsnmptrapd action.
+   :keywords: rsyslog, mmsnmptrapd, tag, legacy directive
+
 .. _param-mmsnmptrapd-tag:
 .. _mmsnmptrapd.parameter.module.tag:
 
@@ -19,9 +23,9 @@ Specifies the tag prefix that identifies messages for processing.
 This parameter applies to :doc:`../../configuration/modules/mmsnmptrapd`.
 
 :Name: tag
-:Scope: module
+:Scope: next legacy action
 :Type: word (see :doc:`../../rainerscript/constant_strings`)
-:Default: module=snmptrapd
+:Default: action=snmptrapd
 :Required?: no
 :Introduced: at least 5.8.1, possibly earlier
 
@@ -30,25 +34,32 @@ Description
 Tells the module which start string inside the tag to look for. The default is
 ``snmptrapd``. Note that a slash (``/``) is automatically appended to this tag for
 matching. You should not include a trailing slash unless you specifically need
-to match a double slash. For example, setting ``tag="tag/"`` results in a
+to match a double slash. For example, setting ``$mmsnmptrapdTag tag/`` results in a
 check for ``tag//`` at the start of the tag field.
 
-Module usage
-------------
+Legacy directive usage
+----------------------
 .. _param-mmsnmptrapd-module-tag:
 .. _mmsnmptrapd.parameter.module.tag-usage:
 
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: mmsnmptrapd
+
 .. code-block:: rsyslog
 
-   module(load="mmsnmptrapd" tag="snmptrapd")
+   module(load="mmsnmptrapd")
+   $mmsnmptrapdTag snmptrapd
+   *.* :mmsnmptrapd:
 
-Legacy names (for reference)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
+Supported directive
+~~~~~~~~~~~~~~~~~~~
+This legacy directive is the supported way to configure this setting. It is
+not accepted as a ``module()`` or ``action()`` parameter. The setting resets
+after the next ``:mmsnmptrapd:`` action is constructed.
 
 .. _mmsnmptrapd.parameter.legacy.mmsnmptrapdtag:
 
-- $mmsnmptrapdTag — maps to tag (status: legacy)
+- ``$mmsnmptrapdTag``
 
 .. index::
    single: mmsnmptrapd; $mmsnmptrapdTag

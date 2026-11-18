@@ -212,7 +212,10 @@ jobs:
             -w /workspace \
             opensuse/leap:16.0 bash -lc '
               set -euo pipefail
-              zypper -n install findutils gzip python3 rpm-build tar
+              # Install OpenSSL first: pkgconfig(openssl) otherwise resolves
+              # to libressl-devel, which imdtls/omdtls do not build against.
+              zypper -n install findutils gzip python3 rpm-build tar \
+                libopenssl-3-devel
               zypper -n modifyrepo --enable openSUSE:repo-oss-source
               zypper -n refresh openSUSE:repo-oss-source
               # Keep the official source RPM for provenance and extraction;
@@ -410,6 +413,11 @@ jobs:
           install -m 600 /dev/null "$passphrase_file"
           printf '%s' "$ARCHIVE_GPG_PASSPHRASE" > "$passphrase_file"
           echo "GPG_PASSPHRASE_FILE=$passphrase_file" >> "$GITHUB_ENV"
+
+      - name: Check archive signing key expiry
+        run: >-
+          devtools/release/check-signing-key-expiry.sh
+          "$ARCHIVE_GPG_FINGERPRINT" 60
 
       - name: Sign binary and source RPMs
         run: |

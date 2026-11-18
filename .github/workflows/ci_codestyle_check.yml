@@ -13,7 +13,9 @@ concurrency:
 
 jobs:
   style-check:
-    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    # Keep the hosted image on the release that provides clang-format-18.
+    # ubuntu-latest can move to a release with a different formatter set.
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
 
     steps:
       - name: Checkout repository
@@ -29,6 +31,7 @@ jobs:
           files: |
             **/*.c
             **/*.h
+            .github/workflows/ci_codestyle_check.yml
             devtools/format-code.sh
             devtools/check-raw-atomics.py
             devtools/raw-atomics-baseline.txt

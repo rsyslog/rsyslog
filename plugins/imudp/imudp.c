@@ -187,7 +187,7 @@ static struct cnfparamdescr modpdescr[] = {{"schedulingpolicy", eCmdHdlrGetWord,
                                            {"schedulingpriority", eCmdHdlrInt, 0},
                                            {"batchsize", eCmdHdlrInt, 0},
                                            {"threads", eCmdHdlrPositiveInt, 0},
-                                           {"timerequery", eCmdHdlrInt, 0},
+                                           {"timerequery", eCmdHdlrNonNegInt, 0},
                                            {"preservecase", eCmdHdlrBinary, 0},
                                            {"allowedsender", eCmdHdlrArray, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
@@ -955,7 +955,7 @@ finalize_it:
 static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
     DEFiRet;
     int nfds;
-    int efd;
+    int efd = -1;
     int i;
     struct sockaddr_storage frominetPrev;
     struct lstn_s *lstnPrev;
@@ -1030,6 +1030,7 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
     }
 
 finalize_it:
+    if (efd >= 0) close(efd);
     if (udpEPollEvt != NULL) free(udpEPollEvt);
 
     RETiRet;
@@ -1668,7 +1669,7 @@ BEGINmodInit()
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt, NULL, &cs.iSchedPrio,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
-    CHKiRet(regCfSysLineHdlr2((uchar *)"udpservertimerequery", 0, eCmdHdlrInt, NULL, &cs.iTimeRequery,
+    CHKiRet(regCfSysLineHdlr2((uchar *)"udpservertimerequery", 0, eCmdHdlrNonNegInt, NULL, &cs.iTimeRequery,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,

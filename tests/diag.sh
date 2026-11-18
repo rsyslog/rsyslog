@@ -17,6 +17,11 @@
 #		the testbench utilizing this, use
 #		export SUDO=sudo
 #		to activate the extra functionality.
+# SIDECAR_TEST_PYTHON
+#               Python interpreter for the optional Prometheus sidecar test,
+#               defaulting to "python3" when unset or empty. Select an interpreter
+#               with Python 3.8+ and the prometheus_client and werkzeug dependencies
+#               installed; missing prerequisites cause the test to skip.
 # RS_SORTCMD    Sort command to use (must support $RS_SORT_NUMERIC_OPT option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
 # RS_SORT_NUMERIC_OPT option to use for numerical sort, If unset "-g" is used.
@@ -194,6 +199,33 @@ skip_platform() {
 		exit 77
 	fi
 
+}
+
+# Solaris builder runs only a reduced test subset (best-effort CI, see
+# tests/solaris-subset.list): tests matching a "skip" glob there exit with 77.
+# RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1 runs everything; for checking the
+# filter on another OS set RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1. Both flags are
+# only active with the value 1.
+# $1 is the test script's basename.
+solaris_subset_skip() {
+	[ "$RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL" != "1" ] || return 0
+	if [ "$(uname)" != "SunOS" ] && [ "$RSYSLOG_TESTBENCH_SOLARIS_SUBSET" != "1" ]; then
+		return 0
+	fi
+	local list="${srcdir:-.}/solaris-subset.list" action glob rest skipglob=""
+	[ -r "$list" ] || return 0
+	while read -r action glob rest; do
+		case "$action" in
+		keep)
+			case "$1" in $glob) return 0 ;; esac ;;
+		skip)
+			case "$1" in $glob) skipglob="$glob" ;; esac ;;
+		esac
+	done < "$list"
+	if [ -n "$skipglob" ]; then
+		printf 'test "%s" is not part of the reduced Solaris test subset (skip %s in solaris-subset.list)\n' "$1" "$skipglob"
+		exit 77
+	fi
 }
 
 # Skip runtime local-queue tests where queue_local.c builds only its
@@ -621,7 +653,7 @@ get_core_pattern() {
 
 core_policy_uses_external_collector() {
 	local core_pattern
-	[ "$(uname)" = "Linux" ] || return 1
+	[ "$(uname)" = "Linux" ] || [ -n "${RSTB_CORE_PATTERN_OVERRIDE:-}" ] || return 1
 	core_pattern="$(get_core_pattern)"
 	case "$core_pattern" in
 	\|*) return 0 ;;
@@ -3072,6 +3104,7 @@ module_needs_testing() {
 				;;
 			imfile:plugins/imfile/*|\
 			imfile:tests/*imfile*.sh|\
+			imfile:tests/override_fstat.c|\
 			imfile:tests/testsuites/imfile*|\
 			imfile:tests/testsuites/*imfile*)
 				return 0
@@ -3649,6 +3682,12 @@ check_command_available() {
 	else
 		if command -v "$1" >/dev/null 2>&1; then
 			have_cmd=1
+		fi
+		# helper scripts use f-strings/pathlib etc.: need Python >= 3.6
+		if [ "$1" == "python3" ] && [ $have_cmd -eq 1 ] && \
+		   ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+			printf 'Testbench requires python3 >= 3.6\n'
+			have_cmd=0
 		fi
 	fi
 	if [ $have_cmd -eq 0 ] ; then
@@ -4642,7 +4681,12 @@ omhttp_start_server() {
     omhttp_server_portfile="$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
     server_args="-p $omhttp_server_port ${*:2} --port-file $omhttp_server_portfile"
 
-    setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    # setsid is not available everywhere (e.g. Solaris); it is only a convenience
+    if command -v setsid >/dev/null 2>&1; then
+        setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    else
+        timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    fi
     # shellcheck disable=SC2181 # Preserve the existing background-start check.
     if [ $? -ne 0 ]; then
         echo "Failed to start omhttp test server."
@@ -5743,6 +5787,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 
 		# Extra Variables for Test statistic reporting
                 export RSYSLOG_TESTNAME=$(basename $0)
+                solaris_subset_skip "$RSYSLOG_TESTNAME"
 
                 # we create one file with the test name, so that we know what was
                 # left over if "make distcheck" complains
@@ -5770,6 +5815,10 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 			echo "testbench: TZ env var not set, setting it to UTC"
 			export TZ=UTC
 		fi
+		# The testbench only talks to local servers. A CI worker-wide http_proxy
+		# (the Solaris builder has one) must not capture these requests.
+		export no_proxy="127.0.0.1,localhost,::1${no_proxy:+,$no_proxy}${NO_PROXY:+,$NO_PROXY}"
+		export NO_PROXY="$no_proxy"
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		# Note: Setting per-process core_pattern would require root privileges via
 		# /proc/sys/kernel/core_pattern, which is not available in standard test environments.

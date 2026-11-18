@@ -926,7 +926,17 @@ jobs:
           echo "== Install build tools for autoreconf/configure/make dist =="
           dnf_retry install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
-          curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
+          # Retry the idempotent key GET on all curl errors: mixed IPv4/IPv6
+          # failures can hide connection refusal from --retry-connrefused.
+          # Keep incomplete downloads away from the key path consumed by dnf.
+          key_tmp=$(mktemp /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon.XXXXXX)
+          if curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 --retry-max-time 180 --connect-timeout 15 --max-time 60 -o "$key_tmp" https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon; then
+            mv "$key_tmp" /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon
+          else
+            status=$?
+            rm -f "$key_tmp"
+            exit "$status"
+          fi
           {
             echo '[adiscon]'
             echo 'name=adiscon'
@@ -973,19 +983,20 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # 1 x from macos-14 (x64 NONE)
-          - os: macos-14
+          # Pin Intel labels for both x64 lanes; generic macos-15 is arm64.
+          # macos-14 is retiring and scheduled brownouts prevent jobs starting.
+          - os: macos-15-intel
             arch: x64
             sanitizer: none
-          # 2 x from macos-15 (x64 ASAN and arm64 TSAN)
-          - os: macos-15
+          - os: macos-15-intel
             arch: x64
             sanitizer: asan
           - os: macos-15
             arch: arm64
             sanitizer: tsan
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    # Leave time for setup and failure evidence after the test watchdog fires.
+    timeout-minutes: ${{ matrix.sanitizer == 'tsan' && 35 || 25 }}
     name: macOS CI (${{ matrix.os }}, ${{ matrix.arch }}, ${{ matrix.sanitizer }})
     env:
       USE_AUTO_DEBUG: true
@@ -1122,6 +1133,7 @@ jobs:
         id: run_tests
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
+          MAKE_CHECK_TIMEOUT_SECONDS: ${{ matrix.sanitizer == 'tsan' && 1500 || 1200 }}
           RSYSLOG_FLAKE_PHASE_NAME: >-
             macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
         run: |
@@ -1143,7 +1155,6 @@ jobs:
             echo "Running without sanitizers"
           fi
 
-          export MAKE_CHECK_TIMEOUT_SECONDS=1200
           devtools/ci-flake-phase.sh begin "$RSYSLOG_FLAKE_PHASE_NAME" automake
 
           set +e

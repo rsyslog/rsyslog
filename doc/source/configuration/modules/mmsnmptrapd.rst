@@ -1,5 +1,9 @@
 .. SPDX-License-Identifier: Apache-2.0
 
+.. meta::
+   :description: Rewrite snmptrapd message tags, hostnames, and severities using legacy mmsnmptrapd directives.
+   :keywords: rsyslog, mmsnmptrapd, snmptrapd, severity, legacy configuration
+
 **************************************************
 mmsnmptrapd: snmptrapd message modification module
 **************************************************
@@ -13,10 +17,14 @@ mmsnmptrapd: snmptrapd message modification module
 Purpose
 =======
 
+.. summary-start
+
 This module uses a specific configuration of snmptrapd's tag values to
 obtain information of the original source system and the severity
 present inside the original SNMP trap. It then replaces these fields
 inside the syslog message.
+
+.. summary-end
 
 Let's look at an example. Essentially, SNMPTT will invoke something like
 this:
@@ -67,11 +75,13 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for
-   readability.
+   This module supports legacy configuration directives and the
+   ``:mmsnmptrapd:`` action. The settings below are not parameters of
+   ``module()`` or ``action()``. There is no native YAML parameter interface;
+   a YAML ruleset can use these directives through its ``script`` field.
 
-Module parameters
------------------
+Legacy action settings
+----------------------
 
 .. list-table::
    :widths: 30 70
@@ -105,12 +115,18 @@ Example
 This enables to rewrite messages from snmptrapd and configures error and
 warning severities. The default tag is used.
 
-.. code-block:: none
+The module is loaded once. Each legacy setting configures the next
+``:mmsnmptrapd:`` action and resets after that action is constructed.
 
-  module(load="mmsnmptrapd" severityMapping="warning/4,error/3") # needs to be done just once
-  # ... other module loads and listener setup ...
-  *.* /path/to/file/with/originalMessage # this file receives unmodified messages
-  *.* :mmsnmptrapd: # now message is modified
-  *.* /path/to/file/with/modifiedMessage # this file receives modified messages
-  # ... rest of config ...
+.. rsyslog-doc-sample: validate-config
+   :require-plugin: mmsnmptrapd
+
+.. code-block:: rsyslog
+   :force:
+
+   module(load="mmsnmptrapd")
+   action(type="omfile" file="/var/log/snmptrapd-original.log")
+   $mmsnmptrapdSeverityMapping warning/4,error/3
+   *.* :mmsnmptrapd:
+   action(type="omfile" file="/var/log/snmptrapd-modified.log")
 

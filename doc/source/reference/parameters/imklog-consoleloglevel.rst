@@ -36,6 +36,12 @@ definition is reset. The active setting will be the last one defined when
 imklog actually starts processing. To avoid unexpected behavior, it is
 recommended to specify this directive only once.
 
+When rsyslogd shuts down, imklog restores the console log level that was
+in effect before it started (read from ``/proc/sys/kernel/printk``).
+Changing the level requires the ``CAP_SYSLOG`` capability. If rsyslogd no
+longer has it at shutdown, for example because privileges were dropped to
+another user, the level cannot be restored and imklog logs a warning.
+
 **Linux only**, ignored on other platforms (but may be specified).
 
 Module usage

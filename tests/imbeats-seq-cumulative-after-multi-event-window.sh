@@ -1,7 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
-# Verify the next window continues after a multi-event cumulative ACK instead
-# of resetting sequence state.
+# Verify that cumulative numbering is still accepted after a multi-event
+# window: window 1 carries seq 1 and 2, window 2 continues at seq 3 (instead
+# of restarting at 1 as Beats clients do).
+# Oracle: ACKs carry the last sequence number of each window (2, then 3) and
+# all three events are delivered once.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf

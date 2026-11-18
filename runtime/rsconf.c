@@ -253,7 +253,7 @@ static uchar template_FullJSONFmt[] =
 static uchar template_StdClickHouseFmt[] =
     "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
     "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
-    "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
+    "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",SQL";
 static uchar template_StdOmSenderTrack_senderid[] =
     "\"%fromhost-ip%\""; /* default template for omsendertrack "senderid" parameter*/
 static uchar template_PerSourceKey[] = "\"%hostname%\""; /* default template for per-source ratelimiting */

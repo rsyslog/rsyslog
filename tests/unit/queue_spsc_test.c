@@ -12,10 +12,9 @@
  * exactly once. Its payload bytes and checksum are initialized before enqueue
  * and checked after dequeue, making visibility after release/acquire part of
  * the concurrent-publication oracle rather than only pointer-ID ordering. The
- * full and empty retry paths yield after no progress, so their deliberate
- * contention does not monopolize the scheduler under instrumentation. After
- * a run of fruitless yields they sleep briefly: on loaded macOS TSan runners
- * yield alone can let the spinning peers starve each other past the alarm.
+ * full and empty retry paths yield a few times and then block briefly on a
+ * peer-progress condition variable, so a spinning thread never keeps a CPU
+ * from its peer (loaded macOS runners starved each other with yield/sleep).
  *
  * The 31-slot ring and 11/13 batch maxima are intentional: they keep both
  * threads at the full and empty boundaries, so the cached-index refresh and
@@ -23,11 +22,14 @@
  * The test therefore also requires at least one full and one empty episode.
  * Each episode is a producer/consumer handoff whose wall-clock cost is set by
  * the scheduler, not the queue; on a loaded macOS TSan runner it can approach
- * a scheduler quantum.  TSan builds therefore move fewer items: TSan flags a
+ * a scheduler quantum.  Sanitizer builds therefore move fewer items: TSan flags a
  * missing happens-before edge on the first unordered access, so item volume
- * adds little there, while uninstrumented builds keep 100k items to give real
+ * adds little there; ASan builds are equally scheduler-bound on loaded macOS
+ * x64 runners (the 60 s alarm fired there with 100k items).  Uninstrumented
+ * builds keep 100k items to give real
  * weakly ordered hardware more chances to expose a stale payload checksum.
- * A 60-second alarm bounds a regression hang; it is not the success oracle.
+ * A 60-second watchdog bounds a regression hang and prints progress counters;
+ * it is not the success oracle.
  */
 #include "config.h"
 
@@ -224,15 +226,15 @@ static int test_cached_full_and_slot_reuse(void) {
     return 0;
 }
 
-#if defined(__SANITIZE_THREAD__)
-    #define SPSC_TEST_UNDER_TSAN 1
+#if defined(__SANITIZE_THREAD__) || defined(__SANITIZE_ADDRESS__)
+    #define SPSC_TEST_SANITIZED 1
 #elif defined(__has_feature)
-    #if __has_feature(thread_sanitizer)
-        #define SPSC_TEST_UNDER_TSAN 1
+    #if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
+        #define SPSC_TEST_SANITIZED 1
     #endif
 #endif
 
-#ifdef SPSC_TEST_UNDER_TSAN
+#ifdef SPSC_TEST_SANITIZED
     #define CONCURRENT_ITEMS 20000U
 #else
     #define CONCURRENT_ITEMS 100000U
@@ -257,6 +259,11 @@ typedef struct spsc_thread_test_state_s {
     int consumer_result;
     unsigned long full_episodes;
     unsigned long empty_episodes;
+    pthread_mutex_t wait_mutex;
+    pthread_cond_t wait_cond;
+    uint32_t produced_items;
+    uint32_t consumed_items;
+    int threads_done;
 } spsc_thread_test_state_t;
 
 static uint32_t payload_checksum(const publication_payload_t *payload) {
@@ -282,15 +289,48 @@ static int wait_for_start(spsc_thread_test_state_t *state) {
     return abort_start;
 }
 
-/* Yield first; sleep after repeated misses so the peer is scheduled. */
-static void retry_backoff(unsigned *const misses) {
-    if (++*misses < 64U) {
+/* Wake a peer that may be blocked in wait_for_peer(). */
+static void signal_peer(spsc_thread_test_state_t *state) {
+    (void)pthread_cond_signal(&state->wait_cond);
+}
+
+/* Progress counters are only for the watchdog report; guard them with the
+ * wait mutex rather than raw atomics so the test stays portable. */
+static void publish_progress(spsc_thread_test_state_t *state, const int is_producer, const uint32_t items) {
+    (void)pthread_mutex_lock(&state->wait_mutex);
+    if (is_producer)
+        state->produced_items = items;
+    else
+        state->consumed_items = items;
+    (void)pthread_mutex_unlock(&state->wait_mutex);
+}
+
+static void thread_finished(spsc_thread_test_state_t *state) {
+    (void)pthread_mutex_lock(&state->wait_mutex);
+    ++state->threads_done;
+    (void)pthread_mutex_unlock(&state->wait_mutex);
+}
+
+/* Yield a few times, then block briefly on the peer's progress signal.  A
+ * spinning thread must not keep a CPU from its peer: on small macOS runners
+ * sched_yield() alone can leave both threads starving each other past the
+ * alarm.  The timed wait bounds a missed signal to one millisecond. */
+static void wait_for_peer(spsc_thread_test_state_t *state, unsigned *const misses) {
+    if (++*misses < 8U) {
         (void)sched_yield();
     } else {
-        const struct timespec pause = {0, 50000};
+        struct timespec deadline;
 
-        (void)nanosleep(&pause, NULL);
-        *misses = 0;
+        (void)clock_gettime(CLOCK_REALTIME, &deadline);
+        deadline.tv_nsec += 1000000L;
+        if (deadline.tv_nsec >= 1000000000L) {
+            deadline.tv_nsec -= 1000000000L;
+            ++deadline.tv_sec;
+        }
+        (void)pthread_mutex_lock(&state->wait_mutex);
+        (void)pthread_cond_timedwait(&state->wait_cond, &state->wait_mutex, &deadline);
+        (void)pthread_mutex_unlock(&state->wait_mutex);
+        *misses = 8U;
     }
 }
 
@@ -314,11 +354,14 @@ static void *producer_main(void *arg) {
         if (rsSpscQueueTryPush(&state->queue, batch, count)) {
             next_id += count;
             misses = 0;
+            publish_progress(state, 1, next_id - 1U);
+            signal_peer(state);
         } else {
             if (misses == 0) ++state->full_episodes;
-            retry_backoff(&misses);
+            wait_for_peer(state, &misses);
         }
     }
+    thread_finished(state);
     return NULL;
 }
 
@@ -334,7 +377,7 @@ static void *consumer_main(void *arg) {
 
         if (count == 0) {
             if (misses == 0) ++state->empty_episodes;
-            retry_backoff(&misses);
+            wait_for_peer(state, &misses);
             continue;
         }
         misses = 0;
@@ -352,7 +395,10 @@ static void *consumer_main(void *arg) {
             if (payload->checksum != payload_checksum(payload)) state->consumer_result = 1;
             ++received;
         }
+        publish_progress(state, 0, received);
+        signal_peer(state);
     }
+    thread_finished(state);
     return NULL;
 }
 
@@ -360,7 +406,10 @@ static int test_variable_batch_threads(void) {
     static spsc_thread_test_state_t state = {
         .start_mutex = PTHREAD_MUTEX_INITIALIZER,
         .start_cond = PTHREAD_COND_INITIALIZER,
+        .wait_mutex = PTHREAD_MUTEX_INITIALIZER,
+        .wait_cond = PTHREAD_COND_INITIALIZER,
     };
+    int waited_ms = 0;
     pthread_t producer;
     pthread_t consumer;
 
@@ -379,10 +428,26 @@ static int test_variable_batch_threads(void) {
     state.started = 1;
     (void)pthread_cond_broadcast(&state.start_cond);
     (void)pthread_mutex_unlock(&state.start_mutex);
-    (void)alarm(60);
+    /* Watchdog: report progress counters instead of dying silently on SIGALRM. */
+    for (;;) {
+        const struct timespec tick = {0, 10000000};
+        int done;
+
+        (void)pthread_mutex_lock(&state.wait_mutex);
+        done = state.threads_done;
+        (void)pthread_mutex_unlock(&state.wait_mutex);
+        if (done >= 2) break;
+        (void)nanosleep(&tick, NULL);
+        if (++waited_ms > 6000) {
+            (void)pthread_mutex_lock(&state.wait_mutex);
+            fprintf(stderr, "SPSC thread test stalled: produced %u, consumed %u of %u items, %lu full, %lu empty\n",
+                    state.produced_items, state.consumed_items, CONCURRENT_ITEMS, state.full_episodes,
+                    state.empty_episodes);
+            _exit(1);
+        }
+    }
     CHECK(pthread_join(producer, NULL) == 0);
     CHECK(pthread_join(consumer, NULL) == 0);
-    (void)alarm(0);
     CHECK(state.consumer_result == 0);
     for (uint32_t i = 0; i < CONCURRENT_ITEMS; ++i) CHECK(state.seen[i]);
     /* Joined threads: their counters are now visible here. */

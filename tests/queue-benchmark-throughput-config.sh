@@ -8,7 +8,7 @@
 set -euo pipefail
 
 : "${srcdir:=$(dirname "$0")}"
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 harness="$srcdir/../benchmarks/queue-contention/trial-multi.sh"
 driver="$srcdir/../benchmarks/queue-contention/compare.py"
 common=(BENCH_CONFIG_ONLY=yes BENCH_MESSAGES=16 BENCH_CONNECTIONS=16 BENCH_PAYLOAD=512 BENCH_INPUT_WORKERS=8

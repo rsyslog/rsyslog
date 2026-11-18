@@ -3846,7 +3846,13 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
                     break;
                 }
             }
-            if (!is_numeric) {
+            if (is_numeric) {
+                /* JSON numbers cannot have leading zeros. Keep one for zero. */
+                while (buflen > 1 && *pSrc == '0') {
+                    ++pSrc;
+                    --buflen;
+                }
+            } else {
                 es_addChar(&dst, '"');
             }
             CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
@@ -4585,7 +4591,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
             }
         }
-        if (iFrom >= bufLen) {
+        if (iFrom >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
             DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n", iFrom, bufLen);
             if (*pbMustBeFreed == 1) free(pRes);
             pRes = (uchar *)"";

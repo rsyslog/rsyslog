@@ -28,7 +28,7 @@ from pathlib import Path
 
 
 AUTOMAKE_RE = re.compile(
-    r"^(?:FAIL|ERROR): |^# (?:FAIL|ERROR):\s*[1-9][0-9]*\s*$|^FAIL: Test \./",
+    r"^(?:FAIL|ERROR|XPASS): |^# (?:FAIL|ERROR|XPASS):\s*[1-9][0-9]*\s*$|^FAIL: Test \./",
     re.MULTILINE,
 )
 

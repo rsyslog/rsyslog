@@ -644,6 +644,7 @@ EXTRA_DIST = \
     source/reference/parameters/imklog-ratelimitburst.rst \
     source/reference/parameters/imklog-ratelimitinterval.rst \
     source/reference/parameters/imklog-ratelimit-name.rst \
+    source/reference/parameters/imklog-ruleset.rst \
     source/reference/parameters/immark-interval.rst \
     source/reference/parameters/immark-markmessagetext.rst \
     source/reference/parameters/immark-ruleset.rst \
@@ -674,6 +675,8 @@ EXTRA_DIST = \
     source/reference/parameters/impstats-severity.rst \
     source/reference/parameters/imptcp-address.rst \
     source/reference/parameters/imptcp-addtlframedelimiter.rst \
+    source/reference/parameters/imptcp-compression-maxdecompressedbytesperreceive.rst \
+    source/reference/parameters/imptcp-compression-maxexpansionratio.rst \
     source/reference/parameters/imptcp-compression-mode.rst \
     source/reference/parameters/imptcp-defaulttz.rst \
     source/reference/parameters/imptcp-discardtruncatedmsg.rst \
@@ -867,6 +870,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmanon-ipv6-uniqueretrycount.rst \
     source/reference/parameters/mmcount-appname.rst \
     source/reference/parameters/mmcount-key.rst \
+    source/reference/parameters/mmcount-maxcardinality.rst \
     source/reference/parameters/mmcount-value.rst \
     source/reference/parameters/mmdarwin-container.rst \
     source/reference/parameters/mmdarwin-fields.rst \

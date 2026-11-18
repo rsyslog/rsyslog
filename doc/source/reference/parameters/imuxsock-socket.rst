@@ -32,6 +32,10 @@ This parameter is required for every ``input(type="imuxsock" ...)`` object,
 because input objects configure additional sockets only. The system log socket
 is configured on the module object with ``SysSock.*`` parameters.
 
+The path must fit into the operating system's UNIX socket address (usually
+107 bytes on Linux and 103 bytes on BSD systems). Longer paths are rejected
+with an error instead of being truncated.
+
 Input usage
 -----------
 .. _param-imuxsock-input-socket:

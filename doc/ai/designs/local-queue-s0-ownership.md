@@ -221,7 +221,7 @@ and must implement its own complete memory-only terminal-ownership policy.
 | Contract | Existing evidence to retain | New or later evidence |
 |---|---|---|
 | Out-of-order RAM completion | [`queue-fixedarray-outoforder.sh`](../../../tests/queue-fixedarray-outoforder.sh) | Narrow dispatch test must prove completion affects the acquired store only. |
-| Deferred cleanup and missed-wakeup boundaries | [`queue-deferred-idle-wakeup.sh`](../../../tests/queue-deferred-idle-wakeup.sh), [`queue-deferred-idle-shutdown.sh`](../../../tests/queue-deferred-idle-shutdown.sh) | Cancellation with an active lease, including deferred destructor ownership. |
+| Deferred cleanup and missed-wakeup boundaries | None for classic queues since unlocked disposal was reverted (issue #7884) | Cancellation with an active lease, including deferred destructor ownership. |
 | Worker wait and lifecycle | [`wtp-targeted-wakeup.sh`](../../../tests/wtp-targeted-wakeup.sh) | S2 FE/BE wake protocol and producer-capacity wakeup tests. |
 | Transactional partial outcomes | [`action-tx-errfile.sh`](../../../tests/action-tx-errfile.sh) | Normal, retry, partial, and cancellation outcomes in one deterministic lease oracle. |
 | DA save and restart | [`classic-da-persist.sh`](../../../tests/classic-da-persist.sh), [`segmented-da-persist.sh`](../../../tests/segmented-da-persist.sh) | S1 confirms native logical-parent/physical-child ownership; S5 adds FE drain before DA save/restart. |

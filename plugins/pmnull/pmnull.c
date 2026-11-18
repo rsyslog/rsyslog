@@ -104,6 +104,7 @@ BEGINnewParserInst
 
     inst = NULL;
     CHKiRet(createInstance(&inst));
+    inst->pri = syslogfacility * 8 + syslogseverity;
 
     if (lst == NULL) FINALIZE; /* just set defaults, no param block! */
 

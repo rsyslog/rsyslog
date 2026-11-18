@@ -21,7 +21,7 @@ test_dir=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
 helper="$test_dir/../devtools/release/validate-rpm-baseline-patches.py"
 work_dir="./rpm-baseline-patch-policy-work.$$"
 
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 
 cleanup() {
 	rm -rf -- "$work_dir"

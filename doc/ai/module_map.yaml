@@ -125,7 +125,11 @@ runtime_queue:
       make tentative ruleset COMM uncertain even when the outer callback returns
       OK. Interrupted and non-OK callbacks retain at-least-once replay, which may
       repeat earlier script mutations or successful action effects.
-    - Completed message references move to a bounded worker buffer after store completion and are destroyed outside the queue mutex, before callbacks or waits; cancellation is disabled during this transfer and disposal.
+    - Classic queues destroy completed messages under the queue mutex (unlocked disposal was reverted, issue #7884). Local queue backends move completed references to a bounded worker buffer and destroy them outside the mutex, before callbacks or waits, with cancellation disabled.
+    - >-
+      For terminal workers, publish the exiting state under the queue mutex before
+      local-backend deferred-message disposal releases it. Producer start advice
+      during disposal is retained as a restart request for that exiting slot.
     - RAM retirement releases completed counts independently of batch order; segmentedDisk retains its ordered persistent frontier.
     - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.
     - The segmented store is lazy only for a disk-assisted child, and dematerialization requires an empty store with no recovery, batch, retry, or completion work pending.
@@ -339,9 +343,9 @@ imbeats:
     - Use starvationProtection.maxReads to keep one busy sender from monopolizing imbeats worker time.
     - maxInFlightBytes accounts incomplete receive buffers, inflate scratch space, event copies, and lazy window descriptors exactly across each input instance.
     - maxCompressionRatio and maxDecompressedSize jointly bound compressed-frame expansion.
-    - idleTimeout closes sessions with no byte progress; frameTimeout bounds one frame and windowTimeout bounds one advertised window with absolute deadlines that trickle traffic cannot extend. These network deadlines pause while a complete batch is submitted and resume for its ACK. A value of 0 disables the corresponding timeout.
+    - idleTimeout closes sessions with no byte progress; frameTimeout bounds one frame and windowTimeout bounds one advertised window with absolute deadlines that trickle traffic cannot extend. These network deadlines pause while a complete batch is submitted and resume for its ACK. On epoll builds, time a ready session waits in the work queue for a free worker is not charged against these deadlines; the same applies after a starvation-protection requeue of a session that had already made progress. On the poll fallback, sessions are queued without readiness information, so its accept and re-arm hand-offs are charged and idle peers still time out. A value of 0 disables the corresponding timeout.
     - JSON event payloads must be exactly one object, apart from surrounding whitespace. Malformed, non-object, trailing-content, resource-limited, or timed-out traffic is not acknowledged.
-    - Valid Lumberjack v2 W, J, and C flows retain cumulative A acknowledgement behavior.
+    - Lumberjack v2 sequence numbers are per window (1..n as sent by Beats, or continuing from the last ACK for cumulative senders) and must be consecutive; each completed window is ACKed with the sequence number of its last event.
     - TLS deployments require an installed rsyslog TLS stream-driver package or module, such as rsyslog-gnutls or rsyslog-openssl.
     - The common Elastic Agent TLS setup validates the rsyslog server certificate but does not present a client certificate; use streamDriver.authMode=anon for that pattern and stricter auth modes only with sender client certificates.
     - Compressed Lumberjack v2 frames are supported and should be tested with Beats compression enabled.

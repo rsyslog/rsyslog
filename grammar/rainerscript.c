@@ -935,7 +935,7 @@ static int doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param, st
 }
 
 
-/* A file create-mode must be a four-digit octal number
+/* A file create-mode must be a four- or five-digit octal number
  * starting with '0'.
  */
 static int doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param, struct cnfparamvals *val) {
@@ -944,7 +944,7 @@ static int doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *para
     uchar *c;
     const int len_val = es_strlen(valnode->val.d.estr);
 
-    if (len_val >= 4) {
+    if (len_val == 4 || len_val == 5) {
         c = es_getBufAddr(valnode->val.d.estr);
         if ((c[0] == '0') && (c[1] >= '0' && c[1] <= '7') && (c[2] >= '0' && c[2] <= '7') &&
             (c[3] >= '0' && c[3] <= '7')) {
@@ -1682,7 +1682,7 @@ finalize_it:
 
 static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrptr, wti_t *const pWti) {
     size_t submatchnbr;
-    short matchnbr;
+    long long matchnbr;
     regmatch_t pmatch[50];
     int bMustFree;
     es_str_t *estr = NULL; /* init just to keep compiler happy */
@@ -1690,7 +1690,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
     struct svar r[CNFFUNC_MAX_ARGS];
     int iLenBuf;
     unsigned iOffs;
-    short iTry = 0;
+    long long iTry = 0;
     uchar bFound = 0;
     iOffs = 0;
     sbool bHadNoMatch = 0;
@@ -1702,7 +1702,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
     cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
     cnfexprEval(func->expr[3], &r[3], usrptr, pWti);
     str = (char *)var2CString(&r[0], &bMustFree);
-    matchnbr = (short)var2Number(&r[2], NULL);
+    matchnbr = var2Number(&r[2], NULL);
     submatchnbr = (size_t)var2Number(&r[3], NULL);
     if (submatchnbr >= sizeof(pmatch) / sizeof(regmatch_t)) {
         DBGPRINTF("re_extract() submatch %zd is too large\n", submatchnbr);
@@ -1725,7 +1725,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
             if (iTry == matchnbr) {
                 bFound = 1;
             } else {
-                DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %d\n", iOffs,
+                DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %lld\n", iOffs,
                           (int)(iOffs + pmatch[0].rm_eo), iTry);
                 if (pmatch[0].rm_eo == 0) {
                     if (str[iOffs] == '\0') {
@@ -1918,13 +1918,23 @@ static void ATTR_NONNULL() doFunc_parse_json(struct cnffunc *__restrict__ const 
     assert(container != NULL);
     assert(pMsg != NULL);
 
+    const size_t jsontextlen = strlen(jsontext);
+    /* The tokener's int length must also include the terminating NUL. */
+    if (jsontextlen >= INT_MAX) {
+        retVal = RS_SCRIPT_EINVAL;
+        wtiSetScriptErrno(pWti, retVal);
+        goto finalize_it;
+    }
+
     struct json_tokener *const tokener = json_tokener_new();
     if (tokener == NULL) {
         retVal = 1;
         goto finalize_it;
     }
-    json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
-    if (json == NULL) {
+    /* Include the terminator so a scalar at end of input is complete.
+     * JSON null is represented by NULL even when parsing succeeds. */
+    json = json_tokener_parse_ex(tokener, jsontext, (int)(jsontextlen + 1));
+    if (fjson_tokener_get_error(tokener) != fjson_tokener_success) {
         retVal = RS_SCRIPT_EINVAL;
     } else {
         /* Check for trailing garbage */
@@ -2125,6 +2135,7 @@ static void ATTR_NONNULL() doFunct_RandomGen(struct cnffunc *__restrict__ const 
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                  "rainerscript: desired random-number range [0 - %lld] is wider than supported limit of [0 - %d)", max,
                  MAX_RANDOM_NUMBER);
+        max = MAX_RANDOM_NUMBER;
     }
 
     retVal = (x % max);
@@ -3968,7 +3979,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
         n_r = var2Number(&r, &convok_r);
     }
     if (convok_l && convok_r) {
-        ret = n_l - n_r;
+        ret = (n_l > n_r) - (n_l < n_r);
     } else {
         estr_l = var2String(&l, &bMustFree);
         estr_r = var2String(&r, &bMustFree2);
@@ -5759,32 +5770,32 @@ static struct cnfexpr *cnfexprOptimize_CMP_severity_facility(struct cnfexpr *exp
 
     if (!strcmp("syslogseverity", ((struct cnfvar *)expr->l)->name)) {
         if (expr->r->nodetype == 'N') {
-            int sev = (int)((struct cnfnumval *)expr->r)->val;
+            const long long sev = ((struct cnfnumval *)expr->r)->val;
             if (sev >= 0 && sev <= 7) {
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-                prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+                prifiltSetSeverity(func->funcdata, (int)sev, expr->nodetype);
                 cnfexprDestruct(expr);
                 expr = (struct cnfexpr *)func;
             } else {
                 parser_errmsg(
-                    "invalid syslogseverity %d, expression will always "
+                    "invalid syslogseverity %lld, expression will always "
                     "evaluate to FALSE",
                     sev);
             }
         }
     } else if (!strcmp("syslogfacility", ((struct cnfvar *)expr->l)->name)) {
         if (expr->r->nodetype == 'N') {
-            int fac = (int)((struct cnfnumval *)expr->r)->val;
+            const long long fac = ((struct cnfnumval *)expr->r)->val;
             if (fac >= 0 && fac <= 24) {
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-                prifiltSetFacility(func->funcdata, fac, expr->nodetype);
+                prifiltSetFacility(func->funcdata, (int)fac, expr->nodetype);
                 cnfexprDestruct(expr);
                 expr = (struct cnfexpr *)func;
             } else {
                 parser_errmsg(
-                    "invalid syslogfacility %d, expression will always "
+                    "invalid syslogfacility %lld, expression will always "
                     "evaluate to FALSE",
                     fac);
             }

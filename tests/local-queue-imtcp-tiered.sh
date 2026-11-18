@@ -4,8 +4,11 @@
 # While both are observable, the test fills a four-slot FE, overflows a five-ID
 # batch to BE, releases FE capacity, and submits a fitting batch again.  The
 # impstats snapshots prove FE and BE inventory/routes; exact IDs after both
-# releases prove no loss or duplicate delivery.  No connection is treated as a
-# producer identity: workerThreads=1 constrains the actual execution context.
+# releases prove no loss or duplicate delivery.  After the FE barrier release,
+# wait for its queued and in-flight inventory to retire before testing reuse;
+# the FIFO acknowledgement alone does not mean the callback has finished.
+# No connection is treated as a producer identity: workerThreads=1 constrains
+# the actual execution context.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -64,6 +67,8 @@ localq_wait_stats "$STATSFILE" "main Q.local" \
 # blocked.  A fitting two-ID submission must therefore re-enter FE instead of
 # using sticky BE fallback.
 localq_release_barrier "$FE_RELEASE"
+localq_wait_stats "$STATSFILE" "main Q.local" \
+	"fe.queued.messages=0" "fe.inflight.messages=0"
 tcpflood -m2 -i10
 localq_wait_stats "$STATSFILE" "main Q.local" \
 	"route.fe.messages=7" "route.be.messages=$be_after_overflow"

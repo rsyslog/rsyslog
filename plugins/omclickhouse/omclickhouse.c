@@ -859,7 +859,7 @@ BEGINnewActInst
     CODE_STD_STRING_REQUESTnewActInst(1);
     CHKiRet(OMSRsetEntry(*ppOMSR, 0,
                          (uchar *)strdup((pData->tplName == NULL) ? " StdClickHouseFmt" : (char *)pData->tplName),
-                         OMSR_RQD_TPL_OPT_SQL));
+                         OMSR_RQD_TPL_OPT_SQL_BACKSLASH));
 
     if (server != NULL) {
         CHKiRet(computeBaseUrl((const char *)server, pData->port, pData->useHttps, pData));

@@ -5,10 +5,12 @@
 #
 # Oracle:
 # The test sends 100000 messages through an imuxsock input into an omfwd action
-# queue configured with discard settings. Success is proven by the impstats queue
-# line: all messages were enqueued, the queue hit the expected max size, and
-# discard counters stayed internally consistent. The regex also asserts the
-# size.enqueued counter added for cumulative byte accounting.
+# queue configured with discard settings. The receiver withholds reads until
+# impstats proves all messages were enqueued, the queue reached discardMark=100,
+# and at least one message was discarded. This TCP backpressure makes the
+# discard path independent of receiver scheduling. Release reads before draining
+# the queue; the bounded stats wait is a hang watchdog, not a timing oracle.
+# The final regex also checks full/discard counters and size.enqueued accounting.
 #
 # added 2021-09-02 by alorbach. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -27,7 +29,14 @@ export NUMMESSAGES=100000
 export STATSFILE="$RSYSLOG_DYNNAME.stats"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
 generate_conf
+READ_RELEASE="$RSYSLOG_DYNNAME.read-release"
+test_error_exit_handler() {
+    # Let blocked forwarding finish before the harness shuts rsyslog down.
+    touch "$READ_RELEASE"
+}
+export MINITCPSRV_EXTRA_OPTS="-Q $READ_RELEASE -b 4096"
 start_minitcpsrvr "$RSYSLOG_OUT_LOG" 1
+unset MINITCPSRV_EXTRA_OPTS
 PORT_RCVR="$MINITCPSRVR_PORT1"
 export PORT_RCVR
 add_conf '
@@ -90,6 +99,8 @@ startup
 
 # Use syslog_caller 
 ./syslog_caller -m$NUMMESSAGES -C "uxsock:$RSYSLOG_DYNNAME-testbench_socket"
+wait_content 'action-1-builtin:omfwd queue: origin=core.queue .* enqueued=100000 .* discarded.nf=[1-9][0-9]* maxqsize=100 ' "$STATSFILE"
+touch "$READ_RELEASE"
 shutdown_when_empty
 wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
@@ -97,6 +108,6 @@ wait_shutdown
 # check output file generation, should contain at least 100 logs
 check_file_exists "$RSYSLOG_OUT_LOG"
 check_file_exists "$STATSFILE"
-content_check --regex --output-results "action-1-builtin:omfwd queue: origin=core.queue size=.* enqueued=100000 size.enqueued=.* full=0 discarded.full=0 discarded.nf=.* maxqsize=100" $STATSFILE
+content_check --regex --output-results "action-1-builtin:omfwd queue: origin=core.queue size=.* enqueued=100000 size.enqueued=.* full=0 discarded.full=0 discarded.nf=[1-9][0-9]* maxqsize=100" $STATSFILE
 
 exit_test

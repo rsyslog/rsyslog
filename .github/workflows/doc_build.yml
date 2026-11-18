@@ -37,6 +37,7 @@ jobs:
         with:
           use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
+            .github/workflows/doc_build.yml
             doc/**/*.rst
             doc/source/conf.py
             doc/tools/check-html-links.py
@@ -160,12 +161,25 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
+        env:
+          # The oracle runs in the unpacked tree; the upload action runs at root.
+          RSYSLOG_FLAKE_EVIDENCE_ROOT: ${{ github.workspace }}/.ci/flake-evidence
         run: |
           cd doc-builder
-          python3 doc/tools/validate-doc-samples.py \
-            --source-dir doc/source \
-            --build-dir . \
-            --work-dir doc/build/doc-sample-validation
+          ../devtools/ci-flake-phase.sh run doc-samples custom -- \
+            python3 doc/tools/validate-doc-samples.py \
+              --source-dir doc/source \
+              --build-dir . \
+              --work-dir doc/build/doc-sample-validation
+
+      - name: Upload documentation sample failure evidence
+        if: >-
+          ${{ failure() &&
+          (github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true') }}
+        uses: $/.github/actions/upload-flake-evidence
+        with:
+          job-name: documentation samples
 
       - name: Generate documentation sample coverage
         if: >-
@@ -175,7 +189,7 @@ jobs:
           cd doc-builder
           lcov --capture --directory . \
                --rc geninfo_unexecuted_blocks=1 \
-               --ignore-errors mismatch \
+               --ignore-errors mismatch,inconsistent \
                --output-file coverage.raw.info
           lcov --remove coverage.raw.info '/usr/*' '*/tests/*' '*/doc/tools/*' \
                --ignore-errors unused,unused \
@@ -208,7 +222,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: doc-builder/coverage.info
           flags: docs-samples
-          fail_ci_if_error: true
+          # Coverage is informational; Codecov problems must not fail CI.
+          fail_ci_if_error: false
 
       - name: Validate generated HTML links
         if: >-

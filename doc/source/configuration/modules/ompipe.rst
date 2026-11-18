@@ -15,13 +15,16 @@ The ompipe plug-in provides the core functionality for logging output to named p
 
 Note: parameter names are case-insensitive.
 
--  Template: [templateName] sets a new default template for file actions.
+-  Template: [templateName] sets the default template for pipe actions that
+   omit an action-specific template. If unset, ``RSYSLOG_FileFormat`` is used.
+   Configure this module parameter before defining the pipe actions.
 
 **Action specific Configuration Parameters:**
 
 Note: parameter names are case-insensitive.
 
 -  Pipe: string a fifo or named pipe can be used as a destination for log messages.
+-  Template: [templateName] overrides the module-level template for this action.
 -  tryResumeReopen: Sometimes we need to reopen a pipe after an ompipe action gets suspended. Sending a HUP signal does the job but requires an interaction with rsyslog. When set to "on" and a resume action fails, the file descriptor is closed, causing a new open in the next resume. Default: "off" to preserve existing behavior before introduction of this option.
 
 **Caveats/Known Bugs:**

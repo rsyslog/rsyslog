@@ -14,7 +14,9 @@
 # in segmented-da-event-properties.sh on CI).
 #
 # The testbench-only RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_* hook holds the DA
-# pool's exiting worker in that window for 1s. The action is suspended
+# pool's exiting worker in that window for 1s. A second opt-in delay widens
+# the real mutex release during terminal batch disposal, before the worker
+# reaches that exit hook: start advice must survive both windows. The action is suspended
 # (missing parent directory, infinite retries), so only DA transfer can make
 # room; with dequeueBatchSize 1 the suspended regular worker pins exactly one
 # message, so DA transfer drains to the low watermark and retires while the
@@ -33,6 +35,7 @@
 export NUMMESSAGES=100
 export RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL=":DAwpool"
 export RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS=1000
+export RSYSLOG_TESTBENCH_WORKER_CLEANUP_DELAY_MS=1000
 SPOOL_DIR="$PWD/${RSYSLOG_DYNNAME}.spool"
 REFERENCE_FILE="$PWD/${RSYSLOG_DYNNAME}.reference.log"
 RECOVERED_FILE="$PWD/${RSYSLOG_DYNNAME}.recovered.log"
@@ -74,6 +77,7 @@ shutdown_immediate
 wait_shutdown
 
 unset RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_MS
+unset RSYSLOG_TESTBENCH_WORKER_CLEANUP_DELAY_MS
 write_conf "$RECOVERED_FILE"
 startup
 wait_file_lines "$RECOVERED_FILE" "$NUMMESSAGES" 60

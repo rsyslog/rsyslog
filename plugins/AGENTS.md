@@ -98,14 +98,59 @@ support expectations change.
   touching `grammar/` or adding a new top-level config construct.
 
 ## Testing expectations
+
+- `tests/omfile-legacy-dynafile-programname.sh` requires imtcp and covers
+  legacy dynafile APP-NAME, disabled limiter defaults, and first-drop labels
+  for enabled limits. `tests/yaml-imtcp-ratelimit-first-drop.sh` also requires
+  libyaml and checks the YAML interval and burst configuration.
 - Prefer module-focused tests in `tests/` named after the module (e.g.
   `omxyz-basic.sh`).
 - Ensure new tests run cleanly when invoked directly via `./tests/<script>.sh`.
   When reviewers request a CI reproduction, confirm the test also passes under
   `make check`.
+- mmleefparse delimiter coverage lives in
+  `tests/mmleefparse-delimiter-backslash.sh` and
+  `tests/yaml-mmleefparse-delimiter-backslash.sh`; these check explicit
+  backslash separators, recognised escapes, and ordinary-delimiter controls.
 - When a module requires external services (databases, message queues, etc.),
   document setup steps in the module metadata and reference any helper scripts
   placed under `tests/`.
+
+### imjournal state-file paths
+
+`tests/imjournal-statefile-directory.sh` checks a directory at the configured
+state-file path. `tests/imjournal-statefile-fifo.sh` checks a FIFO without a
+writer. `tests/yaml-imjournal-statefile-directory.sh` loads imjournal and its
+parameters from an included YAML file and repeats the directory scenario.
+With the default `IgnoreNonValidStatefile` setting, each test checks that
+imjournal delivers the journal message exactly once and preserves the path's
+original type after shutdown.
+
+Configure with `--enable-testbench --enable-imjournal` and libyaml support.
+Run the tests on a host with a readable systemd journal:
+
+```sh
+make check TESTS="imjournal-statefile-directory.sh imjournal-statefile-fifo.sh yaml-imjournal-statefile-directory.sh"
+```
+
+### mmaudit audit identifiers
+
+`tests/mmaudit-auditid.sh` verifies complete audit IDs, numeric types, body
+fields, parse status, original messages, leading whitespace, and non-audit
+records. `tests/yaml-mmaudit-auditid.sh` runs the same oracle through a YAML
+ruleset. These tests use mmaudit's supported legacy action syntax; they do not
+exercise the separately documented quoted-value limitation.
+
+### imbeats non-object metadata
+
+`tests/imbeats-metadata-non-object.sh` (run with
+`make check TESTS=imbeats-metadata-non-object.sh`, or directly via
+`./tests/imbeats-metadata-non-object.sh`) sends one Lumberjack v2 window whose
+events carry a non-object `metadata` member (string, number, array, null,
+boolean) or a non-object `metadata.imbeats`. It proves that the window is
+ACKed with the last sequence number, every event is delivered exactly once in
+order, the module-owned `$!metadata!imbeats` is present, and `%rawmsg%` keeps
+the original client payload.
 
 ## Documentation touchpoints
 - Mention significant behavior or dependency changes in `doc/` (for example,
@@ -128,3 +173,21 @@ and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
 severity codes with valid and invalid numeric controls using configuration
 validation exit status. The YAML test exercises the existing legacy directive
 and action through a ruleset script.
+
+## imuxsock PRI digit coverage
+
+`tests/imuxsock-pri-digit-limit.sh` sends an overlong numeric PRI field through
+a real Unix socket. Run it in an instrumented build when checking integer
+arithmetic in the receive path.
+## Module regression coverage
+
+- `tests/mmjsonparse-find-json-scan-stats.sh` and its pure-YAML companion
+  verify that `scan.truncated` counts byte-window cutoffs rather than completed
+  unsuccessful searches. They also assert exact message bytes, parse outcomes,
+  and lengths for final-brace, boundary, ordinary-miss, and valid-object cases.
+
+## imuxsock timestamp rewrite coverage
+
+`tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
+companion exercise malformed PRI and short/variable-width timestamps through
+real Unix sockets, checking raw-message preservation and tag/body cursors.

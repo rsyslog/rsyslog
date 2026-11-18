@@ -1,6 +1,6 @@
 # rsyslog Project Threat Model
 
-Model revision: 1
+Model revision: 2
 Schema version: 1
 Status: reusable repository baseline
 
@@ -20,7 +20,7 @@ the main or ruleset queue through the core (`tools/rsyslogd.c:1238-1295`).
 
 The daemon can start with elevated privileges to acquire resources and then
 drop group and user privileges before input modules run
-(`runtime/rsconf.c:971-985`, `runtime/rsconf.c:1067-1113`). Optional modules,
+(`runtime/rsconf.c` `activate()`, `dropPrivileges()`). Optional modules,
 configuration, build flags, packaging, and deployment choices determine which
 surfaces are present. Repository security scope includes the core, built-in and
 contrib modules, and build or packaging logic that can affect released
@@ -30,9 +30,12 @@ artifacts (`SECURITY.md:15-31`).
 | --- | --- | --- |
 | Inputs and sessions | Receive local files, sockets, journals, or network protocols | `plugins/imtcp/imtcp.c:249-315`, `plugins/imbeats/imbeats.c:242-260` |
 | Message pipeline | Bound, parse, transform, queue, and route messages | `tools/rsyslogd.c:1238-1295`, `runtime/parser.c` |
+| Parser and modification modules | Parse or rewrite message content after input (`pm*`, `mm*`) | `plugins/mmjsonparse/mmjsonparse.c`, `plugins/mmpstrucdata/mmpstrucdata.c` |
+| Expression runtime and functions | Evaluate RainerScript, lookup tables, regexes, and function modules | `grammar/rainerscript.c`, `runtime/lookup.c` |
 | Transport security | Apply TLS authentication modes and peer restrictions | `runtime/nsd_ossl.c:650-725`, `runtime/nsd_gtls.c:1058-1117` |
 | Configuration and modules | Select runtime behavior and dynamically loaded code | `runtime/modules.c:1163-1208`, `runtime/modules.c:1403-1420` |
 | Storage and actions | Persist queues or write/forward messages | `runtime/queue.c:449-505`, `tools/omfile.c:364-399`, `tools/omfile.c:943-1058` |
+| Storage protection | Encrypt queue and output files, sign log files | `runtime/lmcry_gcry.c`, `runtime/lmcry_ossl.c`, `runtime/lmsig_ksi-ls12.c` |
 | External helpers | Execute operator-selected programs and exchange message data | `plugins/omprog/omprog.c:143-222` |
 | Build and release | Analyze, build, package, and publish artifacts | `.github/workflows/codeql.yml:25-44`, `.github/workflows/draft_release.yml:53-66` |
 
@@ -42,10 +45,31 @@ artifacts (`SECURITY.md:15-31`).
 | --- | --- | --- | --- | --- | --- |
 | Network collector | Listener socket and session state | Input instance, module defaults, then global stream-driver policy | Remote senders and the selected input module | Framing, session, message-size, rate, and optional peer controls | `plugins/imtcp/imtcp.c:341-351`, `plugins/imtcp/imtcp.c:445-529` |
 | TLS collector or forwarder | Private keys, trust roots, peer identity | Operator-selected driver and authentication mode | rsyslog and configured peers | Driver certificate validation and permitted-peer matching | `runtime/nsd_ossl.c:650-725`, `runtime/nsd_gtls.c:1086-1117` |
-| Privileged startup | Bound sockets, opened files, process identity | Command line and administrator configuration | Startup code, activated modules, then runtime workers | Ordered activation and `setgid`/`setuid` privilege drop | `tools/rsyslogd.c:1932-1953`, `runtime/rsconf.c:893-985` |
+| Privileged startup | Bound sockets, opened files, process identity | Command line and administrator configuration | Startup code, activated modules, then runtime workers | Ordered activation and `setgid`/`setuid` privilege drop | `tools/rsyslogd.c:1932-1953`, `runtime/rsconf.c` `doDropPrivGid()`, `doDropPrivUid()` |
 | Disk-backed processing | Queue, spool, state, and output paths | Administrator configuration below the effective work/output directory | Daemon workers and local administrators | Queue limits plus separately configured dynafile containment, final-symlink, and ownership controls | `runtime/queue.c:434-505`, `tools/omfile.c:364-399`, `tools/omfile.c:943-1058`; deployment permissions remain an assumption |
 | Dynamic module loading | Shared-object search path and loaded code | Environment, command line, and configuration under the process authority | rsyslog process | Administrative control of environment, configuration, and module directories | `runtime/modules.c:1183-1208`, `runtime/modules.c:1403-1420` |
 | Release automation | Source revision and release artifacts | Tagged or explicitly dispatched workflow | GitHub Actions and maintainers | Repository checks, pinned actions, and job permissions | `.github/workflows/draft_release.yml:20-65`; hosted repository settings are not visible here |
+
+### Default security posture
+
+`global(compatibility.defaults.secure=...)` selects how backward-compatible
+defaults are treated. The default is `warn`: legacy defaults stay in effect and
+rsyslog logs a warning where they reduce security. `strict` switches those
+defaults to the secure variant or rejects the configuration, and
+`backward-compatible` keeps legacy behavior without warnings
+(`runtime/rsconf.c` defaults, `runtime/glbl.c`). Reviews must state which mode a
+finding assumes.
+
+| Control | Default (`warn`) | `strict` |
+| --- | --- | --- |
+| omfile dynafile base containment | On; opt-out only via `dynafile.dangerousPermitPathEscape` | On |
+| Secure-path replacement for dynafile template fields | Off, warning | On for fields without explicit mode |
+| Final-component symlink rejection (`O_NOFOLLOW`) | Off unless `followSymlinks="off"`, warning | On unless explicitly enabled |
+| imtcp TLS-capable driver with `streamdriver.mode="0"` | Plain TCP, warning | Mode 1 by default; explicit mode 0 rejected |
+| imtcp zstd stream decompression window | Configured limit if set | Explicit positive limit required |
+| Unclean configuration (`abortOnUncleanConfig`) | Continue with warnings | Abort startup |
+
+Settings an operator configures explicitly take precedence over either mode.
 
 ## 2. Threat Model, Trust Boundaries, and Assumptions
 
@@ -97,13 +121,25 @@ and must apply before data reaches sensitive parsing or allocation. imtcp caps
 configured frame sizes and has secure-mode checks for TLS and zstd resource
 policy (`plugins/imtcp/imtcp.c:341-351`, `plugins/imtcp/imtcp.c:445-529`);
 imbeats exposes explicit frame, decompression, batch, in-flight, ratio, timeout,
-and session limits (`plugins/imbeats/imbeats.c:1775-1810`).
+and session limits (`plugins/imbeats/imbeats.c:1775-1810`). Shared rate limiters
+(`runtime/ratelimit.c`) and the decompression wrappers (`runtime/zlibw.c`,
+`runtime/zstdw.c`) are common controls for several inputs.
 
 ### TB-LOCAL-IN — Local producer to daemon
 
 Local sockets, files, journals, FIFOs, and program output cross from other
 processes into the same message and parser pipeline. Locality changes exposure
 and severity but does not make content memory-safe or semantically trusted.
+
+On the local log socket, imuxsock can take the sender's PID, UID, and GID from
+kernel-supplied socket credentials instead of the message, both for trusted
+property annotation and for per-process rate limiting. Those properties are
+provenance controls. The message's own tag and PID fields remain sender-chosen.
+
+Inputs that read files (imfile, and runtime-loaded files such as lookup tables)
+open them with the daemon's authority. Watched directories and wildcards are
+administrator policy. Directory entries a less-privileged user can create or
+replace, such as symlinks in a watched directory, are part of this boundary.
 
 ### TB-CONFIG — Administrator policy to runtime authority
 
@@ -118,7 +154,11 @@ deployment.
 ### TB-PRIV — Privileged startup to reduced-privilege runtime
 
 Resources may be acquired before `setgid` and `setuid`; input modules run after
-the configured drop (`runtime/rsconf.c:893-985`, `runtime/rsconf.c:1067-1113`).
+the configured drop (`runtime/rsconf.c` `activate()`, `dropPrivileges()`).
+When built with libcap-ng, rsyslogd also reduces its capability sets at startup
+to the set it may need, unless capability dropping is disabled in configuration
+(`tools/rsyslogd.c`, `ENABLE_LIBCAPNG`). The UID/GID drop and the capability
+drop are independent controls, and either can be absent in a deployment.
 The boundary must not retain unintended privileged operations or writable
 control paths after the transition.
 
@@ -136,19 +176,34 @@ Configured paths cross into filesystem operations and persistent state. Queue
 types and disk/resource limits are configuration-dependent
 (`runtime/queue.c:449-505`). omfile bounds normalized dynafile paths to a derived
 static base, with an explicit administrator-controlled path-escape opt-in
-(`tools/omfile.c:364-399`, `tools/omfile.c:1133-1138`). Separately, its effective
+(`tools/omfile.c` `validateDynaFilePath()`, `dynafile.dangerousPermitPathEscape`). Separately, its effective
 final-component symlink policy controls `O_NOFOLLOW`, and configured ownership
 is applied with `fchown` when a file is created (`tools/omfile.c:939-1058`).
 Strict dynafile policy also replaces unsafe message-derived path characters
 (`runtime/template.c:100-158`). Host permissions and directory ownership remain
 deployment controls rather than guarantees established by this repository.
+Optional crypto providers encrypt disk queues and output files (`lmcry_gcry`,
+`lmcry_ossl`), and signature providers protect log file integrity
+(`lmsig_ksi-ls12`); keys and key programs are administrator configuration.
 
 ### TB-OUTBOUND — Message pipeline to remote destinations
 
 Actions transfer potentially sensitive or attacker-influenced content to
 operator-selected network, database, broker, or cloud destinations. Templates
 and protocol libraries must preserve data/syntax separation, and remote
-responses must not create unbounded retry or resource behavior.
+responses must not create unbounded retry or resource behavior
+(`runtime/action.c` retry and suspension handling).
+
+Each sink type has its own syntax: SQL statements, JSON documents, HTTP
+requests and headers, mail headers, and text written to user terminals
+(omusrmsg). rsyslog provides template-level encoding controls for them, for
+example the `sql`/`stdsql` template options and JSON field formatting, and
+output modules that build protocol requests must keep message data out of
+protocol structure.
+
+Function modules can also cross this boundary during rule evaluation, for
+example by performing outbound requests. Message-derived values used as their
+arguments remain untrusted data.
 
 ### TB-EXEC — Daemon to external helper process
 
@@ -216,6 +271,9 @@ post-drop behavior must not regain or misuse startup authority.
 Authenticated transport proves a peer property, not the safety of message
 fields. Message-controlled content must not silently become trusted provenance,
 configuration, a filesystem path, query syntax, or executable arguments.
+Names obtained by reverse DNS for the sending address are also
+sender-influenced, because the sender's network controls its PTR records, and
+the DNS cache must stay bounded.
 
 ### SI-PATH-CONTROL-01 — Contain message-derived filesystem access
 
@@ -228,6 +286,12 @@ remain operator-controlled.
 Queue state, recovery, acknowledgement, discard, and disk limits must preserve
 documented delivery semantics without unbounded resource use or unsafe local
 tampering assumptions.
+
+### SI-STORAGE-PROTECTION-01 — Keep configured at-rest protection effective
+
+When queue or file encryption or log signing is configured, data must not be
+written unprotected without the configured error behavior, keys must stay out
+of messages and diagnostics, and verification tools must reject tampered input.
 
 ### SI-EXEC-DATA-01 — Separate helper selection from helper data
 
@@ -255,6 +319,9 @@ revision-bound workflow.
   and reachable. Severity records those prerequisites.
 - Plain syslog does not provide sender authenticity. Spoofing without a
   configured authentication boundary is expected behavior, not an auth bypass.
+- `imdiag` is a testbench control interface (`--enable-imdiag`, off by
+  default) and is not a supported production surface. Test-only modules such
+  as `omtesting` are treated the same way.
 - Test and developer tools are not production surfaces by default, but build,
   test, packaging, or documentation logic remains in scope when it can affect a
   released artifact, consistent with `SECURITY.md:17-23`.
@@ -265,6 +332,16 @@ revision-bound workflow.
   repository. Missing deployment evidence lowers confidence; it is not proof
   that a code-level boundary is safe or exposed.
 
+### Component map
+
+`doc/security/threat-model-components.json` maps repository paths to the
+boundaries and invariants above. Components with `requires_lead: true` route
+every change to a lead security review. These are the components that hold
+remote-input parsing, transport security, privilege, storage, execution, and
+release authority. Source files that match no component are routed as
+`unmapped-code` and also need lead review, so new modules should be added to
+the map with the change that introduces them.
+
 ## 3. Attack Surface, Mitigations, and Attacker Stories
 
 These are hypotheses for delta review, not confirmed vulnerabilities.
@@ -273,11 +350,12 @@ These are hypotheses for delta review, not confirmed vulnerabilities.
 | --- | --- | --- | --- | --- | --- |
 | 1 | Remote input turns malformed framing, compression, handshake, or message data into memory corruption or a cheap daemon crash | Enabled and reachable input | Availability or code execution | Per-input sizes, sessions, timeouts, secure-mode limits | Verify source-to-sink bounds and alternate encodings; `plugins/imtcp/imtcp.c:341-351`, `plugins/imbeats/imbeats.c:1775-1810` |
 | 1 | A peer bypasses configured certificate, fingerprint, name, or sender restrictions and is accepted as trusted | Authenticated transport or ACL enabled | Forged trusted-source logs or broader compromise | Auth modes and permitted-peer matching | Trace the exact validated identity to accepted session; `runtime/nsd_ossl.c:650-725`, `runtime/nsd_gtls.c:1086-1117` |
-| 1 | A lower-privileged actor changes an include, module path, helper, or effective policy consumed during privileged startup | Writable control path in a realistic deployment | Privilege escalation or arbitrary daemon code | Expected administrative ownership and privilege drop | Prove the lower-privileged write path and effective consumer; `runtime/modules.c:1183-1208`, `runtime/rsconf.c:971-985` |
-| 2 | Message properties escape a dynamic output base or exploit an independently permissive final-symlink policy | Message-derived dynafile plus the relevant explicit policy or weak deployment permissions | File overwrite, file sprawl, or integrity loss | Secure-path replacement, base containment, and independently configured final-component `O_NOFOLLOW` | Check path rendering, base validation, opt-ins, and both opens separately; `runtime/template.c:100-158`, `tools/omfile.c:364-399`, `tools/omfile.c:939-1058`, `tools/omfile.c:1133-1138` |
+| 1 | A lower-privileged actor changes an include, module path, helper, or effective policy consumed during privileged startup | Writable control path in a realistic deployment | Privilege escalation or arbitrary daemon code | Expected administrative ownership and privilege drop | Prove the lower-privileged write path and effective consumer; `runtime/modules.c:1183-1208`, `runtime/rsconf.c` `activate()` |
+| 2 | Message properties escape a dynamic output base or exploit an independently permissive final-symlink policy | Message-derived dynafile plus the relevant explicit policy or weak deployment permissions | File overwrite, file sprawl, or integrity loss | Secure-path replacement, base containment, and independently configured final-component `O_NOFOLLOW` | Check path rendering, base validation, opt-ins, and both opens separately; `runtime/template.c:100-158`, `tools/omfile.c:364-399`, `tools/omfile.c:939-1058`, `tools/omfile.c` `validateDynaFilePath()` |
 | 2 | A sender exhausts sessions, decompression, DNS, queues, disk, retries, or downstream workers | Reachable input and insufficient effective limits | Denial of service or message loss | Input limits, rate controls, queue watermarks and disk caps | Establish resource asymmetry and effective configured limit; `runtime/queue.c:475-505` |
 | 2 | Message content becomes query, JSON, template, or helper syntax without the required encoding boundary | Vulnerable template or downstream consumer | Forged output or downstream injection | Typed templates, escaping modes, `execv` helper launch | Separate operator-selected destination/program from message data; `plugins/omprog/omprog.c:143-222` |
 | 2 | A PR changes a workflow so untrusted code reaches credentials or publication authority | Affected workflow and privileged trigger | Supply-chain compromise | Pinned actions, job permissions, separate release triggers | Trace event, checkout revision, permissions, secrets, and published digest; `.github/workflows/draft_release.yml:20-65` |
+| 2 | Message-supplied or DNS-derived names are trusted as provenance for routing or filtering | Configuration that routes or filters on hostnames or message-supplied identity | Forged routing or misattributed logs | Socket-credential annotation, address-based properties | Separate kernel- or transport-derived identity from sender-chosen fields; `runtime/dnscache.c`, `plugins/imuxsock/imuxsock.c` |
 | 3 | Local producer input reaches a parser or state machine that assumed remote controls already ran | Writable local surface and affected parser | Local denial of service or integrity loss | Shared maximum-message and parser controls | Verify the local entry path uses equivalent bounds; `tools/rsyslogd.c:1247-1295` |
 
 ## 4. Severity Calibration

@@ -1171,7 +1171,7 @@ rsRetVal doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, in
     else if (mode == SQL_ESCAPE)
         for (p = *pp; *p && *p != '\'' && *p != '\\'; ++p);
     else if (mode == JSON_ESCAPE)
-        for (p = *pp; *p && (*p == '"' || *p == '\\'); ++p);
+        for (p = *pp; *p && *p != '"' && *p != '\\'; ++p);
     /* when we get out of the loop, we are either at the
      * string terminator or the first character to escape */
     if (p && *p == '\0') FINALIZE; /* nothing to do in this case! */

@@ -58,6 +58,21 @@ handling, and we aim to acknowledge reports within 7 days where possible.
 Final fixes and coordinated disclosure timelines are handled separately, as
 described below.
 
+## Fix Review and Downstream Patches
+
+For a nonpublic vulnerability, maintainers first prepare and validate the fix
+in a private pull request. That PR should include the source change, meaningful
+regression tests, relevant documentation, and CI evidence. A public pull request
+is opened only when the maintainer explicitly decides to move the fix into the
+public disclosure workflow.
+
+When a coordinated downstream notification needs a patch, maintainers prepare
+a separate minimal source-only patch for the stated vulnerability. The patch
+must be derived from the reviewed candidate, checked against the recipient's
+target base or version, and traceable to the full PR. Tests and documentation
+remain in the review PR; they are not included in the patch sent with the
+notification.
+
 ## Requirements for a Valid Report
 
 To allow efficient triage and remediation, reports should include:

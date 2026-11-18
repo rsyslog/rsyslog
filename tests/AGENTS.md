@@ -191,6 +191,29 @@ minimal containers. Findings are review prompts, not automatic blockers.
   tests can discover them. Mention the addition in `tests/README` if operators
   should know about the new knob.
 
+## Solaris test subset
+
+Solaris CI (the Solaris 11 buildbot builder) is best effort only. The builder is
+slow and `make check` there hits its 3300 s limit, so only important core
+components are covered on purpose. `tests/solaris-subset.list` names the test
+families that are skipped on SunOS (`skip <glob>`, `keep <glob>` overrides);
+`tests/diag.sh` applies it in `init` (`solaris_subset_skip`).
+
+- **Do not add tests for Solaris coverage's sake.** A test should run on Solaris
+  only when there is a concrete need, for example an expected portability or
+  compatibility problem (compiler without atomic builtins, old libc/OpenSSL,
+  different socket or locking behavior). "Runs everywhere" is not a reason.
+- **New non-core tests must not grow the Solaris run.** When you add a test for
+  a component outside the Solaris core (new queue modes, TLS, file/format
+  modules, round-trip `sndrcv_*` tests, and the like), add or extend a `skip`
+  glob for it in `tests/solaris-subset.list` in the same change, unless it is
+  cheap and portability-relevant.
+- **Platform-specific failures:** prefer a small compatibility fix; otherwise use
+  `skip_platform "SunOS" "<reason>"` plus a `KNOWN_ISSUES` entry.
+- The full set can still be forced with
+  `RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1`; use
+  `RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1` to check the filter on another OS.
+
 ## Running tests locally
 - Build rsyslog first using the efficient incremental command:
   ```bash

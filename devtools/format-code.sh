@@ -37,7 +37,9 @@
 #   With '--git-changed', the script limits formatting to changed .c/.h files
 #   reported by Git. This includes committed branch changes relative to
 #   RSYSLOG_LOCAL_VALIDATION_BASE or origin/main, staged and unstaged tracked
-#   changes, and untracked files. If no such files exist, it exits 0.
+#   changes, and untracked files. The comparison ref must be available; fetch
+#   origin/main or set RSYSLOG_LOCAL_VALIDATION_BASE to a valid commit.
+#   If no such files exist, it exits 0.
 #
 #   With '--check', the script runs clang-format in dry-run mode and fails if
 #   any target file would be reformatted. This mode is intended for
@@ -136,7 +138,14 @@ if [[ "$git_changed_only" -eq 1 ]]; then
     exit 2
   fi
 
-  mapfile -t target_files < <(./devtools/list-git-changed-c-h-files.sh)
+  if ! changed_files=$(./devtools/list-git-changed-c-h-files.sh); then
+    echo "Error: failed to determine changed .c/.h files." >&2
+    exit 2
+  fi
+  target_files=()
+  if [[ -n "$changed_files" ]]; then
+    mapfile -t target_files <<< "$changed_files"
+  fi
 
   if [[ "${#target_files[@]}" -eq 0 ]]; then
     echo "No changed .c/.h files detected. Nothing to format."

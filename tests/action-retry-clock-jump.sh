@@ -20,8 +20,8 @@ export FAKETIME_NO_CACHE=1
 export FAKETIME_DONT_FAKE_MONOTONIC=1
 printf '+0\n' > "$FAKETIME_TIMESTAMP_FILE"
 
-if ! command -v python3 >/dev/null 2>&1; then
-    echo 'python3 unavailable; cannot check libfaketime clock isolation'
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+    echo 'python3 >= 3.6 unavailable; cannot check libfaketime clock isolation'
     exit 77
 fi
 

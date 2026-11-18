@@ -2,13 +2,15 @@
 // Contract regressions for the trusted consumer. Fixtures represent the API
 // boundary: rejected input must never produce an upload target. Stale heads
 // are a normal no-upload result, while inconsistent provenance is an error.
+// Only public fork targets may omit upload credentials; same-repo/private
+// targets retain token authentication, and the workflow must honor that choice.
 const assert = require('node:assert/strict');
 const resolve = require('../devtools/pr-coverage-source.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 
 function fixture(sameRepo = false, docs = false) {
-  const base = {id: 1, full_name: 'rsyslog/rsyslog', owner: {login: 'rsyslog'}};
+  const base = {id: 1, private: false, full_name: 'rsyslog/rsyslog', owner: {login: 'rsyslog'}};
   const fork = sameRepo ? base : {id: 2, full_name: 'alice/rsyslog', owner: {login: 'alice'}};
   const run = {id: 41, workflow_id: 12, repository: base, event: 'pull_request', status: 'completed',
     run_attempt: 2, head_sha: 'a'.repeat(40), head_branch: 'fix/topic', head_repository: fork,
@@ -57,10 +59,33 @@ async function evaluate(data) {
       assert.equal(output.pr, 72);
       assert.equal(output.artifact, 81);
       assert.equal(output.branch, sameRepo ? 'fix/topic' : 'alice:fix/topic');
+      assert.equal(output.tokenless, sameRepo ? 'false' : 'true');
       assert.equal(output.flag, docs ? 'docs-samples' : 'pr-ubuntu-24');
       assert.equal(output.kind, docs ? 'docs' : 'runtime');
-      assert.equal(output.check, docs ? 'PR coverage upload (docs-samples)' : 'PR coverage upload (pr-ubuntu-24)');
     }
+  }
+  // Unknown visibility must fail closed to credentials, just like private
+  // repositories; only an explicit public base and a distinct fork qualify.
+  for (const visibility of [true, undefined]) {
+    const data = fixture();
+    data.prs[0].base.repo.private = visibility;
+    assert.equal((await evaluate(data)).tokenless, 'false');
+  }
+  const consumerPath = path.join(__dirname, '../.github/workflows/pr_coverage_upload.yml');
+  if (fs.existsSync(consumerPath)) {
+    const consumer = fs.readFileSync(consumerPath, 'utf8');
+    const upload = consumer.split('- name: Upload coverage')[1].split('\n      - name:')[0];
+    assert.ok(upload.includes("token: ${{ steps.source.outputs.tokenless != 'true' && secrets.CODECOV_TOKEN || '' }}"));
+    assert.ok(upload.includes('fail_ci_if_error: true'));
+    // Upload problems are reported, but must never fail the consumer job.
+    assert.ok(upload.includes('continue-on-error: true'));
+    // Credentialed targets never fall back to a tokenless upload.
+    assert.ok(upload.includes("steps.auth.outputs.ready == 'true'"));
+    const auth = consumer.split('- name: Check upload credentials')[1].split('\n      - name:')[0];
+    assert.ok(auth.includes('[ "$TOKENLESS" != "true" ] && [ -z "$CODECOV_TOKEN" ]'));
+    assert.ok(auth.includes('ready=false'));
+    assert.ok(upload.includes('override_branch: ${{ steps.source.outputs.branch }}'));
+    assert.ok(!consumer.includes('id-token: write'));
   }
   // Both supported targets and arbitrary legal ref characters retain exact
   // API identity matching. Branch text stays data, including shell punctuation.
@@ -102,7 +127,7 @@ async function evaluate(data) {
     'unsafe branch': d => { d.run.head_branch = d.event.head_branch = 'fix\nINJECT=x'; },
     'missing artifact': d => { d.artifacts = []; },
     'duplicate artifact': d => { d.artifacts.push({...d.artifacts[0], id: 82}); },
-    'stale artifact attempt': d => { d.artifacts[0].name = 'coverage-ubuntu-24-pr-41-1'; },
+    'future artifact attempt': d => { d.artifacts[0].name = d.artifacts[0].name.replace(/-2$/, '-3'); },
     'expired artifact': d => { d.artifacts[0].expired = true; },
     'oversized artifact': d => { d.artifacts[0].size_in_bytes = 10485761; },
     'foreign artifact run': d => { d.artifacts[0].workflow_run.id = 42; },
@@ -113,6 +138,17 @@ async function evaluate(data) {
       const data = fixture(false, docs); change(data);
       await assert.rejects(evaluate(data), undefined, name);
     }
+  }
+  // A partial re-run carries the coverage job over: its artifact keeps the
+  // earlier attempt number and must still be uploaded. When several attempts
+  // produced coverage, the newest one not beyond the run's attempt wins.
+  for (const docs of [false, true]) {
+    const carried = fixture(false, docs);
+    carried.artifacts[0].name = carried.artifacts[0].name.replace(/-2$/, '-1');
+    assert.equal((await evaluate(carried)).artifact, 81, 'carried-over artifact');
+    const both = fixture(false, docs);
+    both.artifacts.unshift({...both.artifacts[0], id: 80, name: both.artifacts[0].name.replace(/-2$/, '-1')});
+    assert.equal((await evaluate(both)).artifact, 81, 'newest attempt wins');
   }
   const skipped = {
     'stale PR head': d => { d.prs[0].head.sha = 'b'.repeat(40); },
@@ -144,6 +180,16 @@ async function evaluate(data) {
     const wrongWorkflow = fixture(false, docs);
     wrongWorkflow.workflow.name = docs ? 'check' : 'documentation build';
     await assert.rejects(evaluate(wrongWorkflow));
+  }
+  // Coverage must not publish any status or check on the PR head: a
+  // Codecov failure would otherwise show red on the PR (or attach to an
+  // unrelated Actions suite such as Code Style Check).
+  assert.equal(resolve.reportStatus, undefined);
+  if (fs.existsSync(consumerPath)) {
+    const reportingWorkflow = fs.readFileSync(consumerPath, 'utf8');
+    for (const forbidden of ['statuses: write', 'checks: write', 'github.rest.checks.', 'createCommitStatus']) {
+      assert.ok(!reportingWorkflow.includes(forbidden), forbidden);
+    }
   }
   console.log('PASS: PR runtime/docs coverage identity and stale/provenance refusal contracts');
 })().catch(error => { console.error(error); process.exitCode = 1; });

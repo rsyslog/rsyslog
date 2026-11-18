@@ -31,6 +31,11 @@ Accepted evidence, checked against the history of the packaged source:
   URL or a ``commit:<sha>`` token,
 - failing all references, a patch subject identical to an upstream subject.
 
+A ``git format-patch`` ``From`` hash names the commit in whatever tree the
+patch was exported from, which is often a distribution branch.  Unlike the
+explicit references above, an unresolved ``From`` hash is therefore not a
+claim about upstream; it is ignored and the subject check still applies.
+
 Every referenced commit must be an ancestor of the packaged source and must
 not have been reverted there (by a ``Revert "<subject>"`` commit).  Free-text
 commit mentions are deliberately ignored: a fix for a regression usually names
@@ -87,13 +92,18 @@ def patch_header(text):
 
 
 def referenced_commits(header):
+    """Explicit upstream references; see ``export_commits`` for ``From``."""
     refs = []
-    refs += _FORMAT_PATCH_FROM.findall(header)
     refs += _CHERRY_PICK.findall(header)
     refs += _BACKPORT.findall(header)
     for field in _DEP3_FIELD.findall(header):
         refs += _DEP3_COMMIT.findall(field)
     return list(dict.fromkeys(ref.lower() for ref in refs))
+
+
+def export_commits(header):
+    """``git format-patch`` origin hashes, which may be downstream commits."""
+    return list(dict.fromkeys(ref.lower() for ref in _FORMAT_PATCH_FROM.findall(header)))
 
 
 def patch_subject(header):
@@ -122,6 +132,8 @@ def detect(patch_text, by_sha, by_subject):
     """Return (integrated, evidence) for one patch."""
     header = patch_header(patch_text)
     refs = referenced_commits(header)
+    # An export hash counts only when the packaged upstream contains it.
+    refs += [ref for ref in export_commits(header) if ref not in refs and resolve(ref, by_sha)]
     if refs:
         resolved = [(ref, resolve(ref, by_sha)) for ref in refs]
         missing = [ref for ref, sha in resolved if sha is None]

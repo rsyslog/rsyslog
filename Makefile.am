@@ -4,6 +4,8 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
+	devtools/gather-check-logs.sh \
+	sidecar/rsyslog_exporter.py \
 	devtools/record-container-validation.py \
 	README.md \
 	platform/README \
@@ -22,7 +24,15 @@ EXTRA_DIST = \
 	devtools/release/validate-rpm-baseline-patches.py \
 	devtools/release/upstream_patch_detect.py \
 	devtools/release/rpm-disable-optional-modules.py \
-	devtools/release/check-optional-module-policy.py
+	devtools/release/check-optional-module-policy.py \
+	devtools/release/archive-store.sh \
+	devtools/release/archive-store-server.sh
+
+EXTRA_DIST += \
+	devtools/prepare-flake-evidence.py \
+	devtools/collect-flake-evidence.py \
+	devtools/ci-flake-phase.sh \
+	devtools/tests/test_flake_evidence.py
 
 SUBDIRS = doc compat grammar runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 # external plugin driver is always enabled (core component)

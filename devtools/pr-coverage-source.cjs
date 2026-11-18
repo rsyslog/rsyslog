@@ -57,8 +57,15 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
     ...repo, run_id: run.id, per_page: 100
   });
-  const name = `${profile.prefix}-${run.id}-${run.run_attempt}`;
-  const reports = artifacts.filter(artifact => artifact.name === name);
+  // Re-running only some jobs (e.g. a flaky lane) creates a new run attempt
+  // that carries the successful coverage job over without re-running it, so
+  // its artifact keeps the earlier attempt number. Use the newest attempt
+  // that produced a coverage artifact, never one newer than this run.
+  let reports = [];
+  for (let attempt = run.run_attempt; attempt >= 1 && reports.length === 0; attempt--) {
+    const name = `${profile.prefix}-${run.id}-${attempt}`;
+    reports = artifacts.filter(artifact => artifact.name === name);
+  }
   if (reports.length !== 1 || reports[0].expired ||
       reports[0].size_in_bytes <= 0 || reports[0].size_in_bytes > 10485760 ||
       reports[0].workflow_run?.id !== run.id ||
@@ -67,12 +74,16 @@ module.exports = async function resolveCoverageSource({github, context, core}) {
   }
   core.setOutput('flag', profile.flag);
   core.setOutput('kind', profile.kind);
-  core.setOutput('check', `PR coverage upload (${profile.flag})`);
   core.setOutput('sha', run.head_sha);
   core.setOutput('pr', pr.number);
-  // Namespace fork branches even with a token; never attribute fork
-  // data to main or another protected baseline branch.
-  core.setOutput('branch', pr.head.repo.id === pr.base.repo.id ? pr.head.ref : `${owner}:${pr.head.ref}`);
+  // Codecov accepts public fork uploads without credentials only on a
+  // colon-prefixed branch. Derive both the auth mode and namespace from the
+  // verified PR identity, never from producer-supplied artifact metadata.
+  // https://docs.codecov.com/docs/codecov-tokens#commits-on-unprotected-branches
+  const fork = pr.head.repo.id !== pr.base.repo.id;
+  core.setOutput('branch', fork ? `${owner}:${pr.head.ref}` : pr.head.ref);
+  core.setOutput('tokenless', pr.base.repo.private === false && fork ? 'true' : 'false');
   core.setOutput('artifact', reports[0].id);
   core.setOutput('url', run.html_url);
 };
+

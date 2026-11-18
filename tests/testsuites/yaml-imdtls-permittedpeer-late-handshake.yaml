@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+modules:
+  - load: "../plugins/imdtls/.libs/imdtls"
+
+inputs:
+  - type: imdtls
+    name: dtls-name
+    port: "0"
+    listenPortFileName: "@NAME_PORT_FILE@"
+    timeout: "8"
+    tls.authmode: name
+    tls.permittedpeer: rsyslog-client
+    tls.cacert: "@CERT_DIR@/ca.pem"
+    tls.mycert: "@CERT_DIR@/cert.pem"
+    tls.myprivkey: "@CERT_DIR@/key.pem"
+    ruleset: main
+  - type: imdtls
+    name: dtls-fingerprint
+    port: "0"
+    listenPortFileName: "@FINGERPRINT_PORT_FILE@"
+    timeout: "8"
+    tls.authmode: fingerprint
+    tls.permittedpeer: "SHA1:5C:C6:62:D5:9D:25:9F:BC:F3:CB:61:FA:D2:B3:8B:61:88:D7:06:C3"
+    tls.cacert: "@CERT_DIR@/ca.pem"
+    tls.mycert: "@CERT_DIR@/cert.pem"
+    tls.myprivkey: "@CERT_DIR@/key.pem"
+    ruleset: main
+
+templates:
+  - name: outfmt
+    type: string
+    string: "%inputname%|%rawmsg%\n"
+
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "@OUT_LOG@"
+        template: outfmt

@@ -1,0 +1,76 @@
+# Test subset for the Solaris 11 buildbot builder (best-effort CI).
+#
+# The Solaris builder is slow and its "gmake -j2 check" runs into the builder's
+# 3300 s limit, so only important core components are covered there. Tests
+# matching a "skip" glob are skipped (exit 77) on SunOS before they do any
+# work; a matching "keep" glob wins over "skip". Globs are matched against the
+# test script's basename. See tests/diag.sh (solaris_subset_skip).
+#
+# Run everything regardless: RSYSLOG_TESTBENCH_FORCE_SOLARIS_FULL=1
+# Test the filter on another OS: RSYSLOG_TESTBENCH_SOLARIS_SUBSET=1
+#
+# Format: "skip <glob>" or "keep <glob>"; "#" starts a comment.
+
+# Disk-assisted, disk, segmented and local queues, worker thread pool:
+# new, Linux-driven code that dominates the run time (about 940 s measured).
+skip daqueue-*
+skip diskqueue-*
+skip segmented-*
+skip classic-da-*
+skip local-queue-*
+skip wtp-*
+# Shared drivers run by the wrapper scripts above (the driver, not the wrapper,
+# calls "diag.sh init" and therefore needs its own entry):
+skip da-engine-*
+skip pure-disk-queue-*
+
+# TLS (gtls, openssl, wolfssl): library logic, covered on Linux (about 650 s).
+skip *tls*
+skip *gtls*
+skip *ossl*
+
+# zlib/zstd writers (about 320 s) and sender/receiver round trips (about 300 s).
+skip gzipwr_*
+skip sndrcv_*
+
+# imfile: keep a handful of basic tests, skip the rest (about 450 s in total).
+skip imfile-*
+keep imfile-basic.sh
+keep imfile-basic-legacy.sh
+keep imfile-readmode2.sh
+keep imfile-endregex.sh
+keep imfile-truncate.sh
+keep imfile-rename.sh
+
+# imbeats timeout regression: platform-independent timer semantics, includes a
+# deliberate 3 s pause, no Solaris-specific need.
+skip imbeats-idle-between-windows.sh
+
+# imbeats session-close diagnostics: the message text and its rate limiter are
+# platform-independent, and both tests wait for an idleTimeout. Covered on
+# Linux for both config frontends; no Solaris portability oracle.
+skip imbeats-session-close-logging.sh
+skip yaml-imbeats-session-close-logging.sh
+
+# imbeats non-object metadata regression: platform-independent JSON handling in
+# the module, one loopback window; no Solaris-specific oracle.
+skip imbeats-metadata-non-object.sh
+
+# imbeats work-queue wait: the forgiveness only exists on the epoll
+# dispatcher, which SunOS does not have, and the test needs several seconds of
+# omtesting sleeps plus timing margins. Covered on Linux.
+skip imbeats-timeout-queue-wait.sh
+
+# mmcount counter tests (collision counters, cardinality limit):
+# platform-independent contrib-module behavior. Both frontends stay covered on
+# Linux; none adds a Solaris portability oracle.
+skip mmcount-*
+skip yaml-mmcount-*
+
+# Redis output: needs a redis-server, no portability relevance.
+skip omhiredis-*
+
+# mmjsonparse scan counters are platform-independent; both configuration
+# frontends remain covered on Linux without growing the reduced Solaris run.
+skip mmjsonparse-find-json-scan-stats.sh
+skip yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh
