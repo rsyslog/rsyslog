@@ -1,0 +1,43 @@
+plugins/mmanon/mmanon.c
+  s_12493d1d1488ca::t_f6ec806f9f090f 169,258,294-295,331-384,401-420
+  s_12493d1d1488ca::t_b75995581ef1b9 2047,2049-2068,2087-2100,2102-2109,2118-2126,2130-2138,2143-2149,2162-2167
+  s_12493d1d1488ca::t_85af412881593b 2048,2069-2073,2075,2077-2086,2101,2110-2117,2127-2129,2139-2142
+  s_12493d1d1488ca::t_c99231042bbf89 36,87-94,108-109
+  s_12493d1d1488ca::t_0728651969ef96 2074,2076
+doc/Makefile.am
+  s_12493d1d1488ca::t_f8d448091f79d4 854
+doc/source/reference/parameters/mmanon-excludesubnets.rst
+  s_12493d1d1488ca::t_04766404373d24 30
+  s_12493d1d1488ca::t_f8d448091f79d4 1-29,31-73
+ChangeLog
+  s_12493d1d1488ca::t_04766404373d24 9-14
+tests/Makefile.am
+  s_12493d1d1488ca::t_ebf56f71a930d9 1303-1305
+tests/mmanon_excludesubnets.sh
+  s_12493d1d1488ca::t_ec0bd6dc9be936 1-21,23-24,27-42,44-45,51-52
+  s_12493d1d1488ca::t_cecf37f03f4325 43,46-49
+  s_12493d1d1488ca::t_4a13bc598c6769 22,25-26,50
+tests/mmanon_excludesubnets_invalid.sh
+  s_12493d1d1488ca::t_ec0bd6dc9be936 1-30
+tests/yaml-mmanon-excludesubnets.sh
+  s_12493d1d1488ca::t_cecf37f03f4325 42
+  s_12493d1d1488ca::t_ec0bd6dc9be936 1-41,43-44
+doc/source/configuration/modules/mmanon.rst
+  s_12493d1d1488ca::t_f8d448091f79d4 3-6,20-21,28-32,76-79,157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a56b12e4a9fcd7603add4892d38223bda96b6f93",
+  "prompts": {},
+  "sessions": {
+    "s_12493d1d1488ca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f64b2-5a7d-7aa3-9c23-168ced1ac714",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
