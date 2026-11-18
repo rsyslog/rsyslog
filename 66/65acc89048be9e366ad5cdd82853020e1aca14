@@ -4,6 +4,7 @@ tests/Makefile.am
 plugins/AGENTS.md
   s_5e773934876cb4::t_fca05240184bea 195-201
   s_5e773934876cb4::t_74ee1fac45b518 176
+  s_9591331cc7634e::t_0a7aa591091589 194
 tests/immark-interval-validation.sh
   s_5e773934876cb4::t_aff5fdafb476f4 1-65
 doc/source/reference/parameters/immark-interval.rst
@@ -32,6 +33,14 @@ plugins/immark/immark.c
         "tool": "codex",
         "id": "01a1592a-fed4-7232-b07f-50e20f293e24",
         "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
       },
       "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
     }
