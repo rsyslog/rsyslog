@@ -3269,10 +3269,32 @@ static void qqueueDrainDeferred(wti_t *const pWti) {
 
 /* Exceptional idle/minbatch/cleanup path: never retain a completed batch
  * across a condition wait. Recheck queue predicates after reacquiring. */
-static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) {
+static void qqueueDrainDeferredLocked(qqueue_t *const pThis,
+                                      wti_t *const pWti,
+                                      const int __attribute__((unused)) terminalCleanup) {
     if (pWti->n_deferred_msgs != 0) {
         d_tsan_release_mutex(pThis->mut);
         d_pthread_mutex_unlock(pThis->mut);
+#ifdef ENABLE_TESTBENCH
+        /* This delay only widens the unlocked window in production terminal
+         * batch disposal, before WAIT_JOIN. Producers issuing start advice in
+         * this window must already see an exiting worker. Retirement publication
+         * and the restart handoff must work with ENABLE_TESTBENCH disabled.
+         * Keep state repair, signaling, and worker restarts in the production
+         * path so the hook cannot change the handoff outcome. */
+        const char *const delay = getenv("RSYSLOG_TESTBENCH_WORKER_CLEANUP_DELAY_MS");
+        const char *const pool = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL");
+        if (terminalCleanup && delay != NULL && pool != NULL && *pool != '\0' &&
+            strstr((const char *)pWti->pWtp->pszDbgHdr, pool) != NULL) {
+            long ms = strtol(delay, NULL, 10);
+            if (ms > 60000) ms = 60000;
+            for (; ms > 0; ms -= 10) {
+                if (ATOMIC_LOAD_32BIT((int *)&pWti->pWtp->wtpState, &pWti->pWtp->mutWtpState) != wtpState_RUNNING)
+                    break;
+                srSleep(0, 10000);
+            }
+        }
+#endif
         qqueueDrainDeferred(pWti);
         if (qqueueLock(pThis) == 0) d_tsan_acquire_mutex(pThis->mut);
     }
@@ -3761,7 +3783,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
         pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
         ++nDequeued;
         if (nDequeued < iMinDeqBatchSize && getLogicalQueueSize(pThis) == 0) {
-            qqueueDrainDeferredLocked(pThis, pWti);
+            qqueueDrainDeferredLocked(pThis, pWti, 0);
             while (!qqueueIsShutdownImmediate(pThis) && keep_running && nDequeued < iMinDeqBatchSize &&
                    getLogicalQueueSize(pThis) == 0) {
                 dbgprintf(
@@ -4027,7 +4049,7 @@ finalize_it:
         if (clearRet != RS_RET_OK) iRet = clearRet;
     }
     if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
-        qqueueDrainDeferredLocked(pThis, pWti);
+        qqueueDrainDeferredLocked(pThis, pWti, 0);
         /* An enqueue during disposal could not signal us as a waiter yet.
          * Retest under the mutex before returning IDLE to the wait loop. */
         if (iRet == RS_RET_IDLE && getLogicalQueueSize(pThis) > 0) goto retry_dequeue;
@@ -4066,7 +4088,7 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     }
     iRet = DeleteProcessedBatch(pSource == NULL ? pThis : pSource, pWti);
     if (iRet == RS_RET_OK) qqueueChkPersist(pSource == NULL ? pThis : pSource, nElemDeq);
-    qqueueDrainDeferredLocked(pSource == NULL ? pThis : pSource, pWti);
+    qqueueDrainDeferredLocked(pSource == NULL ? pThis : pSource, pWti, 1);
 
 finalize_it:
     pthread_setcancelstate(iCancelStateSave, NULL);

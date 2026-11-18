@@ -126,6 +126,10 @@ runtime_queue:
       OK. Interrupted and non-OK callbacks retain at-least-once replay, which may
       repeat earlier script mutations or successful action effects.
     - Classic queues destroy completed messages under the queue mutex (unlocked disposal was reverted, issue #7884). Local queue backends move completed references to a bounded worker buffer and destroy them outside the mutex, before callbacks or waits, with cancellation disabled.
+    - >-
+      For terminal workers, publish the exiting state under the queue mutex before
+      local-backend deferred-message disposal releases it. Producer start advice
+      during disposal is retained as a restart request for that exiting slot.
     - RAM retirement releases completed counts independently of batch order; segmentedDisk retains its ordered persistent frontier.
     - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.
     - The segmented store is lazy only for a disk-assisted child, and dematerialization requires an empty store with no recovery, batch, retry, or completion work pending.
