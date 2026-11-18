@@ -76,6 +76,12 @@ collection, and process orchestration).
   positive offsets on 1 January) and the 23:59:59 end-of-day boundary is
   covered by `tests/timereported-dateordinal-utcoffset.sh`.
 
+- The shared input rate limiter has imtcp coverage in
+  `tests/omfile-legacy-dynafile-programname.sh` for default-disabled limits,
+  APP-NAME on the first drop, and the fallback label on parse failure.
+  `tests/yaml-imtcp-ratelimit-first-drop.sh` covers burst-one admission and the
+  first-drop label through YAML and requires imtcp and libyaml.
+
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in
   files that manage shared state (queues, network sessions, statistics).

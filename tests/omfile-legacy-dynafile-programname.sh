@@ -8,11 +8,14 @@
 # the second APP-NAME in the first-drop diagnostic. A malformed first drop
 # must retain the drop decision and use a fallback label. Each
 # file is a direct oracle; a later property read cannot repair its filename.
+# Wait for each accepted output and both drop diagnostics in the testbench
+# omfile log before shutdown so empty queues cannot hide unread TCP data.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 
 generate_conf
 add_conf '
+global(processInternalMessages="on")
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $template dynfile,"'${PWD}'/'${RSYSLOG_DYNNAME}'.legacy/%HOSTNAME%/%PROGRAMNAME%.log"
 $template primedfile,"'${PWD}'/'${RSYSLOG_DYNNAME}'.primed/%HOSTNAME%/%PROGRAMNAME%.log"
@@ -54,9 +57,17 @@ printf '%s\n' \
     '<14>1 2026-01-01T00:00:00Z myhost goodapp - - - first malformed-control' \
     'this is not syslog' > "${RSYSLOG_DYNNAME}.limitedbad.input"
 tcpflood -p "$(cat "${RSYSLOG_DYNNAME}.limitedbad.port")" -I "${RSYSLOG_DYNNAME}.limitedbad.input"
+wait_content 'hello world' "${RSYSLOG_DYNNAME}.legacy/myhost/myprogram.log"
+wait_content 'modern control' "${RSYSLOG_DYNNAME}.modern/myhost/modernapp.log"
+wait_content 'primed control' "${RSYSLOG_DYNNAME}.primed/myhost/primedapp.log"
+wait_content 'first limited' "${RSYSLOG_DYNNAME}.limited/myhost/limitedapp.log"
+wait_content 'first malformed-control' "${RSYSLOG_DYNNAME}.limitedbad.log"
+wait_content 'from <myhost:droppedapp>: begin to drop messages due to rate-limiting' "${RSYSLOG_DYNNAME}.started"
+wait_content 'from <unparsed>: begin to drop messages due to rate-limiting' "${RSYSLOG_DYNNAME}.started"
 shutdown_when_empty
 wait_shutdown
 
+check_not_present 'this is not syslog' "${RSYSLOG_DYNNAME}.limitedbad.log"
 content_check "programname: 'myprogram'" "$RSYSLOG_OUT_LOG"
 content_check 'modern control' "${RSYSLOG_DYNNAME}.modern/myhost/modernapp.log"
 content_check 'primed control' "${RSYSLOG_DYNNAME}.primed/myhost/primedapp.log"
