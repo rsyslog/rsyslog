@@ -3,6 +3,7 @@ tests/Makefile.am
   s_12493d1d1488ca::t_187e9768643ab0 3020,3425,3443-3447
   s_12493d1d1488ca::t_da9fc5e26b3a6a 3448
   s_c4e7938e7d7f5a::t_5cc9af55563bfe 3453-3454
+  s_9591331cc7634e::t_a1e15cc988c14e 3442
 tests/openssl_shared_curve_probe.c
   s_12493d1d1488ca::t_cdc31b1b8c66e1 18,21-23,25
   s_12493d1d1488ca::t_4a7419fe9796bd 1-17,19-20,24,26-39
@@ -32,6 +33,14 @@ tests/imtcp-tls-ossl-input-basic.sh
         "model": "gpt-6-luna"
       },
       "human_author": null
+    },
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
     },
     "s_c4e7938e7d7f5a": {
       "agent_id": {
