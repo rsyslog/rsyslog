@@ -1,0 +1,29 @@
+doc/source/reference/parameters/imjournal-ignorenonvalidstatefile.rst
+  s_9591331cc7634e::t_d4963fdd8d6c05 39-47
+tests/Makefile.am
+  s_9591331cc7634e::t_d4963fdd8d6c05 1460,1467-1469,2921,4037
+plugins/imjournal/imjournal.c
+  s_9591331cc7634e::t_d4963fdd8d6c05 190,195-196,769,779-804,1067-1071,1115-1117
+tests/imjournal-statefile-directory.sh
+  s_9591331cc7634e::t_d4963fdd8d6c05 4-16,18-23,26-27,29-45,47,50,61-78,91-100,114-119
+tests/imjournal-statefile-fifo.sh
+  s_9591331cc7634e::t_d4963fdd8d6c05 1-9
+tests/yaml-imjournal-statefile-directory.sh
+  s_9591331cc7634e::t_d4963fdd8d6c05 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4e0cc7aa9a382b81bb89c950b803a931f83ceae0",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
