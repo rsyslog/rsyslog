@@ -1,0 +1,29 @@
+plugins/AGENTS.md
+  s_9591331cc7634e::t_d1d468b1decd10 101-105
+tests/omfile-legacy-dynafile-programname.sh
+  s_9591331cc7634e::t_d1d468b1decd10 11-12,18,60-66,70
+tests/testsuites/imtcp-ratelimit-first-drop.yaml
+  s_9591331cc7634e::t_d1d468b1decd10 1-20
+tests/yaml-imtcp-ratelimit-first-drop.sh
+  s_9591331cc7634e::t_d1d468b1decd10 1-34
+tests/Makefile.am
+  s_9591331cc7634e::t_d1d468b1decd10 1103,1205,2878
+runtime/AGENTS.md
+  s_9591331cc7634e::t_d1d468b1decd10 79-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2001ed7a460c22ce944549be5c91a0e18202d6b6",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
