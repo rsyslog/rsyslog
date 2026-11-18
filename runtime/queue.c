@@ -3276,9 +3276,12 @@ static void qqueueDrainDeferredLocked(qqueue_t *const pThis,
         d_tsan_release_mutex(pThis->mut);
         d_pthread_mutex_unlock(pThis->mut);
 #ifdef ENABLE_TESTBENCH
-        /* Widen the real callback-unlock window, rather than the later
-         * WAIT_JOIN window. Producers must already see an exiting worker
-         * when they issue start advice during terminal batch disposal. */
+        /* This delay only widens the unlocked window in production terminal
+         * batch disposal, before WAIT_JOIN. Producers issuing start advice in
+         * this window must already see an exiting worker. Retirement publication
+         * and the restart handoff must work with ENABLE_TESTBENCH disabled.
+         * Keep state repair, signaling, and worker restarts in the production
+         * path so the hook cannot change the handoff outcome. */
         const char *const delay = getenv("RSYSLOG_TESTBENCH_WORKER_CLEANUP_DELAY_MS");
         const char *const pool = getenv("RSYSLOG_TESTBENCH_WORKER_EXIT_DELAY_POOL");
         if (terminalCleanup && delay != NULL && pool != NULL && *pool != '\0' &&
