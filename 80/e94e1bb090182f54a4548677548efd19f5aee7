@@ -1,5 +1,6 @@
 plugins/AGENTS.md
   s_562c2fe9031ed0::t_d4f5e4a78aeb2a 176,195-202
+  s_9591331cc7634e::t_c28fd02df5b77a 194
 plugins/imtcp/imtcp.c
   s_5e773934876cb4::t_f12877ba5d5294 169,637,772,974,976,981,984
 tests/Makefile.am
@@ -36,6 +37,14 @@ tests/yaml-tls-permittedpeer-invalid.sh
         "tool": "codex",
         "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
         "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
       },
       "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
     }
