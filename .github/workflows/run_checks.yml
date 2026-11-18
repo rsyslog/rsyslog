@@ -995,7 +995,8 @@ jobs:
             arch: arm64
             sanitizer: tsan
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    # Leave time for setup and failure evidence after the test watchdog fires.
+    timeout-minutes: ${{ matrix.sanitizer == 'tsan' && 35 || 25 }}
     name: macOS CI (${{ matrix.os }}, ${{ matrix.arch }}, ${{ matrix.sanitizer }})
     env:
       USE_AUTO_DEBUG: true
@@ -1132,6 +1133,7 @@ jobs:
         id: run_tests
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
+          MAKE_CHECK_TIMEOUT_SECONDS: ${{ matrix.sanitizer == 'tsan' && 1500 || 1200 }}
           RSYSLOG_FLAKE_PHASE_NAME: >-
             macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
         run: |
@@ -1153,7 +1155,6 @@ jobs:
             echo "Running without sanitizers"
           fi
 
-          export MAKE_CHECK_TIMEOUT_SECONDS=1200
           devtools/ci-flake-phase.sh begin "$RSYSLOG_FLAKE_PHASE_NAME" automake
 
           set +e
