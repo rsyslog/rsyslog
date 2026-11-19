@@ -40,7 +40,10 @@ EXTRA_DIST += $(TESTS_IMUXSOCK_FIXPID) $(TESTS_IMUXSOCK_FIXPID_YAML) \
 TESTS_IMKLOG_LOGPATH = \
 	imklog-logpath-eof.sh \
 	imklog-logpath-read-error.sh
-EXTRA_DIST += $(TESTS_IMKLOG_LOGPATH)
+TESTS_IMKLOG_LOGPATH_YAML = \
+	yaml-imklog-logpath-eof.sh \
+	yaml-imklog-logpath-read-error.sh
+EXTRA_DIST += $(TESTS_IMKLOG_LOGPATH) $(TESTS_IMKLOG_LOGPATH_YAML)
 
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
@@ -3790,6 +3793,9 @@ endif
 
 if ENABLE_IMKLOG
 TESTS += $(TESTS_IMKLOG_LOGPATH)
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMKLOG_LOGPATH_YAML)
+endif
 endif
 
 if ENABLE_IMFIFO
