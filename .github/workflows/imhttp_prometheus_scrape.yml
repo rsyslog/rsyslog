@@ -21,8 +21,15 @@ concurrency:
 
 jobs:
   scrape:
-    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 25 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
