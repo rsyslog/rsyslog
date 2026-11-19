@@ -1,0 +1,21 @@
+tests/mmanon_excludesubnets.sh
+  s_9591331cc7634e::t_301adfdc2c0db0 7-9,28,37-38,51-52
+plugins/mmanon/mmanon.c
+  s_9591331cc7634e::t_e82eac18960b9d 1035,2071-2073,2101-2105,2108-2114,2118-2119,2125,2136-2140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0083f20dcbe4fb70a94361d46a25ab5f03fad373",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
