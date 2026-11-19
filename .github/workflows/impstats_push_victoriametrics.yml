@@ -36,8 +36,15 @@ concurrency:
 
 jobs:
   test_push:
-    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
-    timeout-minutes: ${{ github.event.repository.private && 180 || 20 }}
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 20 }}
 
     services:
       victoriametrics:

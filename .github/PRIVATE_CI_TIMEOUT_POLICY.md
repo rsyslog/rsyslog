@@ -1,8 +1,10 @@
 # Private CI timeout policy
 
-Public workflows retain their existing timeout values. Private repositories
-route Linux work through `RSYSLOG_CI_LINUX_RUNNER`; all healthy matching workers
-remain eligible and matrix parallelism is unchanged.
+The jobs covered by this policy use `RSYSLOG_CI_LINUX_RUNNER` and the private
+timeout in private repositories for same-repository pull requests and
+non-pull-request events. Public repositories and fork pull requests use the
+existing GitHub-hosted runner and timeout. All healthy matching private
+workers remain eligible and matrix parallelism is unchanged.
 
 Explicitly bounded private build, package, test, fuzzer-build and container-build
 jobs receive 180 minutes. This includes Ubuntu/RPM packages, the main Linux
@@ -15,7 +17,8 @@ or execute the testbench. Hosted/native/release jobs outside private routing
 retain their existing policies.
 
 The i386 aggregate check command receives 150 minutes privately, within its
-180-minute job; public execution retains the 45-minute check and 75-minute job.
+180-minute job. On hosted runners it retains the 45-minute check and
+75-minute job.
 Per-test watchdogs, fuzzer campaign duration and per-input limits, network
 request limits, test selection and failure handling remain unchanged.
 
