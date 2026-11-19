@@ -251,7 +251,7 @@ finalize_it:
 /* receive buffer for maxMessageSize values above the stack buffer size;
  * allocated on first use and kept until klogAfterRun()
  */
-static uchar *pRcvHeap = NULL;
+static uchar *rcv_heap = NULL;
 
 /* Read kernel log while data are available, split into lines.
  * Returns RS_RET_EOF if read() reported end of file and RS_RET_READ_ERR
@@ -278,8 +278,8 @@ static rsRetVal readklog(modConfData_t *pModConf) {
         pRcv = bufRcv;
     } else {
         /* compute in size_t: iMaxLine + 1 overflows int for INT_MAX */
-        if (pRcvHeap == NULL) pRcvHeap = (uchar *)malloc((size_t)iMaxLine + 1);
-        if ((pRcv = pRcvHeap) == NULL) {
+        if (rcv_heap == NULL) rcv_heap = (uchar *)malloc((size_t)iMaxLine + 1);
+        if ((pRcv = rcv_heap) == NULL) {
             iMaxLine = sizeof(bufRcv) - 1; /* better this than noting */
             pRcv = bufRcv;
         }
@@ -325,8 +325,8 @@ static rsRetVal readklog(modConfData_t *pModConf) {
  */
 rsRetVal ATTR_NONNULL() klogAfterRun(modConfData_t *const pModConf __attribute__((unused))) {
     DEFiRet;
-    free(pRcvHeap);
-    pRcvHeap = NULL;
+    free(rcv_heap);
+    rcv_heap = NULL;
     if (fklog != -1) close(fklog);
 #ifdef OS_LINUX
     /* Restore the console log level we changed at startup. This needs the

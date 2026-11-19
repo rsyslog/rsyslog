@@ -220,3 +220,9 @@ The `yaml-imklog-logpath-*.sh` companions run the same checks with YAML.
 `tests/imklog-internalmsgfacility.sh` and its YAML companion
 `tests/yaml-imklog-internalmsgfacility.sh` check that an imklog diagnostic
 uses the configured facility and retains its error severity.
+
+## imklog maximum message size
+
+`tests/yaml-imklog-maxmessagesize.sh` checks that a record larger than the
+default limit is delivered intact when YAML increases the limit and sets
+imklog's LogPath.

@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Verify that imklog works with the largest accepted maxMessageSize.
 # imklog sizes its receive buffer from maxMessageSize plus one byte for
 # the terminating NUL. With maxMessageSize=2147483647 that size must be
