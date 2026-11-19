@@ -6,6 +6,12 @@ Scheduled Release 8.2612.0 (aka 2026.12) 2026-12-20
   operands differ by 2^32 or span the signed 64-bit range. Numeric string
   conversion and lexical comparison fallback remain unchanged.
 
+- 2026-10-22: mmanon: preserve addresses in excluded CIDR subnets
+  The new excludeSubnets action parameter preserves matching IPv4 and IPv6
+  literals while other addresses in the same message are anonymized.
+  Thanks to filippog for the feature request.
+  Closes https://github.com/rsyslog/rsyslog/issues/3710
+
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-20
 
