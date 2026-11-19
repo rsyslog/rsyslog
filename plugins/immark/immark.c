@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
 #include <string.h>
 #include <pthread.h>
@@ -42,6 +43,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
 #include "msg.h"
 #include "srUtils.h"
 #include "glbl.h"
@@ -79,7 +81,7 @@ static struct cnfparamdescr modpdescr[] = {{"ruleset", eCmdHdlrString, 0},
                                            {"markmessagetext", eCmdHdlrString, 0},
                                            {"use.syslogcall", eCmdHdlrBinary, 0},
                                            {"use.markflag", eCmdHdlrBinary, 0},
-                                           {"interval", eCmdHdlrInt, 0}};
+                                           {"interval", eCmdHdlrPositiveInt, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 
@@ -157,6 +159,10 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "interval")) {
+            if (pvals[i].val.d.n > INT_MAX) {
+                parser_errmsg("parameter 'interval' must not exceed %d", INT_MAX);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
             loadModConf->iMarkMessagePeriod = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "use.syslogcall")) {
             loadModConf->bUseSyslogAPI = (int)pvals[i].val.d.n;
@@ -208,11 +214,6 @@ BEGINcheckCnf
             pModConf->bUseSyslogAPI = 0;
         }
     }
-    if (pModConf->iMarkMessagePeriod <= 0) {
-        LogError(0, NO_ERRCODE, "immark: mark message period must be greater than 0, can not run");
-        ABORT_FINALIZE(RS_RET_NO_RUN); /* we can not run with this error */
-    }
-finalize_it:
 ENDcheckCnf
 
 
@@ -330,7 +331,7 @@ BEGINmodInit()
     CHKiRet(prop.ConstructFinalize(pInternalInputName));
 
     /* legacy config handlers */
-    CHKiRet(regCfSysLineHdlr2((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod,
+    CHKiRet(regCfSysLineHdlr2((uchar *)"markmessageperiod", 0, eCmdHdlrPositiveInt, NULL, &iMarkMessagePeriod,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
                                STD_LOADABLE_MODULE_ID));

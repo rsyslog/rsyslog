@@ -4,15 +4,16 @@
 # -N1: no input thread or negative-interval runtime loop is ever started.
 # Default and positive values must validate; zero must retain its rejection.
 # Check those controls before negative values so a module/config setup failure
-# cannot masquerade as the regression. Require the module-specific diagnostic
-# as well as rejection. Capture stderr because -N1 exits before any configured
-# output can run. The YAML wrapper tests the same module parameter;
+# cannot masquerade as the regression. Require the interval parameter's
+# range diagnostic as well as rejection, including values too large to store.
+# Capture stderr because -N1 exits before any configured output can run.
+# The YAML wrapper tests the same module parameter;
 # RainerScript also covers the legacy directive. No timing oracle is needed.
 . ${srcdir:=.}/diag.sh init
 require_plugin immark
 
 validate_interval() {
-    local mode=$1 value=$2 expected=$3 status
+    local mode=$1 value=$2 expected=$3 diagnostic=${4:-} status
     generate_conf
     case "$mode" in
     yaml)
@@ -43,7 +44,14 @@ $MarkMessagePeriod '$value
         error_exit 1 "$mode interval=$value: expected validation status $expected, got $status"
     fi
     if [ "$expected" -ne 0 ]; then
-        content_check "immark: mark message period" "${RSYSLOG_DYNNAME}.${mode}.${value}.log"
+        if [ -z "$diagnostic" ]; then
+            if [ "$mode" = legacy ]; then
+                diagnostic="value $value must be greater than zero"
+            else
+                diagnostic="parameter 'interval' cannot be less than one (was $value)"
+            fi
+        fi
+        content_check "$diagnostic" "${RSYSLOG_DYNNAME}.${mode}.${value}.log"
     fi
     echo "$mode interval=$value: PASS"
 }
@@ -61,5 +69,8 @@ done
 for mode in $modes; do
     validate_interval "$mode" -1 1
     validate_interval "$mode" -1200 1
+    if [ "$mode" != legacy ]; then
+        validate_interval "$mode" 2147483648 1 "parameter 'interval' must not exceed"
+    fi
 done
 exit_test
