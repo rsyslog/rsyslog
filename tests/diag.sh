@@ -2338,10 +2338,11 @@ quit"
 # wait for HUP to complete. $1 is the instance
 # note: there is a slight chance HUP was not completed. This can happen if it takes
 # the system very long (> 500ms) to receive the HUP and set the internal flag
-# variable. aka "very very low probability".
+# variable. aka "very very low probability". Prefer issue_HUP, which reads the
+# completed-HUP counter before signalling and waits for it exactly.
 await_HUP_processed() {
 	if [ "$1" == "2" ]; then
-		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
+		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	else
 		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 	fi
@@ -2540,20 +2541,42 @@ custom_assert_content_missing() {
 }
 
 
-# shut rsyslogd down when main queue is empty. $1 is the instance.
+# send SIGHUP to instance $1 and wait until rsyslogd has fully processed it.
+# Requires imdiag in the instance config. Fails the test if the HUP does not
+# complete within imdiag's timeout (60 s).
 issue_HUP() {
+	local port hup_count reply
 	if [ "$1" == "--sleep" ]; then
-		sleeptime="$2"
+		# kept for compatibility; completion is now detected exactly
 		shift 2
-	else
-		sleeptime=1000
 	fi
 	wait_rsyslog_instance_pid "$1"
+	if [ "$1" == "2" ]; then
+		port=$IMDIAG_PORT2
+	else
+		port=$IMDIAG_PORT
+	fi
+	# Read the completed-HUP counter before sending the signal. imdiag then
+	# waits until the counter changes, which proves that a HUP run started
+	# after this point has finished (no timing heuristic involved).
+	reply=$(echo GetHUPCount | $TESTTOOL_DIR/diagtalker -p"$port") || error_exit $?
+	hup_count=$(printf '%s\n' "$reply" | sed -n 's/^imdiag\[[0-9]*\]: \([0-9][0-9]*\)$/\1/p' | tail -n1)
+	if [ -z "$hup_count" ]; then
+		printf 'issue_HUP: could not read HUP count from imdiag, reply: %s\n' "$reply"
+		error_exit 1
+	fi
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
 	printf 'HUP issued to pid %d - waiting for it to become processed\n' \
 		$(cat $RSYSLOG_PIDBASE$1.pid)
-	await_HUP_processed
-	#$TESTTOOL_DIR/msleep $sleeptime
+	reply=$(echo "AwaitHUPCount $hup_count" | $TESTTOOL_DIR/diagtalker -p"$port") || error_exit $?
+	printf '%s\n' "$reply"
+	case "$reply" in
+	*"HUP completed"*) ;;
+	*)
+		printf 'issue_HUP: HUP was not processed: %s\n' "$reply"
+		error_exit 1
+		;;
+	esac
 }
 
 

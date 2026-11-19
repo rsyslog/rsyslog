@@ -222,6 +222,8 @@ void rsyslogdDoDie(int sig);
 static volatile sig_atomic_t bChildDied = 0;
 static volatile sig_atomic_t bHadHUP = 0;
 static volatile sig_atomic_t bHUPInProgress = 0;
+/* number of HUPs whose processing has finished; written by the main thread only */
+static int hup_completed_count = 0;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
 static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
@@ -274,6 +276,16 @@ int get_bHadHUP(void) {
     const int ret = PREFER_LOAD_INT(&bHadHUP) || PREFER_LOAD_INT(&bHUPInProgress);
     /* note: at this point ret can already be invalid */
     return ret;
+}
+
+/* helper for imdiag: number of HUPs that have been fully processed so far.
+ * The counter only grows, so a caller that reads it before sending SIGHUP can
+ * wait until it changes and then knows that a HUP started after its read has
+ * completed. Several SIGHUPs that arrive before processing starts are merged
+ * into one HUP run and increase the counter by one.
+ */
+int get_hup_completed_count(void) {
+    return PREFER_LOAD_INT(&hup_completed_count);
 }
 
 /* we need a pointer to the conf, because in early startup stage we
@@ -2414,6 +2426,7 @@ static void mainloop(void) {
             PREFER_STORE_INT(&bHadHUP, 0);
             PREFER_STORE_INT(&bHUPInProgress, 1);
             doHUP();
+            PREFER_STORE_INT(&hup_completed_count, PREFER_LOAD_INT(&hup_completed_count) + 1);
             PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 

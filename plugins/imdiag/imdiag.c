@@ -501,6 +501,64 @@ finalize_it:
     RETiRet;
 }
 
+/* Report the number of fully processed HUPs. Tests read it before sending
+ * SIGHUP and then use "awaitHUPCount" with that value.
+ */
+static rsRetVal get_hup_count(tcps_sess_t *const sess) {
+    DEFiRet;
+    CHKiRet(sendResponse(sess, "%d\n", get_hup_completed_count()));
+finalize_it:
+    RETiRet;
+}
+
+/* Wait until a HUP that started after the caller read <old-count> has fully
+ * completed, i.e. until the completed-HUP counter differs from <old-count>.
+ * Syntax: awaitHUPCount <old-count> [timeout-ms]; default timeout 60000 ms.
+ * Replies "HUP completed ..." on success and "ERROR: ..." on timeout or bad
+ * arguments, so the caller can fail the test instead of guessing.
+ */
+static rsRetVal await_hup_count(uchar *cmd, tcps_sess_t *const sess) {
+    uchar word[64];
+    char *end;
+    long old_count;
+    long timeout_ms = 60000;
+    long waited_ms = 0;
+    int count;
+    DEFiRet;
+
+    getFirstWord(&cmd, word, sizeof(word), TO_LOWERCASE);
+    errno = 0;
+    old_count = strtol((char *)word, &end, 10);
+    if (word[0] == '\0' || *end != '\0' || errno != 0 || old_count < 0 || old_count > INT_MAX) {
+        CHKiRet(sendResponse(sess, "ERROR: awaitHUPCount needs the previous HUP count\n"));
+        FINALIZE;
+    }
+    getFirstWord(&cmd, word, sizeof(word), TO_LOWERCASE);
+    if (word[0] != '\0') {
+        errno = 0;
+        timeout_ms = strtol((char *)word, &end, 10);
+        if (*end != '\0' || errno != 0 || timeout_ms <= 0) {
+            CHKiRet(sendResponse(sess, "ERROR: invalid awaitHUPCount timeout\n"));
+            FINALIZE;
+        }
+    }
+
+    while ((count = get_hup_completed_count()) == (int)old_count && waited_ms < timeout_ms) {
+        srSleep(0, 10000);
+        waited_ms += 10;
+    }
+    if (count == (int)old_count) {
+        CHKiRet(sendResponse(sess, "ERROR: timeout after %ld ms waiting for HUP completion, count still %d\n",
+                             timeout_ms, count));
+    } else {
+        CHKiRet(sendResponse(sess, "HUP completed, count %d\n", count));
+    }
+    DBGPRINTF("imdiag: awaitHUPCount %ld done, count now %d\n", old_count, count);
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal enableDebug(tcps_sess_t *pSess) {
     DEFiRet;
 
@@ -1396,6 +1454,10 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
         CHKiRet(awaitHUPComplete(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("gethupcount"))) {
+        CHKiRet(get_hup_count(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcount"))) {
+        CHKiRet(await_hup_count(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {

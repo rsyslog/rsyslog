@@ -562,6 +562,7 @@ TESTS_DEFAULT = \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
+	imdiag-hup-count.sh \
 	rscript-parse-error-noleak.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \
