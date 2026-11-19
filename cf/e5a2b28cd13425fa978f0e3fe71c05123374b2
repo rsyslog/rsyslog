@@ -6,6 +6,7 @@ tests/imklog-logpath-read-error.sh
   s_9591331cc7634e::t_6911f11202b2db 3,9-11,19-29,38
 plugins/AGENTS.md
   s_9591331cc7634e::t_6911f11202b2db 194,209-216
+  s_9591331cc7634e::t_09ed2a1d58c493 208
 tests/Makefile.am
   s_9591331cc7634e::t_6911f11202b2db 43-46,3796-3798
 tests/yaml-imklog-logpath-read-error.sh
