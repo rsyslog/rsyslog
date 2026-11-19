@@ -34,6 +34,12 @@
 #include <libestr.h>
 #include "rainerscript.h"
 #include "parserif.h"
+/* Bison's generated yydestruct() switches over all symbol kinds and does not
+ * handle every one of them (by design) - keep -Wswitch-enum quiet for it. */
+#if defined(__GNUC__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 #define YYDEBUG 1
 extern int yylineno;
 extern char *yytext;
@@ -119,6 +125,26 @@ extern int yyerror(const char*);
 %type <itr> iterator_decl
 %type <fparams> fparams
 %type <arr> array arrayelt
+
+/* Bison discards partially built values while it unwinds after a syntax
+ * error (and on YYABORT). Without destructors these leak. Every value
+ * passed to a consumer (cnfDoObj(), cnfstmtNew*(), nvlstNew*(), ...) in a
+ * normal reduction is not touched by these; they only run for symbols that
+ * Bison itself drops. The grammar has neither "error" rules nor mid-rule
+ * actions, so ownership is unambiguous: a symbol is either consumed by the
+ * reduction action or dropped by Bison, never both. All char* tokens below
+ * are heap copies made by the lexer.
+ */
+%destructor { free($$); } LEGACY_ACTION LEGACY_RULESET PRIFILT PROPFILT BSD_TAG_SELECTOR BSD_HOST_SELECTOR VAR
+%destructor { es_deleteStr($$); } NAME FUNC STRING
+%destructor { cnfobjDestructAll($$); } obj property constant
+%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script elseif_tail
+%destructor { nvlstDestruct($$); } nv nvlst value
+%destructor { objlstDestruct($$); } propconst
+%destructor { cnfexprDestruct($$); } expr
+%destructor { cnfarrayDestruct($$); } array arrayelt
+%destructor { cnffparamlstDestruct($$); } fparams
+%destructor { cnfIteratorDestruct($$); } iterator_decl
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI CMP_ENDSWITH CMP_FNMATCH
@@ -256,6 +282,9 @@ arrayelt: STRING			{ $$ = cnfarrayNew($1); }
 	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
 
 %%
+#if defined(__GNUC__)
+# pragma GCC diagnostic pop
+#endif
 /*
 int yyerror(char *s)
 {

@@ -1410,6 +1410,17 @@ void cnfobjDestruct(struct cnfobj *o) {
     }
 }
 
+/* destruct an object including a ruleset script, which cnfobjDestruct()
+ * leaves alone because the ruleset normally takes ownership of it. Used when
+ * the parser discards a not yet submitted object.
+ */
+void cnfobjDestructAll(struct cnfobj *const o) {
+    if (o == NULL) return;
+    cnfstmtDestructLst(o->script);
+    o->script = NULL;
+    cnfobjDestruct(o);
+}
+
 void cnfobjPrint(struct cnfobj *o) {
     dbgprintf("obj: '%s'\n", cnfobjType2str(o->objType));
     nvlstPrint(o->nvlst);
@@ -5334,8 +5345,6 @@ static void cnfstmtDisable(struct cnfstmt *cnfstmt) {
     cnfstmt->nodetype = S_NOP;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr);
-
 /* delete a single stmt */
 static void cnfstmtDestruct(struct cnfstmt *stmt) {
     switch (stmt->nodetype) {
@@ -5416,10 +5425,26 @@ struct cnfitr *cnfNewIterator(char *var, struct cnfexpr *collection) {
     return itr;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr) {
+void cnfIteratorDestruct(struct cnfitr *itr) {
+    if (itr == NULL) return;
     free(itr->var);
     if (itr->collection != NULL) cnfexprDestruct(itr->collection);
     free(itr);
+}
+
+void cnfarrayDestruct(struct cnfarray *const ar) {
+    if (ar == NULL) return;
+    cnfarrayContentDestruct(ar);
+    free(ar);
+}
+
+void cnffparamlstDestruct(struct cnffparamlst *params) {
+    while (params != NULL) {
+        struct cnffparamlst *const next = params->next;
+        cnfexprDestruct(params->expr);
+        free(params);
+        params = next;
+    }
 }
 
 struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset) {
@@ -5630,6 +5655,7 @@ done:
 
 struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
     struct cnfstmt *cnfstmt;
+    char *const ownedActline = actline; /* cflineDoAction() advances actline */
     rsRetVal localRet;
     if ((cnfstmt = cnfstmtNew(S_ACT)) == NULL) goto done;
     cnfstmt->printable = (uchar *)strdup((char *)actline);
@@ -5643,6 +5669,7 @@ struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
         }
     }
 done:
+    free(ownedActline); /* heap copy handed over by the lexer */
     return cnfstmt;
 }
 

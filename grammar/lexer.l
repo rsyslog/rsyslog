@@ -308,6 +308,13 @@ struct bufstack {
 
 char *cnfcurrfn;			/* name of currently processed file */
 
+/* Backing text of the last config buffer, whose end-of-file was reached.
+ * After the final <<EOF>> the parser may still report a syntax error, and
+ * yyerror() prints yytext, which points into that text. So it must stay
+ * valid until the next parse starts or parsing is ended.
+ */
+static es_str_t *eofEstr = NULL;
+
 int popfile(void);
 
 static void cnfPrintToken(const char *token);
@@ -479,7 +486,7 @@ static void cnfPrintToken(const char *token);
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@\^?~>][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+,;]*	{ cnfPrintToken(yytext); yylval.s = yytext; return LEGACY_ACTION; }
+[a-z0-9_][a-z0-9_\-\+,;]*	{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return LEGACY_ACTION; }
 <INOBJ>")"			{ cnfPrintToken(yytext); BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -557,6 +564,9 @@ cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
 	int r = 0;
 	assert(str != NULL);
 	assert(cnfobj_name != NULL);
+
+	free(eofEstr);
+	eofEstr = NULL;
 
 	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
 		r = 1;
@@ -653,7 +663,13 @@ popfile(void)
 	yy_delete_buffer(bs->bs);
 	if(bs->prev != NULL || cnfcurrfn != bs->fn)
 		free(bs->fn);
-	free(bs->estr);
+	if(bs->prev == NULL) {
+		/* yytext may still be used for the error message, see eofEstr */
+		free(eofEstr);
+		eofEstr = bs->estr;
+	} else {
+		free(bs->estr);
+	}
 
 	/* switch back to previous */
 	currbs = bs->prev;
@@ -675,6 +691,8 @@ popfile(void)
 void
 tellLexEndParsing(void)
 {
+	free(eofEstr);
+	eofEstr = NULL;
 	free(cnfcurrfn);
 	cnfcurrfn= NULL;
 }
