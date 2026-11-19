@@ -597,6 +597,7 @@ jobs:
             xz-utils
 
       - name: Wait for the server to apply this publication
+        id: publication_applied
         env:
           PUBLICATION_ATTEMPT: ${{ needs.publish.outputs.run_attempt }}
           PUBLICATION_MANIFEST_SHA256: ${{ needs.publish.outputs.manifest_sha256 }}
@@ -609,6 +610,7 @@ jobs:
             echo "publish job did not report its publication" >&2
             exit 1
           fi
+          devtools/ci-flake-phase.sh run debian-publication-applied custom -- bash -euo pipefail <<'BASH'
           status_url="$ARCHIVE_PUBLIC_URL/publication-status.json"
           status_file="$RUNNER_TEMP/publication-status.json"
           expected="$GITHUB_RUN_ID $PUBLICATION_ATTEMPT $PUBLICATION_MANIFEST_SHA256"
@@ -634,6 +636,7 @@ jobs:
           done
           echo "The server did not apply this run's publication within 30 minutes." >&2
           exit 1
+          BASH
 
       - name: Wait for CDN and verify signed metadata
         id: published_metadata
@@ -745,7 +748,8 @@ jobs:
         if: >-
           ${{
             failure() &&
-            (steps.published_metadata.outcome == 'failure' ||
+            (steps.publication_applied.outcome == 'failure' ||
+             steps.published_metadata.outcome == 'failure' ||
              steps.published_install.outcome == 'failure')
           }}
         uses: $/.github/actions/upload-flake-evidence

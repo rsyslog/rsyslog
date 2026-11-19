@@ -568,7 +568,8 @@ cmd_fetch_verified_indexes() (
       awk -F: '$1 == "pub" { keys++ } $1 == "fpr" && !fpr { fpr = $10 }
         END { if (keys == 1) print fpr }'
   )"
-  [ "${actual_key_fpr^^}" = "${expected_key_fpr^^}" ] ||
+  [ "$(printf '%s' "$actual_key_fpr" | tr '[:lower:]' '[:upper:]')" = \
+    "$(printf '%s' "$expected_key_fpr" | tr '[:lower:]' '[:upper:]')" ] ||
     die "exported keyring does not hold exactly the key $expected_key_fpr"
 
   rc=0
@@ -595,10 +596,7 @@ cmd_fetch_verified_indexes() (
     entry="$(release_sha256_entry "$tmp_dir/Release" "$rel")" || rc=$?
     case "$rc" in
       0) ;;
-      1)
-        log_warning "$rel is not listed in the published InRelease, starting it empty"
-        continue
-        ;;
+      1) die "required index $rel is not listed in the published InRelease" ;;
       *) die "$rel is listed more than once in the published InRelease" ;;
     esac
     http_fetch "$repo_url/dists/$suite/$rel" "$tmp_dir/index" ||
@@ -611,8 +609,7 @@ cmd_fetch_verified_indexes() (
   done
   # Only a completely verified set reaches <repo-dir>.
   for rel in "${index_paths[@]}"; do
-    [ ! -f "$tmp_dir/verified/$rel" ] ||
-      mv "$tmp_dir/verified/$rel" "$repo_dir/dists/$suite/$rel"
+    mv "$tmp_dir/verified/$rel" "$repo_dir/dists/$suite/$rel"
   done
 )
 
@@ -674,7 +671,8 @@ cmd_verify_repo() (
     gpg --batch --show-keys --with-colons "$tmp_dir/repo-key.asc" |
       awk -F: '$1 == "fpr" {print $10; exit}'
   )"
-  [ "${actual_key_fpr^^}" = "${expected_key_fpr^^}" ] ||
+  [ "$(printf '%s' "$actual_key_fpr" | tr '[:lower:]' '[:upper:]')" = \
+    "$(printf '%s' "$expected_key_fpr" | tr '[:lower:]' '[:upper:]')" ] ||
     die "published signing key fingerprint $actual_key_fpr does not match expected $expected_key_fpr"
   gpgv --keyring "$tmp_dir/repo-key.gpg" "$tmp_dir/InRelease"
   if [ "${ARCHIVE_REQUIRE_VALID_UNTIL:-false}" = true ]; then

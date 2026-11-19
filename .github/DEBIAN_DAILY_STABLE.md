@@ -58,8 +58,8 @@ Only the small current `Packages.xz` and `Sources.xz` indexes are downloaded
 before a publication, by
 `devtools/release/debian-daily-stable.sh fetch-verified-indexes`. It verifies
 the published `InRelease` with the archive key and checks each index against
-the SHA-256 and size listed there; any mismatch or download error fails the
-run. Only an `InRelease` answered with HTTP 404 (empty prefix) starts from
+the SHA-256 and size listed there. The run fails if a required index is
+missing from the signed list or its download or integrity check fails. Only an `InRelease` answered with HTTP 404 (empty prefix) starts from
 empty indexes. The indexes are merged with the new build, so daily Actions
 traffic does not grow with the full archive size. The publication lists
 immutable objects first, signed mutable metadata last, and `InRelease` last of

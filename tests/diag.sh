@@ -5894,6 +5894,9 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
                 fi
                 ;;
 
+   'solaris-subset-skip')
+		solaris_subset_skip "$2"
+		;;
    'wait-kafka-startup')
                 wait_for_kafka_startup "$2" "$3"
                 ;;

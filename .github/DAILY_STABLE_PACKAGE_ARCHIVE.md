@@ -46,6 +46,14 @@ workflow never hard-codes credentials or an account API token.  A bucket-scoped
 read/write Spaces key is sufficient; do not require a DigitalOcean account API
 token for regular publication.
 
+For targets still using Spaces, provision a public-read Standard Spaces
+bucket with object versioning enabled. Enable the Spaces CDN and route the
+public package hostname to it. Workflows set the Spaces object metadata
+`max-age` override in addition to HTTP `Cache-Control`, with 60 seconds for
+mutable repository metadata and one year for immutable package and snapshot
+objects. Purge existing cached repository metadata once when enabling that
+override so older cache entries do not delay publication verification.
+
 The APT and RPM targets share one archive signing key; Alpine uses its own
 RSA key.  Every APT and RPM publish job runs
 `devtools/release/check-signing-key-expiry.sh` right after importing the key.
@@ -97,7 +105,10 @@ Publication format v1, built and checked by
   `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICavKojThGK0MaNgezhI6qnU8dlrjC9d+Pqv8nQ60QnB`.
   The private key is the `ARCHIVE_PUBLICATION_SIGNING_KEY` secret in the
   `debian-daily-stable` environment; the job writes it to a 0600 file only
-  for signing.
+  for signing. This publication key is a proof-of-concept key. Before
+  declaring the archive production, replace the secret, the workflow's
+  public key, and the server poller's trusted key in coordination with
+  infrastructure.
 - `files/<path>`: one file per manifest line.
 
 A publication contains only what its run produced: new pool files, the

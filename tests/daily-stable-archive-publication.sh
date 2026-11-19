@@ -13,40 +13,49 @@
 #   entry after InRelease
 # - sign + verify succeed with the matching allowed-signers entry; verify
 #   fails for a tampered file, a tampered manifest, an extra file and a
-#   signature by another key
+#   signature by another key, a duplicate path, a missing InRelease, or an
+#   InRelease published as an immutable object
 #
 # debian-daily-stable.sh fetch-verified-indexes (served by a local HTTP
 # server so that HTTP status codes are real):
 # - a good signed InRelease and matching indexes are copied into place
 # - a Packages.xz that does not match the signed SHA-256/size fails
-# - an InRelease signed by another key or altered after signing fails
+# - an InRelease signed by another key, altered after signing, or missing
+#   a required index fails
 # - HTTP 404 for InRelease starts from empty indexes and succeeds
 # - HTTP 500 for InRelease fails (no fallback to empty indexes)
 # The oracle is the exit status of each command plus the files it leaves.
-# The only wait is for the local HTTP server to report its port.
+# Poll the local HTTP server's readiness file for up to 10 seconds; the
+# helper writes it after binding so requests cannot race the listener.
 set -eu
 
 test_dir=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
+srcdir="$test_dir" bash "$test_dir/diag.sh" solaris-subset-skip "${0##*/}"
 repo_dir="$test_dir/.."
 publication="$repo_dir/devtools/release/archive-publication.sh"
 helper="$repo_dir/devtools/release/debian-daily-stable.sh"
 work_dir="$(pwd)/daily-stable-archive-publication-work.$$"
 
-for tool in sha256sum ssh-keygen gpg gpgv curl python3 awk; do
+for tool in sha256sum ssh-keygen gpg gpgconf gpgv curl python3 awk; do
 	command -v "$tool" >/dev/null 2>&1 || exit 77
 done
 
 server_pid=""
 gnupg_dir=""
 cleanup() {
-	[ -z "$server_pid" ] || kill "$server_pid" 2>/dev/null || true
+	if [ -n "$server_pid" ]; then
+		kill "$server_pid" 2>/dev/null || true
+		wait "$server_pid" 2>/dev/null || true
+	fi
 	if [ -n "$gnupg_dir" ]; then
-		GNUPGHOME="$gnupg_dir" gpgconf --kill all >/dev/null 2>&1 || true
+		GNUPGHOME="$gnupg_dir/good" gpgconf --kill all >/dev/null 2>&1 || true
+		GNUPGHOME="$gnupg_dir/other" gpgconf --kill all >/dev/null 2>&1 || true
 		rm -rf -- "$gnupg_dir"
 	fi
 	rm -rf -- "$work_dir"
 }
-trap cleanup EXIT HUP INT TERM
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 mkdir -p "$work_dir"
 
 fail() {
@@ -160,7 +169,7 @@ if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
 	fail "verify accepted a tampered file"
 fi
 tamper_copy
-sed -i 's/^run 123456 2$/run 123456 3/' "$work_dir/t/manifest"
+sed 's/^run 123456 2$/run 123456 3/' "$bundle/manifest" >"$work_dir/t/manifest"
 if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
 	fail "verify accepted a tampered manifest"
 fi
@@ -180,18 +189,39 @@ pool_sha="$(sha "$work_dir/pool.deb")"
 tamper_copy
 mkdir -p "$work_dir/t/files/other"
 cp "$work_dir/pool.deb" "$work_dir/t/files/other/x.deb"
-sed -i "4a immutable $pool_sha 5 other/x.deb" "$work_dir/t/manifest"
+awk -v entry="immutable $pool_sha 5 other/x.deb" \
+	'{ print } NR == 4 { print entry }' "$bundle/manifest" >"$work_dir/t/manifest"
 "$publication" sign "$work_dir/t" "$work_dir/key"
 if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
 	fail "verify accepted a path outside the prefix"
 fi
 tamper_copy
 cp "$work_dir/pool.deb" "$work_dir/t/files/$prefix/pool/main/r/rsyslog/late.deb"
-sed -i "\$i immutable $pool_sha 5 $prefix/pool/main/r/rsyslog/late.deb" \
-	"$work_dir/t/manifest"
+awk -v entry="immutable $pool_sha 5 $prefix/pool/main/r/rsyslog/late.deb" \
+	'$4 ~ /\/InRelease$/ { print entry } { print }' "$bundle/manifest" >"$work_dir/t/manifest"
 "$publication" sign "$work_dir/t" "$work_dir/key"
 if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
 	fail "verify accepted an immutable entry after metadata"
+fi
+
+tamper_copy
+awk '{ print } NR == 5 { print }' "$bundle/manifest" >"$work_dir/t/manifest"
+"$publication" sign "$work_dir/t" "$work_dir/key"
+if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+	fail "verify accepted a duplicate path"
+fi
+tamper_copy
+sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
+rm "$work_dir/t/files/$prefix/dists/trixie/InRelease"
+"$publication" sign "$work_dir/t" "$work_dir/key"
+if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+	fail "verify accepted a bundle missing its terminal InRelease"
+fi
+tamper_copy
+sed 's/^metadata \(.*\/InRelease\)$/immutable \1/' "$bundle/manifest" >"$work_dir/t/manifest"
+"$publication" sign "$work_dir/t" "$work_dir/key"
+if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+	fail "verify accepted InRelease as an immutable entry"
 fi
 
 # ---- fetch-verified-indexes ---------------------------------------------
@@ -233,7 +263,11 @@ make_repo tampered "$GNUPGHOME"
 printf 'evil\n' >"$www/tampered/dists/trixie/main/binary-amd64/Packages.xz"
 make_repo foreign "$other_home"
 make_repo altered "$GNUPGHOME"
-sed -i 's/^Origin: test$/Origin: evil/' "$www/altered/dists/trixie/InRelease"
+sed 's/^Origin: test$/Origin: evil/' "$www/altered/dists/trixie/InRelease" >"$work_dir/altered-release"
+mv "$work_dir/altered-release" "$www/altered/dists/trixie/InRelease"
+make_repo missing-index "$GNUPGHOME"
+sed '/ main\/source\/Sources.xz$/d' "$www/missing-index/dists/trixie/Release" >"$work_dir/missing-release"
+gpg --batch --yes --clearsign --output "$www/missing-index/dists/trixie/InRelease" "$work_dir/missing-release"
 mkdir -p "$www/empty"
 
 # Serve $www; any path below /error/ answers HTTP 500.
@@ -283,7 +317,7 @@ for f in main/binary-amd64/Packages.xz main/source/Sources.xz; do
 	cmp -s "$www/good/dists/trixie/$f" "$work_dir/apt-repo/dists/trixie/$f" ||
 		fail "fetch did not copy $f"
 done
-for name in tampered foreign altered error; do
+for name in tampered foreign altered missing-index error; do
 	if fetch "$name" >/dev/null 2>&1; then
 		fail "fetch accepted the '$name' archive"
 	fi

@@ -27,8 +27,8 @@
 #   archive-publication.sh verify <dir> <allowed-signers-file>
 #
 # <path> for "add" is relative to <prefix>.  Add all immutable files first,
-# then the metadata, signed APT/RPM/APK metadata last (InRelease last of
-# all).  Nothing can be added after an InRelease entry.
+# then the metadata. APT v1 bundles require InRelease as the last metadata
+# entry. Nothing can be added after it.
 #
 # Bundle layout:
 #   manifest      rsyslog-archive-publication v1
@@ -153,7 +153,7 @@ cmd_sign() {
 cmd_verify() {
 	[ "$#" -eq 2 ] || die "usage: verify <dir> <allowed-signers-file>"
 	local dir="$1" signers="$2"
-	local manifest="$dir/manifest" listed actual
+	local manifest="$dir/manifest" listed actual duplicate
 
 	if [ ! -f "$manifest" ] || [ -L "$manifest" ]; then
 		die "missing manifest"
@@ -168,8 +168,11 @@ cmd_verify() {
 	! grep -q $'\r' "$manifest" || die "manifest contains CR characters"
 
 	local line_no=0 line prefix="" kind sha size path seen_metadata=0
+	# awk keeps duplicate tracking independent of the Bash version.
+	duplicate="$(awk 'NR > 4 && seen[$4]++ { print $4; exit }' "$manifest")"
+	[ -z "$duplicate" ] || die "duplicate path: $duplicate"
+
 	local seen_inrelease=0 got_sha got_size
-	declare -A seen=()
 	while IFS= read -r line; do
 		line_no=$((line_no + 1))
 		case "$line_no" in
@@ -207,8 +210,6 @@ cmd_verify() {
 			"$prefix"/*) ;;
 			*) die "path outside prefix $prefix: $path" ;;
 		esac
-		[ -z "${seen[$path]:-}" ] || die "duplicate path: $path"
-		seen[$path]=1
 		[ "$seen_inrelease" -eq 0 ] || die "entry after InRelease: $path"
 		if [ "$kind" = metadata ]; then
 			seen_metadata=1
@@ -216,7 +217,10 @@ cmd_verify() {
 			die "immutable entry after metadata: $path"
 		fi
 		case "$path" in
-			InRelease|*/InRelease) seen_inrelease=1 ;;
+			*/InRelease)
+				[ "$kind" = metadata ] || die "InRelease must be metadata: $path"
+				seen_inrelease=1
+				;;
 		esac
 		if [ ! -f "$dir/files/$path" ] || [ -L "$dir/files/$path" ]; then
 			die "missing file: files/$path"
@@ -227,8 +231,9 @@ cmd_verify() {
 		[ "$got_sha" = "$sha" ] || die "sha256 mismatch: $path"
 	done <"$manifest"
 	[ "$line_no" -gt 4 ] || die "manifest lists no files"
+	[ "$seen_inrelease" -eq 1 ] || die "manifest has no terminal InRelease"
 
-	listed="${#seen[@]}"
+	listed="$((line_no - 4))"
 	actual="$(find "$dir/files" -type f | wc -l | tr -d ' ')"
 	[ "$listed" = "$actual" ] || die "files/ holds files not in the manifest"
 	[ -z "$(find "$dir/files" ! -type f ! -type d -print -quit)" ] ||
