@@ -28,14 +28,21 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-This is the message format that will be sent to ClickHouse. The resulting
-string needs to be a valid INSERT Query, otherwise ClickHouse will return an
-error. Custom INSERT templates must enable ``option.sql="on"`` in RainerScript.
+This is the message format that will be sent to ClickHouse. With the default
+``format="values"``, the rendered string must be an INSERT statement.
+For ``format="values"``, custom INSERT templates must enable
+``option.sql="on"`` in RainerScript.
 ClickHouse accepts backslash escape sequences inside string literals, so
 ``option.stdsql="on"`` is not safe for this module. These are template-level
 options, not ``omclickhouse`` action parameters. Only string and list
 templates apply SQL escaping to rendered fields; plugin and subtree templates
-are rejected for this action even if they declare ``option.sql="on"``. Defaults to:
+are rejected for this action even if they declare ``option.sql="on"``.
+
+With ``format="jsoneachrow"``, the template renders one JSON object per
+event. Use a list template with ``option.jsonf="on"``, or escape each field
+with a property option such as ``:::json``. ``option.stdsql``,
+``option.sql``, and ``option.json`` are rejected. The module puts the INSERT
+in the request URL. Defaults to:
 
 .. note::
 
