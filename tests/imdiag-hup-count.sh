@@ -11,7 +11,10 @@
 #   returns only after its HUP finished, so the count is exact, not racy);
 # - with no HUP pending, "AwaitHUPCount <current> 200" must report a timeout
 #   error after about 200 ms instead of claiming success;
-# - a missing or non-numeric count must be rejected with an error.
+# - a missing, non-numeric or over-long count, a zero timeout and extra
+#   arguments must be rejected with an error.
+# imdiag answers these cases with "ERROR:" lines (not "imdiag::error"), so
+# diagtalker exits 0 and the replies can be checked here.
 # The 200 ms timeout only bounds the negative case; no success depends on it.
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -48,7 +51,8 @@ case "$reply" in
 	;;
 esac
 
-for bad in "AwaitHUPCount" "AwaitHUPCount abc" "AwaitHUPCount 1 0"; do
+for bad in "AwaitHUPCount" "AwaitHUPCount abc" "AwaitHUPCount 1 0" "AwaitHUPCount 1 100 7" \
+	"AwaitHUPCount 1$(printf '0%.0s' $(seq 1 80))"; do
 	reply=$(ask "$bad")
 	case "$reply" in
 	*"ERROR:"*) ;;

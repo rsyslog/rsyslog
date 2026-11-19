@@ -502,13 +502,39 @@ finalize_it:
 }
 
 /* Report the number of fully processed HUPs. Tests read it before sending
- * SIGHUP and then use "awaitHUPCount" with that value.
+ * SIGHUP and then use "awaitHUPCount" with that value. If a HUP is still
+ * pending or running, wait (up to 60 s) until it is done first, so the
+ * reported baseline already includes it and a later change of the counter can
+ * only come from a HUP requested after this call.
  */
 static rsRetVal get_hup_count(tcps_sess_t *const sess) {
+    long waited_ms = 0;
     DEFiRet;
-    CHKiRet(sendResponse(sess, "%d\n", get_hup_completed_count()));
+    while (get_bHadHUP() && waited_ms < 60000) {
+        srSleep(0, 10000);
+        waited_ms += 10;
+    }
+    if (get_bHadHUP()) {
+        CHKiRet(sendResponse(sess, "ERROR: a HUP is still pending after 60000 ms\n"));
+    } else {
+        CHKiRet(sendResponse(sess, "%d\n", get_hup_completed_count()));
+    }
 finalize_it:
     RETiRet;
+}
+
+/* parse one non-negative decimal argument; returns 0 on success, -1 if the
+ * word is not a complete number or was truncated by getFirstWord().
+ */
+static int parse_long_arg(uchar **cmd, long *val) {
+    uchar word[64];
+    char *end;
+    getFirstWord(cmd, word, sizeof(word), TO_LOWERCASE);
+    if (word[0] == '\0' || strlen((char *)word) >= sizeof(word) - 1) return -1;
+    errno = 0;
+    *val = strtol((char *)word, &end, 10);
+    if (*end != '\0' || errno != 0 || *val < 0) return -1;
+    return 0;
 }
 
 /* Wait until a HUP that started after the caller read <old-count> has fully
@@ -518,34 +544,33 @@ finalize_it:
  * arguments, so the caller can fail the test instead of guessing.
  */
 static rsRetVal await_hup_count(uchar *cmd, tcps_sess_t *const sess) {
-    uchar word[64];
-    char *end;
     long old_count;
     long timeout_ms = 60000;
     long waited_ms = 0;
     int count;
     DEFiRet;
 
-    getFirstWord(&cmd, word, sizeof(word), TO_LOWERCASE);
-    errno = 0;
-    old_count = strtol((char *)word, &end, 10);
-    if (word[0] == '\0' || *end != '\0' || errno != 0 || old_count < 0 || old_count > INT_MAX) {
+    if (parse_long_arg(&cmd, &old_count) != 0 || old_count > INT_MAX) {
         CHKiRet(sendResponse(sess, "ERROR: awaitHUPCount needs the previous HUP count\n"));
         FINALIZE;
     }
-    getFirstWord(&cmd, word, sizeof(word), TO_LOWERCASE);
-    if (word[0] != '\0') {
-        errno = 0;
-        timeout_ms = strtol((char *)word, &end, 10);
-        if (*end != '\0' || errno != 0 || timeout_ms <= 0) {
+    while (*cmd == ' ' || *cmd == '\t') ++cmd;
+    if (*cmd != '\0' && *cmd != '\n' && *cmd != '\r') {
+        if (parse_long_arg(&cmd, &timeout_ms) != 0 || timeout_ms == 0) {
             CHKiRet(sendResponse(sess, "ERROR: invalid awaitHUPCount timeout\n"));
+            FINALIZE;
+        }
+        while (*cmd == ' ' || *cmd == '\t' || *cmd == '\n' || *cmd == '\r') ++cmd;
+        if (*cmd != '\0') {
+            CHKiRet(sendResponse(sess, "ERROR: too many awaitHUPCount arguments\n"));
             FINALIZE;
         }
     }
 
     while ((count = get_hup_completed_count()) == (int)old_count && waited_ms < timeout_ms) {
-        srSleep(0, 10000);
-        waited_ms += 10;
+        const long sleep_ms = (timeout_ms - waited_ms < 10) ? timeout_ms - waited_ms : 10;
+        srSleep(0, (int)(sleep_ms * 1000));
+        waited_ms += sleep_ms;
     }
     if (count == (int)old_count) {
         CHKiRet(sendResponse(sess, "ERROR: timeout after %ld ms waiting for HUP completion, count still %d\n",

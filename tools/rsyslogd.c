@@ -222,8 +222,12 @@ void rsyslogdDoDie(int sig);
 static volatile sig_atomic_t bChildDied = 0;
 static volatile sig_atomic_t bHadHUP = 0;
 static volatile sig_atomic_t bHUPInProgress = 0;
-/* number of HUPs whose processing has finished; written by the main thread only */
+/* number of HUPs whose processing has finished; written by the main thread only.
+ * The mutex orders the counter with the HUP work done before it is increased,
+ * so a reader that sees the new value also sees the HUP's effects.
+ */
 static int hup_completed_count = 0;
+static pthread_mutex_t mut_hup_completed_count = PTHREAD_MUTEX_INITIALIZER;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
 static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
@@ -285,7 +289,11 @@ int get_bHadHUP(void) {
  * into one HUP run and increase the counter by one.
  */
 int get_hup_completed_count(void) {
-    return PREFER_LOAD_INT(&hup_completed_count);
+    int count;
+    pthread_mutex_lock(&mut_hup_completed_count);
+    count = hup_completed_count;
+    pthread_mutex_unlock(&mut_hup_completed_count);
+    return count;
 }
 
 /* we need a pointer to the conf, because in early startup stage we
@@ -2423,10 +2431,14 @@ static void mainloop(void) {
         }
 
         if (PREFER_LOAD_INT(&bHadHUP)) {
-            PREFER_STORE_INT(&bHadHUP, 0);
+            /* set "in progress" before clearing the request so that
+             * get_bHadHUP() never sees both flags clear while a HUP runs */
             PREFER_STORE_INT(&bHUPInProgress, 1);
+            PREFER_STORE_INT(&bHadHUP, 0);
             doHUP();
-            PREFER_STORE_INT(&hup_completed_count, PREFER_LOAD_INT(&hup_completed_count) + 1);
+            pthread_mutex_lock(&mut_hup_completed_count);
+            ++hup_completed_count;
+            pthread_mutex_unlock(&mut_hup_completed_count);
             PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 
