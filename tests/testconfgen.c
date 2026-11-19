@@ -53,9 +53,13 @@ int main(int argc, char *argv[]) {
     n = 0;
     while (!feof(stdin)) {
         nscanned = scanf("%s %[^\n]s\n", iname, istmt);
-        if (nscanned == EOF)
+        if (nscanned == EOF) {
+            if (ferror(stdin)) {
+                perror("testconfgen: error reading stdin");
+                ret = 1;
+            }
             break;
-        else if (nscanned != 2) {
+        } else if (nscanned != 2) {
             fprintf(stderr, "problem scanning entry %d, scanned %d\n", n, nscanned);
             ret = 1;
             break;
