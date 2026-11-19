@@ -1,0 +1,26 @@
+tests/imklog-internalmsgfacility.sh
+  s_9591331cc7634e::t_979ce1224112c4 3,16-26,29-31
+tests/Makefile.am
+  s_9591331cc7634e::t_979ce1224112c4 23-24,3533-3535
+plugins/AGENTS.md
+  s_9591331cc7634e::t_979ce1224112c4 194,218-222
+  s_9591331cc7634e::t_92ef2cdf623fa1 208
+tests/yaml-imklog-internalmsgfacility.sh
+  s_9591331cc7634e::t_979ce1224112c4 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67fa6a874144f191a55c349ada1b812fa6711175",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
