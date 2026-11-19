@@ -322,7 +322,7 @@ fetch() {
 		trixie main "$fpr" amd64
 }
 
-fetch good >/dev/null 2>&1 || fail "fetch rejected a good archive"
+fetch good || fail "fetch rejected a good archive"
 for f in main/binary-amd64/Packages.xz main/source/Sources.xz; do
 	cmp -s "$www/good/dists/trixie/$f" "$work_dir/apt-repo/dists/trixie/$f" ||
 		fail "fetch did not copy $f"
@@ -335,7 +335,7 @@ for name in tampered foreign altered missing-index error; do
 		fail "fetch of the '$name' archive left index files behind"
 	fi
 done
-fetch empty >/dev/null 2>&1 || fail "fetch failed on an empty prefix (404)"
+fetch empty || fail "fetch failed on an empty prefix (404)"
 if find "$work_dir/apt-repo" -type f | grep -q .; then
 	fail "fetch of an empty prefix created index files"
 fi
