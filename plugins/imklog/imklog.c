@@ -446,6 +446,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
     CODESTARTfreeCnf;
+    free(pModConf->pszPath);
     free(pModConf->pszBindRuleset);
     free(pModConf->pszRatelimitName);
 ENDfreeCnf

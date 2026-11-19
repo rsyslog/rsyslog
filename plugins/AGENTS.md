@@ -205,3 +205,12 @@ The imbeats TLS listener-rearm and YAML basic tests also keep malformed peer
 arrays disabled while valid Lumberjack events still receive their ACKs. Legacy
 omfwd peer directive failures remain sticky until configuration reset and reject
 TCP actions; the TLS malformed-list tests cover that path in both frontends.
+
+## imklog LogPath coverage
+
+`tests/imklog-logpath-eof.sh` checks that imklog resumes reading when records
+are appended after EOF and logs a single warning. It samples daemon CPU use
+when Linux `/proc/<pid>/stat` is readable. `tests/imklog-logpath-read-error.sh`
+checks that a non-retryable read error ends the input thread. It requires
+Linux `/proc/self/mem` with a successful open and a failing read.
+The `yaml-imklog-logpath-*.sh` companions run the same checks with YAML.

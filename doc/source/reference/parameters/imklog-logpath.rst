@@ -6,6 +6,10 @@
 LogPath
 =======
 
+.. meta::
+   :description: Configure the kernel log path that rsyslog imklog reads.
+   :keywords: rsyslog, imklog, LogPath, kernel log
+
 .. index::
    single: imklog; LogPath
    single: LogPath
@@ -30,6 +34,16 @@ Description
 Defines the path to the kernel log device or file that imklog reads from.
 If this parameter is not set, it defaults to "/proc/kmsg" on Linux and
 "/dev/klog" on other platforms.
+
+The kernel log devices block until new messages arrive. If the configured
+path is something else, for example a regular file or a FIFO whose writer
+has closed it, reading can report end of file. In that case imklog logs a
+warning once and then checks for new data once per second.
+
+If reading fails with a non-retryable error, imklog logs the error, closes
+the path and stops reading until rsyslogd is restarted. With
+``global(inputStartupPolicy="require-all")``, rsyslogd terminates in this
+case.
 
 Module usage
 ------------
