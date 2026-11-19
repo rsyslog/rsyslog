@@ -1,0 +1,33 @@
+.github/workflows/imtcp_session_fuzz.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 53-61,127-135
+.github/workflows/run_checks.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 325-333,403-411,472-480,774-782,871-879,1320-1328,1399-1407,1592-1600,1932-1940,1980-1983
+.github/workflows/impstats_push_victoriametrics.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 39-47
+.github/workflows/imbeats.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 39-47
+.github/workflows/syslog_parser_fuzz.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 69-77,134-142
+.github/PRIVATE_CI_TIMEOUT_POLICY.md
+  s_9591331cc7634e::t_57fa6f788ee92e 3-7,20-21
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 24-32
+.github/workflows/container_build.yml
+  s_9591331cc7634e::t_57fa6f788ee92e 27-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcec8724306d1c81de574acdf59ecf3fbe200465",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
