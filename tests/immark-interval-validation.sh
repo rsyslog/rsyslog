@@ -5,7 +5,8 @@
 # Default and positive values must validate; zero must retain its rejection.
 # Check those controls before negative values so a module/config setup failure
 # cannot masquerade as the regression. Require the module-specific diagnostic
-# as well as rejection. The YAML wrapper tests the same module parameter;
+# as well as rejection. Capture stderr because -N1 exits before any configured
+# output can run. The YAML wrapper tests the same module parameter;
 # RainerScript also covers the legacy directive. No timing oracle is needed.
 . ${srcdir:=.}/diag.sh init
 require_plugin immark
@@ -42,8 +43,7 @@ $MarkMessagePeriod '$value
         error_exit 1 "$mode interval=$value: expected validation status $expected, got $status"
     fi
     if [ "$expected" -ne 0 ]; then
-        grep -F 'immark: mark message period' "${RSYSLOG_DYNNAME}.${mode}.${value}.log" >/dev/null ||
-            error_exit 1 "missing immark interval validation diagnostic"
+        content_check "immark: mark message period" "${RSYSLOG_DYNNAME}.${mode}.${value}.log"
     fi
     echo "$mode interval=$value: PASS"
 }
