@@ -25,8 +25,8 @@
 # - HTTP 404 for InRelease starts from empty indexes and succeeds
 # - HTTP 500 for InRelease fails (no fallback to empty indexes)
 # The oracle is the exit status of each command plus the files it leaves.
-# Poll the local HTTP server's readiness file for up to 10 seconds; the
-# helper writes it after binding so requests cannot race the listener.
+# The loopback server writes its port after listening. Poll that file and
+# allow up to 60 seconds for Python startup on loaded runners.
 set -eu
 
 test_dir=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
@@ -274,6 +274,8 @@ mkdir -p "$www/empty"
 cat >"$work_dir/server.py" <<'EOF'
 import functools
 import http.server
+import os
+import socketserver
 import sys
 
 
@@ -289,20 +291,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 handler = functools.partial(Handler, directory=sys.argv[1])
-server = http.server.HTTPServer(("127.0.0.1", 0), handler)
+# We only need a loopback socket. HTTPServer resolves a hostname when it
+# binds, although the handler serves this fixture without needing one.
+server = socketserver.TCPServer(("127.0.0.1", 0), handler)
 with open(sys.argv[2] + ".tmp", "w") as stream:
     stream.write(str(server.server_address[1]))
-import os
 os.rename(sys.argv[2] + ".tmp", sys.argv[2])
 server.serve_forever()
 EOF
-python3 -I "$work_dir/server.py" "$www" "$work_dir/port" &
+python3 -I "$work_dir/server.py" "$www" "$work_dir/port" >"$work_dir/server.log" 2>&1 &
 server_pid=$!
-for _ in $(seq 1 100); do
-	[ -s "$work_dir/port" ] && break
+server_deadline=$((SECONDS + 60))
+while [ ! -s "$work_dir/port" ]; do
+	if ! kill -0 "$server_pid" 2>/dev/null; then
+		cat "$work_dir/server.log" >&2
+		fail "test HTTP server exited before reporting its port"
+	fi
+	if [ "$SECONDS" -ge "$server_deadline" ]; then
+		cat "$work_dir/server.log" >&2
+		fail "test HTTP server did not report its port within 60 seconds"
+	fi
 	sleep 0.1
 done
-[ -s "$work_dir/port" ] || fail "test HTTP server did not start"
 base="http://127.0.0.1:$(cat "$work_dir/port")"
 export ARCHIVE_FETCH_RETRIES=0
 
