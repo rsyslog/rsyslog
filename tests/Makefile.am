@@ -554,6 +554,7 @@ TESTS_DEFAULT = \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
+	rscript-parse-error-noleak.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \
 	rscript_privdropgroup.sh \
