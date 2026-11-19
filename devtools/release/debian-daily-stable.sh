@@ -520,6 +520,13 @@ file_matches_entry() {
   [ "$actual" = "$entry" ]
 }
 
+# Extract signed Release data into a private temporary file. Redirect stdout
+# because affected versions of gpgv leave named output in a .part file
+# even after successful verification (GnuPG T8540).
+verify_release_text() {
+  gpgv --keyring "$1" --output - "$2" > "$3" && [ -s "$3" ]
+}
+
 # Read the current indexes of a published archive into <repo-dir> so that
 # generate-repo can merge the new build into them.  The published InRelease
 # must verify with the archive signing key from the local GPG keyring, and
@@ -584,9 +591,8 @@ cmd_fetch_verified_indexes() (
     *) die "cannot read the current archive state from $repo_url" ;;
   esac
 
-  gpgv --keyring "$tmp_dir/keyring.gpg" --output "$tmp_dir/Release" \
-    "$tmp_dir/InRelease" ||
-    die "published InRelease does not verify with archive key $expected_key_fpr"
+  verify_release_text "$tmp_dir/keyring.gpg" "$tmp_dir/InRelease" "$tmp_dir/Release" ||
+    die "could not verify and extract published InRelease with archive key $expected_key_fpr"
   awk -v suite="$suite" '$1 == "Codename:" && $2 == suite { found = 1 }
     /^$/ { exit } END { exit !found }' "$tmp_dir/Release" ||
     die "published InRelease is not for suite $suite"
@@ -676,9 +682,8 @@ cmd_verify_repo() (
     die "published signing key fingerprint $actual_key_fpr does not match expected $expected_key_fpr"
   gpgv --keyring "$tmp_dir/repo-key.gpg" "$tmp_dir/InRelease"
   if [ "${ARCHIVE_REQUIRE_VALID_UNTIL:-false}" = true ]; then
-    gpgv --keyring "$tmp_dir/repo-key.gpg" --output "$tmp_dir/Release" \
-      "$tmp_dir/InRelease" 2>/dev/null ||
-      die "InRelease signature does not verify"
+    verify_release_text "$tmp_dir/repo-key.gpg" "$tmp_dir/InRelease" "$tmp_dir/Release" 2>/dev/null ||
+      die "could not extract verified Release text from InRelease"
     check_valid_until "$tmp_dir/Release"
   fi
 
