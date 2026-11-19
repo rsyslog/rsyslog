@@ -501,6 +501,89 @@ finalize_it:
     RETiRet;
 }
 
+/* Report the number of fully processed HUPs. Tests read it before sending
+ * SIGHUP and then use "awaitHUPCount" with that value. If a HUP is still
+ * pending or running, wait (up to 60 s) until it is done first, so the
+ * reported baseline already includes it and a later change of the counter can
+ * only come from a HUP requested after this call.
+ */
+static rsRetVal get_hup_count(tcps_sess_t *const sess) {
+    long waited_ms = 0;
+    DEFiRet;
+    while (get_bHadHUP() && waited_ms < 60000) {
+        srSleep(0, 10000);
+        waited_ms += 10;
+    }
+    if (get_bHadHUP()) {
+        CHKiRet(sendResponse(sess, "ERROR: a HUP is still pending after 60000 ms\n"));
+    } else {
+        CHKiRet(sendResponse(sess, "%d\n", get_hup_completed_count()));
+    }
+finalize_it:
+    RETiRet;
+}
+
+/* parse one non-negative decimal argument; returns 0 on success, -1 if the
+ * word is not a complete number or was truncated by getFirstWord().
+ */
+static int parse_long_arg(uchar **cmd, long *val) {
+    uchar word[64];
+    char *end;
+    getFirstWord(cmd, word, sizeof(word), TO_LOWERCASE);
+    if (word[0] == '\0' || strlen((char *)word) >= sizeof(word) - 1) return -1;
+    errno = 0;
+    *val = strtol((char *)word, &end, 10);
+    if (*end != '\0' || errno != 0 || *val < 0) return -1;
+    return 0;
+}
+
+/* Wait until a HUP that started after the caller read <old-count> has fully
+ * completed, i.e. until the completed-HUP counter differs from <old-count>.
+ * Syntax: awaitHUPCount <old-count> [timeout-ms]; default timeout 60000 ms.
+ * Replies "HUP completed ..." on success and "ERROR: ..." on timeout or bad
+ * arguments, so the caller can fail the test instead of guessing.
+ */
+static rsRetVal await_hup_count(uchar *cmd, tcps_sess_t *const sess) {
+    long old_count;
+    long timeout_ms = 60000;
+    long waited_ms = 0;
+    int count;
+    DEFiRet;
+
+    if (parse_long_arg(&cmd, &old_count) != 0 || old_count > INT_MAX) {
+        CHKiRet(sendResponse(sess, "ERROR: awaitHUPCount needs the previous HUP count\n"));
+        FINALIZE;
+    }
+    while (*cmd == ' ' || *cmd == '\t') ++cmd;
+    if (*cmd != '\0' && *cmd != '\n' && *cmd != '\r') {
+        if (parse_long_arg(&cmd, &timeout_ms) != 0 || timeout_ms == 0) {
+            CHKiRet(sendResponse(sess, "ERROR: invalid awaitHUPCount timeout\n"));
+            FINALIZE;
+        }
+        while (*cmd == ' ' || *cmd == '\t' || *cmd == '\n' || *cmd == '\r') ++cmd;
+        if (*cmd != '\0') {
+            CHKiRet(sendResponse(sess, "ERROR: too many awaitHUPCount arguments\n"));
+            FINALIZE;
+        }
+    }
+
+    while ((count = get_hup_completed_count()) == (int)old_count && waited_ms < timeout_ms) {
+        const long sleep_ms = (timeout_ms - waited_ms < 10) ? timeout_ms - waited_ms : 10;
+        srSleep(0, (int)(sleep_ms * 1000));
+        waited_ms += sleep_ms;
+    }
+    if (count == (int)old_count) {
+        CHKiRet(sendResponse(sess, "ERROR: timeout after %ld ms waiting for HUP completion, count still %d\n",
+                             timeout_ms, count));
+    } else {
+        CHKiRet(sendResponse(sess, "HUP completed, count %d\n", count));
+    }
+    DBGPRINTF("imdiag: awaitHUPCount %ld done, count now %d\n", old_count, count);
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal enableDebug(tcps_sess_t *pSess) {
     DEFiRet;
 
@@ -1396,6 +1479,10 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
         CHKiRet(awaitHUPComplete(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("gethupcount"))) {
+        CHKiRet(get_hup_count(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcount"))) {
+        CHKiRet(await_hup_count(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {
