@@ -120,6 +120,7 @@ typedef struct instanceConf_s {
     uchar *pszStrmDrvrCertFile;
     uchar *gnutlsPriorityString;
     permittedPeers_t *pPermPeersRoot;
+    rsRetVal permittedPeersResult;
     int iStrmDrvrExtendedCertCheck;
     int iStrmDrvrSANPreference;
     int iStrmTlsVerifyDepth;
@@ -2132,6 +2133,7 @@ BEGINnewInpInst
                 CHKiRet(setCnfString(&peer, pvals[i].val.d.ar->arr[j]));
                 iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                inst->permittedPeersResult = iRet;
                 CHKiRet(iRet);
             }
         } else if (!strcmp(inppblk.descr[i].name, "keepalive")) {
@@ -2277,6 +2279,7 @@ BEGINrunInput
     instanceConf_t *inst;
     CODESTARTrunInput;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        if (inst->permittedPeersResult != RS_RET_OK) continue;
         clearInstanceShuttingDown(inst);
         pthread_mutex_lock(&inst->mutWork);
         inst->workShutdown = 0;
@@ -2308,6 +2311,7 @@ BEGINwillRun
     CODESTARTwillRun;
     if (runConf->globals.bRequireAllInputs) {
         for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+            CHKiRet(inst->permittedPeersResult);
             CHKiRet(buildListeners(inst));
             if (inst->listener_count == 0) ABORT_FINALIZE(RS_RET_NO_LISTNERS);
             if (pthread_create(&inst->listener_tid, NULL, listenerThread, inst) != 0) {

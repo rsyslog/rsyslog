@@ -191,3 +191,17 @@ arithmetic in the receive path.
 `tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
 companion exercise malformed PRI and short/variable-width timestamps through
 real Unix sockets, checking raw-message preservation and tag/body cursors.
+
+## Permitted-peer construction coverage
+
+`tests/tls-permittedpeer-invalid.sh` checks malformed module and omfwd peer
+lists. `tests/imtcp-permittedpeer-invalid-input.sh` and
+`tests/yaml-tls-permittedpeer-invalid.sh` keep invalid input overrides
+disabled during best-effort startup, including a partially compiled list, while
+a healthy listener continues to receive. Plain and wildcard many-connection
+TLS controls exercise immutable matching under sanitizer lanes.
+
+The imbeats TLS listener-rearm and YAML basic tests also keep malformed peer
+arrays disabled while valid Lumberjack events still receive their ACKs. Legacy
+omfwd peer directive failures remain sticky until configuration reset and reject
+TCP actions; the TLS malformed-list tests cover that path in both frontends.

@@ -28,6 +28,8 @@ skip pure-disk-queue-*
 skip *tls*
 skip *gtls*
 skip *ossl*
+# TLS malformed-peer input coverage has no TLS token in its basename.
+skip imtcp-permittedpeer-invalid-input.sh
 
 # zlib/zstd writers (about 320 s) and sender/receiver round trips (about 300 s).
 skip gzipwr_*

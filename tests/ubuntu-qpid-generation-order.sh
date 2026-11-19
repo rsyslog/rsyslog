@@ -3,7 +3,8 @@
 # Verify the actual Jammy/Noble helpers complete generated artifacts before
 # parallel consumers and preserve configure/build/install sequencing. This is
 # a deterministic contract test with build-tool adapters, not a Qpid race
-# reproduction. Packaging helpers are not shipped in every source tarball.
+# reproduction. Also verify checked archive reuse and reject corrupt fallback
+# downloads. Packaging helpers are not shipped in every source tarball.
 set -eu
 python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 srcdir=${srcdir:-.}

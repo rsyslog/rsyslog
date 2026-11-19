@@ -1,7 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Verify YAML configuration accepts a basic imbeats event and preserves JSON
-# fields, reserved metadata, and the cumulative ACK.
+# fields, reserved metadata, and the cumulative ACK. Under default best-effort
+# startup, malformed peer arrays must not publish listener port files. A valid
+# event/ACK plus synchronized shutdown makes absence a deterministic oracle.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 
@@ -15,6 +17,14 @@ add_yaml_conf '    type: string'
 add_yaml_conf '    string: "%msg%|%$!message%|%$!metadata!imbeats!sequence%\n"'
 add_yaml_conf ''
 add_yaml_conf 'inputs:'
+add_yaml_conf '  - type: imbeats'
+add_yaml_conf '    port: "0"'
+add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.invalid-first.port\""
+add_yaml_conf '    PermittedPeer: ["bad*middle.invalid"]'
+add_yaml_conf '  - type: imbeats'
+add_yaml_conf '    port: "0"'
+add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.invalid-tail.port\""
+add_yaml_conf '    PermittedPeer: ["valid.example.com", "*.valid.bad*middle"]'
 add_yaml_conf '  - type: imbeats'
 add_yaml_conf '    port: "0"'
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.imbeats.port\""
@@ -54,4 +64,10 @@ wait_shutdown
 EXPECTED='{"message":"yaml"}|yaml|1'
 cmp_exact
 
+for port_file in "$RSYSLOG_DYNNAME.invalid-first.port" "$RSYSLOG_DYNNAME.invalid-tail.port"; do
+    if [ -e "$port_file" ]; then
+        echo "invalid imbeats permitted-peer input activated: $port_file"
+        error_exit 1
+    fi
+done
 exit_test
