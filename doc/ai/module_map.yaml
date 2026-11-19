@@ -168,6 +168,22 @@ runtime_tcpsrv:
     - imtcp sessions own independent decompressor state.
     - A finite zstd aggregate-window limit uses a listener-local 64-bit atomic reservation counter; only platforms without 64-bit atomics use the helper-mutex fallback.
 
+runtime_config_lifecycle:
+  paths:
+    - "runtime/rsconf.c"
+    - "runtime/rsconf.h"
+    - "runtime/lookup.c"
+    - "runtime/lookup.h"
+    - "runtime/outchannel.c"
+    - "runtime/outchannel.h"
+    - "runtime/perctile_stats.c"
+    - "runtime/perctile_stats.h"
+  requires_serialization: true
+  notes:
+    - activate() runs once per process; runConf is set exactly once and there is no in-process config replacement on HUP yet.
+    - lookupDestroyCnf, ochDeleteAll and perctileBucketsDestruct take the rsconf_t that owns the objects and free only that config's tables, outchannels and buckets; they never read runConf. Callers must ensure no worker can still reach that config.
+    - A worker's actWrkrInfo array is sized at worker creation; every scan must stay below wti->n_act_wrkr_info, not the current global action count.
+
 runtime_msg:
   paths: ["runtime/msg.c", "runtime/msg.h"]
   requires_serialization: true

@@ -493,8 +493,8 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     freeCnf(pThis);
     tplDeleteAll(pThis);
     dynstats_destroyAllBuckets(pThis);
-    perctileBucketsDestruct();
-    ochDeleteAll();
+    perctileBucketsDestruct(pThis);
+    ochDeleteAll(pThis);
     freeTimezones(pThis);
     parser.DestructParserList(&pThis->parsers.pDfltParsLst);
     parser.destroyMasterParserList(pThis->parsers.pParsLstRoot);
@@ -512,7 +512,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     stdlog_close(pThis->globals.stdlog_hdl);
     free(pThis->globals.stdlog_chanspec);
 #endif
-    lookupDestroyCnf();
+    lookupDestroyCnf(pThis);
     freeActionNames(pThis);
     llDestroy(&(pThis->rulesets.llRulesets));
     ratelimit_cfgsDestruct(&pThis->ratelimit_cfgs);
@@ -1192,17 +1192,6 @@ static rsRetVal loadMainQueue(void) {
     /* create message queue */
     iRet = createMainQueue(&loadConf->pMsgQueue, UCHAR_CONSTANT("main Q"),
                            (mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
-    if (iRet == RS_RET_OK) {
-        if (runConf != NULL) { /* dynamic config reload */
-            int areEqual = queuesEqual(loadConf->pMsgQueue, runConf->pMsgQueue);
-            DBGPRINTF("Comparison of old and new main queues: %d\n", areEqual);
-            if (areEqual) { /* content of the new main queue is the same as it was in previous conf */
-                qqueueDestruct(&loadConf->pMsgQueue);
-                loadConf->pMsgQueue = runConf->pMsgQueue;
-            }
-        }
-    }
-
     if (iRet != RS_RET_OK) {
         /* no queue is fatal, we need to give up in that case... */
         fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
@@ -1247,27 +1236,17 @@ static inline rsRetVal setUmask(int iUmask) {
     return RS_RET_OK;
 }
 
-/* Remove resources from previous config */
-static void cleanupOldCnf(rsconf_t *cnf) {
-    if (cnf == NULL) FINALIZE;
-
-    if (runConf->pMsgQueue != cnf->pMsgQueue) qqueueDestruct(&cnf->pMsgQueue);
-
-finalize_it:
-    return;
-}
-
-
 /* Activate an already-loaded configuration. The configuration will become
- * the new running conf (if successful). Note that in theory this method may
- * be called when there already is a running conf. In practice, the current
- * version of rsyslog does not support this. Future versions probably will.
+ * the new running conf (if successful). This must only be called once per
+ * process: activation is not transactional (runConf is switched first, later
+ * steps can fail without rollback) and it drops privileges. Configuration
+ * reload must not be built on calling activate() a second time.
  * Begun 2011-04-20, rgerhards
  */
 static rsRetVal activate(rsconf_t *cnf) {
     DEFiRet;
-    rsconf_t *runCnfOld = runConf;
 
+    assert(runConf == NULL);
     /* at this point, we "switch" over to the running conf */
     runConf = cnf;
     loadConf = NULL;
@@ -1306,7 +1285,6 @@ static rsRetVal activate(rsconf_t *cnf) {
     qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
     dbgprintf("configuration %p activated\n", cnf);
-    cleanupOldCnf(runCnfOld);
 
 finalize_it:
     RETiRet;

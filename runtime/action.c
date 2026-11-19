@@ -2053,7 +2053,7 @@ void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
     int i;
     action_t *pAction;
 
-    for (i = 0; i < runConf->actions.iActionNbr; ++i) {
+    for (i = 0; i < pWti->n_act_wrkr_info; ++i) {
         pAction = pWti->actWrkrInfo[i].pAction;
         if (pAction == NULL) continue;
         DBGPRINTF(

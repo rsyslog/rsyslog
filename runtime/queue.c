@@ -6499,31 +6499,6 @@ finalize_it:
     RETiRet;
 }
 
-/* return 1 if the content of two qqueue_t structs equal */
-int queuesEqual(qqueue_t *pOld, qqueue_t *pNew) {
-    const qda_lifecycle_config_t old_da = {
-        .engine = pOld->diskQueueType,
-        .auto_upgrade = pOld->diskQueueAutoUpgrade,
-        .idle_timeout = pOld->diskQueueIdleTimeout,
-    };
-    const qda_lifecycle_config_t new_da = {
-        .engine = pNew->diskQueueType,
-        .auto_upgrade = pNew->diskQueueAutoUpgrade,
-        .idle_timeout = pNew->diskQueueIdleTimeout,
-    };
-    return (NUM_EQUALS(qType) && NUM_EQUALS(iMaxQueueSize) && NUM_EQUALS(iDeqBatchSize) &&
-            NUM_EQUALS(iMinDeqBatchSize) && NUM_EQUALS(toMinDeqBatchSize) && NUM_EQUALS(sizeOnDiskMax) &&
-            NUM_EQUALS(iHighWtrMrk) && NUM_EQUALS(iLowWtrMrk) && NUM_EQUALS(iFullDlyMrk) && NUM_EQUALS(iLightDlyMrk) &&
-            NUM_EQUALS(iDiscardMrk) && NUM_EQUALS(iDiscardSeverity) && NUM_EQUALS(iPersistUpdCnt) &&
-            NUM_EQUALS(bSyncQueueFiles) && NUM_EQUALS(iNumWorkerThreads) && NUM_EQUALS(toQShutdown) &&
-            NUM_EQUALS(toActShutdown) && NUM_EQUALS(toEnq) && NUM_EQUALS(toWrkShutdown) &&
-            NUM_EQUALS(iMinMsgsPerWrkr) && NUM_EQUALS(iMaxFileSize) && NUM_EQUALS(bSaveOnShutdown) &&
-            NUM_EQUALS(iDeqSlowdown) && NUM_EQUALS(iDeqtWinFromHr) && NUM_EQUALS(iDeqtWinToHr) &&
-            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(bMutexContentionStats) && NUM_EQUALS(takeFlowCtlFromMsg) &&
-            qdaLifecycleConfigEqual(&old_da, &new_da) && USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
-}
-
-
 /* some simple object access methods
  * Note: the semicolons behind the macros are actually empty declarations. This is
  * a work-around for clang-format's missing understanding of generative macros.

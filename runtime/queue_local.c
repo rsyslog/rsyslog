@@ -596,7 +596,7 @@ static int helperReusable(const wti_t *const worker) {
     if (worker->source_queue != NULL || worker->batch.nElem != 0 || worker->batch.nElemDeq != 0 ||
         worker->batch.storeData != NULL || worker->n_deferred_msgs != 0)
         return 0;
-    for (int i = 0; i < runConf->actions.iActionNbr; ++i) {
+    for (int i = 0; i < worker->n_act_wrkr_info; ++i) {
         const actWrkrInfo_t *const info = &worker->actWrkrInfo[i];
         /* This is a reuse check, never evidence that an interrupted commit
          * delivered its message. The source lease controls that decision. */

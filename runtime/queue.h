@@ -326,7 +326,6 @@ void qqueue_activate_graph_node(qqueue_t *queue);
 rsRetVal qqueue_finalize_graph_node(qqueue_t *queue, uint64_t *global_memory_residual);
 rsRetVal qqueue_shutdown_graph_node(qqueue_t *queue, const struct timespec *graceful, const struct timespec *action);
 void qqueueDoneLoadCnf(void);
-int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
 void qqueueCorrectParams(qqueue_t *pThis);
 
 PROTOTYPEObjClassInit(qqueue);
