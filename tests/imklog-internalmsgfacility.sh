@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # Verify that imklog emits its own messages with the configured
 # internalMsgFacility. LogPath points to a directory: it can be opened,
 # but the read check after startup fails (EISDIR on Linux), so imklog logs
@@ -12,10 +13,22 @@
 require_plugin imklog
 mkdir -p "$RSYSLOG_DYNNAME.klogdir"
 generate_conf
-add_conf '
+if [ "${IMKLOG_INTERNALMSGFACILITY_YAML:-}" = YES ]; then
+	require_yaml_support
+	cat > "$RSYSLOG_DYNNAME.imklog.yaml" <<EOF
+modules:
+  - load: "../plugins/imklog/.libs/imklog"
+    logpath: "$RSYSLOG_DYNNAME.klogdir"
+    internalMsgFacility: local0
+EOF
+	add_conf 'include(file="'${RSYSLOG_DYNNAME}'.imklog.yaml")'
+else
+	add_conf '
 module(load="../plugins/imklog/.libs/imklog" logpath="'$RSYSLOG_DYNNAME.klogdir'"
        internalMsgFacility="local0")
-
+'
+fi
+add_conf '
 template(name="outfmt" type="string" string="%syslogfacility-text%.%syslogseverity-text%\n")
 :msg, contains, "imklog: cannot open kernel log" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '

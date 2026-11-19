@@ -214,3 +214,9 @@ when Linux `/proc/<pid>/stat` is readable. `tests/imklog-logpath-read-error.sh`
 checks that a non-retryable read error ends the input thread. It requires
 Linux `/proc/self/mem` with a successful open and a failing read.
 The `yaml-imklog-logpath-*.sh` companions run the same checks with YAML.
+
+## imklog internal message facility
+
+`tests/imklog-internalmsgfacility.sh` and its YAML companion
+`tests/yaml-imklog-internalmsgfacility.sh` check that an imklog diagnostic
+uses the configured facility and retains its error severity.
