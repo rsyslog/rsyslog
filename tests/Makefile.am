@@ -19,6 +19,9 @@ EXTRA_DIST += $(TESTS_WEEKDAY_RANGE)
 
 TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_PRI_RANGE)
+TESTS_IMKLOG_INTERNALMSGFACILITY = imklog-internalmsgfacility.sh
+TESTS_IMKLOG_INTERNALMSGFACILITY_YAML = yaml-imklog-internalmsgfacility.sh
+EXTRA_DIST += $(TESTS_IMKLOG_INTERNALMSGFACILITY) $(TESTS_IMKLOG_INTERNALMSGFACILITY_YAML)
 
 TESTS_RSCRIPT_NUMERIC_COMPARISON = rscript-numeric-comparison.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_NUMERIC_COMPARISON)
@@ -3524,6 +3527,15 @@ check_PROGRAMS += openssl_shared_curve_probe
 openssl_shared_curve_probe_SOURCES = openssl_shared_curve_probe.c
 openssl_shared_curve_probe_CPPFLAGS = $(OPENSSL_CFLAGS)
 openssl_shared_curve_probe_LDADD = $(OPENSSL_LIBS)
+endif
+
+if ENABLE_IMKLOG
+if ENABLE_IMKLOG_LINUX
+TESTS += $(TESTS_IMKLOG_INTERNALMSGFACILITY)
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMKLOG_INTERNALMSGFACILITY_YAML)
+endif
+endif
 endif
 
 if ENABLE_OMUDPSPOOF

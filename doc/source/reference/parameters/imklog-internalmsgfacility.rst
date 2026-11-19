@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/imklog`.
 :Name: InternalMsgFacility
 :Scope: module
 :Type: facility
-:Default: Linux: "kern"; other platforms: "syslogd"
+:Default: Linux: "kern"; other platforms: "syslog"
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -31,8 +31,19 @@ This parameter sets the facility for messages that are generated internally by i
 imklog generates some messages of itself (e.g. on problems, startup and
 shutdown) and these do not stem from the kernel. Historically, under
 Linux, these too have "kern" facility. Thus, on Linux platforms the
-default is "kern" while on others it is "syslogd". It is recommended to
+default is "kern" while on others it is "syslog". It is recommended to
 not change this setting unless you have a specific reason to do so.
+
+The severity of these messages depends on the event, for example "err"
+for errors. They carry the ``rsyslogd`` tag, not the ``kernel:`` tag of
+kernel messages.
+
+.. note::
+
+   Older releases ignored this setting and always used "kern" for
+   imklog's own messages, on all platforms. On platforms other than
+   Linux, imklog's own messages therefore now use "syslog" by default
+   instead of "kern".
 
 Module usage
 ------------
