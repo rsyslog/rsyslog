@@ -1,0 +1,33 @@
+tests/imklog-logpath-eof.sh
+  s_9591331cc7634e::t_6911f11202b2db 3,8-11,16-26,33,48-49,51-53,59-60
+doc/source/reference/parameters/imklog-logpath.rst
+  s_9591331cc7634e::t_6911f11202b2db 9-12,43-44
+tests/imklog-logpath-read-error.sh
+  s_9591331cc7634e::t_6911f11202b2db 3,9-11,19-29,38
+plugins/AGENTS.md
+  s_9591331cc7634e::t_6911f11202b2db 194,209-216
+tests/Makefile.am
+  s_9591331cc7634e::t_6911f11202b2db 43-46,3796-3798
+tests/yaml-imklog-logpath-read-error.sh
+  s_9591331cc7634e::t_6911f11202b2db 1-4,6
+  s_9591331cc7634e::t_f65c8979e9a0fe 5
+tests/yaml-imklog-logpath-eof.sh
+  s_9591331cc7634e::t_6911f11202b2db 1-4,6
+  s_9591331cc7634e::t_f65c8979e9a0fe 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cfe5a2b28cd13425fa978f0e3fe71c05123374b2",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
