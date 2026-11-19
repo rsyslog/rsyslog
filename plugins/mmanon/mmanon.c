@@ -1032,7 +1032,7 @@ static int num2ipv4(unsigned num, char *str) {
  * \param end length to copy.
  * \param address destination buffer terminated with NUL.
  */
-static void getip(uchar *start, size_t end, char *address) {
+static void getip(const uchar *start, size_t end, char *address) {
     size_t i;
 
     for (i = 0; i < end; i++) {
@@ -2068,15 +2068,9 @@ static int matchesExcludedSubnet(const instanceData *pData, const int family, co
     return 0;
 }
 
-/* Convert the module's split IPv6 integer format into network-order bytes. */
-static void ipv6IntegerToBytes(const struct ipv6_int *ip, uint8_t address[16]) {
-    for (unsigned int i = 0; i < 8; ++i) {
-        const unsigned int shift = (3 - (i % 4)) * 16;
-        const unsigned long long half = i < 4 ? ip->high : ip->low;
-        const uint16_t block = (uint16_t)(half >> shift);
-        address[i * 2] = (uint8_t)(block >> 8);
-        address[i * 2 + 1] = (uint8_t)block;
-    }
+static int matchesExcludedIPv6(const instanceData *pData, const char *address) {
+    struct in6_addr parsed;
+    return inet_pton(AF_INET6, address, &parsed) == 1 && matchesExcludedSubnet(pData, AF_INET6, parsed.s6_addr);
 }
 
 static void ipv4IntegerToBytes(const unsigned int ip, uint8_t address[16]) {
@@ -2098,32 +2092,37 @@ static int shouldSkipExcludedLiteral(const instanceData *pData,
     size_t iplen = 0;
     size_t v4Start = 0;
     char address[INET6_ADDRSTRLEN];
-    uint8_t addressBytes[16] = {0};
 
     if (pData->nExcludeSubnets == 0 || remainingLen <= 0) {
         return 0;
     }
 
     if (syntax_embedded(msg, (size_t)remainingLen, &iplen, &v4Start)) {
-        assert(iplen < sizeof(address));
-        getip((uchar *)msg, iplen, address);
-        struct ipv6_int embeddedIP = {0, 0};
-        embedded2num(address, v4Start, &embeddedIP);
-        ipv6IntegerToBytes(&embeddedIP, addressBytes);
-        unsigned int embeddedIPv4 = ipv42num(address + v4Start);
+        if (iplen >= sizeof(address)) {
+            return 0;
+        }
+        getip(msg, iplen, address);
+        const unsigned int embeddedIPv4 = ipv42num(address + v4Start);
         uint8_t embeddedIPv4Bytes[16] = {0};
         ipv4IntegerToBytes(embeddedIPv4, embeddedIPv4Bytes);
-        if (matchesExcludedSubnet(pData, AF_INET6, addressBytes) ||
-            matchesExcludedSubnet(pData, AF_INET, embeddedIPv4Bytes)) {
+
+        /* Normalize the decimal tail, including leading zeroes, for inet_pton(). */
+        const size_t tailCapacity = sizeof(address) - v4Start;
+        const int tailLen =
+            snprintf(address + v4Start, tailCapacity, "%x:%x", embeddedIPv4 >> 16, embeddedIPv4 & 0xffffu);
+        if (matchesExcludedSubnet(pData, AF_INET, embeddedIPv4Bytes) ||
+            (tailLen > 0 && (size_t)tailLen < tailCapacity && matchesExcludedIPv6(pData, address))) {
             *literalLen = iplen;
             return 1;
         }
+        /* A complete mixed literal owns the exclusion decision. */
+        return 0;
     }
 
     iplen = 0;
     if (syntax_ipv4(msg, (size_t)remainingLen, &iplen)) {
         assert(iplen < sizeof(address));
-        getip((uchar *)msg, iplen, address);
+        getip(msg, iplen, address);
         uint8_t address4Bytes[16] = {0};
         ipv4IntegerToBytes(ipv42num(address), address4Bytes);
         if (matchesExcludedSubnet(pData, AF_INET, address4Bytes)) {
@@ -2134,12 +2133,11 @@ static int shouldSkipExcludedLiteral(const instanceData *pData,
 
     iplen = 0;
     if (syntax_ipv6(msg, (size_t)remainingLen, &iplen)) {
-        assert(iplen < sizeof(address));
-        getip((uchar *)msg, iplen, address);
-        struct ipv6_int ipv6IP = {0, 0};
-        ipv62num(address, iplen, &ipv6IP);
-        ipv6IntegerToBytes(&ipv6IP, addressBytes);
-        if (matchesExcludedSubnet(pData, AF_INET6, addressBytes)) {
+        if (iplen >= sizeof(address)) {
+            return 0;
+        }
+        getip(msg, iplen, address);
+        if (matchesExcludedIPv6(pData, address)) {
             *literalLen = iplen;
             return 1;
         }
