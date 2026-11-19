@@ -191,3 +191,11 @@ arithmetic in the receive path.
 `tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
 companion exercise malformed PRI and short/variable-width timestamps through
 real Unix sockets, checking raw-message preservation and tag/body cursors.
+
+## immark interval validation
+
+`tests/immark-interval-validation.sh` uses configuration-validation mode only
+(`-N1`) to check positive/default periods, zero rejection, and negative-period
+rejection through modern and legacy syntax. The YAML companion
+`tests/yaml-immark-interval-validation.sh` checks the module parameter through
+that frontend. Neither regression starts a negative-period input thread.
