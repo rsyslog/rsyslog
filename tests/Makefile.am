@@ -68,6 +68,7 @@ TESTS_RELEASE_PACKAGING = \
 	rpm-baseline-patch-policy.sh \
 	daily-stable-package-drift.sh \
 	daily-stable-archive-store.sh \
+	daily-stable-archive-publication.sh \
 	daily-stable-failure-report.sh
 FUZZING_CORPUS = \
 	fuzz/README.md \

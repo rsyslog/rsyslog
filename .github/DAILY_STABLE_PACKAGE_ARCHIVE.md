@@ -37,13 +37,22 @@ GitHub Actions builds, signs, publishes, and verifies packages.  DigitalOcean
 Spaces is passive S3-compatible storage behind its CDN; it does not build
 packages.  Workflows use the AWS CLI against the configured Spaces endpoint.
 The shared `debian-daily-stable` GitHub Environment holds the archive signing
-material and bucket-scoped Spaces credentials.
+material and bucket-scoped Spaces credentials.  Debian 13 has moved to
+`packages.rsyslog.com` with a pull model instead (see below).
 
 The archive uses the `rsyslog-packages` Spaces bucket in the `fra1` region.
 Repository URL and endpoint values are GitHub repository variables so a target
 workflow never hard-codes credentials or an account API token.  A bucket-scoped
 read/write Spaces key is sufficient; do not require a DigitalOcean account API
 token for regular publication.
+
+For targets still using Spaces, provision a public-read Standard Spaces
+bucket with object versioning enabled. Enable the Spaces CDN and route the
+public package hostname to it. Workflows set the Spaces object metadata
+`max-age` override in addition to HTTP `Cache-Control`, with 60 seconds for
+mutable repository metadata and one year for immutable package and snapshot
+objects. Purge existing cached repository metadata once when enabling that
+override so older cache entries do not delay publication verification.
 
 The APT and RPM targets share one archive signing key; Alpine uses its own
 RSA key.  Every APT and RPM publish job runs
@@ -60,46 +69,82 @@ nginx tenant on the shared Docker edge of vserverweb5.adiscon.com.  The
 hosting side is maintained in the private `Adiscon/infrastructure`
 repository (`deploy/vserverweb5/`, runbook
 `docs/runbooks/rsyslog-packages-onboarding.md`).  The two projects
-coordinate only through `Adiscon/infrastructure` issue 17.  Decisions agreed
-there on 2026-11-08:
+coordinate only through `Adiscon/infrastructure` issue 17.
 
-- Storage goes through `devtools/release/archive-store.sh` with
-  `ARCHIVE_BACKEND=ssh`.  Uploads never pass through Docker: they reach host
-  sshd as user `rsyslog-archive`, whose key is bound to the forced command
-  `archive-store-server.sh /home/otherweb/importdata/packages`.  That key can
-  only `get`, `put-immutable` and `put-metadata`; it cannot delete.
-- The installed server script is pinned at rsyslog commit
-  `3969e63d080bcdd7cc7a7fd9ccb95cb64c3831a1`; its SHA-256 is
-  `98230496b1265b453ac3b8f97cbb666d02aaf58424f8c282e910e147ec5ed1f1`.  A
-  change to the script needs a new pin on the infrastructure side.
-- Workflow settings per migrated target: `ARCHIVE_BACKEND=ssh`,
-  `ARCHIVE_SSH_TARGET=rsyslog-archive@packages.rsyslog.com`,
-  `ARCHIVE_PREFIX=<prefix>`, `ARCHIVE_SSH_KEY` and `ARCHIVE_SSH_KNOWN_HOSTS`.
-  The last two are paths to runner-local files: the job writes the private
-  key from the `ARCHIVE_SSH_KEY` secret in the `debian-daily-stable`
-  environment to a mode 0600 file, and the `known_hosts` line the
-  infrastructure side hands over to another file.  The prefixes stay the
-  same as on Spaces.
-- Debian 13 goes first with `ARCHIVE_PREFIX=apt/daily-stable/debian/13`.
-  The other targets follow one at a time, only after Debian has run cleanly
-  for a few nights.
-- There is no dual publication.  Per target, a reviewed PR switches the
-  publish job to the ssh backend and the public repository URL to
-  `https://packages.rsyslog.com/<prefix>`.  Spaces stays untouched as a
-  fallback until all targets are verified on the new host, then it is
-  retired.
-- The host only collects garbage.  A planned
-  `devtools/release/archive-prune.sh <archive-root>`, run from a host timer
-  and pinned like the server script, will delete pool files that no current
-  index references and that are older than a grace period (default 3 days).
-  It must parse APT `Packages`/`Sources` (including `by-hash`), RPM
-  `repomd.xml` and the files it references, `APKINDEX.tar.gz`, and the dated
-  snapshot indexes, so that no file a retained snapshot references is
-  removed.  It offers a dry-run mode, logs every deletion and never touches
-  metadata.  Until it exists, nothing is pruned.
-- Verification per target stays with this project: signed metadata from a
-  clean container, exact-version install and smoke test against
-  `https://packages.rsyslog.com/<prefix>`, reported in issue 17.
+Debian 13 (`apt/daily-stable/debian/13`) has moved; all other targets stay
+on Spaces until they are switched one at a time by a reviewed PR.  There is
+no dual publication, and Spaces stays untouched as a fallback until all
+targets are verified on the new host.
+
+### Pull model
+
+GitHub Actions never writes to the web server.  A migrated publish job
+builds one signed *publication* and uploads it as a GitHub Actions artifact
+(`archive-publication-<distro>-<version>`, kept 7 days).  A poller on the
+server, owned by the infrastructure project, downloads it, verifies it and
+applies it; afterwards it writes `<prefix>/publication-status.json`
+(`run`, `attempt`, `created`, `manifest_sha256`).  The verify job polls that
+file for up to 30 minutes until it names its own run, attempt and manifest
+hash, then runs the usual public-metadata, install and smoke-test checks.
+
+Publication format v1, built and checked by
+`devtools/release/archive-publication.sh` (`init`, `add`, `sign`,
+`verify`; `verify` is the reference for the poller):
+
+- `manifest` (UTF-8, LF): `rsyslog-archive-publication v1`,
+  `prefix <prefix>`, `run <run_id> <run_attempt>`,
+  `created <YYYY-MM-DDTHH:MM:SSZ>`, then one
+  `immutable|metadata <sha256> <size> <path>` line per file.  Paths are
+  relative to the archive root, start with `<prefix>/` and follow the path
+  rules of `archive-store-server.sh`.  Immutable entries come first (pool,
+  snapshots, by-hash), then metadata, with `Release`, `Release.gpg` and
+  `InRelease` last and `InRelease` the very last entry.
+- `manifest.sig`: `ssh-keygen -Y sign -n rsyslog-archive-publication`.
+  The server trusts principal `rsyslog-archive-publication` for namespace
+  `rsyslog-archive-publication` with the public key
+  `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICavKojThGK0MaNgezhI6qnU8dlrjC9d+Pqv8nQ60QnB`.
+  The private key is the `ARCHIVE_PUBLICATION_SIGNING_KEY` secret in the
+  `debian-daily-stable` environment; the job writes it to a 0600 file only
+  for signing. This publication key is a proof-of-concept key. Before
+  declaring the archive production, replace the secret, the workflow's
+  public key, and the server poller's trusted key in coordination with
+  infrastructure.
+- `files/<path>`: one file per manifest line.
+
+A publication contains only what its run produced: new pool files, the
+snapshot, new by-hash files and all current metadata.  To merge, the
+publisher reads the current indexes over HTTPS from the public URL.  It
+first verifies `InRelease` with `gpgv` against the archive key from its
+own keyring, then checks every downloaded index against the SHA-256 and
+size in that verified `InRelease`.  Any failure stops the run; only an
+`InRelease` answered with HTTP 404 (first publication into an empty
+prefix) starts from empty indexes.  APT metadata of migrated targets
+carries `Valid-Until` (7 days), so clients reject metadata that is not
+refreshed.
+
+The ssh push backend of `devtools/release/archive-store.sh` and its
+server-side `archive-store-server.sh` remain in the tree but are not used
+by the pull model.  The server script needs bash, coreutils and awk.  Its
+installed copy is pinned at rsyslog commit
+`3969e63d080bcdd7cc7a7fd9ccb95cb64c3831a1` (SHA-256
+`98230496b1265b453ac3b8f97cbb666d02aaf58424f8c282e910e147ec5ed1f1`); a
+change to the script needs a new pin on the infrastructure side.
+
+### Host-side garbage collection
+
+The host only collects garbage.  A planned
+`devtools/release/archive-prune.sh <archive-root>`, run from a host timer
+and pinned like the server-side tooling, will delete pool files that no
+current index references and that are older than a grace period (default
+3 days).  It must parse APT `Packages`/`Sources` (including `by-hash`), RPM
+`repomd.xml` and the files it references, `APKINDEX.tar.gz`, and the dated
+snapshot indexes, so that no file a retained snapshot references is
+removed.  It offers a dry-run mode, logs every deletion and never touches
+metadata.  Until it exists, nothing is pruned.
+
+Verification per target stays with this project: signed metadata from a
+clean container, exact-version install and smoke test against
+`https://packages.rsyslog.com/<prefix>`, reported in issue 17.
 
 ## Publication invariants
 

@@ -76,3 +76,6 @@ skip omhiredis-*
 # frontends remain covered on Linux without growing the reduced Solaris run.
 skip mmjsonparse-find-json-scan-stats.sh
 skip yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh
+
+# Debian archive publication is covered in the package test lane.
+skip daily-stable-archive-publication.sh
