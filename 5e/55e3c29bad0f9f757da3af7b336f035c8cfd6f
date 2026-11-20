@@ -1,0 +1,20 @@
+plugins/imjournal/imjournal.c
+  h_95716f3de0caf5 33,435-478,729,731,742,755
+tests/Makefile.am
+  h_95716f3de0caf5 1408
+tests/imjournal-tag-control.sh
+  h_95716f3de0caf5 1-120
+tests/journal_print.c
+  h_95716f3de0caf5 35,40,43-118,120-122,124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5e55e3c29bad0f9f757da3af7b336f035c8cfd6f",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
