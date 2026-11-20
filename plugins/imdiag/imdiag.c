@@ -1689,7 +1689,7 @@ static void *timeoutGuard(ATTR_UNUSED void *arg) {
             "timeoutGuard: rsyslog still active after expiry of guard "
             "period (strtTO %lld, endTO %lld, time now %lld, diff %lld), pid %d - initiating abort()\n",
             (long long)strtTO, (long long)endTO, (long long)time(NULL), (long long)(time(NULL) - strtTO),
-            (int)glblGetOurPid());
+            (int)getpid());
     fflush(stderr);
     (void)rsyslogdWriteTerminationMarker("error", "timeoutGuard", "timeoutguard-abort");
     abort();
