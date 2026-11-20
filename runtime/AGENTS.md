@@ -66,6 +66,9 @@ collection, and process orchestration).
 
 - Classic disk-queue serializer callback ABI and message round-trip coverage is
   in `tests/diskqueue-serializer-abi.sh`, including reduced macOS builds.
+- Segmented-disk codec rejection and replay boundaries are covered by
+  `tests/runtime_unit_segdisk_codec`: invalid severity, facility and offsets;
+  the valid no-MSG boundary, legacy shifted facility and stale after-PRI offset.
 - `datetime.c` weekday remainder bounds and template name/number formatting
   are covered by `tests/timereported-weekday-range.sh`.
 - Bounded negative UTC-epoch crossings in `datetime.c` are covered by
