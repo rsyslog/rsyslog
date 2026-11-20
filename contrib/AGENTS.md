@@ -44,6 +44,9 @@ exact message bytes against ordinary-space and dedup-off controls.
 
 ## Focused coverage
 
+- `tests/imkubernetes-defaultfacility-unknown.sh` and
+  `tests/imkubernetes-defaultfacility-range.sh` verify invalid symbolic or
+  numeric facilities retain the default ordinal for queued messages.
 - `tests/mmcount-distinct-values.sh` verifies independent counters for distinct
   property values with colliding hashes. Its YAML companion checks action
   parameter parity.

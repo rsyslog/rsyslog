@@ -2881,7 +2881,9 @@ TESTS_IMKUBERNETES = \
 	imkubernetes-cri-partial-hard-cap.sh \
 	imkubernetes-cri-partial-split.sh \
 	imkubernetes-dockerjson-basic.sh \
-	yaml-imkubernetes-dockerjson-basic.sh
+	yaml-imkubernetes-dockerjson-basic.sh \
+	imkubernetes-defaultfacility-unknown.sh \
+	imkubernetes-defaultfacility-range.sh
 
 TESTS_IMTUXEDOULOG = \
 	imtuxedoulog_errmsg_no_params.sh \

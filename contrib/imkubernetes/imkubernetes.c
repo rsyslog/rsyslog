@@ -1394,11 +1394,12 @@ static rsRetVal applyConfigParams(struct nvlst *lst, struct cnfparamblk *parambl
             char *facility_name = es_str2cstr(pvals[i].val.d.estr, NULL);
             CHKmalloc(facility_name);
             const int facility = decodeSyslogName((uchar *)facility_name, syslogFacNames);
-            if (facility < 0)
-                LogError(0, RS_RET_INVALID_PARAMS, "imkubernetes: unknown defaultfacility '%s'", facility_name);
             /* Numeric settings are ordinals; symbolic names decode to shifted LOG_* values. */
-            loadModConf->iDfltFacility =
-                facility < 0 || isdigit((unsigned char)facility_name[0]) ? facility : pri2fac(facility);
+            const int ordinal = facility < 0 || isdigit((unsigned char)facility_name[0]) ? facility : pri2fac(facility);
+            if (ordinal < 0 || ordinal > 23)
+                LogError(0, RS_RET_INVALID_PARAMS, "imkubernetes: invalid defaultfacility '%s'", facility_name);
+            else
+                loadModConf->iDfltFacility = ordinal;
             free(facility_name);
         } else if (!strcmp(paramblk->descr[i].name, "escapelf")) {
             loadModConf->bEscapeLf = (sbool)pvals[i].val.d.n;
