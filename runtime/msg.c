@@ -3027,14 +3027,17 @@ void MsgSetRawMsgWOSize(smsg_t *const pMsg, char *pszRawMsg) {
  * at least 20 characters.
  */
 static uchar *textpri(const smsg_t *const __restrict__ pMsg) {
-    int lenfac = len_syslog_fac_names[pMsg->iFacility];
-    int lensev = len_syslog_severity_names[pMsg->iSeverity];
+    /* An unparsed message can retain the LOG_INVLD sentinel (192). */
+    const unsigned int fac = pMsg->iFacility < LOG_NFACILITIES ? pMsg->iFacility : LOG_FAC_INVLD;
+    const unsigned int sev = pMsg->iSeverity <= LOG_DEBUG ? pMsg->iSeverity : LOG_DEBUG;
+    int lenfac = len_syslog_fac_names[fac];
+    int lensev = len_syslog_severity_names[sev];
     int totlen = lenfac + 1 + lensev + 1;
     char *pRes = malloc(totlen);
     if (pRes != NULL) {
-        memcpy(pRes, syslog_fac_names[pMsg->iFacility], lenfac);
+        memcpy(pRes, syslog_fac_names[fac], lenfac);
         pRes[lenfac] = '.';
-        memcpy(pRes + lenfac + 1, syslog_severity_names[pMsg->iSeverity], lensev + 1 /* for \0! */);
+        memcpy(pRes + lenfac + 1, syslog_severity_names[sev], lensev + 1 /* for \0! */);
     }
     return (uchar *)pRes;
 }
