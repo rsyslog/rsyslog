@@ -1,0 +1,37 @@
+.github/workflows/debian_daily_stable.yml
+  s_9591331cc7634e::t_58cc906c88057e 600,613,639,751-752
+devtools/release/archive-publication.sh
+  s_9591331cc7634e::t_0d7e143dc6c68d 30-31,156,171-174,220-223,234,236
+devtools/release/debian-daily-stable.sh
+  s_9591331cc7634e::t_58cc906c88057e 571-572,674-675
+  s_9591331cc7634e::t_0d7e143dc6c68d 599,612
+tests/solaris-subset.list
+  s_9591331cc7634e::t_0d7e143dc6c68d 79-81
+tests/daily-stable-archive-publication.sh
+  s_9591331cc7634e::t_58cc906c88057e 192-193,200-201
+  s_9591331cc7634e::t_0d7e143dc6c68d 16-17,23-24,33,51-52,172,207-226,266-270,320
+  s_9591331cc7634e::t_1143d312037da5 28-29,39,46-49,57-58
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_9591331cc7634e::t_1143d312037da5 109-111
+  s_9591331cc7634e::t_58cc906c88057e 49-56,108
+.github/DEBIAN_DAILY_STABLE.md
+  s_9591331cc7634e::t_58cc906c88057e 61-62
+tests/diag.sh
+  s_9591331cc7634e::t_0d7e143dc6c68d 5883-5885
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2af4a5c7c0aaeeef609a85e2cc1b59e423dff3bb",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

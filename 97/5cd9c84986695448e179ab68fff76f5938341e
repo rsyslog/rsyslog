@@ -1,0 +1,28 @@
+plugins/imklog/bsd.c
+  s_9591331cc7634e::t_673f6e3f41c7d8 254,281-282,328-329
+tests/imklog-maxmessagesize-intmax.sh
+  s_9591331cc7634e::t_673f6e3f41c7d8 3
+plugins/AGENTS.md
+  s_9591331cc7634e::t_673f6e3f41c7d8 217,224-228
+tests/Makefile.am
+  s_9591331cc7634e::t_673f6e3f41c7d8 35-36,3864-3866
+tests/yaml-imklog-maxmessagesize.sh
+  s_9591331cc7634e::t_673f6e3f41c7d8 1-14,17-20,27-33
+  s_9591331cc7634e::t_5c7dd1266c268f 15-16,21-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "975cd9c84986695448e179ab68fff76f5938341e",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

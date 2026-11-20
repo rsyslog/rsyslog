@@ -1,0 +1,23 @@
+tests/immark-interval-validation.sh
+  s_9591331cc7634e::t_2ccba249776467 9-10,47-53
+  s_9591331cc7634e::t_0958fdb2569954 7-8,16,54,72-74
+plugins/immark/immark.c
+  s_9591331cc7634e::t_0958fdb2569954 38,84,162-165,334
+  s_9591331cc7634e::t_9e328e885e05d6 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "82ef6000779de49e21ce0588bdc65f06e5ecc3aa",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

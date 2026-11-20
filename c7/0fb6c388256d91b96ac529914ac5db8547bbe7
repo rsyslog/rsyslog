@@ -1,0 +1,33 @@
+tests/imklog-internalmsgfacility.sh
+  h_95716f3de0caf5 1-38
+plugins/imklog/imklog.c
+  h_95716f3de0caf5 225-226,233,239-241
+doc/source/reference/parameters/imklog-internalmsgfacility.rst
+  h_95716f3de0caf5 24,34,37-47
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 342-343,347-349,351
+tests/Makefile.am
+  h_95716f3de0caf5 22-23,3498-3501
+  s_7a6fd7e16a791c::t_d99c99d1db001c 3502-3503
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c70fb6c388256d91b96ac529914ac5db8547bbe7",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_7a6fd7e16a791c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee1f-6d42-73e0-8dfe-4b0e91d89dbb",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
