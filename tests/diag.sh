@@ -1428,14 +1428,15 @@ check_rsyslog_active() {
 	fi
 }
 
-# wait for rsyslogd startup ($1 is the instance)
+# wait for rsyslogd startup ($1 is the instance, $2 is the optional launcher PID)
 # Startup is signalled by the imdiag port file appearing (written only after
 # the imdiag input is fully active).  This works for both RainerScript and
 # yaml-only modes.  Fast-fail if the process exits before the port file appears.
 wait_startup() {
-	local instance=$1
+	local instance=$1 launcher_pid=${2:-}
 	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
 	local imdiag_port_file="$RSYSLOG_DYNNAME.imdiag$instance.port"
+	local startup_log="$RSYSLOG_DYNNAME$instance.started" startup_pid
 	# Per-startup deadline: each rsyslog instance gets TB_STARTUP_MAX_RUNTIME
 	# seconds from the moment wait_startup() is called.  Using TB_STARTTEST
 	# (global test start) would exhaust the budget in tests that call startup()
@@ -1460,7 +1461,20 @@ wait_startup() {
 			[ -s "$imdiag_port_file" ] && break
 			printf '%s ABORT! Timeout waiting for imdiag port file (%s) after %d seconds\n' \
 				"$(tb_timestamp)" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
-			ls -l "$pid_file" "$imdiag_port_file" 2>/dev/null || true
+			ls -l "$pid_file" "$imdiag_port_file" "$startup_log" || true
+			startup_pid="$(cat "$pid_file" 2>/dev/null || true)"
+			if [[ ! "$startup_pid" =~ ^[0-9]+$ ]]; then
+				# The pidfile may not exist until daemon activation finishes.
+				startup_pid="$launcher_pid"
+			fi
+			if [[ "$startup_pid" =~ ^[0-9]+$ ]]; then
+				printf 'Startup process state for PID %s\n' "$startup_pid"
+				ps -o pid,ppid,stat,etime,time -p "$startup_pid" || true
+			fi
+			if [ -f "$startup_log" ]; then
+				printf 'Recent rsyslog startup messages\n'
+				tail -n 20 "$startup_log" || true
+			fi
 			error_exit 1 stacktrace
 		fi
 		$TESTTOOL_DIR/msleep 50 # wait 50 milliseconds
@@ -1519,7 +1533,7 @@ startup() {
 		n_option="-n"
 	fi
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M"$RSYSLOG_MODDIR" -f$CONF_FILE $RS_REDIR &
-	wait_startup $instance
+	wait_startup "$instance" "$!"
 	reassign_ports
 }
 
