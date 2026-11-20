@@ -1,0 +1,19 @@
+runtime/tcps_sess.c
+  s_9591331cc7634e::t_9ef52818c3c59d 112-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "779b0a44a916c08faee63944fed41c0406b948b0",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
