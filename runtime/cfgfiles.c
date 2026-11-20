@@ -87,7 +87,14 @@ static cfgfiles_t record; /* the load-time record */
 static int bSealed = 0;
 
 
-static uint64_t fnvUpdate(uint64_t h, const unsigned char *buf, size_t len) {
+/* FNV-1a relies on unsigned wrap-around in the multiply, which is well defined;
+ * keep the CI sanitizer's unsigned-integer-overflow check out of it.
+ */
+static uint64_t
+#if defined(__clang__)
+    __attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
+    fnvUpdate(uint64_t h, const unsigned char *buf, size_t len) {
     size_t i;
     for (i = 0; i < len; ++i) {
         h ^= buf[i];
