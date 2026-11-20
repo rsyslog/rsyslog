@@ -1,0 +1,16 @@
+tests/imkubernetes-defaultfacility-range.sh
+  h_95716f3de0caf5 4-5,27
+tests/imkubernetes-defaultfacility-unknown.sh
+  h_95716f3de0caf5 4-5,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24208a4069609a1cce153a003f508f3b5dea4713",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
