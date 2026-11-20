@@ -1,0 +1,28 @@
+runtime/msg.c
+  h_95716f3de0caf5 3030-3034,3038,3040
+runtime/segdisk_codec.c
+  h_95716f3de0caf5 279-280,338-341,346-349,463,467,490-501
+tests/Makefile.am
+  h_95716f3de0caf5 215-217
+tests/segdisk-inspect.py
+  h_95716f3de0caf5 217-241,307-309,326-331
+tests/segmented-diskqueue-corruption-facility.sh
+  h_95716f3de0caf5 1-6
+tests/segmented-diskqueue-corruption-msg-offset.sh
+  h_95716f3de0caf5 1-6
+tests/segmented-diskqueue-corruption-severity.sh
+  h_95716f3de0caf5 1-6
+tests/segmented-diskqueue-corruption.sh
+  h_95716f3de0caf5 4,51-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f070a54be4f798c7ec315072a436729515b9b475",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
