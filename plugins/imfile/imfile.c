@@ -77,6 +77,7 @@
 #include "parserif.h"
 #include "datetime.h"
 #include "statsobj.h"
+#include "imfile_path.h"
 
 #include <regex.h>
 
@@ -1054,6 +1055,7 @@ static void ATTR_NONNULL() poll_active_files(fs_edge_t *const edge) {
 static rsRetVal ATTR_NONNULL() process_symlink(fs_edge_t *const chld, const char *symlink) {
     DEFiRet;
     char *target;
+    char *parent = NULL;
     CHKmalloc(target = realpath(symlink, NULL));
     struct stat fileInfo;
     if (lstat(target, &fileInfo) != 0) {
@@ -1065,12 +1067,10 @@ static rsRetVal ATTR_NONNULL() process_symlink(fs_edge_t *const chld, const char
               0);
     if (act_obj_add(chld, target, is_file, fileInfo.st_ino, 0, symlink) == RS_RET_OK) {
         /* need to watch parent target as well for proper rotation support */
-        uint idx = ustrlen(chld->active->name) - ustrlen(chld->active->basename);
-        if (idx) { /* basename is different from name */
-            char parent[MAXFNAME];
-            idx--; /* move past trailing slash */
-            memcpy(parent, chld->active->name, idx);
-            parent[idx] = '\0';
+        const char *parent_path;
+        size_t parent_len;
+        if (imfile_get_parent_path(chld->active->name, &parent_path, &parent_len)) {
+            CHKmalloc(parent = strndup(parent_path, parent_len));
             if (lstat(parent, &fileInfo) != 0) {
                 LogError(errno, RS_RET_ERR, "imfile: process_symlink: cannot stat directory '%s' - ignored", parent);
                 FINALIZE;
@@ -1083,6 +1083,7 @@ static rsRetVal ATTR_NONNULL() process_symlink(fs_edge_t *const chld, const char
     }
 
 finalize_it:
+    free(parent);
     free(target);
     RETiRet;
 }
