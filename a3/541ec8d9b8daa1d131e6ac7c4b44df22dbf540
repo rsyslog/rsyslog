@@ -1,0 +1,20 @@
+tests/Makefile.am
+  h_95716f3de0caf5 38-41,3765-3767
+tests/imklog_secondary_pri.sh
+  h_95716f3de0caf5 10,14-26
+tests/yaml-imklog-secondary-pri-permit-off.sh
+  h_95716f3de0caf5 1-8
+tests/yaml-imklog-secondary-pri.sh
+  h_95716f3de0caf5 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a3541ec8d9b8daa1d131e6ac7c4b44df22dbf540",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
