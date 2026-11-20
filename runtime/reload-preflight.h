@@ -44,7 +44,7 @@
 /** Remember how to find our own binary. Call first thing in main(). */
 void reloadPreflightInitExe(const char *argv0);
 /** Remember one command line option that is replayed in the child. */
-void reloadPreflightNoteOpt(int opt, const char *optarg);
+void reloadPreflightNoteOpt(int opt, const char *arg);
 /** Remember the current working directory (call right before loading the config). */
 void reloadPreflightNoteCwd(void);
 /** Set up statistics; call after the config was activated. */

@@ -162,9 +162,9 @@ void reloadPreflightInitExe(const char *argv0) {
     }
 }
 
-void reloadPreflightNoteOpt(int opt, const char *optarg) {
+void reloadPreflightNoteOpt(int opt, const char *arg) {
     switch (opt) {
-        /* replayed; see doc/source/development/config_reload.rst, "Argument replay".
+        /* replayed; see the M1 pre-flight design in doc/source/development/config_reload.rst.
          * Never replayed: -T (we already are inside the chroot), -i, -n, -d, -D,
          * -F, -o, -N (we add -N1 ourselves). */
         case '4':
@@ -184,10 +184,10 @@ void reloadPreflightNoteOpt(int opt, const char *optarg) {
         case 'M':
         case 'S':
         case 'u':
-            if (optarg != NULL && nReplayOpts + 2 <= PF_MAX_OPTS) {
+            if (arg != NULL && nReplayOpts + 2 <= PF_MAX_OPTS) {
                 char flag[3] = {'-', (char)opt, '\0'};
                 char *a = strdup(flag);
-                char *b = strdup(optarg);
+                char *b = strdup(arg);
                 if (a == NULL || b == NULL) {
                     free(a);
                     free(b);
