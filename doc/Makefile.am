@@ -359,6 +359,7 @@ EXTRA_DIST = \
     source/development/coding_practices/error_logging_with_errno.rst \
     source/development/coding_practices/externalized_helper_contracts.rst \
     source/development/config_data_model.rst \
+    source/development/config_reload.rst \
     source/development/debugging.rst \
     source/development/design_decisions.rst \
     source/development/dev_action_threads.rst \
