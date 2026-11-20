@@ -387,7 +387,7 @@ EXTRA_DIST += unit/queue_spsc_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 EXTRA_DIST += unit/mmaitag_gemini_response_test.c
-EXTRA_DIST += unit/turbo_msgdup_test.c
+EXTRA_DIST += unit/turbo_msgdup_test.c unit/segdisk_codec_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -3322,6 +3322,25 @@ runtime_unit_mmaitag_gemini_response_SOURCES = \
 
 runtime_unit_mmaitag_gemini_response_CPPFLAGS = \
 	-I$(top_srcdir)/plugins/mmaitag
+endif
+
+if LD_LINK_WHOLE_RUNTIME
+check_PROGRAMS += runtime_unit_segdisk_codec
+TESTS += runtime_unit_segdisk_codec
+runtime_unit_segdisk_codec_SOURCES = unit/segdisk_codec_test.c
+runtime_unit_segdisk_codec_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+if LD_WHOLE_ARCHIVE
+runtime_unit_segdisk_codec_LDFLAGS = -export-dynamic \
+	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+else
+runtime_unit_segdisk_codec_LDFLAGS = -export-dynamic \
+	-Wl,-force_load,$(top_builddir)/runtime/.libs/librsyslog.a
+endif
+runtime_unit_segdisk_codec_LDADD = $(top_builddir)/grammar/libgrammar.la \
+	$(top_builddir)/runtime/librsyslog.la $(top_builddir)/compat/compat.la \
+	$(ZLIB_LIBS) $(ZSTD_LIBS) $(PTHREADS_LIBS) $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) \
+	$(LIBSYSTEMD_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) \
+	$(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
 endif
 
 if LOGNORM_TURBO_SUPPORTED

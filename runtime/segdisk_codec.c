@@ -343,11 +343,15 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
             case F_FACILITY:
                 NEED(TLV_U16, 2);
-                if (get16(p) >= LOG_NFACILITIES && get16(p) != LOG_INVLD) {
+                if (get16(p) < LOG_NFACILITIES || get16(p) == LOG_INVLD) {
+                    msg->iFacility = get16(p);
+                } else if (get16(p) <= LOG_LOCAL7 && (get16(p) & 7u) == 0) {
+                    /* Older module records may contain an unambiguous shifted LOG_* value. */
+                    msg->iFacility = pri2fac(get16(p));
+                } else {
                     r = RS_RET_INVALID_VALUE;
                     goto fail;
                 }
-                msg->iFacility = get16(p);
                 break;
             case F_FLAGS:
                 NEED(TLV_U32, 4);
@@ -490,10 +494,25 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
     /* TLVs may arrive in any order. Check offsets against the final raw message
      * before invoking setters that assert their preconditions. */
     if ((msg_offset != UINT32_MAX && (msg_offset > (uint32_t)msg->iLenRawMsg + 1u || msg_offset > INT_MAX)) ||
-        after_pri_offset > (uint32_t)msg->iLenRawMsg || after_pri_offset > INT_MAX ||
-        (after_pri_offset > 0 && (msg->pszRawMsg[0] != '<' || msg->pszRawMsg[after_pri_offset - 1] != '>'))) {
+        after_pri_offset > INT_MAX) {
         r = RS_RET_INVALID_VALUE;
         goto fail;
+    }
+    if (after_pri_offset > (uint32_t)msg->iLenRawMsg ||
+        (after_pri_offset > 0 && (msg->pszRawMsg[0] != '<' || msg->pszRawMsg[after_pri_offset - 1] != '>'))) {
+        /* A rawmsg rewrite may leave this cached offset stale. Follow the
+         * same bounded PRI-prefix check as getRawMsgAfterPRI(). */
+        const uchar *raw = msg->pszRawMsg;
+        const int raw_len = msg->iLenRawMsg;
+        after_pri_offset = 0;
+        if (raw_len > 2 && raw[0] == '<') {
+            if (raw[2] == '>')
+                after_pri_offset = 3;
+            else if (raw_len > 3 && raw[3] == '>')
+                after_pri_offset = 4;
+            else if (raw_len > 4 && raw[4] == '>')
+                after_pri_offset = 5;
+        }
     }
     MsgSetMSGoffs(msg, msg_offset == UINT32_MAX ? -1 : (int)msg_offset);
     if ((seen & (1u << (F_AFTER_PRI_OFFSET - 1))) != 0 &&
