@@ -1,0 +1,19 @@
+SECURITY.md
+  s_2896e52954784d::t_86690f3b7ac1e9 92-94,107-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5173f3bbab7e9db96361f9c3d0e12bfeaff119d2",
+  "prompts": {},
+  "sessions": {
+    "s_2896e52954784d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a884f0b-a757-5cab-aa97-04c8000e9576",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
