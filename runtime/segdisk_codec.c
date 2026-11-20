@@ -343,6 +343,8 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
             case F_FACILITY:
                 NEED(TLV_U16, 2);
+                /* Ordinals 0..24 take precedence where shifted LOG_* values
+                 * overlap; queue records do not carry their source representation. */
                 if (get16(p) < LOG_NFACILITIES || get16(p) == LOG_INVLD) {
                     msg->iFacility = get16(p);
                 } else if (get16(p) <= LOG_LOCAL7 && (get16(p) & 7u) == 0) {
@@ -498,21 +500,19 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
         r = RS_RET_INVALID_VALUE;
         goto fail;
     }
-    if (after_pri_offset > (uint32_t)msg->iLenRawMsg ||
-        (after_pri_offset > 0 && (msg->pszRawMsg[0] != '<' || msg->pszRawMsg[after_pri_offset - 1] != '>'))) {
-        /* A rawmsg rewrite may leave this cached offset stale. Follow the
-         * same bounded PRI-prefix check as getRawMsgAfterPRI(). */
-        const uchar *raw = msg->pszRawMsg;
-        const int raw_len = msg->iLenRawMsg;
-        after_pri_offset = 0;
-        if (raw_len > 2 && raw[0] == '<') {
-            if (raw[2] == '>')
-                after_pri_offset = 3;
-            else if (raw_len > 3 && raw[3] == '>')
-                after_pri_offset = 4;
-            else if (raw_len > 4 && raw[4] == '>')
-                after_pri_offset = 5;
-        }
+    /* MsgSetRawMsg() may leave any cached offset stale, even zero or an
+     * in-bounds delimiter. Derive it from the current raw message using the
+     * same bounded PRI-prefix check as getRawMsgAfterPRI(). */
+    const uchar *raw = msg->pszRawMsg;
+    const int raw_len = msg->iLenRawMsg;
+    after_pri_offset = 0;
+    if (raw_len > 2 && raw[0] == '<') {
+        if (raw[2] == '>')
+            after_pri_offset = 3;
+        else if (raw_len > 3 && raw[3] == '>')
+            after_pri_offset = 4;
+        else if (raw_len > 4 && raw[4] == '>')
+            after_pri_offset = 5;
     }
     MsgSetMSGoffs(msg, msg_offset == UINT32_MAX ? -1 : (int)msg_offset);
     if ((seen & (1u << (F_AFTER_PRI_OFFSET - 1))) != 0 &&

@@ -186,6 +186,10 @@ int main(void) {
     check_record(record, len, 2, 8, 0, 0, 0, 0);
     check_record(record, len, 3, 25, 0, 0, 0, 0);
     check_record(record, len, 3, 128, 1, 16, 4, 4);
+    /* Low shifted values overlap valid ordinals; preserve ordinal precedence. */
+    check_record(record, len, 3, 8, 1, 8, 4, 4);
+    check_record(record, len, 3, 16, 1, 16, 4, 4);
+    check_record(record, len, 3, 24, 1, 24, 4, 4);
     check_record(record, len, 3, 192, 1, 192, 4, 4);
 
     /* F2: the raw message has eight bytes; nine is the valid no-MSG offset. */
@@ -197,6 +201,7 @@ int main(void) {
     check_record(record, len, 24, UINT32_MAX, 0, 0, 0, 0);
     check_record(record, len, 24, 9, 1, 1, 4, 4);
     check_record(record, len, 24, 3, 1, 1, 4, 4);
+    check_record(record, len, 24, 0, 1, 1, 4, 4);
 
     /* Rewritten raw text with no PRI makes the old offset stale but valid. */
     unsigned char *rewritten = malloc(len);
