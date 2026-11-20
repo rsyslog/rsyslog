@@ -866,6 +866,102 @@ static rsRetVal LstnInit(netstrms_t *pNS,
 }
 
 
+/* Process TLS records the peer already sent on a client connection.
+ * A TLS server that closes an idle connection sends a close_notify alert
+ * before its FIN. As long as that alert sits unread in the socket buffer,
+ * the MSG_PEEK check in ptcp sees data instead of EOF and reports the
+ * connection as alive, so the next message is written into a connection
+ * the peer has already closed and is lost. Let OpenSSL consume whatever is
+ * buffered (close_notify, TLS 1.3 session tickets, ...). The client socket
+ * is blocking, so it is switched to non-blocking for the duration of the
+ * check; OpenSSL keeps incomplete records buffered for the next call.
+ * Returns RS_RET_PEER_CLOSED_CONN on close_notify and RS_RET_IO_ERROR on a
+ * fatal TLS error.
+ * See https://github.com/rsyslog/rsyslog/issues/1503
+ */
+static rsRetVal ossl_check_peer_records(nsd_ossl_t *const pThis) {
+    DEFiRet;
+    int sock = -1;
+    int sockflags = -1;
+    char peekbuf[1];
+    char discard[1024];
+    int len_rcvd;
+    int err;
+    SSL *const ssl = pThis->pNetOssl->ssl;
+
+    /* a pending retry owns the buffered records; Send() completes it */
+    if (pThis->iMode != 1 || ssl == NULL || pThis->pNetOssl->sslState != osslClient || pThis->rtryCall != osslRtry_None)
+        FINALIZE;
+    CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
+
+    /* fast path: nothing buffered, which is the normal case */
+    if (SSL_pending(ssl) == 0) {
+        const ssize_t len_peek = recv(sock, peekbuf, 1, MSG_DONTWAIT | MSG_PEEK);
+        if (len_peek == 0) ABORT_FINALIZE(RS_RET_PEER_CLOSED_CONN);
+        if (len_peek < 0) {
+            if (errno == EAGAIN || errno == EINTR
+#if EWOULDBLOCK != EAGAIN
+                || errno == EWOULDBLOCK
+#endif
+            )
+                FINALIZE;
+            dbgprintf("ossl_check_peer_records: socket error %d on %d\n", errno, sock);
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+    }
+
+    sockflags = fcntl(sock, F_GETFL);
+    if (sockflags == -1 || fcntl(sock, F_SETFL, sockflags | O_NONBLOCK) == -1) {
+        /* cannot check without risk of blocking; keep old behavior */
+        dbgprintf("ossl_check_peer_records: cannot set O_NONBLOCK on %d, errno %d\n", sock, errno);
+        sockflags = -1;
+        FINALIZE;
+    }
+
+    /* bounded, so a peer streaming data cannot keep us here forever */
+    for (int i = 0; i < 64; ++i) {
+        ERR_clear_error();
+        len_rcvd = SSL_read(ssl, discard, sizeof(discard));
+        if (len_rcvd > 0) {
+            dbgprintf("ossl_check_peer_records: discarded %d bytes of unexpected data\n", len_rcvd);
+            continue;
+        }
+        err = SSL_get_error(ssl, len_rcvd);
+        if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) break; /* all buffered data processed */
+        if (err == SSL_ERROR_ZERO_RETURN) {
+            LogMsg(0, RS_RET_PEER_CLOSED_CONN, LOG_INFO,
+                   "nsd_ossl: CheckConnection detected that peer closed the TLS connection "
+                   "(close_notify)");
+            ABORT_FINALIZE(RS_RET_PEER_CLOSED_CONN);
+        }
+        if (err == SSL_ERROR_SYSCALL) {
+            if (errno == EINTR) continue;
+#ifdef ENABLE_WOLFSSL
+            /* wolfSSL reports a would-block read as SSL_ERROR_SYSCALL */
+            if (SSL_want_read(ssl) || SSL_want_write(ssl)) break;
+#endif
+            if (errno == EAGAIN
+#if EWOULDBLOCK != EAGAIN
+                || errno == EWOULDBLOCK
+#endif
+            )
+                break;
+        }
+        nsd_ossl_lastOpenSSLErrorMsg(pThis, len_rcvd, ssl, LOG_WARNING, "CheckConnection", "SSL_read");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+
+finalize_it:
+    if (sockflags != -1) {
+        if (fcntl(sock, F_SETFL, sockflags) == -1) {
+            LogError(errno, RS_RET_IO_ERROR, "nsd_ossl: cannot restore socket flags");
+            iRet = RS_RET_IO_ERROR;
+        }
+    }
+    RETiRet;
+}
+
+
 /* This function checks if the connection is still alive.
  * When the underlying ptcp layer detects a closed/broken connection it closes
  * the fd. In that case we must immediately abort the SSL session (SSL_free
@@ -882,9 +978,11 @@ static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
 
     dbgprintf("CheckConnection for %p\n", pNsd);
     iRet = nsd_ptcp.CheckConnection(pThis->pTcp);
+    if (iRet == RS_RET_OK) iRet = ossl_check_peer_records(pThis);
     if (iRet != RS_RET_OK) {
-        /* ptcp closed the fd; free the SSL object without SSL_shutdown so the
-         * stale BIO fd cannot be used again. */
+        /* the connection is gone (ptcp may also have closed the fd); free
+         * the SSL object without SSL_shutdown so the stale BIO fd cannot be
+         * used again. */
         osslAbortSess(pThis);
     }
     RETiRet;

@@ -62,6 +62,11 @@ collection, and process orchestration).
 - `tests/imtcp-tls-gtls-certinfo-long-names.sh` (and its `-vg` wrapper)
   covers the `nsd_gtls.c` peer certificate-info dump with a long DN and SAN,
   i.e. the name buffer growth path (GnuTLS tests and imtcp required).
+- `tests/omfwd-tls-gtls-close-notify.sh` and
+  `tests/omfwd-tls-ossl-close-notify.sh` cover `CheckConnection()` in
+  `nsd_gtls.c` / `nsd_ossl.c`: after the peer closed an idle TLS connection
+  with close_notify, omfwd must reconnect instead of losing the next message
+  (Python 3 required).
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 - Classic disk-queue serializer callback ABI and message round-trip coverage is
