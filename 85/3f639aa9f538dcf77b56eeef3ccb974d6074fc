@@ -1,0 +1,33 @@
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_706ba3a7188950::t_6483940929c212 40-41,64-136
+.github/DEBIAN_DAILY_STABLE.md
+  s_706ba3a7188950::t_3f78f396466bf6 11-20,29,32,47-49,58-68,75-76,82-83,87-89,93-95,104,106-108,111-115,117-118
+.github/workflows/debian_daily_stable.yml
+  s_706ba3a7188950::t_253e76fa150b76 29,52-53,333,344,354-356,358-365,374,379,381,388-390,429,431-441,470,473-487,490-508,511-515,517-521,523-552,570,599-637,641,654,688,690-691
+Makefile.am
+  s_706ba3a7188950::t_36399df6e02ef4 29-31
+devtools/release/archive-publication.sh
+  s_706ba3a7188950::t_66f9ea9dd4c8b6 1-246
+devtools/release/debian-daily-stable.sh
+  s_706ba3a7188950::t_52b29fcfccd559 14,17-22,395,403-407,455,474-634,680-685,744,772-773,853-876,889
+tests/Makefile.am
+  s_706ba3a7188950::t_1171e298390088 48
+tests/daily-stable-archive-publication.sh
+  s_706ba3a7188950::t_ab3568f15f0c78 1-301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "853f639aa9f538dcf77b56eeef3ccb974d6074fc",
+  "prompts": {},
+  "sessions": {
+    "s_706ba3a7188950": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae401a8cdd246e894",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

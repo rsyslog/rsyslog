@@ -1,0 +1,39 @@
+.codex/pre_push_container_gate.sh
+  s_142ee1fa291d22::t_4608329d89092f 89-90,94-95,97-98,104-105,111-112,119-121,251,269
+  s_142ee1fa291d22::t_920f0c25c2c47e 310,352-354
+  s_142ee1fa291d22::t_90525158dd7f9f 12,71-81,84-85,87-88,96,100-103,106-110,113-118,122,128,215,218-224,228,232,237,240-241,243-250,252-268,270-272,291-297,303-309,314-332,336-348,385-416,418-425,427-432,443-444,455-456,467-473
+  s_142ee1fa291d22::t_b5b02126fdf208 426,438
+  s_142ee1fa291d22::t_4b62d58fdf43b9 355-356
+tests/codex-pre-push-container-gate.sh
+  s_142ee1fa291d22::t_4f218cd73ff569 11-19,39-40,45-48,52-53,55,61,70,139-190,193-194,196-200
+  s_142ee1fa291d22::t_4608329d89092f 104-105,191-192
+  s_142ee1fa291d22::t_b5b02126fdf208 78-84,195
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_142ee1fa291d22::t_2dadb71c57944f 607-683
+.gitignore
+  s_142ee1fa291d22::t_c4e90244db6c36 155-157
+Makefile.am
+  s_142ee1fa291d22::t_d267a6b58be3e4 7
+devtools/record-container-validation.py
+  s_142ee1fa291d22::t_60d60f014cf2cd 1-156
+tests/Makefile.am
+  s_142ee1fa291d22::t_65ed191fe71d78 227
+tests/record-container-validation.sh
+  s_142ee1fa291d22::t_81bf7db2b1f2d9 1-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1bb97f78ac47f30dce56d0a4d1e323d97b2e1c0a",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

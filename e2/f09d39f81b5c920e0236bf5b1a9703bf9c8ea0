@@ -1,0 +1,22 @@
+doc/source/reference/parameters/imtcp-maxsessions.rst
+  s_5424d888acca0b::t_2c82312c1cf744 36
+  s_5424d888acca0b::t_1a168de79c1b4f 39
+tests/imtcp-stream-always-zlib-completion-release.sh
+  s_5424d888acca0b::t_1a168de79c1b4f 57-58,62-69,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "e2f09d39f81b5c920e0236bf5b1a9703bf9c8ea0",
+  "prompts": {},
+  "sessions": {
+    "s_5424d888acca0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4dd5-73fd-7af3-9aef-a1169b92629a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

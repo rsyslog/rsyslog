@@ -1,0 +1,265 @@
+tests/Makefile.am
+  s_de358a5d0a4803::t_9b081c556c858c 54-56,70-72,99-101,284,340,474,494,685,995,1001,1147-1148,1494-1500,1712,1909-1910,1913-1915,2217,2231-2232,2268,2692,2737,2822-2823,2826-2827,2835,2838-2841,2927-2937,3045-3050,3217,3226,3275,3713-3719,3919-3923
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_de358a5d0a4803::t_74464116170c8a 607-683
+.codex/pre_push_container_gate.sh
+  s_de358a5d0a4803::t_1f1cb06489d4c6 12,71-81,84-85,87-90,94-98,100-122,128,215,218-224,228,232,237,240-241,243-271,290-296,302-319,323-332,336-348,379-410,412-426,432,437-438,449-450,461-467
+.github/OPENSUSE_DAILY_STABLE.md
+  s_de358a5d0a4803::t_78a526bab3c141 12-18
+.github/actionlint.yaml
+  s_de358a5d0a4803::t_253d264cf59b70 1-6
+.github/opensuse-leap160-daily-stable-policy.yml
+  s_de358a5d0a4803::t_5cae24288a52b3 3-6
+.github/requirements-zizmor.txt
+  s_de358a5d0a4803::t_1d8923160bd8c2 1
+.github/workflows/actionlint.yml
+  s_de358a5d0a4803::t_c995b11373182b 18
+.github/workflows/alpine324_daily_stable.yml
+  s_de358a5d0a4803::t_e5ef64581befc2 304,570
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_de358a5d0a4803::t_27b6ce9ce0ea29 253,669
+.github/workflows/codeql.yml
+  s_de358a5d0a4803::t_de2f8a31806129 109,116,119
+.github/workflows/daily_focused_tests.yml
+  s_de358a5d0a4803::t_a676b84c78c440 396,407
+.github/workflows/debian_daily_stable.yml
+  s_de358a5d0a4803::t_3c86a9b9a8ce05 287,727
+.github/workflows/doc_build.yml
+  s_de358a5d0a4803::t_ab330e3b5e8d7e 191,203
+.github/workflows/el10_daily_stable.yml
+  s_de358a5d0a4803::t_e9b549a9eec3b8 283,682
+.github/workflows/fedora44_daily_stable.yml
+  s_de358a5d0a4803::t_4fee3de32daaf4 252,668
+.github/workflows/imbeats.yml
+  s_de358a5d0a4803::t_957f8fa41fad47 118
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_de358a5d0a4803::t_d358eb703077b8 48
+.github/workflows/impstats_push_victoriametrics.yml
+  s_de358a5d0a4803::t_144fafb822de56 178
+.github/workflows/imtcp_session_fuzz.yml
+  s_de358a5d0a4803::t_c1a12276ff4f63 107,201
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_de358a5d0a4803::t_aeef8aa5400b29 215-217,271,689
+.github/workflows/run_checks.yml
+  s_de358a5d0a4803::t_232701bc839e67 663,1129,1232,1316,1470,1639,1643,1720,1870
+.github/workflows/run_cross_arch_weekly.yml
+  s_de358a5d0a4803::t_1915b585adeb65 48,53,56,146
+.github/workflows/run_distro_daily.yml
+  s_de358a5d0a4803::t_f56a117cf32c6c 124
+.github/workflows/run_macos_weekly.yml
+  s_de358a5d0a4803::t_248b2cc5e755df 143
+.github/workflows/syslog_parser_fuzz.yml
+  s_de358a5d0a4803::t_dc86043a3f4c95 112,230
+.github/workflows/ubuntu_daily_stable.yml
+  s_de358a5d0a4803::t_2c461d9b139316 288,739
+.gitignore
+  s_de358a5d0a4803::t_0782e953bc112c 138,157-159
+ChangeLog
+  s_de358a5d0a4803::t_af934b1a9c05a3 4-7
+Makefile.am
+  s_de358a5d0a4803::t_70283d95caaa69 7,252-255,619-622
+configure.ac
+  s_de358a5d0a4803::t_10b4b60502c214 1808-1819,1834,3175-3212,3801,3923
+devtools/check-flake-evidence-coverage.py
+  s_de358a5d0a4803::t_eb68def7f95f3e 43
+devtools/record-container-validation.py
+  s_de358a5d0a4803::t_3954c223bfb075 1-181
+doc/Makefile.am
+  s_de358a5d0a4803::t_400eb7f339bbe3 274,747,844-848,977-987
+doc/ai/module_map.yaml
+  s_de358a5d0a4803::t_9564f3d03243d3 244-249
+doc/source/configuration/modules/imtcp.rst
+  s_de358a5d0a4803::t_21cf5371f76cdb 241-244,331
+doc/source/configuration/modules/mmaitag.rst
+  s_de358a5d0a4803::t_0712c48853d35a 3-6,20-21,26-45,103-122,134-138
+doc/source/configuration/modules/omkinesis.rst
+  s_de358a5d0a4803::t_66cb2cdd32372b 1-94
+doc/source/reference/parameters/imrelp-maxdatasize.rst
+  s_de358a5d0a4803::t_f69144d0e5c1ec 4-7,35-38,49-54
+doc/source/reference/parameters/imtcp-failonbinderror.rst
+  s_de358a5d0a4803::t_10d160ce1d27df 1-55
+doc/source/reference/parameters/mmaitag-request-connecttimeoutms.rst
+  s_de358a5d0a4803::t_e749b67f9bf9c1 1-41
+doc/source/reference/parameters/mmaitag-request-lowspeedlimit.rst
+  s_de358a5d0a4803::t_ab8d12bdb3d5b0 1-41
+doc/source/reference/parameters/mmaitag-request-lowspeedtime.rst
+  s_de358a5d0a4803::t_24222bab8314a4 1-41
+doc/source/reference/parameters/mmaitag-request-timeoutms.rst
+  s_de358a5d0a4803::t_6290dfeb5cd94c 1-41
+doc/source/reference/parameters/mmaitag-response-maxbytes.rst
+  s_de358a5d0a4803::t_9b4c125df57cf5 1-41
+doc/source/reference/parameters/omkinesis-access_key.rst
+  s_de358a5d0a4803::t_6d5fcd722cb3d4 1-30
+doc/source/reference/parameters/omkinesis-endpoint.rst
+  s_de358a5d0a4803::t_af377c0001f2d7 1-30
+doc/source/reference/parameters/omkinesis-max_record_size.rst
+  s_de358a5d0a4803::t_7bedcca851c679 1-33
+doc/source/reference/parameters/omkinesis-partition_key.rst
+  s_de358a5d0a4803::t_813a0cb3acdb37 1-31
+doc/source/reference/parameters/omkinesis-partition_key_template.rst
+  s_de358a5d0a4803::t_faaa7c12786c87 1-32
+doc/source/reference/parameters/omkinesis-region.rst
+  s_de358a5d0a4803::t_57a86268e326d5 1-30
+doc/source/reference/parameters/omkinesis-secret_key.rst
+  s_de358a5d0a4803::t_92b2eeb30ef48b 1-30
+doc/source/reference/parameters/omkinesis-session_token.rst
+  s_de358a5d0a4803::t_216a634c5725c4 1-30
+doc/source/reference/parameters/omkinesis-stream.rst
+  s_de358a5d0a4803::t_84e760f2c4e803 1-30
+doc/source/reference/parameters/omkinesis-template.rst
+  s_de358a5d0a4803::t_9d76465e742959 1-30
+doc/source/reference/parameters/omkinesis-timeout.rst
+  s_de358a5d0a4803::t_3c77cfcf6b8c00 1-30
+doc/tools/fix-mermaid-offline.py
+  s_de358a5d0a4803::t_a64ee739d2d056 74,76-77
+grammar/rainerscript.c
+  s_de358a5d0a4803::t_64b0ca3355bb31 64,1806-1822,1835-1837,1841,1843,1857-1858,1883-1890,2524,2538,2540-2541,2549-2552,2557,2562-2578,2581
+packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec
+  s_de358a5d0a4803::t_b0de861c28beb7 329-342,558-565,741-744,1041-1050
+packaging/ubuntu/jammy/v8-stable/debian/control
+  s_de358a5d0a4803::t_be66bd9e15f592 491-500
+packaging/ubuntu/jammy/v8-stable/debian/rsyslog-omkinesis.install
+  s_de358a5d0a4803::t_968880a7c4d862 1
+packaging/ubuntu/noble/v8-stable/debian/control
+  s_de358a5d0a4803::t_59f2a411b19079 385-394
+packaging/ubuntu/noble/v8-stable/debian/rsyslog-omkinesis.install
+  s_de358a5d0a4803::t_888803aed1f1cb 1
+plugins/imdiag/imdiag.c
+  s_de358a5d0a4803::t_73c26d08567948 109-111,521-525,572-592,1316-1317,1977
+plugins/imdtls/imdtls.c
+  s_de358a5d0a4803::t_7d7d3bc34468b8 595
+plugins/imptcp/imptcp.c
+  s_de358a5d0a4803::t_d9b0a59d238aaa 2178
+plugins/imrelp/imrelp.c
+  s_de358a5d0a4803::t_2fb4d90e394194 59-61,558-563,807-820
+plugins/imtcp/imtcp.c
+  s_de358a5d0a4803::t_9ec8e71be2ce0e 208,244,561,1149-1150
+plugins/mmaitag/Makefile.am
+  s_de358a5d0a4803::t_7b25e6541cd17a 3-4
+plugins/mmaitag/ai_provider.h
+  s_de358a5d0a4803::t_5cd1ac2db35594 18-28,70
+plugins/mmaitag/ai_provider_gemini.c
+  s_de358a5d0a4803::t_75e6d4dbfc1abb 12,92-105,130,138-143,152,198,230-238
+plugins/mmaitag/ai_provider_gemini_response.c
+  s_de358a5d0a4803::t_45fb465f00ca26 1-51
+plugins/mmaitag/ai_provider_gemini_response.h
+  s_de358a5d0a4803::t_da9a4123422e0d 1-42
+plugins/mmaitag/mmaitag.c
+  s_de358a5d0a4803::t_20dce7edadae63 33,35,43-54,66,128-132,201-234,238-242,269
+plugins/mmnormalize/mmnormalize.c
+  s_de358a5d0a4803::t_9f50594767560e 52-59,70,91-99,545-556,562-576,587-593,598,630-632,648-651,728-743,1099-1102,1170-1179
+plugins/omkinesis/MODULE_METADATA.yaml
+  s_de358a5d0a4803::t_5a51cedb32aa63 1-17
+plugins/omkinesis/Makefile.am
+  s_de358a5d0a4803::t_f6d6147f3057d0 1-6
+plugins/omkinesis/omkinesis.c
+  s_de358a5d0a4803::t_7f39a0370d4a22 1-414
+runtime/msg.c
+  s_de358a5d0a4803::t_9195619aa4de95 4441-4442,4444-4445,4466-4480
+runtime/net_ossl.c
+  s_de358a5d0a4803::t_ed0730de462f44 896,911-914,916,922-926,928,1132-1134,1143-1145,1147,1151-1156,1158,1162-1164,1166,1446,1682-1683,1688-1689,1692-1708,2224,2234,2308
+runtime/nsd_ptcp.c
+  s_de358a5d0a4803::t_1823721dd6bad8 41-44,64-156,815-819
+runtime/parser.c
+  s_de358a5d0a4803::t_4f5dca19f26ec4 263-264,309-322,361
+runtime/perctile_ringbuf.c
+  s_de358a5d0a4803::t_3353abd4141358 1,4,21,25,27-28,30-40,42-51,56-57,62-65,67-69,72-77,82-84,86,89,91-93,95-106,110-112,114,118,121
+runtime/perctile_ringbuf.h
+  s_de358a5d0a4803::t_f30495d10d880e 1-5,7-8,12-13,15-17,28
+runtime/perctile_stats.c
+  s_de358a5d0a4803::t_06e294316330c4 367,411
+runtime/rsconf.c
+  s_de358a5d0a4803::t_18685a59c9accc 1087,1093-1094,1276
+runtime/tcpsrv.c
+  s_de358a5d0a4803::t_2538a6bbe7da7c 693,703,708,717-718,1916,1977-1978
+runtime/tcpsrv.h
+  s_de358a5d0a4803::t_e3aedd1c662c59 229
+tests/codex-pre-push-container-gate.sh
+  s_de358a5d0a4803::t_bcbb89ffba0160 11-19,39-40,45-48,52-53,55,61,70,78-84,104-105,139-221
+tests/dynstats_prevent_premature_eviction-vg.sh
+  s_de358a5d0a4803::t_72e7fb13dfc07b 2-6
+tests/dynstats_prevent_premature_eviction.sh
+  s_de358a5d0a4803::t_14edaa4daaa6d0 2-7,33-49,51-65,71,75
+tests/imdtls-permittedpeer-reject.sh
+  s_de358a5d0a4803::t_dc65458729a5fa 1-54
+tests/imptcp-debug-recv-length.sh
+  s_de358a5d0a4803::t_03808ef30cf434 1-45
+tests/imrelp-maxDataSize-range.sh
+  s_de358a5d0a4803::t_ceea01b8c11150 1-70
+tests/imtcp-bind-failure.sh
+  s_de358a5d0a4803::t_5f6f60f851fe7d 1-142
+tests/legacy-zlib-empty-output.sh
+  s_de358a5d0a4803::t_9e2dc5bf98f63d 1-89
+tests/mermaid-offline.py
+  s_de358a5d0a4803::t_83fbdeaaa023d1 1-42
+tests/mermaid-offline.sh
+  s_de358a5d0a4803::t_63a0e45695ca85 1-13
+tests/mmaitag-basic.sh
+  s_de358a5d0a4803::t_53e5c3225cdc70 16-21
+tests/mmaitag-transfer-limits-invalid.sh
+  s_de358a5d0a4803::t_d9ae9df61a027f 1-39
+tests/mmnormalize-turbo-json-discard.sh
+  s_de358a5d0a4803::t_b3ab8b6adde472 1-41
+tests/mmnormalize-turbo-json-nested.sh
+  s_de358a5d0a4803::t_f68df7ecef95f7 1-49
+tests/mmnormalize-turbo-truncated-stat.sh
+  s_de358a5d0a4803::t_dbb5b3c3c46dba 1-63
+tests/omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh
+  s_de358a5d0a4803::t_418fa308b70580 6-7,83
+tests/omkinesis-endpoint-validation.sh
+  s_de358a5d0a4803::t_235a6077aa133b 1-33
+tests/omkinesis-mock-common.sh
+  s_de358a5d0a4803::t_7d9400480c22a9 1-82
+tests/omkinesis-mock-server.py
+  s_de358a5d0a4803::t_cd9e0a2d419a36 1-29
+tests/omkinesis-mock.sh
+  s_de358a5d0a4803::t_2b4536d9facc18 1-6
+tests/ompipe-legacy-path-length-vg.sh
+  s_de358a5d0a4803::t_85bea42d123cea 1-20
+tests/ompipe-legacy-path-length.sh
+  s_de358a5d0a4803::t_e642766f947f60 1-60
+tests/override_queue_disposal.c
+  s_de358a5d0a4803::t_b1038228340f84 9,23,27,50
+tests/override_recv_imptcp.c
+  s_de358a5d0a4803::t_6667806023e0e4 1-38
+tests/pmrfc3164-SquareBracketsInHostname-oversize.sh
+  s_de358a5d0a4803::t_ca4a5e33dfa502 1-47
+tests/record-container-validation.sh
+  s_de358a5d0a4803::t_888b45827852dd 1-145
+tests/rscript-json-var-eval-semantics.sh
+  s_de358a5d0a4803::t_e73d34c186d392 6-9,14-15,19,45,67
+tests/rscript-replace-result-limit.sh
+  s_de358a5d0a4803::t_b6cb5994c3f11a 1-36
+tests/sndrcv_dtls_certvalid_permitted.sh
+  s_de358a5d0a4803::t_7bb44e1e85621a 32
+tests/template-topos-neg-underflow.sh
+  s_de358a5d0a4803::t_db36fab6d5b74b 1-42
+tests/unit/mmaitag_gemini_response_test.c
+  s_de358a5d0a4803::t_40a97da5dc6b21 1-81
+tests/unit/perctile_ringbuf_test.c
+  s_de358a5d0a4803::t_3c958c8b7fd0ca 1-108
+tests/yaml-imrelp-maxDataSize-range.sh
+  s_de358a5d0a4803::t_7ff28a1a6403f5 1-74
+tests/yaml-omkinesis-mock.sh
+  s_de358a5d0a4803::t_754cb0309ed5bb 1-6
+tools/ompipe.c
+  s_de358a5d0a4803::t_309c4c143626ea 383
+tools/pmrfc3164.c
+  s_de358a5d0a4803::t_f77cc728f28524 434-439
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ede0d94b9ae49ca6661a23a9999f7c195779bd73",
+  "prompts": {},
+  "sessions": {
+    "s_de358a5d0a4803": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a134bf-85eb-7ea0-9778-fe8a054bde7d",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

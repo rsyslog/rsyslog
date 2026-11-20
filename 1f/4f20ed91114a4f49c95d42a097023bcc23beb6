@@ -1,0 +1,54 @@
+grammar/grammar.y
+  s_f2c089be484e12::t_5abc401dee2364 160-167
+tools/shadow_reload.c
+  s_f2c089be484e12::t_badd8884c9b0d7 234-238,528
+grammar/lexer.l
+  s_f2c089be484e12::t_96b0aa80760fc2 485
+  s_f2c089be484e12::t_5abc401dee2364 479-482,484,486-488
+  s_f2c089be484e12::t_6c2690b43134cf 483
+  s_f2c089be484e12::t_48c49d4cc502e8 653-654
+runtime/yamlconf.c
+  s_f2c089be484e12::t_75bf4d300cbfbe 1652-1653,1943-1947
+tests/include-abort-if-missing.sh
+  s_f2c089be484e12::t_75bf4d300cbfbe 19
+runtime/yamlconf.h
+  s_f2c089be484e12::t_9ec55d85ccbee6 41-42
+  s_f2c089be484e12::t_75bf4d300cbfbe 38-40
+grammar/rainerscript.h
+  s_f2c089be484e12::t_6c2690b43134cf 425
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_badd8884c9b0d7 152,154-155,157-158,246-253
+  s_f2c089be484e12::t_c90404607aba5d 254-255,257-280,431-432,435-436,439-440,443-444,447-448,450,455-456,464-465,468-469,472-474,483-490,493-494,497-498
+  s_f2c089be484e12::t_9eaef1f719967c 121,126-132
+  s_f2c089be484e12::t_06a59e288c9f44 424-430,433-434,437-438,441-442,445-446,449,451,453,461-463,466-467,470-471,475-482,491-492,495-496,499-500
+  s_f2c089be484e12::t_10e12f074ad3a6 133-134,452,454,457-460
+  s_f2c089be484e12::t_5daff56864e6ee 256
+tests/global-reloadonhup-rainerscript.sh
+  s_f2c089be484e12::t_badd8884c9b0d7 62,73,166
+  s_f2c089be484e12::t_8f94b565387743 49-55,58-59,124-139,158,191
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_badd8884c9b0d7 607,614,1006,1009
+grammar/rainerscript.c
+  s_f2c089be484e12::t_f22b9b22b5e628 5177,5181,5393,6574-6577
+  s_f2c089be484e12::t_01873071be764a 6273-6289,6297-6301,6304-6307,6409,6413-6420,6430,6452,6569-6573,6578-6579,6581,6583,6585
+  s_f2c089be484e12::t_6c2690b43134cf 6293-6296,6391
+  s_f2c089be484e12::t_98e7f865400798 5466-5470
+  s_f2c089be484e12::t_146bf7298dda6f 5170
+  s_f2c089be484e12::t_0d7c35c9f1a9a3 6312-6315,6375-6382,6387-6390,6392-6394
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1f4f20ed91114a4f49c95d42a097023bcc23beb6",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

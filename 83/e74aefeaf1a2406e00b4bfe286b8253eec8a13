@@ -1,0 +1,19 @@
+tests/imbeats-submit-timeout.sh
+  s_d41298c6e29859::t_8aa5e4f6eebfda 43-54,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "83e74aefeaf1a2406e00b4bfe286b8253eec8a13",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

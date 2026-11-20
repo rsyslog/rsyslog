@@ -1,0 +1,19 @@
+tests/template-json.sh
+  s_3aa9d0dbe5c8fb::t_61ce490c5bb4d0 10,21-22,34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7389d323915e13f86575c0a7daf21339b6de2717",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

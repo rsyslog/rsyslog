@@ -1,0 +1,14 @@
+plugins/AGENTS.md
+  h_95716f3de0caf5 131-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b70e9d478928bee635aff4e2d77dc6fbdebbbfa",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

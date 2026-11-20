@@ -1,0 +1,21 @@
+runtime/segdisk_state.c
+  s_d41298c6e29859::t_8992eac52afb9d 114
+tests/unit/segdisk_state_test.c
+  s_d41298c6e29859::t_7f952f88001271 9,11,14-29,42-43,59,65-68,73,79,88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "af4948ecdf7d1479b68bc54d63991b2fa6f4da8e",
+  "prompts": {},
+  "sessions": {
+    "s_d41298c6e29859": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4ac6-2767-7de1-9da3-81b02eaad273",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

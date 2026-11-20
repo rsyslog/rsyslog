@@ -1,0 +1,20 @@
+ChangeLog
+  s_87878341638fe5::t_9a0fa36ddc1b59 92
+  s_87878341638fe5::t_106ef8e0edffb0 4-66,71-91,93-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6481b5f271b4c53d3cfe13455a7a976870560deb",
+  "prompts": {},
+  "sessions": {
+    "s_87878341638fe5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0155c-a426-7651-bd37-e20ce2e83369",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

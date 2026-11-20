@@ -1,0 +1,19 @@
+SECURITY.md
+  s_2bef424141f91c::t_3484aa67955de2 91-93,100-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7bf6e095cd4d07bb541d70bc63463e789e72b2a2",
+  "prompts": {},
+  "sessions": {
+    "s_2bef424141f91c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaa22c86ffdffc0d7",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

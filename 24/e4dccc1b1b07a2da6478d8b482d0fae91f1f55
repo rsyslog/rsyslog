@@ -1,0 +1,21 @@
+doc/ai/module_map.yaml
+  s_9591331cc7634e::t_3d0ba26a130e7c 362-371
+plugins/imjournal/imjournal.c
+  s_9591331cc7634e::t_964933617a0bec 77-101,110,118-119,1395,1420-1421,1424,1428,1437,1443,1466,1470-1471,1475-1478,1482-1484,1487-1488,1494-1495,1740,1929
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24e4dccc1b1b07a2da6478d8b482d0fae91f1f55",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

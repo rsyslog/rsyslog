@@ -1,0 +1,36 @@
+tests/Makefile.am
+  h_95716f3de0caf5 22-23,3498-3499,3501,3503
+  h_95716f3de0caf5 3497,3500
+  s_9591331cc7634e::t_5444295008becb 3496
+plugins/imklog/imklog.c
+  h_95716f3de0caf5 225-226,233,239-241
+doc/source/reference/parameters/imklog-internalmsgfacility.rst
+  h_95716f3de0caf5 24,34,37-44,47
+  h_95716f3de0caf5 45-46
+tests/imklog-internalmsgfacility.sh
+  h_95716f3de0caf5 1-7,11-22,33-38
+  h_95716f3de0caf5 8-10,23-32
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 342-343,347-349,351
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0b5df2cb47a272b9bbdbf8940c6ba96110d9a7c",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

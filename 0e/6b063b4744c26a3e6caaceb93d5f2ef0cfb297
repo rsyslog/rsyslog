@@ -1,0 +1,22 @@
+ChangeLog
+  s_18723db397e337::t_7f4dc9abfc9616 4-8
+plugins/imjournal/imjournal.c
+  s_18723db397e337::t_0b2be28f0015d0 878,883-893
+  s_18723db397e337::t_f832bfeef24e19 894
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0e6b063b4744c26a3e6caaceb93d5f2ef0cfb297",
+  "prompts": {},
+  "sessions": {
+    "s_18723db397e337": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f65f9-b5e7-7e43-b45a-810ea8baeeae",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

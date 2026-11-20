@@ -1,0 +1,25 @@
+plugins/imuxsock/imuxsock.c
+  s_3aa9d0dbe5c8fb::t_0e1421b7404543 983
+plugins/mmanon/mmanon.c
+  s_3aa9d0dbe5c8fb::t_fd5b571186fd3e 1759,1932-1934
+tests/imuxsock-pri-digit-limit.sh
+  s_3aa9d0dbe5c8fb::t_01ae68088a6bfd 1-42
+tests/mmanon_recognize_ipembedded.sh
+  s_3aa9d0dbe5c8fb::t_e0a3150054e0c2 4-5,23,47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf6dd6242936319d726051d41be26b86115e3325",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+plugins/imjournal/imjournal.c
+  h_95716f3de0caf5 73-77,421,423,426-431,433,450,456-459,463-464,487-490,496-497,518-522,528-537,545,661,671-674,684,761-762,769-770,774-792,794-795,802,827
+tests/Makefile.am
+  h_95716f3de0caf5 1408
+tests/imjournal-field-bounds.sh
+  h_95716f3de0caf5 1-103
+tests/journal_print.c
+  h_95716f3de0caf5 34,120-215,220-225,229-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "276cf1e64f328df18eb9248bf3f8cf60738b047a",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

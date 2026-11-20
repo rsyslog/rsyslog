@@ -1,0 +1,37 @@
+doc/source/reference/parameters/imudp-batchsize.rst
+  s_d7272bc53775bd::t_0eabf3676b1384 3-6,36-46
+plugins/imudp/Makefile.am
+  s_d7272bc53775bd::t_2e9f440dac175d 3
+plugins/imudp/imudp.c
+  s_d7272bc53775bd::t_6b74496c1dafd6 31,67,167-174,561-601,714-716,718-725,731,811,1324-1325,1327-1329,1403-1404,1442-1443,1446-1448,1450
+tests/.gitignore
+  s_d7272bc53775bd::t_2704849dc3a1df 19
+tests/Makefile.am
+  s_d7272bc53775bd::t_18d5c2b2a723f3 81-84,2899-2901,2996-2998,3050
+tests/imudp-batchsize-range.sh
+  s_d7272bc53775bd::t_780e93cdb8e31f 1-62
+tests/yaml-imudp-batchsize-range.sh
+  s_d7272bc53775bd::t_3b515c2563cb10 1-57
+plugins/imudp/imudp_buffer.h
+  s_d7272bc53775bd::t_374eb45dd20b86 1-38
+tests/imudp-batchsize-runtime.sh
+  s_d7272bc53775bd::t_5e38cb56e44405 1-37
+tests/unit/imudp_buffer_test.c
+  s_d7272bc53775bd::t_231fb062e4dc69 1-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33fa542b507bf2c2f38e88ba40d1b4f3402e10f6",
+  "prompts": {},
+  "sessions": {
+    "s_d7272bc53775bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fce3-06c9-76c0-90f3-f2b23cb3399f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

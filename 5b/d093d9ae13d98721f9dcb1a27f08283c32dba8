@@ -1,0 +1,85 @@
+doc/ai/mpmc_queue_design.md
+  s_316e24de471f59::t_2ad0e5fece3b72 1029-1073
+tests/concurrent-array-config.sh
+  s_316e24de471f59::t_47882ae5a79be7 152-153,310-315,317-322,324-341
+  s_316e24de471f59::t_49e815ab399d07 142,207
+  s_316e24de471f59::t_e89f34da6762b9 155-158,219-225
+  s_316e24de471f59::t_b4170e3177f814 209-218
+  s_316e24de471f59::t_f256d4f2bc6d6a 4-7,32-46,150,165,172
+  s_316e24de471f59::t_f8ff97998f1171 316
+  s_316e24de471f59::t_08c358d24cb7e6 323
+  s_316e24de471f59::t_245dfe10b54689 151
+  s_316e24de471f59::t_3a2e1092c75cf2 154
+  s_316e24de471f59::t_21d9dc651ba859 208
+runtime/rsconf.c
+  s_316e24de471f59::t_3b99f658faa60c 389,498,1371-1373,1393,1549-1550
+tests/concurrent-array-da-maxdiskspace.sh
+  s_316e24de471f59::t_ace61631c40752 1-7
+tests/testsuites/da-engine-persist-driver.sh
+  s_316e24de471f59::t_0aa8f519fc8cb2 8-13,65-74,76,79-83
+  s_316e24de471f59::t_6f872a347efbea 39
+  s_316e24de471f59::t_7c79c65d695815 17,23-33,38,41,43,48
+  s_316e24de471f59::t_8613610f376f6f 75
+tests/testsuites/da-engine-behavior-driver.sh
+  s_316e24de471f59::t_47ebcee6a59b37 65,89,102
+  s_316e24de471f59::t_5bdf8850ac2fd7 145
+  s_316e24de471f59::t_e89f34da6762b9 10-12
+  s_316e24de471f59::t_62874edd1bed9e 18,53-55,59-62,66-68,70,76,83,95,110,141-144,146-150
+  s_316e24de471f59::t_29ae7c286b5ce0 57,64,97,112
+  s_316e24de471f59::t_6fc0a880c60e6d 56,63,84,96,111
+  s_316e24de471f59::t_30095e3be17a5a 58
+runtime/rsconf.h
+  s_316e24de471f59::t_3b99f658faa60c 61
+tests/segmented-da-maxdiskspace.sh
+  s_316e24de471f59::t_fecc14b64b72fa 47-51
+  s_316e24de471f59::t_ace61631c40752 16-22,31,33,56-63
+tests/yaml-concurrent-array-da.sh
+  s_316e24de471f59::t_122622f63a9508 1-55
+tests/Makefile.am
+  s_316e24de471f59::t_122622f63a9508 67
+  s_316e24de471f59::t_ace61631c40752 65-66
+tools/rsyslogd.c
+  s_316e24de471f59::t_3b99f658faa60c 1143-1147
+  s_316e24de471f59::t_e89f34da6762b9 1108-1114
+runtime/queue.c
+  s_316e24de471f59::t_3b99f658faa60c 4512-4513,4515-4518
+  s_316e24de471f59::t_fecc14b64b72fa 6581
+  s_316e24de471f59::t_c25438d4782c02 2863-2867
+  s_316e24de471f59::t_1add47fdc351d0 5570-5571
+  s_316e24de471f59::t_d48489af2c8e26 289
+  s_316e24de471f59::t_1686244f7ffd89 4758,4763-4767,6440-6443,6453-6454,6456-6457,6459-6467
+  s_316e24de471f59::t_72ecdac9f70a2a 4500-4506,4508-4511
+  s_316e24de471f59::t_47882ae5a79be7 1011-1021
+  s_316e24de471f59::t_e89f34da6762b9 991-997,4507,4514,4759-4762,6455,6458,6468-6478,6484-6486,6582-6590
+  s_316e24de471f59::t_0aa8f519fc8cb2 2653-2658
+  s_316e24de471f59::t_451e760bc6c2be 783-788,988-990,998-999,2599,2828-2862,6495
+  s_316e24de471f59::t_2b0058bb9993a9 2868-2869
+doc/ai/mpmc_queue_lab_notebook.md
+  s_316e24de471f59::t_2ad0e5fece3b72 1131-1169
+tests/concurrent-array-da-persist.sh
+  s_316e24de471f59::t_7c79c65d695815 1-12
+tests/concurrent-array-da.sh
+  s_316e24de471f59::t_62874edd1bed9e 1-15
+runtime/ruleset.c
+  s_316e24de471f59::t_451e760bc6c2be 159-160,171-172,195
+runtime/queue.h
+  s_316e24de471f59::t_1686244f7ffd89 119-122
+doc/ai/module_map.yaml
+  s_316e24de471f59::t_2ad0e5fece3b72 19-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5bd093d9ae13d98721f9dcb1a27f08283c32dba8",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

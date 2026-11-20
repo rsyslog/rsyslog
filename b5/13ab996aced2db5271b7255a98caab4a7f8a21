@@ -1,0 +1,14 @@
+tests/Makefile.am
+  h_95716f3de0caf5 1001
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b513ab996aced2db5271b7255a98caab4a7f8a21",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

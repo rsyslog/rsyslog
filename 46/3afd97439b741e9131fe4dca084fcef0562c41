@@ -1,0 +1,20 @@
+runtime/queue.c
+  s_0e13bafe0bf506::t_59f79d4ca84a11 748-751
+  s_0e13bafe0bf506::t_11639488d75d8a 752
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "463afd97439b741e9131fe4dca084fcef0562c41",
+  "prompts": {},
+  "sessions": {
+    "s_0e13bafe0bf506": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a062d6-a2e9-7590-884e-edace947c0df",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+tests/unit/qpid_generation_order.py
+  h_95716f3de0caf5 121-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5662f319780739f7c5687b737f10fa3412117f39",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

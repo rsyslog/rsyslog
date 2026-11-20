@@ -1,0 +1,113 @@
+doc/ai/module_map.yaml
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 44-49
+doc/source/configuration/modules/omawslogshlc.rst
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 26,213-249,252-253
+  s_0ed7a98cdca2e7::t_fcdafd77ac1d3a 38-78,182-196
+  s_0ed7a98cdca2e7::t_bf0d2fd6302230 81-155,250-251,254,256-263
+  s_0ed7a98cdca2e7::t_29f97632550a87 255
+  s_0ed7a98cdca2e7::t_66a3a725779215 23-25
+  s_0ed7a98cdca2e7::t_512d9fb87d7a39 27-29,35-37
+  s_0ed7a98cdca2e7::t_f24561464b6b68 79-80
+  s_0ed7a98cdca2e7::t_4f4f7413b47b6f 156-158,179-181
+  s_0ed7a98cdca2e7::t_c9e312e3ea254f 197-199,210-212
+  s_0ed7a98cdca2e7::t_0eaedc777accea 264-266
+  s_0ed7a98cdca2e7::t_d5c135b3ce6b07 1-22,30-34,159-178,200-209,267-273
+tests/omawslogshlc-basic.sh
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 4-6,40-41
+  s_0ed7a98cdca2e7::t_39039337d56191 32
+  s_f3db7ab3045489::t_3919d841f95ad8 1-3,7-31,33-39,42-43
+tests/omawslogshlc-event-too-large.sh
+  s_0ed7a98cdca2e7::t_bf0d2fd6302230 46
+  s_0ed7a98cdca2e7::t_48f29c8d79a2ab 5-7,11,17,21,23-34,39-40
+  s_0ed7a98cdca2e7::t_bd091abb51eea2 1-4,8-10,12-16,18-20,22,35-38,41-45,47-48
+plugins/omawslogshlc/Makefile.am
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 8
+  s_0ed7a98cdca2e7::t_c4554659d7e85e 5-7
+  s_0ed7a98cdca2e7::t_50f0244ed1f3be 1-4
+tests/omawslogshlc-missing-region.sh
+  s_0ed7a98cdca2e7::t_39039337d56191 19
+  s_f3db7ab3045489::t_712164fbd5fbf5 1-18,20-28
+tests/omawslogshlc-batch.sh
+  s_0ed7a98cdca2e7::t_39039337d56191 33
+  s_0ed7a98cdca2e7::t_c30eee4a65c475 4-6,41-42
+  s_f3db7ab3045489::t_981af8f71caf9b 1-3,7-32,34-40,43-44
+tests/Makefile.am
+  s_0ed7a98cdca2e7::t_6f1c36517d365b 2052
+  s_0ed7a98cdca2e7::t_9deb6ca3803662 2827
+  s_0ed7a98cdca2e7::t_48f29c8d79a2ab 1072-1074,2828-2831
+  s_0ed7a98cdca2e7::t_6852bf1427269a 1069-1071
+  s_0ed7a98cdca2e7::t_a04efba5d0c3bc 2051
+  s_0ed7a98cdca2e7::t_efc8d13a335b02 2053
+  s_0ed7a98cdca2e7::t_68c38edd08c29d 2824-2826
+  s_0ed7a98cdca2e7::t_4f31509ed07b16 2832
+  s_0ed7a98cdca2e7::t_996332298c298e 1067-1068
+plugins/omawslogshlc/omawslogshlc.c
+  s_0ed7a98cdca2e7::t_437a7dcc4f3ecf 4-355,364,371,377,383,447-448,458,461-462,486,525,536,552,578-579,591,595,599,603,608,644
+  s_0ed7a98cdca2e7::t_ae64f01483fb83 1-3
+  s_0ed7a98cdca2e7::t_9bfe91a524e48f 356-358,361-363
+  s_0ed7a98cdca2e7::t_8246359fdbf24e 365-370
+  s_0ed7a98cdca2e7::t_cb7a14ce0a5ab8 372-376
+  s_0ed7a98cdca2e7::t_6e403d8bef1922 378-382
+  s_0ed7a98cdca2e7::t_c9fbac8b58f5ed 384-386,444-446
+  s_0ed7a98cdca2e7::t_24db4354233321 449-451,455-457
+  s_0ed7a98cdca2e7::t_c0e504865edb37 459-460
+  s_0ed7a98cdca2e7::t_c5ad99aec7ce2f 463-465,483-485
+  s_0ed7a98cdca2e7::t_101cb959fe8f69 487-489,522-524
+  s_0ed7a98cdca2e7::t_12c52cc5921047 526-528,533-535
+  s_0ed7a98cdca2e7::t_ca4fe23c919574 537-539,549-551
+  s_0ed7a98cdca2e7::t_e4522d8639a929 553-555,575-577
+  s_0ed7a98cdca2e7::t_8fa1e58eb1843b 580-582,588-590
+  s_0ed7a98cdca2e7::t_97bb092b79cf67 592-594
+  s_0ed7a98cdca2e7::t_3379162804d62e 596-598
+  s_0ed7a98cdca2e7::t_d96d0875294598 600-602
+  s_0ed7a98cdca2e7::t_1841185da237dd 604-607
+  s_0ed7a98cdca2e7::t_80b83ea08b84f4 609-611,641-643
+  s_0ed7a98cdca2e7::t_f9bb030330d049 645-647
+  s_0ed7a98cdca2e7::t_a92b7889ae29bc 359-360,387-443,452-454,466-482,490-521,529-532,540-548,556-574,583-587,612-640,648-649
+Makefile.am
+  s_0ed7a98cdca2e7::t_706206d04fabb0 242-245,605-608
+configure.ac
+  s_0ed7a98cdca2e7::t_83e16b0f0f95b4 2870-2880,3016-3036,3624,3743,3824
+doc/Makefile.am
+  s_0ed7a98cdca2e7::t_73049816689450 268,926-931
+doc/source/reference/parameters/omawslogshlc-bearer_token.rst
+  s_0ed7a98cdca2e7::t_a2a24bccf2910d 1-46
+doc/source/reference/parameters/omawslogshlc-log_group.rst
+  s_0ed7a98cdca2e7::t_65f10c62129920 1-45
+doc/source/reference/parameters/omawslogshlc-log_stream.rst
+  s_0ed7a98cdca2e7::t_8fba0dfa096580 1-46
+doc/source/reference/parameters/omawslogshlc-max_batch_size.rst
+  s_0ed7a98cdca2e7::t_6c20bb6d989a1c 1-46
+doc/source/reference/parameters/omawslogshlc-region.rst
+  s_0ed7a98cdca2e7::t_84fca66c5d2c9e 1-46
+doc/source/reference/parameters/omawslogshlc-template.rst
+  s_0ed7a98cdca2e7::t_78a5b82d9a134d 1-47
+tests/omawslogshlc-env.sh
+  s_0ed7a98cdca2e7::t_dc6275cd931b1b 1-20
+plugins/omawslogshlc/MODULE_METADATA.yaml
+  s_0ed7a98cdca2e7::t_d6974184719da8 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "abc26c3f189853d8262c6fea340537613357db14",
+  "prompts": {},
+  "sessions": {
+    "s_0ed7a98cdca2e7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f2c80-b6dc-7e91-9682-31b99079a0a7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f3db7ab3045489": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f222f-8acf-7402-8e25-189e3450b231",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

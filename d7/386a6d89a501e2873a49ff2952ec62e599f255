@@ -1,0 +1,21 @@
+tests/imuxsock_annotate_escape.sh
+  s_3aa9d0dbe5c8fb::t_5e6c589b17b242 7-8,50-51,59-81,127-128
+tests/yaml-imuxsock-annotate-escape.sh
+  s_3aa9d0dbe5c8fb::t_5e6c589b17b242 7-8,29-30,38-60,106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d7386a6d89a501e2873a49ff2952ec62e599f255",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

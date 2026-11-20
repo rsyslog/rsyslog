@@ -1,0 +1,19 @@
+tests/imptcp_framing_regex-oversize.sh
+  s_2211d00224abdf::t_5e98c3f32d18ab 3-5,46-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "10f5ad614755eef3ff6733ee24e74fa43aa634fc",
+  "prompts": {},
+  "sessions": {
+    "s_2211d00224abdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7fc9-8e30-7130-b847-6b5dc1a62abb",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

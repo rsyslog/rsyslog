@@ -1,0 +1,85 @@
+runtime/tcps_sess.h
+  s_f2c089be484e12::t_6916f436a32528 119-120
+  s_f2c089be484e12::t_89561cbe9cb159 116-118
+tools/shadow_reload.c
+  s_f2c089be484e12::t_c9939bfe5c8daa 714-722
+  s_f2c089be484e12::t_3811021102699b 828
+tests/Makefile.am
+  s_f2c089be484e12::t_64202a17bebf3e 609-610
+  s_f2c089be484e12::t_96b1158e98767d 1891-1892
+  s_f2c089be484e12::t_2f28333e9d7995 611
+  s_f2c089be484e12::t_271a075eb69d22 1893
+tests/global-reloadonhup-imtcp-regex-yaml.sh
+  s_f2c089be484e12::t_b4a68dd2865e10 1-81
+tests/global-reloadonhup-imtcp-regex-rainerscript.sh
+  s_f2c089be484e12::t_379e7a6dd7ac04 1-77
+runtime/tcps_sess.c
+  s_f2c089be484e12::t_25d0bfd593e486 201-208,379-388,390-391,394-397,404,1381
+  s_f2c089be484e12::t_62731102e64855 389,392-393
+  s_f2c089be484e12::t_4d648c768ddfc4 2-4,348-355
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_4d648c768ddfc4 42-53,382-384
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_4d648c768ddfc4 166-167
+tests/global-reloadonhup-imtcp-maxsessions-explicit-rainerscript.sh
+  s_f2c089be484e12::t_51307f454397c2 1-6
+tests/global-reloadonhup-imtcp-maxsessions-explicit-yaml.sh
+  s_f2c089be484e12::t_26deb796884352 1-6
+tests/global-reloadonhup-imtcp-maxsessions-rainerscript.sh
+  s_f2c089be484e12::t_3934bd96c89f57 152-163
+  s_f2c089be484e12::t_a17fbe22a84d6c 25
+  s_f2c089be484e12::t_5df0202451b03b 1-12,15-23,35-94,96,98-116,118-121,140-141,143,145-151,164-168
+  s_f2c089be484e12::t_59968896ab8cf2 13-14,24,26-29,31-32,34,95,97,117,122-139,142,144
+  s_f2c089be484e12::t_2aed162c099c85 30,33
+tests/global-reloadonhup-imtcp-maxsessions-yaml.sh
+  s_f2c089be484e12::t_1d49ae6e18089d 163-174
+  s_f2c089be484e12::t_c28fdbce5f7c5c 11-12,40-45,47-48,50,109,111,128,133-150,153,155
+  s_f2c089be484e12::t_ad2801229db2cf 1-10,13-39,51-108,110,112-127,129-132,151-152,154,156-162,175-179
+  s_f2c089be484e12::t_2aed162c099c85 46,49
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_5d6e2023f3768c 1738
+  s_f2c089be484e12::t_6916f436a32528 7-8
+  s_f2c089be484e12::t_90ab63cc9a852f 1960
+  s_f2c089be484e12::t_d0606012052911 2117
+  s_f2c089be484e12::t_ea1e26997df52d 2199-2204
+  s_f2c089be484e12::t_2033491fbb930d 2234
+  s_f2c089be484e12::t_d233ca3907199f 2241
+  s_f2c089be484e12::t_c44df17928cb55 2537
+  s_f2c089be484e12::t_090d21cab13106 2082-2092
+  s_f2c089be484e12::t_3811021102699b 1869-1873
+  s_f2c089be484e12::t_b9dba276d53179 1856-1859
+  s_f2c089be484e12::t_62731102e64855 1986,1989-1990
+  s_f2c089be484e12::t_5c50d35a3aa9c8 2132
+  s_f2c089be484e12::t_396fcab5a992d0 2150-2169
+  s_f2c089be484e12::t_41dc4e65d43cd6 1963-1965
+  s_f2c089be484e12::t_77507c0f4130e7 2250
+  s_f2c089be484e12::t_fd03c98bffae76 1975-1985,1987-1988,1991-2017
+  s_f2c089be484e12::t_76472ae14ea16d 1686
+  s_f2c089be484e12::t_5016e1a1d0cc81 2229
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_b46ba10f49f5c2 484,535,694
+  s_f2c089be484e12::t_ee78d162d6f440 2401
+  s_f2c089be484e12::t_4490b3da09b68d 2406-2424
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_a800130ad9ca2d 436
+  s_f2c089be484e12::t_20d830a531700a 502-509
+  s_f2c089be484e12::t_60c39e4d864b40 134
+  s_f2c089be484e12::t_6916f436a32528 107-108,431
+  s_f2c089be484e12::t_7969c73c72c375 98-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec586b09999b15a07a21f9b09b9a95c86740d4a9",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,23 @@
+ChangeLog
+  s_18723db397e337::t_7f4dc9abfc9616 4-8
+plugins/imjournal/imjournal.c
+  s_18723db397e337::t_f832bfeef24e19 895
+  s_18723db397e337::t_0b2be28f0015d0 878,883-891,893-894
+  s_18723db397e337::t_5d7deee00c5ef7 892
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "383f80f21f16c3c94e7d7a57b0a5af12cdac9d75",
+  "prompts": {},
+  "sessions": {
+    "s_18723db397e337": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f65f9-b5e7-7e43-b45a-810ea8baeeae",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

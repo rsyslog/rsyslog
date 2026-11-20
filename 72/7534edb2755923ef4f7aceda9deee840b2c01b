@@ -1,0 +1,27 @@
+runtime/AGENTS.md
+  s_5e773934876cb4::t_82b519aa4020ee 62-65
+runtime/perctile_stats.c
+  s_5e773934876cb4::t_d126e5b317a319 435-438,441
+tests/Makefile.am
+  s_5e773934876cb4::t_859160e052d2d2 17-20,3886-3889
+tests/perctile-nearest-rank.sh
+  s_5e773934876cb4::t_2ddb947ff75230 1-126
+tests/yaml-perctile-nearest-rank.sh
+  s_5e773934876cb4::t_36084c85d509bc 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "727534edb2755923ef4f7aceda9deee840b2c01b",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

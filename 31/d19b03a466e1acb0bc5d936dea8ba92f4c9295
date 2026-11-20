@@ -1,0 +1,178 @@
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_1d411a56c032c2 114,126-144
+  s_f2c089be484e12::t_46f7d84334807f 145
+runtime/msg.c
+  s_f2c089be484e12::t_a16e19eb3ed6d4 1129
+tests/unit/parser_policy_test.c
+  s_f2c089be484e12::t_3a16de67909c20 27-33,42-46,143-171,186
+  s_f2c089be484e12::t_75facf636958ea 185
+  s_f2c089be484e12::t_ab77618bff2a54 1-26,34-41,47-115,135-142,172-184,187-207
+  s_f2c089be484e12::t_45ff6a0dd93e78 116-134
+grammar/reload-ruleset-materializer.h
+  s_f2c089be484e12::t_bbeb6bc564ffac 30
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_091ee3baaafe71 973-974
+  s_f2c089be484e12::t_9ebbc96dd5b4da 964-969
+  s_f2c089be484e12::t_e77b3348e8e445 556-557,559,562-593
+  s_f2c089be484e12::t_876193a40811e7 930
+  s_f2c089be484e12::t_d90de95944047b 893
+  s_f2c089be484e12::t_aa456748cec4d4 941,945-947,949,955-956
+  s_f2c089be484e12::t_5ffbbc8e16c3eb 1074
+  s_f2c089be484e12::t_3a16de67909c20 1077-1083
+  s_f2c089be484e12::t_12e76cdbff2724 594
+  s_f2c089be484e12::t_f08fc0dbe7033f 1065-1073,1075-1076,1084
+tests/parser-policy-unit.sh
+  s_f2c089be484e12::t_9ebbc96dd5b4da 1
+  s_f2c089be484e12::t_ab77618bff2a54 2-7
+tests/global-reloadonhup-droptrailingcr-rainerscript.sh
+  s_f2c089be484e12::t_32be1a0794abb3 1-59
+tests/global-reloadonhup-compactjson-rainerscript.sh
+  s_f2c089be484e12::t_294d613dc1818a 1-51
+tests/global-reloadonhup-oversizemsg-report-yaml.sh
+  s_f2c089be484e12::t_4b0cd8fb6308d8 1-3,7-13,17-24,30-53,56-75,78-79,81
+  s_f2c089be484e12::t_3184f82929a38a 4-6,14-16,25-29,54-55,80
+  s_f2c089be484e12::t_bb8f6a8fa33c60 76-77
+tests/testsuites/reload-mode-off-driver.sh
+  s_f2c089be484e12::t_3a16de67909c20 37
+  s_f2c089be484e12::t_7d30d5ccf02a02 1,3-10,12,15-36,38-45
+  s_f2c089be484e12::t_0144f2d6a222d9 2,11,13-14
+runtime/parser.c
+  s_f2c089be484e12::t_bbe028f98b128f 578
+  s_f2c089be484e12::t_a2de2a48f7b133 363-370,389,396,417,419,422,426,429,439-443,449,470-471,479,484,526,533-534,546,566-577
+tools/rsyslogd.c
+  s_f2c089be484e12::t_937040d9169217 2718
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_9ebbc96dd5b4da 10-11,309-313
+  s_f2c089be484e12::t_b2ba199207c9b5 221,264-291
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_e3056895239d01 273-301
+  s_f2c089be484e12::t_17c8a5deb06c34 208
+  s_f2c089be484e12::t_9ebbc96dd5b4da 10-11,315-319
+tests/global-reloadonhup-oversizemsg-report-rainerscript.sh
+  s_f2c089be484e12::t_39dab3a71aaff4 1-3,7-10,13-15,21-44,47-65,68-69,71
+  s_f2c089be484e12::t_3184f82929a38a 4-6,11-12,16-20,45-46,70
+  s_f2c089be484e12::t_bb8f6a8fa33c60 66-67
+tests/global-reloadonhup-droptrailinglf-yaml.sh
+  s_f2c089be484e12::t_3429680fe8c432 1-78
+tests/global-reloadonhup-reportchild-rainerscript.sh
+  s_f2c089be484e12::t_a98a919ac66905 1-91
+tests/global-reloadonhup-mode-off-rainerscript.sh
+  s_f2c089be484e12::t_7d30d5ccf02a02 1-5
+tests/global-reloadonhup-droptrailingcr-yaml.sh
+  s_f2c089be484e12::t_c0ce3c3c108a32 1-76
+tests/Makefile.am
+  s_f2c089be484e12::t_11ce3735a8b301 1398
+  s_f2c089be484e12::t_222e039c542977 365,968
+  s_f2c089be484e12::t_bf34d1c385898f 2751
+  s_f2c089be484e12::t_ab77618bff2a54 26-27,2919
+  s_f2c089be484e12::t_c53bb4692d1626 3781-3785
+  s_f2c089be484e12::t_3184f82929a38a 2918,2920
+  s_f2c089be484e12::t_7d30d5ccf02a02 28,363,966,1029-1030,1132-1133
+  s_f2c089be484e12::t_941e9352124f42 364,967
+  s_f2c089be484e12::t_011a3cbb7281a5 1421-1423
+tests/global-reloadonhup-compactjson-yaml.sh
+  s_f2c089be484e12::t_8bdd37bf2eb27b 1-59
+runtime/rsconf.c
+  s_f2c089be484e12::t_0aa20c63503b50 336
+  s_f2c089be484e12::t_937040d9169217 94,305
+  s_f2c089be484e12::t_1e27ac9139316e 338
+  s_f2c089be484e12::t_0927e2f9c2636a 412-413
+tests/global-reloadonhup-reportchild-yaml.sh
+  s_f2c089be484e12::t_bae8af0e50c2b2 1-105
+runtime/glbl.h
+  s_f2c089be484e12::t_ab3f67bcca447e 182
+  s_f2c089be484e12::t_f6c379f639674a 184,186
+  s_f2c089be484e12::t_3f0a28d33f16ba 128,130,132
+  s_f2c089be484e12::t_4f29a34c8be207 138,140
+  s_f2c089be484e12::t_937040d9169217 123-126
+  s_f2c089be484e12::t_091ee3baaafe71 127,129,131,133,135,137,139
+  s_f2c089be484e12::t_ed1267cf45411e 134,136
+  s_f2c089be484e12::t_7d30d5ccf02a02 181,183,185
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_2fe1cfcbc92d9c 658-661
+  s_f2c089be484e12::t_9c1314cd8d2420 1024-1029
+  s_f2c089be484e12::t_091ee3baaafe71 30,40-45
+  s_f2c089be484e12::t_2805fa64b37198 327-331
+  s_f2c089be484e12::t_701244f1a3171a 46
+  s_f2c089be484e12::t_0c0ac62ad7095c 305-316
+tests/global-reloadonhup-mode-off-yaml.sh
+  s_f2c089be484e12::t_7d30d5ccf02a02 1-5
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_34c507d450ce1c 546-549
+  s_f2c089be484e12::t_67334b995c6f7e 490-509
+  s_f2c089be484e12::t_a11a26b202b71c 517,519-522
+  s_f2c089be484e12::t_adff96cce04722 145-146,1555-1557,1559-1561,1571-1576
+  s_f2c089be484e12::t_0e8aaef895d191 1554
+  s_f2c089be484e12::t_0ce5728299d3e9 1577,1579,1587,1605
+  s_f2c089be484e12::t_017a8f0c94f4dc 1599-1604
+  s_f2c089be484e12::t_a1b04b7e82fe07 1276-1334
+plugins/imdiag/imdiag.c
+  s_f2c089be484e12::t_3e39c195458ac7 1449-1450
+tools/Makefile.am
+  s_f2c089be484e12::t_937040d9169217 88-98,100
+grammar/reload-ruleset-materializer.c
+  s_f2c089be484e12::t_284957ef0b7ae5 369
+  s_f2c089be484e12::t_0e8aaef895d191 371-373
+  s_f2c089be484e12::t_8d7277bf3351ec 350
+tools/shadow_reload.c
+  s_f2c089be484e12::t_81a28884244a2f 628,917,927,1162
+  s_f2c089be484e12::t_5efadb767a90d8 1166
+  s_f2c089be484e12::t_f984f0cbcac998 86-89
+  s_f2c089be484e12::t_b1bd1345790c72 1163,1165
+  s_f2c089be484e12::t_bcb9d5295f9985 96-97,495,566-581,603-606,608-611,613,825,832,1170
+  s_f2c089be484e12::t_9e5b5348db8181 26
+  s_f2c089be484e12::t_dac44b5dd6a69a 90-91,467-480,492,525-545,822,829,1167
+  s_f2c089be484e12::t_17740d5606aaa8 882-888
+  s_f2c089be484e12::t_0e8aaef895d191 85
+  s_f2c089be484e12::t_af7d50e2227b27 7-9
+  s_f2c089be484e12::t_937040d9169217 1164
+  s_f2c089be484e12::t_f9e3b0e345029d 453-466,491
+  s_f2c089be484e12::t_45c782a8be11d5 94-95,494,582-602,824,831,1169
+  s_f2c089be484e12::t_ede615b30a15d9 821,826-828
+  s_f2c089be484e12::t_1d411a56c032c2 507-508
+  s_f2c089be484e12::t_3b396266b5edaf 92-93,493,546-565,823,830,1168
+  s_f2c089be484e12::t_976a94555fb1ff 439-452,485-490,496-503,607,614-622
+  s_f2c089be484e12::t_0a31eee1ca4ebc 820
+  s_f2c089be484e12::t_e29e762f4393d9 918-920
+  s_f2c089be484e12::t_adff96cce04722 481-484
+  s_f2c089be484e12::t_b9a216ccd20032 504-506,509-524,612
+tests/global-reloadonhup-droptrailinglf-rainerscript.sh
+  s_f2c089be484e12::t_8ee1309b3448a1 1-61
+runtime/glbl.c
+  s_f2c089be484e12::t_937040d9169217 111,953-962,1651,1653,1655,1822,1845
+  s_f2c089be484e12::t_5cb0ca0039038f 113,317-320,980-989,1824,1842
+  s_f2c089be484e12::t_7bc112ed16174c 1840
+  s_f2c089be484e12::t_59373fb1649faa 1251
+  s_f2c089be484e12::t_21970981d8b2e2 114,945-946,992-996,1260,1533,1825,1841
+  s_f2c089be484e12::t_0927e2f9c2636a 642,648,1262-1263
+  s_f2c089be484e12::t_025bf8f82d5dca 734,736,738
+  s_f2c089be484e12::t_dc1cd483422540 112,313-316,970-979,1823,1843
+  s_f2c089be484e12::t_318bbcc38f42d3 115-118
+  s_f2c089be484e12::t_cc41c89f516324 1826
+  s_f2c089be484e12::t_b9a2cf1a196b96 108-110,949-952,963-969,990-991,1518,1821,1844
+  s_f2c089be484e12::t_5bd4827a84e861 947,997-1004,1012,1015-1016
+  s_f2c089be484e12::t_937f28fcdc1bf9 948
+doc/ai/module_map.yaml
+  s_f2c089be484e12::t_3a16de67909c20 5-16
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_adff96cce04722 90,92-93
+  s_f2c089be484e12::t_0e8aaef895d191 62-69
+  s_f2c089be484e12::t_c22aae08a32bcd 91,94-101
+  s_f2c089be484e12::t_1d411a56c032c2 35,38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "31d19b03a466e1acb0bc5d936dea8ba92f4c9295",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}

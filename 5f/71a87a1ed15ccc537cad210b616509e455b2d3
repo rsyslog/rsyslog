@@ -1,0 +1,22 @@
+doc/source/reference/parameters/imklog-logpath.rst
+  h_95716f3de0caf5 34-43
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 50,218-219,221,228,254-256,259,261,280,304-320
+tests/Makefile.am
+  h_95716f3de0caf5 27-30,3571-3574
+tests/imklog-logpath-eof.sh
+  h_95716f3de0caf5 1-47
+tests/imklog-logpath-read-error.sh
+  h_95716f3de0caf5 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5f71a87a1ed15ccc537cad210b616509e455b2d3",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

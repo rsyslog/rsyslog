@@ -1,0 +1,45 @@
+doc/ai/module_map.yaml
+  s_f8a738e4bdfaee::t_3ac005b9432540 191-209
+plugins/imtcp/Makefile.am
+  s_f8a738e4bdfaee::t_0a886c7c0e26d2 3
+plugins/imtcp/imtcp-reader-test.h
+  s_f8a738e4bdfaee::t_40ff9d1ac06921 1-24
+plugins/imtcp/imtcp.c
+  s_f8a738e4bdfaee::t_cc5fcc96d4962c 90-92,124,2470-2472,2479-2541,2873,2885,2905,2913,2938-2941,2944-2949,2957-2961,2986-2989,3065-3080,3093,3112,3155-3159,3163-3222,3691,3770-3772
+runtime/module-reload.c
+  s_f8a738e4bdfaee::t_77021200541bbe 106-129,178-191
+runtime/modules.h
+  s_f8a738e4bdfaee::t_3d1c18a224cda7 174-186,196-197,212,409-413
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_1d241b5741ae46 4866,4885-4902
+tests/unit/module_readers_manager_test.c
+  s_f8a738e4bdfaee::t_1a5167764ad5d7 1-58
+tests/unit/module_reload_test.c
+  s_f8a738e4bdfaee::t_65bf3586d867f2 213-264,266,317-319,321,330-331
+tests/unit/tcpsrv_prepared_backend_test.c
+  s_f8a738e4bdfaee::t_df204fc5d7a846 56-57,64,86,223-228,636-874,928-929
+tools/Makefile.am
+  s_f8a738e4bdfaee::t_3a2eceed58b639 13
+tools/shadow_reload.c
+  s_f8a738e4bdfaee::t_8b53b247174cd9 38,85-88,165-168,473-501,1040-1048,1051-1052,1059-1060,1154-1158,1198,1214-1218,1391,1420-1724,1774-1778,1801-1813
+tools/shadow_reload.h
+  s_f8a738e4bdfaee::t_6c9b01ef1ffbde 71-78,106-113
+tools/shadow_reload_readers.h
+  s_f8a738e4bdfaee::t_6cddc4a07266e3 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14921d8752f1b2b2ed4685372e29c7b3261fb509",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

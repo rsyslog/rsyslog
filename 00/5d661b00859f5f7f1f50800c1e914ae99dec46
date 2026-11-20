@@ -1,0 +1,55 @@
+doc/ai/module_map.yaml
+  s_142ee1fa291d22::t_4199f964ff5679 26-31,35-41
+runtime/queue.c
+  s_142ee1fa291d22::t_ff45f1b54734f4 320-321,3153-3154,3158-3188,5109-5110,5590-5591,5620-5622,5701-5706
+runtime/queue.h
+  s_142ee1fa291d22::t_db9933effc728b 106-107
+runtime/queue_local.c
+  s_142ee1fa291d22::t_4c949e75ed807e 20-23,41,63-69,79,97-99,337-341,349,352-353,359-379,481-608,614,654-660,671-675,677-704,707,736,786-804,947,984-990,999-1002,1074-1079,1139,1141-1150,1283-1284,1311,1313-1326,1411-1425,1522-1529
+runtime/queue_local.h
+  s_142ee1fa291d22::t_417860c6fd6a17 24-26,41-43,70,88-92
+runtime/queue_local_stats.c
+  s_142ee1fa291d22::t_bd9049a2877256 67-81,113-127,203-217,251-265,328-342,380-394
+runtime/wti.h
+  s_142ee1fa291d22::t_7b8fb5041df2c0 87-90
+tests/Makefile.am
+  s_142ee1fa291d22::t_fefb99bd8f7d8e 182-189
+tests/local-queue-be-force-term-actions.sh
+  s_142ee1fa291d22::t_51a7ee584c5e92 14-19,26-44,60,67,84,86-93,103-109,117-120,123-131,142
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_2dddfa24b9ae81 28-37,179-180
+tests/local-queue-help-capacity.sh
+  s_142ee1fa291d22::t_008354385e2443 1-7
+tests/local-queue-help-wake-after.sh
+  s_142ee1fa291d22::t_2fe8adb6ea4954 1-6
+tests/local-queue-help-wake-before.sh
+  s_142ee1fa291d22::t_2735d05e43b04c 1-6
+tests/local-queue-help-wake-handoff.sh
+  s_142ee1fa291d22::t_9b1cb571f184a2 1-71
+tests/local-queue-helper-cancel-actions.sh
+  s_142ee1fa291d22::t_2a22b4320d45f2 1-8
+tests/local-queue-helper-force-term-actions.sh
+  s_142ee1fa291d22::t_5ca2f4ecdefe30 1-7
+tests/local-queue-helping-default.sh
+  s_142ee1fa291d22::t_f028c839a3e916 1-5
+tests/local-queue-helping.sh
+  s_142ee1fa291d22::t_11993d350407a9 1-101
+tests/local-queue-submit-batches.sh
+  s_142ee1fa291d22::t_8f00aea9b75b0e 10,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "005d661b00859f5f7f1f50800c1e914ae99dec46",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

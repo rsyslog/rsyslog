@@ -1,0 +1,21 @@
+doc/source/rainerscript/functions/mo-hashXX.rst
+  s_5e773934876cb4::t_70b6d74dd6c2c5 3-6,14-15,18-19,25,32-43
+doc/source/rainerscript/functions/mo-hashXXmod.rst
+  s_5e773934876cb4::t_63faeee30bc857 3-6,14-15,18-19,27,37-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f24ca20928d15bc7241ab7db2eeccd6c656a566c",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+tests/Makefile.am
+  s_142ee1fa291d22::t_70749bfd3d1636 3065
+benchmarks/queue-contention/compare-latency.py
+  s_142ee1fa291d22::t_e280b845238015 52,63-75,95,98-99
+benchmarks/queue-contention/README.md
+  s_142ee1fa291d22::t_b9e77c7406cbea 53-60
+benchmarks/queue-contention/trial-latency.sh
+  s_142ee1fa291d22::t_8ca845604b3887 14,44-45
+  s_142ee1fa291d22::t_2fb7af5409a07a 8,42,48
+  s_142ee1fa291d22::t_2580bb06681a03 41,43,49
+benchmarks/queue-contention/latency-observer.py
+  s_142ee1fa291d22::t_bf4b5ab79c45b3 188-189
+  s_142ee1fa291d22::t_4cc53497740b57 176-178,203-204
+  s_142ee1fa291d22::t_6f135806bd8301 207
+  s_142ee1fa291d22::t_ea135845188185 19,71-92,115-117,145-146,154,156,163-166,185-186
+  s_142ee1fa291d22::t_4b946dcd0460aa 171-172,187,191-202
+tests/queue-benchmark-latency-oracle.sh
+  s_142ee1fa291d22::t_8ca845604b3887 3-6,9-13
+benchmarks/queue-contention/latency-observer-selftest.py
+  s_142ee1fa291d22::t_75ad6e143cebd5 43-48
+  s_142ee1fa291d22::t_b0b02814b5f522 24-27,61-63,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5453bd524331466e52b69afda719f685c2f6b382",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

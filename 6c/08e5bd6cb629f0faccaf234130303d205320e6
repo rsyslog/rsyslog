@@ -1,0 +1,23 @@
+benchmarks/queue-contention/compare-latency.py
+  s_142ee1fa291d22::t_c614693c02bbbe 51-52
+benchmarks/queue-contention/README.md
+  s_142ee1fa291d22::t_17d439b9c095a3 47-49
+benchmarks/queue-contention/latency-observer.py
+  s_142ee1fa291d22::t_17d439b9c095a3 5-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6c08e5bd6cb629f0faccaf234130303d205320e6",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

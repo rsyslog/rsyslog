@@ -1,0 +1,20 @@
+tests/unit/hashtable_hooks_test.c
+  s_f67b54b127aca7::t_d85bead25e3ccd 48-53,162-168,214-248,371
+  s_f67b54b127aca7::t_56375c33c73c93 372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "7a30bd1ad20e8838a1b8024c262aa2d683558b84",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

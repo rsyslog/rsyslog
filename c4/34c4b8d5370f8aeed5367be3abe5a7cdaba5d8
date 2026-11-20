@@ -1,0 +1,19 @@
+tests/imuxsock-pri-digit-limit.sh
+  s_0ad5cc83f5b7d5::t_f71a1d6dc2e7ab 3-8,13,30,35,40-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c434c4b8d5370f8aeed5367be3abe5a7cdaba5d8",
+  "prompts": {},
+  "sessions": {
+    "s_0ad5cc83f5b7d5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eac7-8976-7cd3-8e0a-3688bf28863e",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

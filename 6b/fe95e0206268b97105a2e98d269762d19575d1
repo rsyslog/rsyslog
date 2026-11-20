@@ -1,0 +1,23 @@
+tests/imdtls-nonblocking-read.sh
+  s_3aa9d0dbe5c8fb::t_0f68b64a9ee9e7 9
+tests/imdtls-two-flight-proxy.py
+  s_3aa9d0dbe5c8fb::t_0f68b64a9ee9e7 2,38
+tests/imdtls-nonblocking-handshake.sh
+  s_3aa9d0dbe5c8fb::t_0f68b64a9ee9e7 4-5,10,61,64,66,68,74-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6bfe95e0206268b97105a2e98d269762d19575d1",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

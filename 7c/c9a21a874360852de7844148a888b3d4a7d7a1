@@ -1,0 +1,36 @@
+plugins/imklog/imklog.c
+  h_95716f3de0caf5 449
+tests/Makefile.am
+  h_95716f3de0caf5 40-43,3791-3794
+  s_9591331cc7634e::t_eaa22f4f15db32 44
+doc/source/reference/parameters/imklog-logpath.rst
+  h_95716f3de0caf5 34-43
+tests/imklog-logpath-read-error.sh
+  h_95716f3de0caf5 1-34
+tests/imklog-logpath-eof.sh
+  h_95716f3de0caf5 1-47
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 241,252-253,255,262,288-290,293,295,314,347-363
+  h_95716f3de0caf5 345
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cc9a21a874360852de7844148a888b3d4a7d7a1",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

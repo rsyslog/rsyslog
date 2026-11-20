@@ -1,0 +1,19 @@
+tests/mmexternal-interface-output-none.sh
+  s_594964528b618b::t_faf4dfbf11c046 5-7,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "c566302058320d4431f436d2162cd995c895c1f9",
+  "prompts": {},
+  "sessions": {
+    "s_594964528b618b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e5db7-91bf-7d21-a855-35623d2d6110",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

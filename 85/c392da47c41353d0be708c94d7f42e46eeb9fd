@@ -1,0 +1,27 @@
+tests/imtcp-persource-port-keys.sh
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 1-4
+tests/imptcp-persource-port-keys.sh
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 1-4
+tests/ratelimit-persource-port-keys-common.sh
+  s_008ef65e7b10ec::t_8c9f46144c49e4 99
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 1-2,7-71,73,78-83,85-88,91-98,100-108
+  s_008ef65e7b10ec::t_a9c5a311eceba5 3-6,72,74-77,84,89-90
+tests/Makefile.am
+  s_008ef65e7b10ec::t_0c53345d7a1cf3 897-898,901-902,2311,3321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "85c392da47c41353d0be708c94d7f42e46eeb9fd",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

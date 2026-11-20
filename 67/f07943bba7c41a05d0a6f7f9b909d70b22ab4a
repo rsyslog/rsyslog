@@ -1,0 +1,19 @@
+tests/daily-stable-archive-publication.sh
+  s_9591331cc7634e::t_472d9d2d7e137f 28-29,277-278,294-296,302,304-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67f07943bba7c41a05d0a6f7f9b909d70b22ab4a",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

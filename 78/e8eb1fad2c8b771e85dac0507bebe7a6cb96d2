@@ -1,0 +1,19 @@
+doc/ai/designs/local-queue-s2-integration-notes.md
+  s_142ee1fa291d22::t_84626fda42fd8f 1-397
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "78e8eb1fad2c8b771e85dac0507bebe7a6cb96d2",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

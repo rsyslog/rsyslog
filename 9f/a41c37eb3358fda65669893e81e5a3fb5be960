@@ -1,0 +1,18 @@
+runtime/nsd_gtls.c
+  h_95716f3de0caf5 31,984-987,993-994,1000-1003,1006-1016,1018-1019,1025
+tests/Makefile.am
+  h_95716f3de0caf5 2188
+tests/imtcp-tls-gtls-cn-attribute.sh
+  h_95716f3de0caf5 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9fa41c37eb3358fda65669893e81e5a3fb5be960",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_1fee1e5f80ceac 1655
+tests/imrelp-tls-randconn-drop.sh
+  s_6224eda96fc0da::t_1f21694581484d 11,47,49
+  s_6224eda96fc0da::t_1fee1e5f80ceac 1-10,12-36,38-42,44-46,48,50-59
+  s_6224eda96fc0da::t_90b043b1d442f9 37,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "589658d8ff631116b0c328b653ec616bda61971e",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

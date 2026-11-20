@@ -1,0 +1,33 @@
+runtime/hashtable.c
+  s_5e773934876cb4::t_a4eccc5bbf4e04 1
+runtime/hashtable.h
+  s_5e773934876cb4::t_77ec6bd7a5a71d 1
+runtime/hashtable/hashtable_utility.c
+  s_5e773934876cb4::t_8051d23b7b6436 1
+runtime/hashtable/hashtable_utility.h
+  s_5e773934876cb4::t_e58ddb0d7d0fd5 1
+runtime/hashtable/tester.c
+  s_5e773934876cb4::t_e6f50ce15a0f8d 1
+runtime/hashtable_itr.c
+  s_5e773934876cb4::t_51e3be9c80d1de 1
+runtime/hashtable_itr.h
+  s_5e773934876cb4::t_b2ddaae46b1825 1
+runtime/hashtable_private.h
+  s_5e773934876cb4::t_822646bb477b0f 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ddde3eafa31798c49bf13eeca670a6fe3bfe6c6",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

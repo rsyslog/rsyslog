@@ -1,0 +1,21 @@
+.github/PACKAGING_IMPLEMENTATION.md
+  s_0d5683fb5e1727::t_2c8624d5d7b175 62-64
+devtools/release/candidate-kinesis/VALIDATION.md
+  s_0d5683fb5e1727::t_16223d8728e151 26-34,64-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "15e7afffe1f348f699d6d818c5b14513a2c6ea78",
+  "prompts": {},
+  "sessions": {
+    "s_0d5683fb5e1727": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16240-3f5e-7e91-a8f5-79df42a516f3",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

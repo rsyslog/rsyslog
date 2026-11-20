@@ -1,0 +1,28 @@
+runtime/ratelimit.c
+  s_5e773934876cb4::t_3f516113fc4ab0 2594-2596
+tests/omfile-legacy-dynafile-programname.sh
+  s_5e773934876cb4::t_fe8789e4eac8bf 4-7,15-16,20-25,29-30,35-36,41-42
+  s_5e773934876cb4::t_7c7b8ec35ae628 13,26-28
+  s_5e773934876cb4::t_5344a67da8e0a1 34
+  s_5e773934876cb4::t_84a0fe5d8933cf 1-3,8-12,17-18,31-33,37-40,43-46,48
+  s_5e773934876cb4::t_92dec4cd883f01 47
+  s_5e773934876cb4::t_40741d21de1af6 14,19
+tests/Makefile.am
+  s_5e773934876cb4::t_84a0fe5d8933cf 389
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4e375167918e712f20f132ab4be92602ec92b4e",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

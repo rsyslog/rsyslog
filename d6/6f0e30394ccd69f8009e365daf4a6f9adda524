@@ -1,0 +1,14 @@
+.github/workflows/run_checks.yml
+  h_95716f3de0caf5 459-463
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d66f0e30394ccd69f8009e365daf4a6f9adda524",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

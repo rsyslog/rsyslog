@@ -1,0 +1,20 @@
+tests/imptcp-discard-truncated-msg.sh
+  s_11817263318fdf::t_ced946f6bb9079 2-7,32-33
+  s_11817263318fdf::t_bbc9f416cca685 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "c9166944a333c75d14b305038d9f3cadbaef214b",
+  "prompts": {},
+  "sessions": {
+    "s_11817263318fdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0248d-e47f-7c23-a7d5-b0f7d1503b73",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

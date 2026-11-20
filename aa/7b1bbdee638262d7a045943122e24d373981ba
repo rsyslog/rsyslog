@@ -1,0 +1,27 @@
+doc/ai/module_map.yaml
+  s_f8a738e4bdfaee::t_ff385c6d4624da 1-10
+runtime/statsobj.c
+  s_f8a738e4bdfaee::t_43765cf2b47a74 79-83,111-114,128,145,170-173,180-217,225,1158
+runtime/statsobj.h
+  s_f8a738e4bdfaee::t_f9bb36c637c8cb 160,170-185
+tests/Makefile.am
+  s_f8a738e4bdfaee::t_f0bb13e24c90eb 5018-5035
+tests/unit/statsobj_detached_test.c
+  s_f8a738e4bdfaee::t_91dfa91b33153c 1-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa7b1bbdee638262d7a045943122e24d373981ba",
+  "prompts": {},
+  "sessions": {
+    "s_f8a738e4bdfaee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14673-197a-7af1-a732-38a4b8d36d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

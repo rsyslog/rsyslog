@@ -1,0 +1,25 @@
+runtime/msg.c
+  s_5e773934876cb4::t_30e5a94ad34979 4456
+tests/Makefile.am
+  s_5e773934876cb4::t_9516d025f803e8 383,991
+tests/template-fixedwidth-empty.sh
+  s_5e773934876cb4::t_fd80405bfff2f3 1-99
+tests/yaml-template-fixedwidth-empty.sh
+  s_5e773934876cb4::t_9a5a2513370fae 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db3af08f8bc1fec21eeb731aa08495a1b298293a",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

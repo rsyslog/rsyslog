@@ -1,0 +1,41 @@
+runtime/tcpsrv.c
+  s_f2c089be484e12::t_55125800bb3bd6 2369-2387
+  s_f2c089be484e12::t_57072099422b8c 2756
+grammar/reload-ruleset-materializer.c
+  s_f2c089be484e12::t_ffc96afd2e693a 359-360
+runtime/module-reload.c
+  s_f2c089be484e12::t_ffc96afd2e693a 65-66,92
+runtime/modules.h
+  s_f2c089be484e12::t_ffc96afd2e693a 110-113
+tests/unit/module_reload_test.c
+  s_f2c089be484e12::t_ffc96afd2e693a 39-45,182-183
+tools/shadow_reload.c
+  s_f2c089be484e12::t_ffc96afd2e693a 183-184,650
+tests/global-reloadonhup-imtcp-reorder-rainerscript.sh
+  s_f2c089be484e12::t_666b4fec61da01 10
+tests/global-reloadonhup-on-yaml.sh
+  s_f2c089be484e12::t_f29512bdb53f59 83,96,110
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_d6d44235786e34 1921,2286-2311
+  s_f2c089be484e12::t_666b4fec61da01 47,117,120-122,135-143,147-148,1910-1920,1922-1931,1937-1939,1941-1945,1979,1985,2130-2131
+runtime/tcpsrv.h
+  s_f2c089be484e12::t_55125800bb3bd6 101-129,427-428,431
+tests/global-reloadonhup-on-rainerscript.sh
+  s_f2c089be484e12::t_f29512bdb53f59 64,80,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "9b1695fa36369563aad0009709d7e4d41f3f0284",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+runtime/rshash.c
+  s_f67b54b127aca7::t_58c7ad4651c963 17-20,362,364
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_6893092e12bc68 4,60,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "1af70a4b96a9f6d6abf779e377805c51656376ec",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/rscript-json-var-eval-semantics.sh
+  s_8ae44759aefe0b::t_500c69de9bab3e 8-9,17
+  s_8ae44759aefe0b::t_754a1170bb9d36 6,43,65
+  s_8ae44759aefe0b::t_6e05cd7c23340c 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc69959eb4d901dd0238e4912d3141f81971847f",
+  "prompts": {},
+  "sessions": {
+    "s_8ae44759aefe0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11090-e2c8-7c92-8f2a-b8af62adae73",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

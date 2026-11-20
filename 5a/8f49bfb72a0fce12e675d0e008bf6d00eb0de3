@@ -1,0 +1,23 @@
+tools/fuzz_imtcp_session.c
+  s_2414784e87421b::t_b79e4f92c3585b 58
+tools/fuzz_moddir.h
+  s_2414784e87421b::t_bdf41b86550497 11-13,41,48-51,67-72
+tools/fuzz_rsyslog_message.c
+  s_2414784e87421b::t_93ce2d5c4cafde 62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a8f49bfb72a0fce12e675d0e008bf6d00eb0de3",
+  "prompts": {},
+  "sessions": {
+    "s_2414784e87421b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7bdd8e06-7e6c-5ff5-bc44-6477b0ffe399",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

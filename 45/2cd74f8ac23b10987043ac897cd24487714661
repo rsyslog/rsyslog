@@ -1,0 +1,27 @@
+.agent/skills/rsyslog-security-pr-review/SKILL.md
+  s_f030ebab4e4d81::t_e4068b7c260806 3,8-81
+.agent/skills/rsyslog-security-pr-review/agents/openai.yaml
+  s_f030ebab4e4d81::t_be820aaeca7262 4
+.agent/skills/rsyslog_commit/SKILL.md
+  s_f030ebab4e4d81::t_b32f4cdf808140 41-44
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_f030ebab4e4d81::t_25ebf7812b4f04 28-34,676,678
+AGENTS.md
+  s_f030ebab4e4d81::t_b82badebf84452 19,41,43-45,50-67,424-425,427-429
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "452cd74f8ac23b10987043ac897cd24487714661",
+  "prompts": {},
+  "sessions": {
+    "s_f030ebab4e4d81": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16d98-5a65-7fa0-948e-f3cc4dee07fd",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

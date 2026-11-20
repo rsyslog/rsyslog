@@ -1,0 +1,89 @@
+doc/ai/designs/local-queue-execution-ledger.md
+  s_142ee1fa291d22::t_1871e6acec6703 906-1062
+doc/ai/designs/local-queue-frontends.md
+  s_142ee1fa291d22::t_034dbe33be8a84 11
+doc/ai/designs/local-queue-implementation-plan.md
+  s_142ee1fa291d22::t_dae0547233bf07 11,473-507
+doc/ai/designs/local-queue-s0-contracts.md
+  s_142ee1fa291d22::t_685c7cadcbdeb9 314-317
+doc/ai/module_map.yaml
+  s_142ee1fa291d22::t_249dd0020f58fc 34,42-56
+runtime/queue.c
+  s_142ee1fa291d22::t_3a68b61657a3b1 1106-1108,2386,2962-2963,3245,3251-3252,3263-3279,3304-3305,3316,3842-3845,3855-3858,3898-3917,3925,5391-5392,5413-5414,5444,5492-5493,5497,5757,5848,5902-5910,5924-5929,5949,5954-5955,5958-5976,6087-6089
+runtime/queue_local.c
+  s_142ee1fa291d22::t_f1a2fdd48eaed0 42,71,87,90-92,153-155,182-184,201-207,357-358,367-368,374-376,624-627,629,631,662,709-719,759,797-800,811,825-826,943-946,1022-1097,1528-1537,1546-1552,1559-1562,1568,1624,1639-1644,1646-1650
+runtime/queue_local.h
+  s_142ee1fa291d22::t_0dfa1bfffc85c1 31-32,58,86-88
+runtime/queue_local_stats.c
+  s_142ee1fa291d22::t_be29ca2b2e8e92 31-38,183-190,322-329
+tests/Makefile.am
+  s_142ee1fa291d22::t_2543b1c3631635 182-196
+tests/local-queue-be-force-term-actions.sh
+  s_142ee1fa291d22::t_925748d03f7422 24-25,33-40,74,77,146-148,181-189
+tests/local-queue-config.sh
+  s_142ee1fa291d22::t_b69be1bc72d68c 3,104-127,214-218
+tests/local-queue-force-term-actions.sh
+  s_142ee1fa291d22::t_ca29ab5b65892c 12-13,21-28,46,51,55,73
+tests/local-queue-helping.sh
+  s_142ee1fa291d22::t_5ee2a7008f0a7b 42
+tests/local-queue-imtcp-partial-batch.sh
+  s_142ee1fa291d22::t_66b77bb33a4437 7-8,16-26,41-42,52-53,56-65
+tests/local-queue-imtcp-producer-exit.sh
+  s_142ee1fa291d22::t_e5ae13754f646a 9-10,70-72
+tests/local-queue-imtcp-registration.sh
+  s_142ee1fa291d22::t_7f43cd9b919a3a 7-8,43-45
+tests/local-queue-imtcp-tiered.sh
+  s_142ee1fa291d22::t_fdcb7b46e1f6a8 31
+tests/local-queue-s5-persistence.sh
+  s_142ee1fa291d22::t_9588ae8015fa4d 12-13,21-27,58,62,95,97,99,101-104,133-145
+tests/local-queue-s5-store-failure.sh
+  s_142ee1fa291d22::t_33266bbfcf6dd4 76-78
+tests/local-queue-s6-discard.sh
+  s_142ee1fa291d22::t_87e9db1dcbcc5c 1-69
+tests/local-queue-s6-linkedlist-discard.sh
+  s_142ee1fa291d22::t_b6e6a55fcca171 1-4
+tests/local-queue-s6-linkedlist-help-capacity.sh
+  s_142ee1fa291d22::t_54d154a28697e5 1-5
+tests/local-queue-s6-linkedlist-oom.sh
+  s_142ee1fa291d22::t_ae7b5c94db2d70 1-65
+tests/local-queue-s6-linkedlist-persistence.sh
+  s_142ee1fa291d22::t_be94bdae7903ee 1-5
+tests/local-queue-s6-linkedlist-retry-oom.sh
+  s_142ee1fa291d22::t_3371771db48a0c 1-7
+tests/local-queue-s6-linkedlist-segmented-persistence.sh
+  s_142ee1fa291d22::t_b1b4bf9c4b7c3a 1-6
+tests/local-queue-s6-linkedlist-stats.sh
+  s_142ee1fa291d22::t_0f5bcdf94618fb 1-5
+tests/local-queue-s6-linkedlist-tiered.sh
+  s_142ee1fa291d22::t_e6d5743a31fdaa 1-5
+tests/local-queue-s6-min-batch.sh
+  s_142ee1fa291d22::t_b41ecbdb76f8ed 1-6
+tests/local-queue-s6-sampling-retry.sh
+  s_142ee1fa291d22::t_d9b781a5ef161c 1-6
+tests/local-queue-s6-sampling.sh
+  s_142ee1fa291d22::t_23cfff18ed8884 1-6
+tests/local-queue-s6-schedule.sh
+  s_142ee1fa291d22::t_663ae5edcdb6ff 1-60
+tests/local-queue-s6-segmented-sampling.sh
+  s_142ee1fa291d22::t_3a6ba03cf41481 1-6
+tests/local-queue-s6-slowdown.sh
+  s_142ee1fa291d22::t_0f359a028d7b5a 1-63
+tests/local-queue-stats-reconciliation.sh
+  s_142ee1fa291d22::t_3480eb9bf33c6d 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "31796c8e1a4e0933942e7a21fd1618f2cf898098",
+  "prompts": {},
+  "sessions": {
+    "s_142ee1fa291d22": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09f30-6e9a-7711-8e8d-9750387d4c18",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

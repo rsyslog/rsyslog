@@ -1,0 +1,23 @@
+tests/imuxsock-use-pid-from-system.sh
+  h_95716f3de0caf5 30
+  s_3aa9d0dbe5c8fb::t_f10e2868c336c5 3,9-11,35-46,48-50,52-54,59-65
+tests/yaml-imuxsock-use-pid-from-system.sh
+  h_95716f3de0caf5 27
+  s_3aa9d0dbe5c8fb::t_f10e2868c336c5 3,8-10,36-47,49-51,53-55,60-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2872294d0ad4e40789c3fb645d976920d3dd81b0",
+  "prompts": {},
+  "sessions": {
+    "s_3aa9d0dbe5c8fb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea8c-c3c3-7ec0-abc1-50e01d2df4c3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": null
+    }
+  }
+}

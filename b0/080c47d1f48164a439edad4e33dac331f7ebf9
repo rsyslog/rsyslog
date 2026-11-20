@@ -1,0 +1,25 @@
+.github/workflows/run_checks.yml
+  s_5e773934876cb4::t_4996fbe19b0a5c 96-99,499-502
+devtools/check-flake-evidence-coverage.py
+  s_5e773934876cb4::t_c65c394b56e754 44
+devtools/pr-coverage-source.cjs
+  s_5e773934876cb4::t_e1b183d5f86c9c 27-28,31,41
+tests/pr-coverage-source.cjs
+  s_5e773934876cb4::t_40fa408a5803b2 7-8,65-91,121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b0080c47d1f48164a439edad4e33dac331f7ebf9",
+  "prompts": {},
+  "sessions": {
+    "s_5e773934876cb4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162cf-b6b8-7050-91de-d39ee000f440",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
