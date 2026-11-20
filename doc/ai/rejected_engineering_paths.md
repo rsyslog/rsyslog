@@ -1,6 +1,6 @@
 # Rejected and parked engineering paths
 
-catalog_updated: 2026-09-10
+catalog_updated: 2026-11-20
 default_review_horizon_days: 180
 default_binding_horizon_days: 540
 
@@ -221,4 +221,40 @@ evidence:
 reopen_if: >
   A harness owns exactly one queue, preserves DA transfer, and still has
   deterministic ready/complete oracles without extra persistent queues.
+```
+
+### config-reload-private-pipeline
+
+```yaml
+id: config-reload-private-pipeline
+status: rejected
+recorded: 2026-11-16
+last_reviewed: 2026-11-20
+stale_after: 2028-05-09
+area: config reload on HUP (runtime/rsconf.c, grammar/, plugins/imtcp)
+tried: >
+  A 24-PR prototype stack for transactional config reload on HUP: a private
+  syntax parse into a separate normalised graph, a materialiser that built
+  runtime objects outside the normal loader, wtp/queue barrier changes, and
+  per-parameter live imtcp settings. Also reviewed: full Load() plus
+  activate() of a new config on HUP, in-process stop/start of inputs, and
+  listener file-descriptor hand-off or SO_REUSEPORT.
+result: >
+  No slice was shippable on its own, OFF mode regressed in several shared
+  paths (imtcp listeners, parser, signal mask, per-message locking), and the
+  performance acceptance benchmark was never met. Full Load()+activate()
+  cannot roll back and cannot repeat privileged init after privilege drop;
+  input stop/start and fd hand-off drop or strand TCP sessions.
+why_stopped: >
+  A second object-construction path is a permanent maintenance cost, and the
+  stack changed hot shared paths. Replaced by the plan in
+  doc/source/development/config_reload.rst: child -N1 pre-flight, normal
+  loader as a never-activated donor, in-place patch of the running config at
+  a per-batch gate in msgConsumer().
+evidence:
+  - doc/source/development/config_reload.rst (Decisions and rejected alternatives)
+  - https://github.com/rsyslog/rsyslog/issues/8007 (closed PR list)
+reopen_if: >
+  The donor-loader design proves unworkable for a required change class,
+  with a concrete reason recorded in the design record.
 ```
