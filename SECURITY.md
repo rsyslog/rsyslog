@@ -88,11 +88,26 @@ To allow efficient triage and remediation, reports should include:
 - the conditions required to trigger the vulnerability
 - relevant configuration, platform, build options, logs, stack traces, or
   sanitizer output when available
+- disclosure of whether AI assistants, LLMs, or autonomous agents were used
+  to find, verify, or write the report, naming the tools or agents, the
+  model and version, and which parts they performed (discovery,
+  reproduction, write-up)
 
 Reports that do not meet these requirements may be deprioritized or returned
 for clarification. Reports generated solely by automated scanners without
 manual verification or an accompanying proof of concept may also be
 deprioritized or returned for clarification.
+
+AI-assisted reports are welcome and are judged on technical merit, like any
+other report. The disclosure is used as context during triage, for example to
+understand how claims were verified. Any statement that a step was verified
+manually must be accurate. Reports that omit this information may be returned
+for clarification or deprioritized.
+
+We ask for the tool and model name for these reasons: it credits the tool
+and model provider, it lets maintainers run further checks with the same
+tool, it helps identify tools with known weaknesses or false-positive
+patterns, and it supports later retrospective analysis of reports.
 
 ## Initial Triage
 
