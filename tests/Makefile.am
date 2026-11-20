@@ -1064,6 +1064,7 @@ TESTS_LIBYAML = \
 	config-translate-rs-to-yaml.sh \
 	$(TESTS_IMUXSOCK_FIXPID_YAML) \
 	yaml-imuxsock-socket-path-checks.sh \
+	config-translate-write-error.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
 	config-translate-rs-statements-to-yaml.sh \
