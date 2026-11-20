@@ -1461,7 +1461,7 @@ wait_startup() {
 			[ -s "$imdiag_port_file" ] && break
 			printf '%s ABORT! Timeout waiting for imdiag port file (%s) after %d seconds\n' \
 				"$(tb_timestamp)" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
-			ls -l "$pid_file" "$imdiag_port_file" "$startup_log" || true
+			ls -l "$pid_file" "$imdiag_port_file" "$startup_log" 2>/dev/null || true
 			startup_pid="$(cat "$pid_file" 2>/dev/null || true)"
 			if [[ ! "$startup_pid" =~ ^[0-9]+$ ]]; then
 				# The pidfile may not exist until daemon activation finishes.
