@@ -46,9 +46,13 @@ in particular TCP sessions, stay up, as far as the change permits.
 Requirements for every step on the way:
 
 - **No throughput loss.** Ruleset execution is the hot path. The design must
-  not add per-message locks, lookups, reference counts or atomics. From the
-  milestone that touches the data path on, a benchmark against ``main`` is an
-  acceptance criterion.
+  not add per-message locks, lookups, reference counts or atomics. The one
+  accepted exception is direct-mode main and ruleset queues, where a batch is
+  a single message, so the per-batch gate cost becomes a per-message cost
+  (see the gate sketch below). Direct-mode main queues are documented as not
+  recommended. From the milestone that touches the data path on, a benchmark
+  against ``main`` is an acceptance criterion, and it must include a
+  direct-mode configuration.
 - **Fail safe.** A change that cannot be applied leaves the running config
   untouched and is reported with a reason that names the object and, where
   known, the source location. The operator then fixes the config or restarts.
@@ -109,7 +113,13 @@ change this page first.
    are never gated.
 6. **Candidate objects are invisible.** A candidate must not register
    statistics, open outputs, bind sockets or start threads before it is
-   committed.
+   committed. One exception: the queues of new actions are started, still
+   empty, in the prepare step, because starting a queue can fail and must
+   fail before the commit point. Their worker threads exist then, but receive
+   no messages until the swap. If the reload fails, these queues are stopped
+   and destroyed again. Their statistics objects are published only at
+   commit, so ``qqueueStart()`` needs a variant that defers
+   ``statsobj.ConstructFinalize()``.
 7. **References resolve to running objects.** When the candidate defines an
    object (template, lookup table, dynstats or percentile bucket, ruleset)
    equal to a running one, name lookups during the candidate load return the
@@ -144,7 +154,8 @@ Steps of one reload attempt (``on`` mode, full form):
 4. **Classify** each difference against the reload-class table. Anything out
    of scope rejects.
 5. **Prepare** everything the swap needs: allocations, action renumbering,
-   new action queues started (still empty).
+   new action queues started (still empty, statistics not yet published; see
+   invariant 6).
 6. **Gate.** Request the gate and wait for every gated thread to be outside
    ``msgConsumer()``, bounded by a quiesce timeout.
 7. **Swap.** Pointer stores only, no allocation, no I/O. Cannot fail.
@@ -159,7 +170,10 @@ entry (``call`` into a direct-mode ruleset queue) never parks. Entry and the
 reloader's request form a store-then-load pair with full barriers on both
 sides. Per batch this costs a few stores to the worker's own ``wti_t`` and one
 load of a read-mostly word. In direct mode a batch is one message, so the
-cost there is per message. All ``wti_t`` objects are registered, so idle
+cost there is per message: one full barrier per message on that path. This
+is the exception named under the requirements; the M3 benchmark measures it,
+and if it is too expensive, direct-mode queues make ``on`` unavailable
+instead. All ``wti_t`` objects are registered, so idle
 workers and workers being started or stopped are covered. Worker cancellation
 cleanup resets the gate state.
 
@@ -195,7 +209,9 @@ Chosen:
   descriptions and the diff. Legacy ``$`` directives are captured verbatim
   and in order.
 
-Rejected (see the closed pull requests listed in #8007 for the code):
+Rejected (see the closed pull requests listed in #8007 for the code; the
+prototype stack is also recorded as ``config-reload-private-pipeline`` in
+``doc/ai/rejected_engineering_paths.md``):
 
 - Stopping and starting inputs in process: loses TCP sessions.
 - Full ``Load()`` plus ``activate()`` of a new config on HUP: ``activate()``
@@ -268,7 +284,8 @@ Reload-class table
 
 Every config object and setting gets exactly one class. The table is filled
 in as milestones land; until an entry says otherwise, the class is
-*restart*.
+*restart*. Where this table and the restart-only list below disagree, the
+restart-only list wins.
 
 .. list-table::
    :header-rows: 1
@@ -291,7 +308,11 @@ in as milestones land; until an entry says otherwise, the class is
      -
    * - Removed or changed action, changed template
      - live (M4b)
-     - Drained with the configured shutdown timeouts
+     - Drained with the configured shutdown timeouts; memory and direct
+       queues only
+   * - Changed action with a disk or disk-assisted queue
+     - restart (until M7)
+     - A new queue on the same spool file needs stop-old-before-start-new
    * - Added or removed ruleset
      - live (M4b)
      - Removed ruleset becomes a tombstone routing to the default ruleset
