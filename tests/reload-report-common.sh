@@ -157,6 +157,21 @@ rr_stat() {
 	grep 'config.reload.check:' "$RR_STATS" | tail -n 1 | sed -n "s/.* $1=\([0-9][0-9]*\).*/\1/p"
 }
 
+# print the pids of all child processes of the daemon, zombies included (their
+# cmdline is empty, so rr_child_pids cannot see them); reads /proc/PID/stat
+rr_daemon_children() {
+	local daemon p st
+	daemon=$(cat "$RSYSLOG_PIDBASE.pid")
+	for p in /proc/[0-9]*; do
+		st=$(cat "$p/stat" 2>/dev/null) || continue
+		st=${st##*) }	# drop "pid (comm) ": comm may contain blanks
+		set -- $st	# $1 = state, $2 = ppid
+		if [ "$2" = "$daemon" ]; then
+			printf '%s(%s)\n' "${p#/proc/}" "$1"
+		fi
+	done
+}
+
 # print the pids of running validation children of this test (cmdline ends in -N1
 # and names this test's config file); needs /proc
 rr_child_pids() {

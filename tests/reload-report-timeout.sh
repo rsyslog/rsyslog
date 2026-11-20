@@ -10,8 +10,11 @@
 #
 # Oracle (bounded waits, the timeout is the event under test):
 #  - a "timed out" report line appears;
-#  - afterwards the /proc entry of the child (pid captured while it was
-#    blocked) is gone: killed and reaped, not left as a zombie;
+#  - afterwards the daemon has no child process left, running or zombie
+#    (checked via the ppid field of /proc/PID/stat): the child was killed and
+#    reaped. The test does not try to catch the child while it runs: with a
+#    1 s deadline on a slow (sanitizer) build it can be gone before the first
+#    poll, which made an earlier "child appeared" check flaky;
 #  - messages injected before and after are all processed.
 . ${srcdir:=.}/diag.sh init
 . ${srcdir}/reload-report-common.sh
@@ -23,13 +26,12 @@ injectmsg 0 50
 mkfifo "$RR_FIFO"
 rr_inc_block
 issue_HUP
-rr_wait_child
-child_pid=$(rr_child_pids | head -n 1)
 rr_wait_count 'validation of the changed configuration timed out after 1 seconds, running configuration kept' "$RR_STARTED" 1
-# A zombie has an empty cmdline, so check the /proc entry of the captured pid:
-# it must be gone (killed and reaped).
-if [ -e "/proc/$child_pid" ]; then
-	echo "FAIL: timed-out validation child $child_pid still has a /proc entry (not reaped?)"
+# The child is killed and reaped before the report is written, so no child of
+# the daemon may be left now; a zombie would still show up here.
+children=$(rr_daemon_children)
+if [ -n "$children" ]; then
+	echo "FAIL: daemon still has child processes after the timeout (pid(state)): $children"
 	error_exit 1
 fi
 injectmsg 50 50
