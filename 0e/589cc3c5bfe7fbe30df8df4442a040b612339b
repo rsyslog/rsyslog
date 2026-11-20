@@ -1,0 +1,27 @@
+runtime/statsobj.c
+  s_9591331cc7634e::t_4d4788255193d9 86-87,757-760,764-767
+doc/source/configuration/modules/imhttp.rst
+  s_9591331cc7634e::t_4d4788255193d9 396-400
+tests/stats-prometheus-escaping.sh
+  s_9591331cc7634e::t_5958d7a4f21968 14
+  s_9591331cc7634e::t_4d4788255193d9 7-8,13,39
+doc/source/configuration/modules/impstats.rst
+  s_9591331cc7634e::t_4d4788255193d9 294-295,298
+  s_9591331cc7634e::t_5958d7a4f21968 296-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e589cc3c5bfe7fbe30df8df4442a040b612339b",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
