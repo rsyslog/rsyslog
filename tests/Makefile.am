@@ -3212,11 +3212,16 @@ endif
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention
+	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention \
+	runtime_unit_cfgfiles
 TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention
+	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention \
+	runtime_unit_cfgfiles
+
+runtime_unit_cfgfiles_SOURCES = unit/cfgfiles_test.c ../runtime/cfgfiles.c
+runtime_unit_cfgfiles_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/runtime
 
 runtime_unit_iminternal_lock_SOURCES = unit/iminternal_lock_test.c
 runtime_unit_iminternal_lock_CPPFLAGS = -I$(top_srcdir)

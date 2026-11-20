@@ -239,6 +239,22 @@ static cfgfile_t *addFile(cfgfiles_t *c, char *path) {
     return &c->files[c->nfiles++];
 }
 
+/* is path part of the expansion of glob number gi in c? */
+static int globHasPath(const cfgfiles_t *c, size_t gi, const char *path) {
+    size_t j;
+    if (gi >= c->nglobs) return 0;
+    for (j = 0; j < c->globs[gi].npaths; ++j)
+        if (!strcmp(c->globs[gi].paths[j], path)) return 1;
+    return 0;
+}
+
+static const cfgfile_t *findFile(const cfgfiles_t *c, const char *path) {
+    size_t i;
+    for (i = 0; i < c->nfiles; ++i)
+        if (!strcmp(c->files[i].path, path)) return &c->files[i];
+    return NULL;
+}
+
 static cfgglob_t *addGlob(cfgfiles_t *c, char *pattern) {
     if (c->nglobs == c->capglobs) {
         size_t ncap = c->capglobs ? 2 * c->capglobs : 8;
@@ -332,6 +348,31 @@ cfgfiles_t *cfgfilesCapture(const cfgfiles_t *base) {
             goto fail;
         }
         if (expandGlob(g) != 0) goto fail;
+    }
+    /* Files that newly match an include glob are not in the load-time record.
+     * Snapshot their content too, so that an edit to such a file between two
+     * captures is seen (e.g. a HUP coalesced while a check runs). Files these
+     * new files would include in turn are not followed; changing an include
+     * statement changes the including file's hash anyway. */
+    for (i = 0; i < cur->nglobs; ++i) {
+        size_t j;
+        for (j = 0; j < cur->globs[i].npaths; ++j) {
+            cfgfile_t *f;
+            char *path;
+            const char *const gp = cur->globs[i].paths[j];
+            const size_t gl = strlen(gp);
+            /* only paths that are new since the load: everything matched at
+             * load time is already covered by the record (or was skipped by
+             * the loader, e.g. a directory) */
+            if (globHasPath(base, i, gp) || findFile(cur, gp) != NULL) continue;
+            if (gl > 0 && gp[gl - 1] == '/') continue; /* GLOB_MARK: directory */
+            path = strdup(gp);
+            if (path == NULL || (f = addFile(cur, path)) == NULL) {
+                free(path);
+                goto fail;
+            }
+            statAndHash(f);
+        }
     }
     return cur;
 fail:
