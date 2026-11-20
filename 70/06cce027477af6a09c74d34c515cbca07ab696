@@ -1,0 +1,29 @@
+doc/source/reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
+  s_2896e52954784d::t_02b4ce9b2364cd 54-55
+doc/source/reference/parameters/omfile-dynafile-restricttemplatetype.rst
+  s_2896e52954784d::t_57fe9da665b9cc 44-46
+doc/source/reference/parameters/omfile-dynafile.rst
+  s_2896e52954784d::t_a2124c45020ebd 61-70
+tests/Makefile.am
+  s_2896e52954784d::t_93c54b7ef044a9 551
+tests/omfile-dynafile-relative-root.sh
+  s_2896e52954784d::t_fcad2edba30315 1-76
+tools/omfile.c
+  s_2896e52954784d::t_d326030d6a9fe8 371-386,393-398,421-427
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7006cce027477af6a09c74d34c515cbca07ab696",
+  "prompts": {},
+  "sessions": {
+    "s_2896e52954784d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a884f0b-a757-5cab-aa97-04c8000e9576",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
