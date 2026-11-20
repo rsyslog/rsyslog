@@ -20,7 +20,7 @@
     do {                                                                                    \
         if (!(condition)) {                                                                 \
             fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
-            exit(1);                                                                        \
+            return 1;                                                                       \
         }                                                                                   \
     } while (0)
 
@@ -43,9 +43,9 @@ static void init_state(segdisk_state_image_t *state, unsigned char uuid_byte) {
     state->delete_segments = 3;
 }
 
-static void expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
-                            const unsigned char slot1[SEGDISK_STATE_SLOT_LEN],
-                            int expected) {
+static int expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
+                           const unsigned char slot1[SEGDISK_STATE_SLOT_LEN],
+                           int expected) {
     segdisk_state_image_t selected;
     int selected_slot = -1;
     CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &selected, &selected_slot) == RS_RET_OK);
@@ -54,6 +54,7 @@ static void expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
     CHECK(selected.delete_last == 4);
     CHECK(selected.delete_bytes == 12345);
     CHECK(selected.delete_segments == 3);
+    return 0;
 }
 
 int main(void) {
@@ -77,16 +78,16 @@ int main(void) {
 
     segdiskStateEncode(&state, 10, slot0);
     segdiskStateEncode(&state, 11, slot1);
-    expect_selected(slot0, slot1, 1);
+    CHECK(expect_selected(slot0, slot1, 1) == 0);
 
     slot1[200] ^= 1;
-    expect_selected(slot0, slot1, 0);
+    CHECK(expect_selected(slot0, slot1, 0) == 0);
     slot0[201] ^= 1;
     CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &state, NULL) == RS_RET_INVALID_VALUE);
 
     segdiskStateEncode(&state, UINT64_MAX, slot0);
     segdiskStateEncode(&state, 0, slot1);
-    expect_selected(slot0, slot1, 1);
+    CHECK(expect_selected(slot0, slot1, 1) == 0);
 
     segdiskStateEncode(&state, 0, slot0);
     segdiskStateEncode(&state, UINT64_C(1) << 63, slot1);
@@ -97,13 +98,13 @@ int main(void) {
     slot1[8] = 0;
     slot1[9] = 1;
     repair_crc(slot1);
-    expect_selected(slot0, slot1, 0);
+    CHECK(expect_selected(slot0, slot1, 0) == 0);
 
     segdiskStateEncode(&state, 21, slot1);
     slot1[10] = 0;
     slot1[11] ^= 1;
     repair_crc(slot1);
-    expect_selected(slot0, slot1, 0);
+    CHECK(expect_selected(slot0, slot1, 0) == 0);
 
     segdiskStateEncode(&state, 21, slot1);
     slot1[12] ^= 1;
