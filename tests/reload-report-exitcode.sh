@@ -8,8 +8,7 @@
 #
 # Oracle: the exit codes of the foreground rsyslogd -N1 runs below.
 . ${srcdir:=.}/diag.sh init
-require_yaml_support
-require_plugin imtcp
+# registered only with libyaml and imtcp (see tests/Makefile.am)
 good_rs="${RSYSLOG_DYNNAME}.good.conf"
 warn_rs="${RSYSLOG_DYNNAME}.warn.conf"
 bad_rs="${RSYSLOG_DYNNAME}.bad.conf"

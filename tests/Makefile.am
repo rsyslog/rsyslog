@@ -18,6 +18,14 @@ EXTRA_DIST = \
 	reload-report-common.sh
 EXTRA_DIST += $(TESTS_WEEKDAY_RANGE)
 
+TESTS_RELOAD_REPORT_YAML = reload-report-basic-yaml.sh reload-report-off-yaml.sh \
+	reload-report-timeout-yaml.sh reload-report-on-unsupported-yaml.sh
+TESTS_RELOAD_REPORT_IMPSTATS = reload-report-burst.sh
+TESTS_RELOAD_REPORT_IMPSTATS_YAML = reload-report-burst-yaml.sh
+TESTS_RELOAD_REPORT_IMTCP_YAML = reload-report-exitcode.sh
+EXTRA_DIST += $(TESTS_RELOAD_REPORT_YAML) $(TESTS_RELOAD_REPORT_IMPSTATS) \
+	$(TESTS_RELOAD_REPORT_IMPSTATS_YAML) $(TESTS_RELOAD_REPORT_IMTCP_YAML)
+
 TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_PRI_RANGE)
 TESTS_IMKLOG_INTERNALMSGFACILITY = imklog-internalmsgfacility.sh
@@ -569,14 +577,8 @@ TESTS_DEFAULT = \
 	exec_tpl-concurrency.sh \
 	imdiag-hup-count.sh \
 	reload-report-basic.sh \
-	reload-report-basic-yaml.sh \
 	reload-report-off.sh \
-	reload-report-off-yaml.sh \
-	reload-report-burst.sh \
-	reload-report-burst-yaml.sh \
 	reload-report-timeout.sh \
-	reload-report-timeout-yaml.sh \
-	reload-report-exitcode.sh \
 	reload-report-on-unsupported.sh \
 	rscript-parse-error-noleak.sh \
 	rscript_privdropuser.sh \
@@ -3624,6 +3626,20 @@ if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 TESTS += $(TESTS_JSONF_AUTO_YAML)
+endif
+if ENABLE_IMDIAG
+if HAVE_LIBYAML
+TESTS += $(TESTS_RELOAD_REPORT_YAML)
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_RELOAD_REPORT_IMPSTATS_YAML)
+endif
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_RELOAD_REPORT_IMTCP_YAML)
+endif
+endif
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_RELOAD_REPORT_IMPSTATS)
+endif
 endif
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE_IMDIAG)

@@ -9,6 +9,10 @@
  * load-time record; without its own content snapshot, an edit to it between
  * two HUPs coalesced into one check would go unnoticed.
  *
+ * Also checked: a literal include name that is absent at load time (glob
+ * NOMAGIC returns such a name unchanged) is detected when the file appears,
+ * and a permission-only change of a recorded file is a change.
+ *
  * Oracle: cfgfilesEqual() on captures. Setup is a private temp directory with
  * a main file and an include glob; no daemon, no timing involved.
  */
@@ -43,9 +47,9 @@ static int writeFile(const char *path, const char *content) {
 int main(void) {
     char dirTmpl[] = "/tmp/rsyslog-cfgfiles-test-XXXXXX";
     char *dir;
-    char mainPath[256], incDir[256], pattern[256], oldInc[256], newInc[256];
+    char mainPath[256], incDir[256], pattern[256], oldInc[256], newInc[256], litInc[256];
     FILE *fp = NULL;
-    cfgfiles_t *c1 = NULL, *c2 = NULL, *c3 = NULL;
+    cfgfiles_t *c1 = NULL, *c2 = NULL, *c3 = NULL, *c4 = NULL, *c5 = NULL;
     int ret = 1;
 
     dir = mkdtemp(dirTmpl);
@@ -58,10 +62,12 @@ int main(void) {
     snprintf(pattern, sizeof(pattern), "%s/inc/*.conf", dir);
     snprintf(oldInc, sizeof(oldInc), "%s/inc/a.conf", dir);
     snprintf(newInc, sizeof(newInc), "%s/inc/b.conf", dir);
+    snprintf(litInc, sizeof(litInc), "%s/literal.conf", dir);
 
     CHECK(writeFile(mainPath, "include(file=\"inc/*.conf\")\n") == 0);
     CHECK(mkdir(incDir, 0700) == 0);
     CHECK(writeFile(oldInc, "# a\n") == 0);
+    CHECK(chmod(oldInc, 0644) == 0); /* known start mode, independent of umask */
 
     /* what a load records: the files the lexer opened plus the include glob */
     fp = fopen(mainPath, "r");
@@ -74,6 +80,7 @@ int main(void) {
     fclose(fp);
     fp = NULL;
     cfgfilesRecordGlob(pattern);
+    cfgfilesRecordGlob(litInc); /* literal name, does not exist yet */
     cfgfilesSeal();
     CHECK(cfgfilesFileCount(cfgfilesGetRecord()) == 2);
 
@@ -108,12 +115,27 @@ int main(void) {
     CHECK(c3 != NULL);
     CHECK(!cfgfilesEqual(c1, c3));
 
+    /* a literal include that did not exist at load time and now appears */
+    CHECK(writeFile(litInc, "# literal\n") == 0);
+    c4 = cfgfilesCapture(cfgfilesGetRecord());
+    CHECK(c4 != NULL);
+    CHECK(!cfgfilesEqual(c3, c4));
+
+    /* permission-only change of a recorded file */
+    CHECK(chmod(oldInc, 0600) == 0);
+    c5 = cfgfilesCapture(cfgfilesGetRecord());
+    CHECK(c5 != NULL);
+    CHECK(!cfgfilesEqual(c4, c5));
+
     ret = 0;
 done:
     if (fp != NULL) fclose(fp);
     cfgfilesDestruct(c1);
     cfgfilesDestruct(c2);
     cfgfilesDestruct(c3);
+    cfgfilesDestruct(c4);
+    cfgfilesDestruct(c5);
+    unlink(litInc);
     unlink(newInc);
     unlink(oldInc);
     unlink(mainPath);

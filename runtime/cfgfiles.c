@@ -63,6 +63,7 @@ typedef struct cfgfile_s {
     dev_t dev;
     ino_t ino;
     off_t size;
+    mode_t mode; /* type and permission bits */
     int64_t mtime_s;
     long mtime_ns;
     uint64_t hash;
@@ -112,11 +113,12 @@ static void fillStat(cfgfile_t *f, const struct stat *st) {
     f->dev = st->st_dev;
     f->ino = st->st_ino;
     f->size = st->st_size;
+    f->mode = st->st_mode & (S_IFMT | 07777);
     getMtime(st, &f->mtime_s, &f->mtime_ns);
 }
 
 static int sameStat(const cfgfile_t *a, const cfgfile_t *b) {
-    return a->exists && b->exists && a->dev == b->dev && a->ino == b->ino && a->size == b->size &&
+    return a->exists && b->exists && a->dev == b->dev && a->ino == b->ino && a->size == b->size && a->mode == b->mode &&
            a->mtime_s == b->mtime_s && a->mtime_ns == b->mtime_ns;
 }
 
@@ -127,9 +129,10 @@ static char *makeAbsolute(const char *path, int forGlob) {
     size_t i, n = 0, plen = strlen(path);
     char *res;
 
-    if (path[0] == '/' || getcwd(cwd, sizeof(cwd)) == NULL) {
-        return strdup(path);
-    }
+    if (path[0] == '/') return strdup(path);
+    /* A relative path is useless after rsyslogd changed its directory to "/":
+     * report failure, the caller marks the record incomplete. */
+    if (getcwd(cwd, sizeof(cwd)) == NULL) return NULL;
     res = malloc(2 * strlen(cwd) + plen + 2);
     if (res == NULL) return NULL;
     for (i = 0; cwd[i] != '\0'; ++i) {
@@ -163,6 +166,7 @@ static void statAndHash(cfgfile_t *f) {
     ssize_t n;
     unsigned char buf[8192];
     uint64_t h = FNV64_OFFSET;
+    off_t total = 0;
 
     f->exists = f->hashed = 0;
     if (stat(f->path, &st) != 0) return;
@@ -182,7 +186,19 @@ static void statAndHash(cfgfile_t *f) {
         close(fd);
         return;
     }
-    while ((n = read(fd, buf, sizeof(buf))) > 0) h = fnvUpdate(h, buf, (size_t)n);
+    /* limits apply to the opened file: it may have grown or been replaced since stat() */
+    if (st.st_size > CFGFILES_MAX_HASH_SIZE) {
+        close(fd);
+        return;
+    }
+    while ((n = read(fd, buf, sizeof(buf))) > 0) {
+        total += (off_t)n;
+        if (total > CFGFILES_MAX_HASH_SIZE) {
+            close(fd);
+            return; /* grew beyond the cap: stat data only */
+        }
+        h = fnvUpdate(h, buf, (size_t)n);
+    }
     close(fd);
     if (n < 0) return;
     f->hash = h;
@@ -196,7 +212,10 @@ static void freeGlob(cfgglob_t *g) {
     free(g->pattern);
 }
 
-/* expand g->pattern into g->paths; returns 0 on success */
+/* Expand g->pattern into g->paths. Returns 0 on success, -1 on out-of-memory
+ * and 1 if glob() itself failed (the expansion is then unknown). With
+ * GLOB_NOMAGIC a literal name that does not exist is returned as is; such
+ * entries are dropped, so that creating the file later changes the expansion. */
 static int expandGlob(cfgglob_t *g) {
     glob_t gl;
     size_t i;
@@ -206,6 +225,10 @@ static int expandGlob(cfgglob_t *g) {
     g->npaths = 0;
     memset(&gl, 0, sizeof(gl));
     r = glob(g->pattern, CFGFILES_GLOB_FLAGS, NULL, &gl);
+    if (r != 0 && r != GLOB_NOMATCH) {
+        globfree(&gl);
+        return 1;
+    }
     if (r == 0 && gl.gl_pathc > 0) {
         g->paths = calloc(gl.gl_pathc, sizeof(char *));
         if (g->paths == NULL) {
@@ -213,14 +236,15 @@ static int expandGlob(cfgglob_t *g) {
             return -1;
         }
         for (i = 0; i < gl.gl_pathc; ++i) {
-            g->paths[i] = strdup(gl.gl_pathv[i]);
-            if (g->paths[i] == NULL) {
-                g->npaths = i;
+            struct stat lst;
+            if (lstat(gl.gl_pathv[i], &lst) != 0) continue; /* absent literal name */
+            g->paths[g->npaths] = strdup(gl.gl_pathv[i]);
+            if (g->paths[g->npaths] == NULL) {
                 globfree(&gl);
                 return -1;
             }
+            ++g->npaths;
         }
-        g->npaths = gl.gl_pathc;
     }
     globfree(&gl); /* safe also after a failed glob() */
     return 0;
@@ -342,12 +366,15 @@ cfgfiles_t *cfgfilesCapture(const cfgfiles_t *base) {
     }
     for (i = 0; i < base->nglobs; ++i) {
         cfgglob_t *g;
+        int er;
         char *pattern = strdup(base->globs[i].pattern);
         if (pattern == NULL || (g = addGlob(cur, pattern)) == NULL) {
             free(pattern);
             goto fail;
         }
-        if (expandGlob(g) != 0) goto fail;
+        er = expandGlob(g);
+        if (er < 0) goto fail;
+        if (er > 0) cur->incomplete = 1; /* unknown expansion: never equal, the check runs */
     }
     /* Files that newly match an include glob are not in the load-time record.
      * Snapshot their content too, so that an edit to such a file between two
@@ -393,7 +420,7 @@ int cfgfilesEqual(const cfgfiles_t *a, const cfgfiles_t *b) {
     for (i = 0; i < a->nfiles; ++i) {
         const cfgfile_t *x = &a->files[i], *y = &b->files[i];
         if (x->exists != y->exists || x->hashed != y->hashed) return 0;
-        if (x->hashed && (x->hash != y->hash || x->size != y->size)) return 0;
+        if (x->hashed && (x->hash != y->hash || x->size != y->size || x->mode != y->mode)) return 0;
         /* unhashable (not regular, too large): fall back to stat data */
         if (x->exists && !x->hashed && !sameStat(x, y)) return 0;
     }

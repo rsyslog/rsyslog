@@ -37,7 +37,10 @@
  * since it was loaded?" (see reload-preflight.c).
  *
  * All paths are stored as absolute paths, because rsyslogd changes its
- * working directory to "/" after loading the configuration.
+ * working directory to "/" after loading the configuration. If that is
+ * not possible (getcwd() fails) or an include glob cannot be expanded, the
+ * record is marked incomplete and never compares equal, so a check runs.
+ * Permission/type changes of a file count as changes, as do edits.
  *
  * The FNV hash is a change detector, not a security boundary: whoever can
  * edit the config already controls the daemon.

@@ -10,8 +10,8 @@
 #
 # Oracle (bounded waits, the timeout is the event under test):
 #  - a "timed out" report line appears;
-#  - afterwards no "-N1" child process of this test exists (it was killed
-#    and reaped, not left as a zombie: a zombie would still show in /proc);
+#  - afterwards the /proc entry of the child (pid captured while it was
+#    blocked) is gone: killed and reaped, not left as a zombie;
 #  - messages injected before and after are all processed.
 . ${srcdir:=.}/diag.sh init
 . ${srcdir}/reload-report-common.sh
@@ -23,9 +23,13 @@ injectmsg 0 50
 mkfifo "$RR_FIFO"
 rr_inc_block
 issue_HUP
+rr_wait_child
+child_pid=$(rr_child_pids | head -n 1)
 rr_wait_count 'validation of the changed configuration timed out after 1 seconds, running configuration kept' "$RR_STARTED" 1
-if [ -n "$(rr_child_pids)" ]; then
-	echo "FAIL: timed-out validation child still exists: $(rr_child_pids)"
+# A zombie has an empty cmdline, so check the /proc entry of the captured pid:
+# it must be gone (killed and reaped).
+if [ -e "/proc/$child_pid" ]; then
+	echo "FAIL: timed-out validation child $child_pid still has a /proc entry (not reaped?)"
 	error_exit 1
 fi
 injectmsg 50 50

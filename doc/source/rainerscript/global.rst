@@ -228,16 +228,23 @@ The following parameters can be set:
   - ``report``: rsyslog remembers all configuration files it read at startup
     (including ``include()`` files, ``$IncludeConfig`` files, YAML files and
     the expansion of include wildcards). On HUP it compares them with the
-    files on disk. If they are unchanged, nothing happens. If they changed,
-    rsyslog runs its own binary in a separate process with the original
-    command line options and ``-N1`` to validate the new configuration, and
-    logs one message with the result:
+    files on disk (content, and file type and permission bits). If they are
+    unchanged, nothing happens. If they changed, rsyslog runs its own binary in a separate process to validate the new
+    configuration. The validation process gets the daemon's configuration
+    related options (``-f``, ``-M``, ``-4``, ``-6``, ``-A``, ``-q``, ``-Q``,
+    ``-x``, ``-w``, ``-S``, ``-u`` and ``-C``) plus ``-N1``; options such as
+    ``-n``, ``-i``, ``-d``, ``-T`` or ``-o`` are not passed on. rsyslog
+    then logs one message with the result:
 
     - "configuration changed and is valid; restart rsyslog to apply it"
     - "changed configuration is invalid, running configuration kept: ..."
       followed by the first error messages of the validation run
     - "validation of the changed configuration timed out ..." if the
       validation did not finish within 30 seconds
+    - "could not run the validation process ..." (or "the validation process
+      died from signal ...") if the check itself failed, for example because
+      the rsyslogd binary could not be executed; nothing is known about the
+      configuration in this case
 
     The running configuration is never changed, so a restart is still needed
     to apply a change. The value of ``report`` is to learn at HUP time that

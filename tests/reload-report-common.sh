@@ -18,7 +18,7 @@ RR_STARTED="${RSYSLOG_DYNNAME}.started" # rsyslogd's own messages, see generate_
 RR_DIR="${RSYSLOG_DYNNAME}.d"
 RR_STATS="${RSYSLOG_DYNNAME}.stats"
 if [ "$RR_FRONTEND" = "yaml" ]; then
-	require_yaml_support
+	# the *-yaml.sh twins are registered under HAVE_LIBYAML only
 	RR_EXT=yaml
 else
 	RR_EXT=conf
@@ -38,7 +38,6 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '
 	if [ "$2" = "stats" ]; then
-		require_plugin impstats
 		add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1" resetCounters="off"
 	log.file="'$RR_STATS'" log.syslog="off")

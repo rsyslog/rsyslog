@@ -53,12 +53,25 @@
     #include <sys/prctl.h>
 #endif
 
+/* environ is not declared by <unistd.h> everywhere. glibc declares it (a second
+ * declaration would trip -Wredundant-decls); macOS needs _NSGetEnviron(). */
+#if defined(__APPLE__)
+    #include <crt_externs.h>
+    #define PF_ENVIRON (*_NSGetEnviron())
+#else
+    #if !defined(__linux__)
+extern char **environ;
+    #endif
+    #define PF_ENVIRON environ
+#endif
+
 #include "rsyslog.h"
 #include "errmsg.h"
 #include "obj.h"
 #include "statsobj.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
+#include "dirty.h"
 #include "cfgfiles.h"
 #include "reload-preflight.h"
 
@@ -209,7 +222,9 @@ void reloadPreflightNoteCwd(void) {
 }
 
 int reloadPreflightIsChild(void) {
-    return getenv(RELOAD_PREFLIGHT_CHILD_ENV) != NULL;
+    /* The marker alone is not trusted: the child always runs in config
+     * verify mode (-N), a normal daemon never does. */
+    return iConfigVerify != 0 && getenv(RELOAD_PREFLIGHT_CHILD_ENV) != NULL;
 }
 
 void reloadPreflightInit(void) {
@@ -452,17 +467,18 @@ static char **buildEnv(void) {
     size_t n = 0, i, o = 0;
     char **env;
 
-    while (environ != NULL && environ[n] != NULL) ++n;
+    while (PF_ENVIRON != NULL && PF_ENVIRON[n] != NULL) ++n;
     env = calloc(n + 2, sizeof(char *));
     if (env == NULL) return NULL;
     for (i = 0; i < n; ++i) {
         int j, drop = 0;
         for (j = 0; dropEnv[j] != NULL; ++j) {
             const size_t l = strlen(dropEnv[j]);
-            if (!strncmp(environ[i], dropEnv[j], l) && environ[i][l] == '=') drop = 1;
+            if (!strncmp(PF_ENVIRON[i], dropEnv[j], l) && PF_ENVIRON[i][l] == '=') drop = 1;
         }
-        if (drop || !strncmp(environ[i], RELOAD_PREFLIGHT_CHILD_ENV "=", sizeof(RELOAD_PREFLIGHT_CHILD_ENV))) continue;
-        if ((env[o] = strdup(environ[i])) == NULL) goto fail;
+        if (drop || !strncmp(PF_ENVIRON[i], RELOAD_PREFLIGHT_CHILD_ENV "=", sizeof(RELOAD_PREFLIGHT_CHILD_ENV)))
+            continue;
+        if ((env[o] = strdup(PF_ENVIRON[i])) == NULL) goto fail;
         ++o;
     }
     if ((env[o] = strdup(RELOAD_PREFLIGHT_CHILD_ENV "=1")) == NULL) goto fail;

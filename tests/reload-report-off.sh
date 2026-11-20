@@ -18,6 +18,7 @@
 #  - all injected messages arrive.
 . ${srcdir:=.}/diag.sh init
 . ${srcdir}/reload-report-common.sh
+[ -r /proc/self/cmdline ] || skip_test # the no-child oracle needs /proc
 rr_setup "${RR_MODE:-}"
 startup
 injectmsg 0 50
