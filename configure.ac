@@ -1464,6 +1464,7 @@ if test "x$enable_gnutls" = "xyes"; then
 	LIBS="$LIBS $GNUTLS_LIBS"
 	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
 	AC_CHECK_FUNCS(gnutls_certificate_type_set_priority,,)
+	AC_CHECK_FUNCS(gnutls_x509_crt_import_url gnutls_pkcs11_privkey_import_url,,)
 	LIBS=$save_libs
 fi
 
