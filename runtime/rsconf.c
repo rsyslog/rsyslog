@@ -335,6 +335,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.bActionReportSuspension = 1;
     pThis->globals.bActionReportSuspensionCont = 0;
     pThis->globals.janitorInterval = 10;
+    pThis->globals.reloadOnHUP = 0;
     pThis->globals.reportNewSenders = 0;
     pThis->globals.reportGoneAwaySenders = 0;
     pThis->globals.senderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */

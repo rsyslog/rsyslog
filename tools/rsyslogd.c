@@ -78,6 +78,8 @@
 #include "janitor.h"
 #include "parserif.h"
 #include "rswatch.h"
+#include "cfgfiles.h"
+#include "reload-preflight.h"
 
 /* some global vars we need to differentiate between environments,
  * for TZ-related things see
@@ -1534,6 +1536,7 @@ static void initAll(int argc, char **argv) {
 #else
     while ((ch = getopt(argc, argv, "46ACDdf:F:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
 #endif
+        reloadPreflightNoteOpt(ch, optarg); /* options replayed by the config reload check */
         switch ((char)ch) {
             case '4':
             case '6':
@@ -1791,7 +1794,9 @@ static void initAll(int argc, char **argv) {
     }
 
     resetErrMsgsFlag();
+    reloadPreflightNoteCwd(); /* relative -f/-M paths are resolved against this */
     localRet = rsconf.Load(&ourConf, ConfFile);
+    cfgfilesSeal(); /* all config files are known now */
     /* Never permit an unaudited local graph, including developer/partial-config
      * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */
     if (localRet == RS_RET_LOCAL_QUEUE_CONFIG || (loadConf != NULL && loadConf->local_config_error))
@@ -1981,6 +1986,7 @@ static void initAll(int argc, char **argv) {
     }
 
     CHKiRet(rsconf.Activate(ourConf));
+    reloadPreflightInit();
 
     if (runConf->globals.bLogStatusMsgs) {
         char bufStartUpMsg[512];
@@ -2393,6 +2399,7 @@ static void reapChild(void) {
         int status;
         child = waitpid(-1, &status, WNOHANG);
         if (child != -1 && child != 0) {
+            if (reloadPreflightReapChild(child, status)) continue; /* config reload check child */
             glblReportChildProcessExit(runConf, NULL, child, status);
         }
     } while (child > 0);
@@ -2436,6 +2443,7 @@ static void mainloop(void) {
             PREFER_STORE_INT(&bHUPInProgress, 1);
             PREFER_STORE_INT(&bHadHUP, 0);
             doHUP();
+            reloadPreflightOnHUP(); /* global(config.reloadOnHUP="report") only */
             pthread_mutex_lock(&mut_hup_completed_count);
             ++hup_completed_count;
             pthread_mutex_unlock(&mut_hup_completed_count);
@@ -2447,9 +2455,10 @@ static void mainloop(void) {
         if (bFinished) break; /* exit as quickly as possible */
 
         now_ms = mainloopMonotonicMs();
-        wait_timeout(&origmask, mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms));
+        wait_timeout(&origmask, reloadPreflightCapTimeoutMs(mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms)));
         pthread_sigmask(SIG_UNBLOCK, &sigblockset, NULL);
         now_ms = mainloopMonotonicMs();
+        reloadPreflightPoll(now_ms);
 
         /* File-watch I/O is handled before due dispatch so newly-read events can
          * arm or extend debounce deadlines within the same wake cycle.
@@ -2695,6 +2704,7 @@ int main(int argc, char **argv) {
 #endif
 
     mainthread = pthread_self();
+    reloadPreflightInitExe(argv[0]); /* before any chdir() */
     if ((int)getpid() == 1) {
         fprintf(stderr,
                 "rsyslogd %s: running as pid 1, enabling "
@@ -2743,6 +2753,7 @@ int main(int argc, char **argv) {
            "- begin actual processing");
 
     mainloop();
+    reloadPreflightShutdown(); /* kills and reaps a running config reload check */
     LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
     deinitAll();
     osf_close();

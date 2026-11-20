@@ -14,7 +14,8 @@ EXTRA_DIST = \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
 	proprepltest-rfctag.sh \
-	unit/README.md
+	unit/README.md \
+	reload-report-common.sh
 EXTRA_DIST += $(TESTS_WEEKDAY_RANGE)
 
 TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
@@ -567,6 +568,16 @@ TESTS_DEFAULT = \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
 	imdiag-hup-count.sh \
+	reload-report-basic.sh \
+	reload-report-basic-yaml.sh \
+	reload-report-off.sh \
+	reload-report-off-yaml.sh \
+	reload-report-burst.sh \
+	reload-report-burst-yaml.sh \
+	reload-report-timeout.sh \
+	reload-report-timeout-yaml.sh \
+	reload-report-exitcode.sh \
+	reload-report-on-unsupported.sh \
 	rscript-parse-error-noleak.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \

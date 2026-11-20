@@ -214,6 +214,61 @@ The following parameters can be set:
   :doc:`janitor process <../concepts/janitor>`
   runs.
 
+.. _global_config_reloadOnHUP:
+
+- **config.reloadOnHUP** [off|report], default "off", available 8.2612.0+,
+  **experimental**
+
+  Controls what rsyslog does with changed configuration files when it
+  receives a HUP signal. A HUP always performs its classic duties first (for
+  example closing and re-opening output files) and never re-reads the
+  configuration; this parameter only adds a check on top of that.
+
+  - ``off``: a HUP does exactly what it did before. No check is made.
+  - ``report``: rsyslog remembers all configuration files it read at startup
+    (including ``include()`` files, ``$IncludeConfig`` files, YAML files and
+    the expansion of include wildcards). On HUP it compares them with the
+    files on disk. If they are unchanged, nothing happens. If they changed,
+    rsyslog runs its own binary in a separate process with the original
+    command line options and ``-N1`` to validate the new configuration, and
+    logs one message with the result:
+
+    - "configuration changed and is valid; restart rsyslog to apply it"
+    - "changed configuration is invalid, running configuration kept: ..."
+      followed by the first error messages of the validation run
+    - "validation of the changed configuration timed out ..." if the
+      validation did not finish within 30 seconds
+
+    The running configuration is never changed, so a restart is still needed
+    to apply a change. The value of ``report`` is to learn at HUP time that
+    the configuration on disk is broken, before a restart takes the service
+    down. Identical consecutive results are logged only once. Several HUPs in
+    quick succession start at most one validation at a time.
+
+  The validation process runs with the privileges, user, group and chroot the
+  daemon currently has, so it sees exactly what the running daemon can read.
+  A configuration that cannot be read with those privileges is reported as
+  invalid. Files that are only referenced by module parameters (for example
+  certificates or lookup tables) are not tracked as configuration files.
+
+  The value ``on`` (live reload) is reserved for a future release and is
+  rejected with an error. With statistics enabled (:doc:`impstats
+  <../configuration/modules/impstats>`), the counters ``attempted``,
+  ``unchanged``, ``coalesced``, ``invalid``, ``valid_changed``, ``timeout``
+  and ``failed`` are available in the ``config.reload.check`` statistics
+  object while ``report`` is active.
+
+  .. code-block:: none
+
+     global(config.reloadOnHUP="report")
+
+  YAML equivalent:
+
+  .. code-block:: yaml
+
+     global:
+       config.reloadOnHUP: report
+
 - **debug.onShutdown** available 7.5.8+
 
   If enabled ("on"), rsyslog will log debug messages when a system
