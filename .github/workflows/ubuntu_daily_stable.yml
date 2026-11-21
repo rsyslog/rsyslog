@@ -551,6 +551,7 @@ jobs:
           path: archive-publication/
           retention-days: 7
           if-no-files-found: error
+          overwrite: true
 
   verify:
     name: verify published Ubuntu 26.04 ${{ matrix.arch }} repository
@@ -604,6 +605,7 @@ jobs:
           PUBLICATION_MANIFEST_SHA256: ${{ needs.publish.outputs.manifest_sha256 }}
         run: |
           set -euo pipefail
+          # Service readiness, not a test phase: kept outside ci-flake-phase.sh.
           # The poller on packages.rsyslog.com writes publication-status.json
           # after it has verified and applied a publication.  Wait up to 30
           # minutes for the one this run built.
@@ -611,7 +613,7 @@ jobs:
             echo "publish job did not report its publication" >&2
             exit 1
           fi
-          devtools/ci-flake-phase.sh run ubuntu-publication-applied custom -- bash -euo pipefail <<'BASH'
+          bash -euo pipefail <<'BASH'
           status_url="$ARCHIVE_PUBLIC_URL/publication-status.json"
           status_file="$RUNNER_TEMP/publication-status.json"
           expected="$GITHUB_RUN_ID $PUBLICATION_ATTEMPT $PUBLICATION_MANIFEST_SHA256"
