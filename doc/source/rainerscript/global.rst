@@ -826,6 +826,16 @@ Historically these options were referenced in source code and change logs as
   cases, this option can be used to globally disable support for compression on
   all inputs.
 
+  Legacy single-message compression is historic compatibility behavior, not
+  recommended for new configurations. Its use emits one warning per process.
+  A separate warning, also once per process, identifies legacy records received
+  over TCP without octet-counted framing: binary compressed data can contain LF
+  bytes and be split by delimiter framing. UDP records and octet-counted TCP
+  records do not trigger that framing warning. Prefer matching stream compression
+  on both ends or uncompressed transport. These warnings do not disable legacy
+  decoding; disabling this extension and receiving stream-decompressed data do
+  not trigger them.
+
 privdrop.group.name
 ^^^^^^^^^^^^^^^^^^^
 
