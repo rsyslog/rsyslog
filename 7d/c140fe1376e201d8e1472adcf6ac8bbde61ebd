@@ -1,0 +1,23 @@
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_a4b80537bdb97c::t_900aec7014ede3 118-125
+devtools/release/debian-daily-stable.sh
+  s_a4b80537bdb97c::t_6f1817348f6dcc 23-28,541-545,597-615
+tests/daily-stable-archive-publication.sh
+  s_a4b80537bdb97c::t_fe139ef85c8a1e 27-29,274-275,277-278,289,350-373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dc140fe1376e201d8e1472adcf6ac8bbde61ebd",
+  "prompts": {},
+  "sessions": {
+    "s_a4b80537bdb97c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a37c3c6844fc3e8a4",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
