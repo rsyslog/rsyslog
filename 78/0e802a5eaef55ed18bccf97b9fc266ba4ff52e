@@ -1,0 +1,21 @@
+.github/workflows/debian_daily_stable.yml
+  s_ce74af14c19768::t_4700d268c603bc 553,607,615
+.github/workflows/ubuntu_daily_stable.yml
+  s_ce74af14c19768::t_9b5799fa35e798 554,608,616
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "780e802a5eaef55ed18bccf97b9fc266ba4ff52e",
+  "prompts": {},
+  "sessions": {
+    "s_ce74af14c19768": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f73d6ad-cd3b-5a14-8bb6-84b818a0dcb2",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
