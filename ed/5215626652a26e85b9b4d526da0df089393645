@@ -1,0 +1,29 @@
+runtime/msg.c
+  h_95716f3de0caf5 3030-3034,3038,3040
+runtime/segdisk_codec.c
+  s_f8b36c61dc0e83::t_e7c8a7492b8d23 338
+  h_95716f3de0caf5 279-280,339-341,346-349,463,467,490-501
+tests/unit/turbo_msgdup_test.c
+  s_f8b36c61dc0e83::t_e7c8a7492b8d23 24-25,40,217-243,981
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed5215626652a26e85b9b4d526da0df089393645",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_f8b36c61dc0e83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f982-a4d4-7813-adbe-27beebe8954e",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": null
+    }
+  }
+}
