@@ -234,16 +234,19 @@ logs, and treat a changed native package baseline as a review event.
 
 ## Detailed operational references
 
-- [Debian 13](DEBIAN_DAILY_STABLE.md); Ubuntu 26.04 uses the same pull-model
-  design with `ubuntu_daily_stable.yml` and the artifact
-  `archive-publication-ubuntu-26.04`.  Its verify job has no environment,
-  so `DEBIAN_DAILY_STABLE_GPG_FINGERPRINT` must stay a repository variable, and
-  `UBUNTU_DAILY_STABLE_REPO_URL` and the Spaces settings are no longer used by
-  it.
+- [Debian 13](DEBIAN_DAILY_STABLE.md)
+- Ubuntu 26.04: same pull-model design as Debian 13, with
+  `ubuntu_daily_stable.yml`, prefix `apt/daily-stable/ubuntu/26.04` and the
+  artifact `archive-publication-ubuntu-26.04`, which must be listed in the
+  poller configuration in `Adiscon/infrastructure`.  Its verify job has no
+  environment, so `DEBIAN_DAILY_STABLE_GPG_FINGERPRINT` must stay a
+  repository variable.  Scheduled runs need the repository variable
+  `UBUNTU_DAILY_STABLE_ENABLED=true`; a manual dispatch with
+  `publish_to_archive: true` publishes and verifies once.
 - [Fedora 44](FEDORA_DAILY_STABLE.md)
 - [Amazon Linux 2023](AMAZONLINUX_DAILY_STABLE.md)
 - [openSUSE Leap 16.0](OPENSUSE_DAILY_STABLE.md)
 - [Alpine 3.24](ALPINE_DAILY_STABLE.md)
-- Ubuntu and Enterprise Linux follow their named workflow and policy files;
+- Enterprise Linux follows its named workflow and policy files;
   add comparable operational documents when introducing material new setup or
   recovery requirements.
