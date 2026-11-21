@@ -37,8 +37,8 @@ GitHub Actions builds, signs, publishes, and verifies packages.  DigitalOcean
 Spaces is passive S3-compatible storage behind its CDN; it does not build
 packages.  Workflows use the AWS CLI against the configured Spaces endpoint.
 The shared `debian-daily-stable` GitHub Environment holds the archive signing
-material and bucket-scoped Spaces credentials.  Debian 13 has moved to
-`packages.rsyslog.com` with a pull model instead (see below).
+material and bucket-scoped Spaces credentials.  Debian 13 and Ubuntu 26.04
+have moved to `packages.rsyslog.com` with a pull model instead (see below).
 
 The archive uses the `rsyslog-packages` Spaces bucket in the `fra1` region.
 Repository URL and endpoint values are GitHub repository variables so a target
@@ -71,7 +71,8 @@ repository (`deploy/vserverweb5/`, runbook
 `docs/runbooks/rsyslog-packages-onboarding.md`).  The two projects
 coordinate only through `Adiscon/infrastructure` issue 17.
 
-Debian 13 (`apt/daily-stable/debian/13`) has moved; all other targets stay
+Debian 13 (`apt/daily-stable/debian/13`) and Ubuntu 26.04
+(`apt/daily-stable/ubuntu/26.04`) have moved; all other targets stay
 on Spaces until they are switched one at a time by a reviewed PR.  There is
 no dual publication, and Spaces stays untouched as a fallback until all
 targets are verified on the new host.
@@ -241,7 +242,12 @@ logs, and treat a changed native package baseline as a review event.
 
 ## Detailed operational references
 
-- [Debian 13](DEBIAN_DAILY_STABLE.md)
+- [Debian 13](DEBIAN_DAILY_STABLE.md); Ubuntu 26.04 uses the same pull-model
+  design with `ubuntu_daily_stable.yml` and the artifact
+  `archive-publication-ubuntu-26.04`.  Its verify job has no environment,
+  so `DEBIAN_DAILY_STABLE_GPG_FINGERPRINT` must stay a repository variable, and
+  `UBUNTU_DAILY_STABLE_REPO_URL` and the Spaces settings are no longer used by
+  it.
 - [Fedora 44](FEDORA_DAILY_STABLE.md)
 - [Amazon Linux 2023](AMAZONLINUX_DAILY_STABLE.md)
 - [openSUSE Leap 16.0](OPENSUSE_DAILY_STABLE.md)
