@@ -65,6 +65,7 @@ TESTS_FUZZING = \
 	fuzz-imtcp-session-smoke.sh
 TESTS_RELEASE_PACKAGING = \
 	ubuntu-qpid-generation-order.sh \
+	package-candidate-plan.sh \
 	rpm-baseline-patch-policy.sh \
 	daily-stable-package-drift.sh \
 	daily-stable-archive-store.sh \

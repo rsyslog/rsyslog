@@ -94,6 +94,9 @@ procedure is in `SCHEDULED_PUBLIC_PR.md`. Verify access before handling a case.
 
 ## Package Archive Automation
 
+For consolidation work, read the [packaging foundation](.github/PACKAGING_FOUNDATION.md).
+Keep existing package systems live until a qualified beta and explicit cutover decision.
+
 For any daily-stable, scheduled-release packaging, package archive, or
 distribution-extension work, first read the
 [`Daily Stable Package Archive Program`](.github/DAILY_STABLE_PACKAGE_ARCHIVE.md).

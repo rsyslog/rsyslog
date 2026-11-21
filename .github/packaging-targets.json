@@ -1,0 +1,702 @@
+{
+  "_license": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "recorded": "2026-10-22",
+  "purpose": "Target catalog consumed by the manual candidate planner; existing production workflows remain unchanged. Rows do not establish replacement-service admission.",
+  "architecture_aliases": {
+    "deb": {
+      "x86_64": "amd64",
+      "aarch64": "arm64"
+    }
+  },
+  "lifecycle_semantics": "Observed vendor dates are not rsyslog commitments. Null means unverified. Month dates retain source precision. Recheck lifecycle before qualification and choose rsyslog end dates explicitly.",
+  "sources": {
+    "debian": "https://www.debian.org/releases/",
+    "ubuntu": "https://ubuntu.com/about/release-cycle",
+    "alpine": "https://alpinelinux.org/releases/",
+    "sles": "https://www.suse.com/lifecycle/",
+    "fedora": "https://docs.fedoraproject.org/en-US/releases/",
+    "opensuse": "https://news.opensuse.org/2025/09/03/leap-16-doubles-support/",
+    "el": "https://docs.rockylinux.org/rocky/version/",
+    "amazonlinux": "https://docs.aws.amazon.com/linux/al2023/release-notes/support-information.html"
+  },
+  "targets": [
+    {
+      "id": "debian-13",
+      "distribution": "debian",
+      "release": "13",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2030-06-30",
+        "source": "https://www.debian.org/releases/",
+        "notes": "native LTS end; extended window is a separate decision"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/debian_daily_stable.yml",
+        "policy": ".github/debian-daily-stable-13-policy.yml",
+        "builder": "devtools/release/debian-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact native source recipe provenance",
+        "final channel identity and migration policy",
+        "near-full feature contract and optional-service coverage",
+        "native ARM runtime and host service integration",
+        "named operational owner and full support acceptance"
+      ]
+    },
+    {
+      "id": "debian-12",
+      "distribution": "debian",
+      "release": "12",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "lts",
+        "observed_support_end": "2028-06-30",
+        "source": "https://www.debian.org/releases/",
+        "notes": "current LTS; qualify module dependency set"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "debian-11",
+      "distribution": "debian",
+      "release": "11",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "extended",
+        "observed_support_end": "2031-06-30",
+        "source": "https://www.debian.org/releases/",
+        "notes": "ELTS date is vendor offering, not proof of access or dependency coverage"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "ubuntu-26.04",
+      "distribution": "ubuntu",
+      "release": "26.04",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2031-05",
+        "source": "https://ubuntu.com/about/release-cycle",
+        "notes": "vendor publishes month precision"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/ubuntu_daily_stable.yml",
+        "policy": ".github/ubuntu-daily-stable-26.04-policy.yml",
+        "builder": "devtools/release/debian-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "ubuntu-24.04",
+      "distribution": "ubuntu",
+      "release": "24.04",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2029-05",
+        "source": "https://ubuntu.com/about/release-cycle",
+        "notes": "current runtime container base; prioritize package-source migration tests"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "ubuntu-22.04",
+      "distribution": "ubuntu",
+      "release": "22.04",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2027-05",
+        "source": "https://ubuntu.com/about/release-cycle",
+        "notes": "recheck ESM transition before qualification"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "ubuntu-20.04",
+      "distribution": "ubuntu",
+      "release": "20.04",
+      "package_format": "deb",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "extended",
+        "observed_support_end": "2030-05",
+        "source": "https://ubuntu.com/about/release-cycle",
+        "notes": "ESM access and package coverage require qualification"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "el-10",
+      "distribution": "el",
+      "release": "10",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": null,
+        "source": "https://docs.rockylinux.org/rocky/version/",
+        "notes": "Rocky lifecycle page not retrieved; verify date. Existing archive builds CentOS Stream+EPEL, not the planned Rocky baseline"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/el10_daily_stable.yml",
+        "policy": ".github/el10-daily-stable-policy.yml",
+        "builder": "devtools/release/rpm-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact native source recipe provenance",
+        "final channel identity and migration policy",
+        "near-full feature contract and optional-service coverage",
+        "native ARM runtime and host service integration",
+        "named operational owner and full support acceptance"
+      ],
+      "planned_build_distribution": "rocky",
+      "planned_validation_distributions": [
+        "rocky",
+        "almalinux"
+      ]
+    },
+    {
+      "id": "el-9",
+      "distribution": "el",
+      "release": "9",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": null,
+        "source": "https://docs.rockylinux.org/rocky/version/",
+        "notes": "verify Rocky lifecycle date and native librdkafka alternative before admitting bundled exception"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures",
+        "RHEL validation access; current minor baseline; no blanket pinned-minor guarantee"
+      ],
+      "planned_build_distribution": "rocky",
+      "planned_validation_distributions": [
+        "rocky",
+        "almalinux"
+      ]
+    },
+    {
+      "id": "el-8",
+      "distribution": "el",
+      "release": "8",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": null,
+        "source": "https://docs.rockylinux.org/rocky/version/",
+        "notes": "verify Rocky lifecycle date and qpid-proton availability"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures",
+        "RHEL validation access; current minor baseline; no blanket pinned-minor guarantee"
+      ],
+      "planned_build_distribution": "rocky",
+      "planned_validation_distributions": [
+        "rocky",
+        "almalinux"
+      ]
+    },
+    {
+      "id": "sles-15-sp7",
+      "distribution": "sles",
+      "release": "15-sp7",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2031-07-31",
+        "source": "https://www.suse.com/lifecycle/",
+        "notes": "general support end; build access and extension terms still require qualification"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures",
+        "public build/test repository access and entitlements"
+      ]
+    },
+    {
+      "id": "sles-16.0",
+      "distribution": "sles",
+      "release": "16.0",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2027-11-30",
+        "source": "https://www.suse.com/lifecycle/",
+        "notes": "release general support end, not product-family 2035 end; confirm repository entitlements"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures",
+        "public build/test repository access and entitlements"
+      ]
+    },
+    {
+      "id": "fedora-43",
+      "distribution": "fedora",
+      "release": "43",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": null,
+        "source": "https://docs.fedoraproject.org/en-US/releases/",
+        "notes": "official lifecycle page access denied; date and current supported status require recheck"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "fedora-44",
+      "distribution": "fedora",
+      "release": "44",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": null,
+        "source": "https://docs.fedoraproject.org/en-US/releases/",
+        "notes": "existing archive target; official lifecycle page access denied; verify deadline"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/fedora44_daily_stable.yml",
+        "policy": ".github/fedora44-daily-stable-policy.yml",
+        "builder": "devtools/release/fedora-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "opensuse-16.0",
+      "distribution": "opensuse",
+      "release": "16.0",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": null,
+        "source": "https://news.opensuse.org/2025/09/03/leap-16-doubles-support/",
+        "notes": "official support announcement located; precise deadline and other currently supported Leap releases require confirmation"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/opensuse_leap160_daily_stable.yml",
+        "policy": ".github/opensuse-leap160-daily-stable-policy.yml",
+        "builder": "devtools/release/opensuse-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "alpine-3.24",
+      "distribution": "alpine",
+      "release": "3.24",
+      "package_format": "apk",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2028-06-01",
+        "source": "https://alpinelinux.org/releases/",
+        "notes": "main and community currently maintained; community ends at next stable release"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/alpine324_daily_stable.yml",
+        "policy": ".github/alpine324-daily-stable-policy.yml",
+        "builder": "devtools/release/alpine-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact native source recipe provenance",
+        "final channel identity and migration policy",
+        "near-full feature contract and optional-service coverage",
+        "native ARM runtime and host service integration",
+        "named operational owner and full support acceptance"
+      ]
+    },
+    {
+      "id": "alpine-3.23",
+      "distribution": "alpine",
+      "release": "3.23",
+      "package_format": "apk",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2027-11-01",
+        "source": "https://alpinelinux.org/releases/",
+        "notes": "main only; audit community dependencies separately"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "alpine-3.22",
+      "distribution": "alpine",
+      "release": "3.22",
+      "package_format": "apk",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2027-05-01",
+        "source": "https://alpinelinux.org/releases/",
+        "notes": "main only; audit community dependencies separately"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "alpine-3.21",
+      "distribution": "alpine",
+      "release": "3.21",
+      "package_format": "apk",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2026-11-01",
+        "source": "https://alpinelinux.org/releases/",
+        "notes": "near EOL: lifecycle recheck before spending build effort; no automatic EOL extension"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": null,
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    },
+    {
+      "id": "amazonlinux-2023",
+      "distribution": "amazonlinux",
+      "release": "2023",
+      "package_format": "rpm",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "qualification_status": "candidate",
+      "production_admitted": false,
+      "lifecycle": {
+        "class": "standard",
+        "observed_support_end": "2029-06-30",
+        "source": "https://docs.aws.amazon.com/linux/al2023/release-notes/support-information.html",
+        "notes": "core support; supplementary SPAL packages have separate support terms"
+      },
+      "planned_channels": [
+        "daily-stable",
+        "stable"
+      ],
+      "baseline_strategy": "native packaging plus reviewed overlay",
+      "existing_archive": {
+        "workflow": ".github/workflows/amazonlinux2023_daily_stable.yml",
+        "policy": ".github/amazonlinux2023-daily-stable-policy.yml",
+        "builder": "devtools/release/amazonlinux-daily-stable.sh",
+        "status": "definition_present_health_not_asserted"
+      },
+      "qualification_gaps": [
+        "exact source and binary package inventory",
+        "native upgrade and source-selection tests",
+        "feature/dependency closure",
+        "named operational owner and evidence for both architectures"
+      ]
+    }
+  ],
+  "preserve_existing": {
+    "rule": "Inventory and preserve all currently served channels and consumers until explicit migration; this target list does not remove them.",
+    "examples": [
+      "EL7",
+      "Ubuntu 18.04",
+      "OBS home:rgerhards targets",
+      "legacy Alpine 3.7 endpoint",
+      "Debian staging endpoint"
+    ]
+  },
+  "discovery_pending": [
+    "complete current supported Leap branch list",
+    "Fedora lifecycle confirmation and future release admission",
+    "existing OBS architectures/consumers beyond initial two-architecture scope",
+    "existing legacy target ownership and retirement/migration proposals"
+  ],
+  "ownership": {
+    "program": "rsyslog release maintainers",
+    "target_assignment": "Named operational owners remain unassigned until target admission; legacy services retain their current operators."
+  }
+}
