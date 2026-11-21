@@ -33,26 +33,17 @@ the target's packaging layout with a one-size-fits-all package definition.
 
 ## Archive architecture
 
-GitHub Actions builds, signs, publishes, and verifies packages.  DigitalOcean
-Spaces is passive S3-compatible storage behind its CDN; it does not build
-packages.  Workflows use the AWS CLI against the configured Spaces endpoint.
-The shared `debian-daily-stable` GitHub Environment holds the archive signing
-material and bucket-scoped Spaces credentials.  Debian 13 and Ubuntu 26.04
-have moved to `packages.rsyslog.com` with a pull model instead (see below).
+GitHub Actions builds, signs and verifies packages.  The archive is served
+from `packages.rsyslog.com` (see below); publish jobs never write to a
+server.  They upload a signed publication bundle as an Actions artifact, and
+a poller on the web server pulls, verifies and applies it.  The shared
+`debian-daily-stable` GitHub Environment holds the archive signing material
+and the publication signing key.
 
-The archive uses the `rsyslog-packages` Spaces bucket in the `fra1` region.
-Repository URL and endpoint values are GitHub repository variables so a target
-workflow never hard-codes credentials or an account API token.  A bucket-scoped
-read/write Spaces key is sufficient; do not require a DigitalOcean account API
-token for regular publication.
-
-For targets still using Spaces, provision a public-read Standard Spaces
-bucket with object versioning enabled. Enable the Spaces CDN and route the
-public package hostname to it. Workflows set the Spaces object metadata
-`max-age` override in addition to HTTP `Cache-Control`, with 60 seconds for
-mutable repository metadata and one year for immutable package and snapshot
-objects. Purge existing cached repository metadata once when enabling that
-override so older cache entries do not delay publication verification.
+The former DigitalOcean Spaces bucket `rsyslog-packages` (fra1) was deleted
+on 2026-11-21, when the DigitalOcean sponsorship ended.  Workflows of
+targets that have not moved yet are disabled until their switch is merged;
+they must not be re-enabled while they still contain Spaces upload code.
 
 The APT and RPM targets share one archive signing key; Alpine uses its own
 RSA key.  Every APT and RPM publish job runs
@@ -64,18 +55,19 @@ before that, then update the private key secret and, for a new key, the
 
 ## Move to packages.rsyslog.com
 
-The archive is moving from Spaces to `packages.rsyslog.com`, a read-only
-nginx tenant on the shared Docker edge of vserverweb5.adiscon.com.  The
-hosting side is maintained in the private `Adiscon/infrastructure`
-repository (`deploy/vserverweb5/`, runbook
-`docs/runbooks/rsyslog-packages-onboarding.md`).  The two projects
-coordinate only through `Adiscon/infrastructure` issue 17.
+The archive lives on `packages.rsyslog.com`, a read-only nginx tenant on
+the shared Docker edge of vserverweb5.adiscon.com.  The hosting side is
+maintained in the private `Adiscon/infrastructure` repository
+(`deploy/vserverweb5/`, runbook
+`docs/runbooks/rsyslog-packages-onboarding.md`).
 
 Debian 13 (`apt/daily-stable/debian/13`) and Ubuntu 26.04
-(`apt/daily-stable/ubuntu/26.04`) have moved; all other targets stay
-on Spaces until they are switched one at a time by a reviewed PR.  There is
-no dual publication, and Spaces stays untouched as a fallback until all
-targets are verified on the new host.
+(`apt/daily-stable/ubuntu/26.04`) have moved.  The remaining targets
+(Fedora 44, EL 10, Amazon Linux 2023, openSUSE Leap 16.0, Alpine 3.24)
+are disabled and move one at a time by a reviewed PR, each adding its
+artifact to the poller configuration in `Adiscon/infrastructure`.  Each
+target starts from an empty prefix; history from Spaces is not carried
+over.
 
 ### Pull model
 
