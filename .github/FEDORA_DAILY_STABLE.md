@@ -70,8 +70,15 @@ Before generating the new repository, the publish job downloads the current `rep
 `x86_64`, `aarch64`, and `SRPMS` over HTTPS with
 `rpm-daily-stable.sh fetch-verified-metadata`. Each must verify against its
 `repomd.xml.asc` with the archive signing key and no other key, and every file
-it lists must match its SHA-256, and its size when `repomd.xml` gives one. Only HTTP 404 for a `repomd.xml`
-starts that repository from scratch (expected for the first publication); any other failure stops the run. RPMs,
+it lists must match its SHA-256, and its size when `repomd.xml` gives one. HTTP 404 for a `repomd.xml`
+starts that repository from scratch (expected for the first publication) only if
+`<prefix>/publication-status.json`, which the server-side poller writes after
+each applied publication, is 404 as well. If that file exists, the prefix was
+published before and the missing `repomd.xml` fails the run, so an index with
+only the newest build is never signed. For manual recovery (for example a newly
+added arch) the operator may set `ARCHIVE_ALLOW_EMPTY_INDEX=true` for the helper,
+which logs a warning and starts from scratch; workflows do not set it. Any other
+failure stops the run. RPMs,
 snapshots, and the SHA-256-named `repodata` files are immutable bundle entries;
 the public key, the `.repo` file, `repomd.xml` and `repomd.xml.asc` are
 metadata.  Each `repomd.xml` is immediately followed by its
