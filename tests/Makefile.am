@@ -14,8 +14,17 @@ EXTRA_DIST = \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
 	proprepltest-rfctag.sh \
-	unit/README.md
+	unit/README.md \
+	reload-report-common.sh
 EXTRA_DIST += $(TESTS_WEEKDAY_RANGE)
+
+TESTS_RELOAD_REPORT_YAML = reload-report-basic-yaml.sh reload-report-off-yaml.sh \
+	reload-report-timeout-yaml.sh reload-report-on-unsupported-yaml.sh
+TESTS_RELOAD_REPORT_IMPSTATS = reload-report-burst.sh
+TESTS_RELOAD_REPORT_IMPSTATS_YAML = reload-report-burst-yaml.sh
+TESTS_RELOAD_REPORT_IMTCP_YAML = reload-report-exitcode.sh
+EXTRA_DIST += $(TESTS_RELOAD_REPORT_YAML) $(TESTS_RELOAD_REPORT_IMPSTATS) \
+	$(TESTS_RELOAD_REPORT_IMPSTATS_YAML) $(TESTS_RELOAD_REPORT_IMTCP_YAML)
 
 TESTS_RSCRIPT_PRI_RANGE = rscript-pri-optimizer-range.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_PRI_RANGE)
@@ -567,6 +576,10 @@ TESTS_DEFAULT = \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
 	imdiag-hup-count.sh \
+	reload-report-basic.sh \
+	reload-report-off.sh \
+	reload-report-timeout.sh \
+	reload-report-on-unsupported.sh \
 	rscript-parse-error-noleak.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \
@@ -3201,11 +3214,16 @@ endif
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention
+	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention \
+	runtime_unit_cfgfiles
 TESTS = $(TESTS_OMJOURNAL_INDEPENDENT) runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
 	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc runtime_unit_perctile_ringbuf runtime_unit_imudp_buffer \
-	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention
+	runtime_unit_iminternal_lock runtime_unit_imfile_path runtime_unit_iminternal_contention \
+	runtime_unit_cfgfiles
+
+runtime_unit_cfgfiles_SOURCES = unit/cfgfiles_test.c ../runtime/cfgfiles.c
+runtime_unit_cfgfiles_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/runtime
 
 runtime_unit_iminternal_lock_SOURCES = unit/iminternal_lock_test.c
 runtime_unit_iminternal_lock_CPPFLAGS = -I$(top_srcdir)
@@ -3608,6 +3626,20 @@ if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 TESTS += $(TESTS_JSONF_AUTO_YAML)
+endif
+if ENABLE_IMDIAG
+if HAVE_LIBYAML
+TESTS += $(TESTS_RELOAD_REPORT_YAML)
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_RELOAD_REPORT_IMPSTATS_YAML)
+endif
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_RELOAD_REPORT_IMTCP_YAML)
+endif
+endif
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_RELOAD_REPORT_IMPSTATS)
+endif
 endif
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE_IMDIAG)
