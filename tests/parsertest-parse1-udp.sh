@@ -1,12 +1,16 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+# Validate the parser matrix with exact CSV output. Publish an OS-assigned
+# UDP port before sending so parallel tests cannot share a TCP-probed port.
 # add 2018-06-27 by Pascal Withopf, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 setvar_RS_HOSTNAME
+# Discard the hostname prerequisite port so startup waits for the UDP listener.
+rm -f "$RSYSLOG_DYNNAME.tcpflood_port"
 generate_conf
 add_conf '
 module(load="../plugins/imudp/.libs/imudp")
-input(type="imudp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset1")
 
 global(localHostname="localhost")
 
