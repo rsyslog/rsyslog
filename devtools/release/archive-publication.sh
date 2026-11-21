@@ -27,8 +27,11 @@
 #   archive-publication.sh verify <dir> <allowed-signers-file>
 #
 # <path> for "add" is relative to <prefix>.  Add all immutable files first,
-# then the metadata. APT v1 bundles require InRelease as the last metadata
-# entry. Nothing can be added after it.
+# then the metadata.  A bundle ends with its terminal entry:
+#   APT  InRelease must be the last metadata entry; nothing can follow it.
+#   RPM  every <dir>/repodata/repomd.xml must be followed immediately by its
+#        <dir>/repodata/repomd.xml.asc, and the last entry of the bundle is
+#        a repomd.xml.asc.  Only the .asc may be added after a repomd.xml.
 #
 # Bundle layout:
 #   manifest      rsyslog-archive-publication v1
@@ -97,7 +100,7 @@ cmd_add() {
 	[ "$#" -eq 4 ] ||
 		die "usage: add <immutable|metadata> <dir> <local-file> <path>"
 	local kind="$1" dir="$2" local_file="$3" rel="$4"
-	local prefix path state sha size
+	local prefix path state sha size last_path
 
 	case "$kind" in
 		immutable|metadata) ;;
@@ -127,6 +130,26 @@ cmd_add() {
 		metadata)
 			[ "$kind" = metadata ] ||
 				die "immutable entry after metadata: $path"
+			;;
+	esac
+
+	# A repomd.xml must be followed by its detached signature, and a
+	# repomd.xml.asc needs its repomd.xml right before it.
+	last_path="$(awk 'NR > 4 { p = $4 } END { print p }' "$dir/manifest")"
+	case "$last_path" in
+		*/repodata/repomd.xml)
+			[ "$path" = "$last_path.asc" ] ||
+				die "repomd.xml must be followed by its .asc: $path"
+			;;
+	esac
+	case "$path" in
+		*/repodata/repomd.xml.asc)
+			[ "$kind" = metadata ] || die "repomd.xml.asc must be metadata: $path"
+			[ "$last_path" = "${path%.asc}" ] ||
+				die "repomd.xml.asc must directly follow its repomd.xml: $path"
+			;;
+		*/repodata/repomd.xml)
+			[ "$kind" = metadata ] || die "repomd.xml must be metadata: $path"
 			;;
 	esac
 
@@ -172,7 +195,7 @@ cmd_verify() {
 	duplicate="$(awk 'NR > 4 && seen[$4]++ { print $4; exit }' "$manifest")"
 	[ -z "$duplicate" ] || die "duplicate path: $duplicate"
 
-	local seen_inrelease=0 got_sha got_size
+	local seen_inrelease=0 got_sha got_size pending_repomd="" last_path=""
 	while IFS= read -r line; do
 		line_no=$((line_no + 1))
 		case "$line_no" in
@@ -211,6 +234,23 @@ cmd_verify() {
 			*) die "path outside prefix $prefix: $path" ;;
 		esac
 		[ "$seen_inrelease" -eq 0 ] || die "entry after InRelease: $path"
+		if [ -n "$pending_repomd" ]; then
+			[ "$path" = "$pending_repomd.asc" ] ||
+				die "repomd.xml is not followed by its .asc: $pending_repomd"
+			pending_repomd=""
+		fi
+		case "$path" in
+			*/repodata/repomd.xml)
+				[ "$kind" = metadata ] || die "repomd.xml must be metadata: $path"
+				pending_repomd="$path"
+				;;
+			*/repodata/repomd.xml.asc)
+				[ "$kind" = metadata ] || die "repomd.xml.asc must be metadata: $path"
+				[ "$last_path" = "${path%.asc}" ] ||
+					die "repomd.xml.asc does not directly follow its repomd.xml: $path"
+				;;
+		esac
+		last_path="$path"
 		if [ "$kind" = metadata ]; then
 			seen_metadata=1
 		elif [ "$seen_metadata" -eq 1 ]; then
@@ -231,7 +271,15 @@ cmd_verify() {
 		[ "$got_sha" = "$sha" ] || die "sha256 mismatch: $path"
 	done <"$manifest"
 	[ "$line_no" -gt 4 ] || die "manifest lists no files"
-	[ "$seen_inrelease" -eq 1 ] || die "manifest has no terminal InRelease"
+	[ -z "$pending_repomd" ] ||
+		die "repomd.xml is not followed by its .asc: $pending_repomd"
+	case "$last_path" in
+		*/repodata/repomd.xml.asc) ;;
+		*)
+			[ "$seen_inrelease" -eq 1 ] ||
+				die "manifest has no terminal InRelease or repomd.xml.asc"
+			;;
+	esac
 
 	listed="$((line_no - 4))"
 	actual="$(find "$dir/files" -type f | wc -l | tr -d ' ')"

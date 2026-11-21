@@ -11,6 +11,7 @@ Commands:
   build-package <prepared-dir> <mock-config> <artifact-dir> <build-log> <expected-evr> <arch>
   sign-rpms <artifact-dir> <fingerprint>
   generate-repo <artifact-dir> <repo-dir> <arch> <fingerprint> <passphrase-file>
+  fetch-verified-metadata <public-url> <repo-dir> <expected-fingerprint> <repo-subdir>...
   verify-repo <repo-url> <arch> <expected-evr> <expected-fingerprint>
   manifest <artifact-dir> <expected-evr> <arch> <channel> <distro> <distro-version>
 EOF
@@ -19,6 +20,14 @@ EOF
 die() {
   echo "ERROR: $*" >&2
   exit 1
+}
+
+log_warning() {
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then
+    echo "::warning::$*"
+  else
+    echo "WARNING: $*" >&2
+  fi
 }
 
 base_version() {
@@ -435,6 +444,222 @@ cmd_generate_repo() {
   trap - RETURN
 }
 
+# Download <url> to <file>.  Returns 0 on success, 4 if the server answered
+# HTTP 404 and 1 on any other failure.  <file> exists only on success.
+# Only HTTPS is accepted (also for redirects) unless the test hook
+# ARCHIVE_FETCH_ALLOW_HTTP=true is set.
+http_fetch() {
+  local url="$1"
+  local out="$2"
+  local code rc=0
+  local -a proto=(--proto '=https' --proto-redir '=https')
+
+  # Test hook: also allow plain http for a loopback server.  The array is
+  # never left empty, since bash 3.2 (macOS) treats "${a[@]}" of an empty
+  # array as unbound under set -u.
+  if [ "${ARCHIVE_FETCH_ALLOW_HTTP:-false}" = true ]; then
+    proto=(--proto '=http,https' --proto-redir '=http,https')
+  fi
+  code="$(
+    curl -sS -L --fail "${proto[@]}" --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
+      -H 'Cache-Control: no-cache' \
+      -o "$out" -w '%{http_code}' "$url"
+  )" || rc=$?
+  [ "$rc" -ne 0 ] || return 0
+  rm -f "$out"
+  [ "$code" != 404 ] || return 4
+  echo "download of $url failed (curl exit $rc, HTTP ${code:-none})" >&2
+  return 1
+}
+
+# Print one "<href> <sha256> <size|->" line per <data> entry of the repomd.xml
+# <file>.  The caller has verified the signature already, but the content is
+# still parsed defensively: no DTD or entity declarations, only sha256
+# checksums, and every location must be a plain file directly in repodata/.
+repomd_data_entries() {
+  python3 -I - "$1" <<'PY'
+import re
+import sys
+import xml.etree.ElementTree as ET
+from xml.parsers import expat
+
+REPO = "{http://linux.duke.edu/metadata/repo}"
+XML_BASE = "{http://www.w3.org/XML/1998/namespace}base"
+HREF = re.compile(r"^repodata/[A-Za-z0-9._+~-]+$")
+
+
+def fail(message):
+    raise SystemExit(f"repomd.xml: {message}")
+
+
+def refuse(*_args):
+    fail("DTD and entity declarations are not allowed")
+
+
+path = sys.argv[1]
+with open(path, "rb") as stream:
+    content = stream.read(4 * 1024 * 1024 + 1)
+if len(content) > 4 * 1024 * 1024:
+    fail("file is unreasonably large")
+# Refuse DTDs and entity declarations with a plain expat pass first, then
+# build the tree from the same bytes.
+guard = expat.ParserCreate()
+guard.StartDoctypeDeclHandler = refuse
+guard.EntityDeclHandler = refuse
+guard.UnparsedEntityDeclHandler = refuse
+try:
+    guard.Parse(content, True)
+    root = ET.fromstring(content)
+except (expat.ExpatError, ET.ParseError) as error:
+    fail(f"not well-formed XML: {error}")
+if root.tag != REPO + "repomd":
+    fail("root element is not repomd")
+
+seen = set()
+for data in root.findall(REPO + "data"):
+    location = data.find(REPO + "location")
+    if location is None:
+        fail("data entry without location")
+    if location.get(XML_BASE) is not None:
+        fail("xml:base in a location is not allowed")
+    href = location.get("href") or ""
+    if not HREF.match(href) or href.split("/")[1] in (".", ".."):
+        fail(f"unsafe location href: {href!r}")
+    if href in seen:
+        fail(f"location listed twice: {href}")
+    seen.add(href)
+    checksum = data.find(REPO + "checksum")
+    if checksum is None or checksum.get("type") != "sha256":
+        fail(f"{href}: checksum is missing or not sha256")
+    digest = (checksum.text or "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        fail(f"{href}: malformed sha256 checksum")
+    size = data.find(REPO + "size")
+    size_text = "-"
+    if size is not None:
+        size_text = (size.text or "").strip()
+        if not re.fullmatch(r"(0|[1-9][0-9]*)", size_text):
+            fail(f"{href}: malformed size")
+    print(f"{href} {digest} {size_text}")
+PY
+}
+
+# Read the current metadata of a published RPM archive into <repo-dir> so
+# that generate-repo can merge the new build into it.  For every
+# <repo-subdir> (<arch> and SRPMS), repodata/repomd.xml must carry a
+# detached signature (repomd.xml.asc) made by the archive signing key from
+# the local GPG keyring and no other key, and every file listed in
+# repomd.xml must match its sha256 and size.  Any failure is fatal; only a
+# repomd.xml answered with HTTP 404 (a first publication into an empty
+# prefix) starts that repository from scratch.  A compromised web server
+# therefore cannot inject entries that would be re-signed.
+cmd_fetch_verified_metadata() (
+  [ "$#" -ge 4 ] ||
+    die "usage: fetch-verified-metadata <public-url> <repo-dir> <expected-fingerprint> <repo-subdir>..."
+  local public_url="${1%/}"
+  local repo_dir="$2"
+  local expected_fpr="$3"
+  local tmp_dir cleanup_command rc subdir actual_fpr status entries
+  local href digest size actual_digest actual_size name stage
+  shift 3
+
+  for tool in curl gpg gpgv python3 sha256sum; do
+    command -v "$tool" >/dev/null 2>&1 || die "$tool not found"
+  done
+  [[ "$expected_fpr" =~ ^[0-9A-Fa-f]{40,64}$ ]] ||
+    die "invalid expected key fingerprint: $expected_fpr"
+  expected_fpr="$(printf '%s' "$expected_fpr" | tr '[:lower:]' '[:upper:]')"
+  for subdir in "$@"; do
+    [[ "$subdir" =~ ^[A-Za-z0-9_+-][A-Za-z0-9._+-]*$ ]] ||
+      die "invalid repository subdirectory: $subdir"
+  done
+
+  tmp_dir="$(mktemp -d)"
+  printf -v cleanup_command 'rm -rf -- %q' "$tmp_dir"
+  # Expand now because function-local variables are unavailable to an EXIT trap.
+  # shellcheck disable=SC2064
+  trap "$cleanup_command" EXIT
+
+  # Never merge into metadata left over from an earlier attempt.
+  for subdir in "$@"; do
+    rm -rf "${repo_dir:?}/$subdir/repodata"
+    mkdir -p "$repo_dir/$subdir"
+  done
+
+  gpg --batch --export "$expected_fpr" > "$tmp_dir/keyring.gpg"
+  [ -s "$tmp_dir/keyring.gpg" ] ||
+    die "archive signing key $expected_fpr is not in the local keyring"
+  actual_fpr="$(
+    gpg --batch --show-keys --with-colons "$tmp_dir/keyring.gpg" |
+      awk -F: '$1 == "pub" { keys++ } $1 == "fpr" && !fpr { fpr = $10 }
+        END { if (keys == 1) print fpr }'
+  )"
+  [ "$(printf '%s' "$actual_fpr" | tr '[:lower:]' '[:upper:]')" = \
+    "$expected_fpr" ] ||
+    die "exported keyring does not hold exactly the key $expected_fpr"
+
+  for subdir in "$@"; do
+    stage="$tmp_dir/stage/$subdir"
+    mkdir -p "$stage"
+    rc=0
+    http_fetch "$public_url/$subdir/repodata/repomd.xml" \
+      "$stage/repomd.xml" || rc=$?
+    case "$rc" in
+      0) ;;
+      4)
+        log_warning "$public_url/$subdir/repodata/repomd.xml does not exist" \
+          "(HTTP 404): first publication into an empty prefix, starting" \
+          "$subdir from scratch"
+        rm -rf "$stage"
+        continue
+        ;;
+      *) die "cannot read the current archive state from $public_url/$subdir" ;;
+    esac
+    http_fetch "$public_url/$subdir/repodata/repomd.xml.asc" \
+      "$stage/repomd.xml.asc" ||
+      die "cannot download $subdir/repodata/repomd.xml.asc"
+
+    # Accept a signature only from the archive key itself (a signing
+    # subkey reports the primary key fingerprint in VALIDSIG).
+    status="$(
+      gpgv --keyring "$tmp_dir/keyring.gpg" --status-fd 1 \
+        "$stage/repomd.xml.asc" "$stage/repomd.xml" 2>/dev/null
+    )" || die "$subdir/repodata/repomd.xml is not signed by archive key $expected_fpr"
+    printf '%s\n' "$status" | awk -v fpr="$expected_fpr" '
+      $1 == "[GNUPG:]" && $2 == "VALIDSIG" { valid++; if (toupper($NF) == fpr) ok++ }
+      $1 == "[GNUPG:]" && $2 ~ /^(BADSIG|ERRSIG|EXPKEYSIG|REVKEYSIG)$/ { bad = 1 }
+      END { exit !(valid == 1 && ok == 1 && !bad) }' ||
+      die "$subdir/repodata/repomd.xml is not signed solely by archive key $expected_fpr"
+
+    entries="$(repomd_data_entries "$stage/repomd.xml")" ||
+      die "$subdir/repodata/repomd.xml is not acceptable"
+    while IFS=' ' read -r href digest size; do
+      [ -n "$href" ] || continue
+      name="${href#repodata/}"
+      http_fetch "$public_url/$subdir/$href" "$stage/$name" ||
+        die "cannot download $subdir/$href listed in repomd.xml"
+      actual_digest="$(sha256sum "$stage/$name" | awk '{print $1}')"
+      [ "$actual_digest" = "$digest" ] ||
+        die "$subdir/$href does not match the sha256 in repomd.xml"
+      if [ "$size" != "-" ]; then
+        actual_size="$(wc -c < "$stage/$name" | tr -d ' ')"
+        [ "$actual_size" = "$size" ] ||
+          die "$subdir/$href does not match the size in repomd.xml"
+      fi
+      echo "Verified current $subdir/$href ($digest)"
+    done <<< "$entries"
+  done
+
+  # Only completely verified metadata reaches <repo-dir>.
+  for subdir in "$@"; do
+    [ -d "$tmp_dir/stage/$subdir" ] || continue
+    mkdir -p "$repo_dir/$subdir/repodata"
+    find "$tmp_dir/stage/$subdir" -maxdepth 1 -type f -exec \
+      sh -c 'dest="$1"; shift; mv -- "$@" "$dest"/' sh \
+      "$repo_dir/$subdir/repodata" {} +
+  done
+)
+
 cmd_verify_repo() {
   local repo_url="$1"
   local arch="$2"
@@ -578,6 +803,7 @@ case "$command" in
   build-package) shift; cmd_build_package "$@" ;;
   sign-rpms) shift; cmd_sign_rpms "$@" ;;
   generate-repo) shift; cmd_generate_repo "$@" ;;
+  fetch-verified-metadata) shift; cmd_fetch_verified_metadata "$@" ;;
   verify-repo) shift; cmd_verify_repo "$@" ;;
   manifest) shift; cmd_manifest "$@" ;;
   *) usage; exit 2 ;;

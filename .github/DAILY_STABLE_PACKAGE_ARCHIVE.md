@@ -61,10 +61,10 @@ maintained in the private `Adiscon/infrastructure` repository
 (`deploy/vserverweb5/`, runbook
 `docs/runbooks/rsyslog-packages-onboarding.md`).
 
-Debian 13 (`apt/daily-stable/debian/13`) and Ubuntu 26.04
-(`apt/daily-stable/ubuntu/26.04`) have moved.  The remaining targets
-(Fedora 44, EL 10, Amazon Linux 2023, openSUSE Leap 16.0, Alpine 3.24)
-are disabled and move one at a time by a reviewed PR, each adding its
+Debian 13 (`apt/daily-stable/debian/13`), Ubuntu 26.04
+(`apt/daily-stable/ubuntu/26.04`) and Fedora 44
+(`rpm/daily-stable/fedora/44`) have moved.  The remaining targets
+(EL 10, Amazon Linux 2023, openSUSE Leap 16.0, Alpine 3.24) are disabled and move one at a time by a reviewed PR, each adding its
 artifact to the poller configuration in `Adiscon/infrastructure`.  Each
 target starts from an empty prefix; history from Spaces is not carried
 over.

@@ -28,7 +28,8 @@ EXTRA_DIST = \
 	devtools/release/archive-store.sh \
 	devtools/release/archive-store-server.sh \
 	devtools/release/archive-publication.sh \
-	devtools/release/debian-daily-stable.sh
+	devtools/release/debian-daily-stable.sh \
+	devtools/release/rpm-daily-stable.sh
 
 EXTRA_DIST += \
 	devtools/prepare-flake-evidence.py \

@@ -58,19 +58,32 @@ pruned. The EVR contains the UTC date, GitHub run and attempt,
 and source commit. Only repository metadata, the public key, and the consumer
 `.repo` file are mutable.
 
-DigitalOcean's CDN currently enforces an observed one-hour minimum TTL even
-when objects request a shorter cache lifetime. The workflow therefore verifies
-that the CDN serves a valid signed repository, while exact newly published
-version installation uses the public Spaces origin. Consumers continue to use
-the CDN and can see a new daily version up to one hour later.
+Fedora 44 is published at `packages.rsyslog.com` and uses the signed pull
+model of the Debian archive (see DAILY_STABLE_PACKAGE_ARCHIVE.md). The publish
+job no longer writes to the archive. It builds a signed publication, uploads it
+as the artifact `archive-publication-fedora-44` (kept 7 days), and a poller on
+the server verifies and applies it. The verify job waits up to 30 minutes for
+`publication-status.json` to name its run, attempt, and manifest hash, then
+checks the published repository and installs the exact new EVR from it.
+
+Before generating the new repository, the publish job downloads the current `repomd.xml` of
+`x86_64`, `aarch64`, and `SRPMS` over HTTPS with
+`rpm-daily-stable.sh fetch-verified-metadata`. Each must verify against its
+`repomd.xml.asc` with the archive signing key and no other key, and every file
+it lists must match its SHA-256, and its size when `repomd.xml` gives one. Only HTTP 404 for a `repomd.xml`
+starts that repository from scratch (expected for the first publication); any other failure stops the run. RPMs,
+snapshots, and the SHA-256-named `repodata` files are immutable bundle entries;
+the public key, the `.repo` file, `repomd.xml` and `repomd.xml.asc` are
+metadata.  Each `repomd.xml` is immediately followed by its
+`repomd.xml.asc`, and the bundle ends with a `repomd.xml.asc`.
 
 ## Signing and configuration
 
-The archive reuses the OpenPGP signing key and DigitalOcean Spaces credentials
-already held by the protected `debian-daily-stable` GitHub Environment. Despite
+The archive reuses the OpenPGP signing key held by the protected
+`debian-daily-stable` GitHub Environment and the
+`ARCHIVE_PUBLICATION_SIGNING_KEY` secret that signs the publication. Despite
 its legacy name, that environment is the security boundary for the shared
 package archive and is not limited to Debian.
-
 Add this repository variable:
 
 - `FEDORA44_DAILY_STABLE_ENABLED`: `true` only after the first complete
@@ -79,24 +92,18 @@ Add this repository variable:
 The scheduled workflow fails preflight if this switch is missing or is not
 exactly `true` or `false`, so a configuration error cannot appear successful.
 
-Add these variables to the `debian-daily-stable` environment:
+The verify job has no environment, so `DEBIAN_DAILY_STABLE_GPG_FINGERPRINT`
+must stay a repository variable. The archive URL is fixed in the workflow.
 
-- `FEDORA44_DAILY_STABLE_REPO_URL`: public CDN URL ending in
-  `/rpm/daily-stable/fedora/44`.
-- `FEDORA44_DAILY_STABLE_ORIGIN_REPO_URL`: public Spaces origin URL
-  ending in `/rpm/daily-stable/fedora/44`.
-
-No new private key, DigitalOcean account API token, or bucket permission is
-required.
+No new private key or server credential is required.
 
 ## Provisioning and recovery
 
-1. Set the CDN and public-origin repository variables while leaving the
-   schedule flag unset or false.
+1. Leave the schedule flag unset or false.
 2. Run the workflow manually with publication disabled and inspect the RPMs.
 3. Run it manually with publication enabled.
-4. Confirm the CDN metadata signature and clean-install the exact new EVR from
-   the public origin in native `fedora:44` containers for both architectures;
+4. Confirm the published metadata signature and clean-install the exact new
+   EVR from `packages.rsyslog.com` in native `fedora:44` containers for both architectures;
    verify all installed EVRs,
    `rsyslogd -v`, and `rsyslogd -N1`.
 5. Set `FEDORA44_DAILY_STABLE_ENABLED=true`.
