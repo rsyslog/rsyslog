@@ -1,7 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Verify Docker json-file parsing from a Kubernetes /var/log/containers-style
-# path with API enrichment disabled. Parsed output metadata is the oracle.
+# path with API enrichment disabled. Parsed output metadata and normalized
+# symbolic local0 facility (ordinal 16) are the oracle.
 . ${srcdir:=.}/diag.sh init
 require_plugin imkubernetes ../contrib/imkubernetes
 
@@ -15,10 +16,11 @@ global(workDirectory="'$RSYSLOG_DYNNAME.spool'")
 module(load="../contrib/imkubernetes/.libs/imkubernetes"
        LogFileGlob="'$pwd/$logdir'/*.log"
        PollingInterval="1"
-       EnrichKubernetes="off")
+       EnrichKubernetes="off" DefaultFacility="local0")
 
 template(name="outfmt" type="list" option.jsonf="on") {
     property(outname="msg" name="msg" format="jsonf")
+    property(outname="facility" name="syslogfacility" format="jsonf")
     property(outname="namespace" name="$!kubernetes!namespace_name" format="jsonf")
     property(outname="pod" name="$!kubernetes!pod_name" format="jsonf")
     property(outname="container" name="$!kubernetes!container_name" format="jsonf")
@@ -60,11 +62,13 @@ assert stdout["container"] == "container-b"
 assert stdout["stream"] == "stdout"
 assert stdout["format"] == "docker_json"
 assert stdout["container_id"] == "deadbeef"
+assert stdout["facility"] == "16"
 
 stderr = by_msg["docker stderr line"]
 assert stderr["stream"] == "stderr"
 assert stderr["format"] == "docker_json"
 assert stderr["container_id"] == "deadbeef"
+assert stderr["facility"] == "16"
 PY
 
 exit_test
