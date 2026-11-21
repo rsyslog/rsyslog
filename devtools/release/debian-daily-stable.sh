@@ -487,13 +487,21 @@ log_warning() {
 
 # Download <url> to <file>.  Returns 0 on success, 4 if the server answered
 # HTTP 404 and 1 on any other failure.  <file> exists only on success.
+# Only HTTPS is accepted (also for redirects) unless the test hook
+# ARCHIVE_FETCH_ALLOW_HTTP=true is set.
 http_fetch() {
   local url="$1"
   local out="$2"
   local code rc=0
+  local -a proto=(--proto '=https' --proto-redir '=https')
 
+  # Test hook for the loopback HTTP fixture. Keep the array non-empty for
+  # Bash 3.2 on macOS under set -u.
+  if [ "${ARCHIVE_FETCH_ALLOW_HTTP:-false}" = true ]; then
+    proto=(--proto '=http,https' --proto-redir '=http,https')
+  fi
   code="$(
-    curl -sS -L --fail --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
+    curl -sS -L --fail "${proto[@]}" --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
       -H 'Cache-Control: no-cache' \
       -o "$out" -w '%{http_code}' "$url"
   )" || rc=$?

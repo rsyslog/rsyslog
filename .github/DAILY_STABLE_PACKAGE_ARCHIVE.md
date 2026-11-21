@@ -121,7 +121,8 @@ too.  If that file exists, the prefix was published before and the missing
 index is an error, so the run fails instead of signing an index that holds
 only the newest build.  For manual recovery the operator may set
 `ARCHIVE_ALLOW_EMPTY_INDEX=true` for the helper; it logs a warning and
-starts from empty indexes.  Workflows do not set it.
+starts from empty indexes.  Reading `publication-status.json` must still
+succeed or return HTTP 404.  Workflows do not set the override.
 
 The ssh push backend of `devtools/release/archive-store.sh` and its
 server-side `archive-store-server.sh` remain in the tree but are not used

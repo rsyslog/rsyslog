@@ -388,17 +388,21 @@ done
 grep -q "publication-status.json" "$work_dir/published.err" ||
 	fail "failure for a published prefix does not name publication-status.json"
 for name in published half-published; do
-	ARCHIVE_ALLOW_EMPTY_INDEX=true fetch "$name" >/dev/null 2>"$work_dir/override.err" ||
+	ARCHIVE_ALLOW_EMPTY_INDEX=true fetch "$name" >"$work_dir/override.log" 2>&1 ||
 		fail "override did not allow a scratch start for '$name'"
-	grep -Eq "WARNING|::warning" "$work_dir/override.err" ||
+	grep -Eq "^(WARNING: |::warning::)ARCHIVE_ALLOW_EMPTY_INDEX=true:" "$work_dir/override.log" ||
 		fail "override for '$name' did not log a warning"
 done
 [ -f "$work_dir/rpm-repo/x86_64/repodata/repomd.xml" ] ||
 	fail "override lost the existing x86_64 metadata of a half-published prefix"
 [ ! -e "$work_dir/rpm-repo/SRPMS/repodata" ] ||
 	fail "override invented SRPMS metadata"
-if ARCHIVE_ALLOW_EMPTY_INDEX=true fetch status500 >/dev/null 2>&1; then
+if ARCHIVE_ALLOW_EMPTY_INDEX=true fetch status500 >/dev/null 2>"$work_dir/status500.err"; then
 	fail "override accepted a publication-status.json error"
 fi
+grep -q 'publication-status.json failed (curl exit 22, HTTP 500)' "$work_dir/status500.err" ||
+	fail "override refusal did not report HTTP 500 from publication-status.json"
+grep -q 'cannot determine whether' "$work_dir/status500.err" ||
+	fail "override refusal did not report that the publication state is unknown"
 
 echo "daily-stable rpm metadata fetch checks passed"
