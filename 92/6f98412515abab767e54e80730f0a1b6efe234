@@ -1,0 +1,19 @@
+devtools/release/alpine-daily-stable.sh
+  s_0e636daf07de12::t_bdb984fd6df280 106-137,142,147-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "926f98412515abab767e54e80730f0a1b6efe234",
+  "prompts": {},
+  "sessions": {
+    "s_0e636daf07de12": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0fb9fa87d179514c",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
