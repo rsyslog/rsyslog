@@ -1,0 +1,25 @@
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_9591331cc7634e::t_040c99488e858f 124-125
+tests/daily-stable-archive-publication.sh
+  s_9591331cc7634e::t_040c99488e858f 21,26-27,325,333-335,366,368,376,379-382
+devtools/release/debian-daily-stable.sh
+  s_9591331cc7634e::t_040c99488e858f 490-491,496,498-502,504
+tests/daily-stable-rpm-metadata-fetch.sh
+  s_9591331cc7634e::t_040c99488e858f 391,393,400,403-406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c413a5cd37df2a6936573bf1cbe5f003713c9cc",
+  "prompts": {},
+  "sessions": {
+    "s_9591331cc7634e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ede2-673c-72c0-8b42-bdf6d5fe40ca",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
