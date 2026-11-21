@@ -59,6 +59,14 @@ static int fklog = -1; /* kernel log fd */
 
 
 #ifdef OS_LINUX
+    /* Limits for a kernel timestamp "[secs.usecs]" that we accept as message
+     * time. Nine seconds digits (about 31 years of uptime) keep the value below
+     * LONG_MAX also where long has 32 bits. The slack covers the drift between
+     * the kernel log clock and CLOCK_MONOTONIC.
+     */
+    #define KERN_TS_MAX_SEC_DIGITS 9
+    #define KERN_TS_SLACK_SECS 60L
+
 /* submit a message to imklog Syslog() API. In this function, we check if
  * a kernel timestamp is present and, if so, extract and strip it.
  * Note that this is heavily Linux specific and thus is not compiled or
@@ -79,6 +87,8 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
     long usecOffs;
     unsigned i;
     unsigned bufsize;
+    unsigned nDigits;
+    int bPlausible = 1; /* kernel timestamp value can be used as message time */
     struct timespec monotonic, realtime;
     struct timeval tv;
     struct timeval *tp = NULL;
@@ -94,11 +104,21 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
      */
     i = endpri + 2; /* space or first digit after '[' */
     while (buf[i] && isspace(buf[i])) ++i; /* skip space */
+    /* The kernel prints "%5lu.%06lu". The text between the brackets can
+     * also come from a user process name when the kernel prints no
+     * timestamp, so the digit runs are not trusted: we stop accumulating
+     * once a value exceeds what a real timestamp can hold (no signed
+     * overflow) and only remember that the value is implausible. The
+     * syntax check below is unchanged, so stripping works as before.
+     */
     secs = 0;
+    nDigits = 0;
     while (buf[i] && isdigit(buf[i])) {
-        secs = secs * 10 + buf[i] - '0';
+        if (nDigits < KERN_TS_MAX_SEC_DIGITS) secs = secs * 10 + buf[i] - '0';
+        ++nDigits;
         ++i;
     }
+    if (nDigits > KERN_TS_MAX_SEC_DIGITS) bPlausible = 0;
     if (buf[i] != '.') {
         DBGPRINTF("no dot --> no kernel timestamp\n");
         goto done; /* no TS! */
@@ -106,10 +126,13 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
 
     ++i; /* skip dot */
     usecs = 0;
+    nDigits = 0;
     while (buf[i] && isdigit(buf[i])) {
-        usecs = usecs * 10 + buf[i] - '0';
+        if (nDigits < 6) usecs = usecs * 10 + buf[i] - '0';
+        ++nDigits;
         ++i;
     }
+    if (nDigits > 6) bPlausible = 0; /* kernel prints exactly 6 digits */
     if (buf[i] != ']') {
         DBGPRINTF("no trailing ']' --> no kernel timestamp\n");
         goto done; /* no TS! */
@@ -128,8 +151,24 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
         goto done;
     }
 
+    if (!bPlausible) {
+        DBGPRINTF("imklog/bsd: kernel timestamp out of range, using reception time\n");
+        goto done;
+    }
+
     clock_gettime(CLOCK_MONOTONIC, &monotonic);
     clock_gettime(CLOCK_REALTIME, &realtime);
+    /* The kernel timestamp is the time since boot, so it cannot be later
+     * than the current monotonic clock (plus slack). Anything beyond
+     * that is not a timestamp of this boot (e.g. a user process name on a
+     * kernel without printk timestamps, or a LogPath replay from another
+     * system) and would produce a bogus message time.
+     */
+    if (secs > monotonic.tv_sec + KERN_TS_SLACK_SECS) {
+        DBGPRINTF("imklog/bsd: kernel timestamp %ld is later than uptime %ld, using reception time\n", secs,
+                  (long)monotonic.tv_sec);
+        goto done;
+    }
     secOffs = realtime.tv_sec - monotonic.tv_sec;
     usecOffs = (realtime.tv_nsec - monotonic.tv_nsec) / 1000;
     if (usecOffs < 0) {
