@@ -1,0 +1,21 @@
+Makefile.am
+  s_ce74af14c19768::t_0cee6a6443498f 31-32
+devtools/release/rpm-daily-stable.sh
+  s_ce74af14c19768::t_f42aa85beeec55 457-462,658-659
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fc706d9ad1238dba04ded34895ca3465c0c4882",
+  "prompts": {},
+  "sessions": {
+    "s_ce74af14c19768": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f73d6ad-cd3b-5a14-8bb6-84b818a0dcb2",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

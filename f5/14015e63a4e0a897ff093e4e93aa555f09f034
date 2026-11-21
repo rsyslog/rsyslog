@@ -1,0 +1,21 @@
+.github/FEDORA_DAILY_STABLE.md
+  s_ce74af14c19768::t_f65f70eefc5bda 73,76-78
+.github/workflows/fedora44_daily_stable.yml
+  s_ce74af14c19768::t_f745a0f52f519c 573,617,625
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f514015e63a4e0a897ff093e4e93aa555f09f034",
+  "prompts": {},
+  "sessions": {
+    "s_ce74af14c19768": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f73d6ad-cd3b-5a14-8bb6-84b818a0dcb2",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

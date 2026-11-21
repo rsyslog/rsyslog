@@ -1,0 +1,42 @@
+tests/solaris-subset.list
+  s_2090a685fea8e1::t_8aa4e5b576a139 82
+devtools/release/rpm-daily-stable.sh
+  s_2090a685fea8e1::t_1d83fd2590e8b8 14,25-32,447-656,800
+tests/daily-stable-rpm-metadata-fetch.sh
+  s_2090a685fea8e1::t_e75fe4f3a48fc1 1-371
+devtools/release/fedora-daily-stable.sh
+  s_2090a685fea8e1::t_70275dc094633e 14,297
+devtools/release/archive-publication.sh
+  s_2090a685fea8e1::t_371edfce203e87 30-34,103,136-155,198,237-253,274-282
+tests/Makefile.am
+  s_2090a685fea8e1::t_3762323d83037e 72
+.github/workflows/fedora44_daily_stable.yml
+  s_2090a685fea8e1::t_38cdd437b1a356 23,42-43,299,303,313-315,320-324,335,341,409,411-419,457,461,464,467-480,483-528,531-535,537-572,587,608-651,662,667-668,672,677,682,690,694
+.github/FEDORA_DAILY_STABLE.md
+  s_2090a685fea8e1::t_8ce21779079bdc 61-77,81-83,94-95,101,104-105
+  s_2dc01c7e3d2940::t_0add9e4d30bb93 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5f28113d3b9e445c8b3692c10de98a3b296e7719",
+  "prompts": {},
+  "sessions": {
+    "s_2090a685fea8e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6240d91e2fe6c548",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}

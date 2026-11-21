@@ -1,0 +1,21 @@
+.github/DAILY_STABLE_PACKAGE_ARCHIVE.md
+  s_056e2c3661c26d::t_f315237078193e 40-41,74-75,245-250
+.github/workflows/ubuntu_daily_stable.yml
+  s_056e2c3661c26d::t_70190a2444ae3a 29,53-54,334,345,355-357,359-366,375,377-383,389-391,430,432-442,471,474-488,491-509,512-516,518-522,524-553,571,600-641,645,658,692,694-695,752-753
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a3b53396ae8676e84da5df817b470342196bf87",
+  "prompts": {},
+  "sessions": {
+    "s_056e2c3661c26d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5a7531ad83fa99f4",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

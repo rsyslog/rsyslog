@@ -1,0 +1,23 @@
+.github/FEDORA_DAILY_STABLE.md
+  s_0e636daf07de12::t_40d2a6c04894f5 73-81
+devtools/release/rpm-daily-stable.sh
+  s_0e636daf07de12::t_d79439439c7fec 17-25,564-569,578,625-650
+tests/daily-stable-rpm-metadata-fetch.sh
+  s_0e636daf07de12::t_c776f66a03fc28 27-30,275-282,293,381-403
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0d0529cdf8dbe39103c93ef4bc11eacec595b3fe",
+  "prompts": {},
+  "sessions": {
+    "s_0e636daf07de12": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0fb9fa87d179514c",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
