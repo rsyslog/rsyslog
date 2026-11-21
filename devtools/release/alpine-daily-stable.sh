@@ -145,8 +145,9 @@ text, version_count = re.subn(r"(?m)^pkgver=.*$", f"pkgver={pkgver}", text)
 text, release_count = re.subn(r"(?m)^pkgrel=.*$", "pkgrel=0", text)
 text, source_count = re.subn(
     # Older baselines name the file ("$pkgname-$pkgver.tar.gz::URL"); newer
-    # ones list the bare release URL as the first source entry.
-    r'(?m)^source="(?:\$pkgname-\$pkgver\.tar\.gz::[^\n]+|https?://[^\s"]+/rsyslog-\$pkgver\.tar\.gz)$',
+    # ones list the bare release URL as the first source entry. Leave any
+    # closing quote in place when the assignment ends on the same line.
+    r'(?m)^source="(?:\$pkgname-\$pkgver\.tar\.gz::[^"\n]+|https?://[^\s"]+/rsyslog-\$pkgver\.tar\.gz)(?="?$)',
     'source="$pkgname-$pkgver.tar.gz',
     text,
 )
