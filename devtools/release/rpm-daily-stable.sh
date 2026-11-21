@@ -14,6 +14,15 @@ Commands:
   fetch-verified-metadata <public-url> <repo-dir> <expected-fingerprint> <repo-subdir>...
   verify-repo <repo-url> <arch> <expected-evr> <expected-fingerprint>
   manifest <artifact-dir> <expected-evr> <arch> <channel> <distro> <distro-version>
+
+Environment:
+  ARCHIVE_ALLOW_EMPTY_INDEX  fetch-verified-metadata: when "true", a repomd.xml
+                             answered with HTTP 404 starts that repository
+                             from scratch even though
+                             <public-url>/publication-status.json shows the
+                             prefix was published before (manual recovery,
+                             e.g. a newly added arch); never set it in
+                             workflows
 EOF
 }
 
@@ -552,7 +561,12 @@ PY
 # repomd.xml must match its sha256 and size.  Any failure is fatal; only a
 # repomd.xml answered with HTTP 404 (a first publication into an empty
 # prefix) starts that repository from scratch.  A compromised web server
-# therefore cannot inject entries that would be re-signed.
+# therefore cannot inject entries that would be re-signed.  A 404 is
+# trusted only if <public-url>/publication-status.json, which the server
+# writes after applying a publication, is 404 as well (checked at most once
+# per run).  If that file exists, the prefix was published before and the
+# missing repomd.xml is an error: fail, unless ARCHIVE_ALLOW_EMPTY_INDEX=true
+# (manual recovery).
 cmd_fetch_verified_metadata() (
   [ "$#" -ge 4 ] ||
     die "usage: fetch-verified-metadata <public-url> <repo-dir> <expected-fingerprint> <repo-subdir>..."
@@ -561,6 +575,7 @@ cmd_fetch_verified_metadata() (
   local expected_fpr="$3"
   local tmp_dir cleanup_command rc subdir actual_fpr status entries
   local href digest size actual_digest actual_size name stage
+  local published=""
   shift 3
 
   for tool in curl gpg gpgv python3 sha256sum; do
@@ -607,9 +622,32 @@ cmd_fetch_verified_metadata() (
     case "$rc" in
       0) ;;
       4)
-        log_warning "$public_url/$subdir/repodata/repomd.xml does not exist" \
-          "(HTTP 404): first publication into an empty prefix, starting" \
-          "$subdir from scratch"
+        if [ -z "$published" ]; then
+          rc=0
+          http_fetch "$public_url/publication-status.json" \
+            "$tmp_dir/publication-status.json" || rc=$?
+          case "$rc" in
+            0) published=yes ;;
+            4) published=no ;;
+            *) die "cannot determine whether $public_url has been published before" ;;
+          esac
+        fi
+        if [ "$published" = no ]; then
+          log_warning "$public_url/$subdir/repodata/repomd.xml does not exist" \
+            "(HTTP 404) and $public_url/publication-status.json does not" \
+            "exist: first publication into an empty prefix, starting" \
+            "$subdir from scratch"
+        elif [ "${ARCHIVE_ALLOW_EMPTY_INDEX:-}" = true ]; then
+          log_warning "ARCHIVE_ALLOW_EMPTY_INDEX=true: $public_url/$subdir/repodata/repomd.xml" \
+            "is missing although the prefix has been published" \
+            "($public_url/publication-status.json exists); starting $subdir" \
+            "from scratch, previously published packages will NOT be in the new metadata"
+        else
+          die "index $public_url/$subdir/repodata/repomd.xml is missing" \
+            "although the prefix has been published" \
+            "($public_url/publication-status.json exists); refusing to start" \
+            "from scratch (manual recovery: ARCHIVE_ALLOW_EMPTY_INDEX=true)"
+        fi
         rm -rf "$stage"
         continue
         ;;
