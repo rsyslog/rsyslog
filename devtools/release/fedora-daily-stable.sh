@@ -11,6 +11,7 @@ Commands:
   build-package <prepared-dir> <artifact-dir> <build-log> <expected-evr> <arch>
   sign-rpms <artifact-dir> <fingerprint>
   generate-repo <artifact-dir> <repo-dir> <arch> <fingerprint> <passphrase-file>
+  fetch-verified-metadata <public-url> <repo-dir> <expected-fingerprint> <repo-subdir>...
   verify-repo <repo-url> <arch> <expected-evr> <expected-fingerprint>
   manifest <artifact-dir> <expected-evr> <arch> <channel> <distro> <distro-version>
 EOF
@@ -293,7 +294,7 @@ case "$command" in
 		shift
 		cmd_build_package "$@"
 		;;
-	sign-rpms | generate-repo | verify-repo | manifest)
+	sign-rpms | generate-repo | fetch-verified-metadata | verify-repo | manifest)
 		exec "$(dirname "$0")/rpm-daily-stable.sh" "$@"
 		;;
 	*)

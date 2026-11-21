@@ -79,3 +79,4 @@ skip yaml-mmjsonparse-find-json-scan-stats-yamlonly.sh
 
 # Debian archive publication is covered in the package test lane.
 skip daily-stable-archive-publication.sh
+skip daily-stable-rpm-metadata-fetch.sh
