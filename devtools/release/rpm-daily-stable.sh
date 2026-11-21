@@ -454,7 +454,12 @@ http_fetch() {
   local code rc=0
   local -a proto=(--proto '=https' --proto-redir '=https')
 
-  [ "${ARCHIVE_FETCH_ALLOW_HTTP:-false}" != true ] || proto=()
+  # Test hook: also allow plain http for a loopback server.  The array is
+  # never left empty, since bash 3.2 (macOS) treats "${a[@]}" of an empty
+  # array as unbound under set -u.
+  if [ "${ARCHIVE_FETCH_ALLOW_HTTP:-false}" = true ]; then
+    proto=(--proto '=http,https' --proto-redir '=http,https')
+  fi
   code="$(
     curl -sS -L --fail "${proto[@]}" --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
       -H 'Cache-Control: no-cache' \
@@ -650,7 +655,8 @@ cmd_fetch_verified_metadata() (
     [ -d "$tmp_dir/stage/$subdir" ] || continue
     mkdir -p "$repo_dir/$subdir/repodata"
     find "$tmp_dir/stage/$subdir" -maxdepth 1 -type f -exec \
-      mv -t "$repo_dir/$subdir/repodata" {} +
+      sh -c 'dest="$1"; shift; mv -- "$@" "$dest"/' sh \
+      "$repo_dir/$subdir/repodata" {} +
   done
 )
 
