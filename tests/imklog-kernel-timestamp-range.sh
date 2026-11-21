@@ -15,17 +15,17 @@
 # timereported is the reception time and must lie between the wall clock
 # before startup and after shutdown (1 s slack for second granularity). Note
 # that timegenerated cannot serve as reference: imklog sets it from the kernel
-# timestamp too. For the valid line, timereported must be boot time + 1 s
-# (boot time from /proc/uptime); the 10 s tolerance covers second-granular
-# values and testbench delays. In all lines the
-# timestamp text must be stripped as before, and the weekday name must be a
-# real weekday.
+# timestamp too. For the valid line, timereported must be the wall-clock time
+# of CLOCK_MONOTONIC zero plus 1 s. That reference comes from the same
+# clock imklog uses (Python's time.monotonic() is CLOCK_MONOTONIC on Linux),
+# so suspend time counted by /proc/uptime does not skew it; the 10 s
+# tolerance covers second-granular values and testbench delays. In all lines
+# the timestamp text must be stripped as before, and the weekday name must be
+# a real weekday.
+# IMKLOG_KERNEL_TS_YAML=YES loads imklog from a YAML config instead
+# (used by yaml-imklog-kernel-timestamp-range.sh).
 . ${srcdir:=.}/diag.sh init
 require_plugin imklog
-if [ ! -r /proc/uptime ]; then
-	echo "SKIP: /proc/uptime is not readable"
-	skip_test
-fi
 cat > "$RSYSLOG_DYNNAME.kmsg" <<'KMSG'
 <6>[    1.000000] msgnum:1 valid
 <6>[975000000000.] msgnum:2 twelve second digits
@@ -34,8 +34,20 @@ cat > "$RSYSLOG_DYNNAME.kmsg" <<'KMSG'
 <6>[    1.0000001] msgnum:5 seven usec digits
 KMSG
 generate_conf
-add_conf 'module(load="../plugins/imklog/.libs/imklog" logpath="'$RSYSLOG_DYNNAME.kmsg'"
-	parsekerneltimestamp="on")
+if [ "${IMKLOG_KERNEL_TS_YAML:-}" = YES ]; then
+	require_yaml_support
+	cat > "$RSYSLOG_DYNNAME.imklog.yaml" <<EOF
+modules:
+  - load: "../plugins/imklog/.libs/imklog"
+    logpath: "$RSYSLOG_DYNNAME.kmsg"
+    parsekerneltimestamp: "on"
+EOF
+	add_conf 'include(file="'${RSYSLOG_DYNNAME}'.imklog.yaml")'
+else
+	add_conf 'module(load="../plugins/imklog/.libs/imklog" logpath="'$RSYSLOG_DYNNAME.kmsg'"
+	parsekerneltimestamp="on")'
+fi
+add_conf '
 template(name="outfmt" type="string"
 	string="%timereported:::date-unixtimestamp% %timereported:::date-wdayname% %msg%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
@@ -47,7 +59,8 @@ shutdown_when_empty
 wait_shutdown
 t_end=$(date +%s)
 
-boot=$(( $(date +%s) - $(cut -d. -f1 /proc/uptime) ))
+# wall-clock time at CLOCK_MONOTONIC zero, the base imklog maps kernel stamps to
+boot=$($PYTHON -c 'import time; print(int(round(time.time() - time.monotonic())))')
 cat "$RSYSLOG_OUT_LOG"
 while read -r reported wday msg; do
 	case "$wday" in
