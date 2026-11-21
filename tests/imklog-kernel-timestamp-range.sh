@@ -59,8 +59,28 @@ shutdown_when_empty
 wait_shutdown
 t_end=$(date +%s)
 
-# wall-clock time at CLOCK_MONOTONIC zero, the base imklog maps kernel stamps to
-boot=$($PYTHON -c 'import time; print(int(round(time.time() - time.monotonic())))')
+# wall-clock time at CLOCK_MONOTONIC zero, the base imklog maps kernel stamps to;
+# Python 2 (e.g. CentOS 7) lacks time.monotonic(), so call clock_gettime there
+boot=$($PYTHON - <<'PYEOF'
+import time
+try:
+    mono = time.monotonic()
+except AttributeError:
+    import ctypes, ctypes.util
+    class timespec(ctypes.Structure):
+        _fields_ = [("tv_sec", ctypes.c_long), ("tv_nsec", ctypes.c_long)]
+    ts = timespec()
+    lib = ctypes.CDLL(ctypes.util.find_library("rt") or ctypes.util.find_library("c"), use_errno=True)
+    if lib.clock_gettime(1, ctypes.byref(ts)) != 0:  # 1 == CLOCK_MONOTONIC on Linux
+        raise OSError(ctypes.get_errno(), "clock_gettime(CLOCK_MONOTONIC) failed")
+    mono = ts.tv_sec + ts.tv_nsec / 1e9
+print(int(round(time.time() - mono)))
+PYEOF
+)
+if [ -z "$boot" ]; then
+	echo "FAIL: could not determine CLOCK_MONOTONIC reference"
+	error_exit 1
+fi
 cat "$RSYSLOG_OUT_LOG"
 while read -r reported wday msg; do
 	case "$wday" in
