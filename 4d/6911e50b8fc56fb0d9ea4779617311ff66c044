@@ -1,0 +1,38 @@
+contrib/imhttp/imhttp.c
+  h_95716f3de0caf5 47,1454,1458-1459,1474,1499
+doc/source/configuration/modules/imhttp.rst
+  h_95716f3de0caf5 396-418
+doc/source/configuration/modules/impstats.rst
+  h_95716f3de0caf5 30-35
+doc/source/configuration/yaml_config.rst
+  h_95716f3de0caf5 39-42
+runtime/glbl.c
+  h_95716f3de0caf5 141-142,1189-1190,1452-1464
+runtime/rsconf.c
+  h_95716f3de0caf5 378-379
+runtime/rsconf.h
+  h_95716f3de0caf5 187-188
+runtime/statsobj.c
+  h_95716f3de0caf5 752,757-761
+tests/Makefile.am
+  h_95716f3de0caf5 1784
+tests/imhttp-metrics-limit.sh
+  h_95716f3de0caf5 1-23
+tests/imhttp-metrics.sh
+  h_95716f3de0caf5 5-6,12
+tests/stats-prometheus-escaping.sh
+  h_95716f3de0caf5 7-8,13-14,16,24-25,40-41
+tests/yaml-imhttp-metrics-apikeyfile.sh
+  h_95716f3de0caf5 5-6,12-15,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d6911e50b8fc56fb0d9ea4779617311ff66c044",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
