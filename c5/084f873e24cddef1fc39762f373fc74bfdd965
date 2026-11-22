@@ -1,0 +1,28 @@
+doc/source/configuration/modules/imklog.rst
+  h_95716f3de0caf5 85-95
+plugins/imklog/bsd.c
+  h_95716f3de0caf5 51-56,81,92-93,159,162-163,198,311-312,316-317,322-325
+plugins/imklog/imklog.c
+  h_95716f3de0caf5 248-254,257,261
+plugins/imklog/imklog.h
+  h_95716f3de0caf5 67
+tests/Makefile.am
+  h_95716f3de0caf5 32-37,3757-3761
+tests/imklog_secondary_pri.sh
+  h_95716f3de0caf5 1-38
+tests/imklog_secondary_pri_permit_off.sh
+  h_95716f3de0caf5 1-7
+tests/imklog_split_continuation.sh
+  h_95716f3de0caf5 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c5084f873e24cddef1fc39762f373fc74bfdd965",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

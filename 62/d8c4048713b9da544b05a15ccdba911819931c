@@ -1,0 +1,14 @@
+runtime/AGENTS.md
+  h_95716f3de0caf5 69-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "62d8c4048713b9da544b05a15ccdba911819931c",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

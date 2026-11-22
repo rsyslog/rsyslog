@@ -1,0 +1,39 @@
+doc/source/reference/parameters/omfile-dynafile.rst
+  s_2896e52954784d::t_a2124c45020ebd 61-78
+tests/Makefile.am
+  s_2896e52954784d::t_93c54b7ef044a9 551
+doc/source/reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
+  s_2896e52954784d::t_02b4ce9b2364cd 54-56
+  s_958aa1d5056522::t_27fa2008296202 57
+tests/omfile-dynafile-relative-root.sh
+  s_2896e52954784d::t_fcad2edba30315 1-99
+doc/source/reference/parameters/omfile-dynafile-restricttemplatetype.rst
+  s_2896e52954784d::t_57fe9da665b9cc 44-46
+tools/omfile.c
+  s_2896e52954784d::t_d326030d6a9fe8 372-387,394-399,422-434
+  s_2896e52954784d::t_7aaabf33466d55 176,1658-1666,1753,2142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3f9768e139f123afdd7b4901aee543820f6f9497",
+  "prompts": {},
+  "sessions": {
+    "s_2896e52954784d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a884f0b-a757-5cab-aa97-04c8000e9576",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_958aa1d5056522": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ffa1a-f132-76d3-bd7c-a44b20b1f7f0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

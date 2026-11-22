@@ -1,0 +1,18 @@
+contrib/imkubernetes/imkubernetes.c
+  h_95716f3de0caf5 1397-1398
+runtime/segdisk_codec.c
+  h_95716f3de0caf5 346-347,503-515
+tests/unit/segdisk_codec_test.c
+  h_95716f3de0caf5 189-192,204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8fc588042fb9b88b7da2ea9e37f1e962214ea22b",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

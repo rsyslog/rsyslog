@@ -1,0 +1,19 @@
+tests/imklog-kernel-timestamp-range.sh
+  s_e8f9cb42d831ee::t_23f7e8c471fd15 62-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2297003dd47e8627f9fc7cbd92a7b52af3e6ee88",
+  "prompts": {},
+  "sessions": {
+    "s_e8f9cb42d831ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2142c1fa-5fb2-5dbe-8cd5-e99b36237182",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

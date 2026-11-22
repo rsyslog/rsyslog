@@ -1,0 +1,22 @@
+contrib/AGENTS.md
+  h_95716f3de0caf5 47-49
+contrib/imkubernetes/imkubernetes.c
+  h_95716f3de0caf5 1398-1402
+tests/Makefile.am
+  h_95716f3de0caf5 2884-2886
+tests/imkubernetes-defaultfacility-range.sh
+  h_95716f3de0caf5 1-31
+tests/imkubernetes-defaultfacility-unknown.sh
+  h_95716f3de0caf5 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3bca3565a6daee18a1fe6edc6ce28687c0ff988f",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

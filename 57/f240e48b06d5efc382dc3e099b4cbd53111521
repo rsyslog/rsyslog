@@ -1,0 +1,23 @@
+tests/Makefile.am
+  s_e8f9cb42d831ee::t_ce6d90e117fbb7 58-59,4183-4185
+tests/imklog-kernel-timestamp-range.sh
+  s_e8f9cb42d831ee::t_e94b82060b622a 18-26,37-50,62-63
+tests/yaml-imklog-kernel-timestamp-range.sh
+  s_e8f9cb42d831ee::t_6f4335c18aba2c 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57f240e48b06d5efc382dc3e099b4cbd53111521",
+  "prompts": {},
+  "sessions": {
+    "s_e8f9cb42d831ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2142c1fa-5fb2-5dbe-8cd5-e99b36237182",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
