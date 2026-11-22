@@ -1731,6 +1731,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     /* The config asked to abort the load (the reason is already on stderr).
      * Stop here, before the optimizer and checks add unrelated messages. */
     if (loadConf->load_abort_requested) {
+        tellLexEndParsing();
         ABORT_FINALIZE(RS_RET_CONF_LOAD_ABORTED);
     }
 
