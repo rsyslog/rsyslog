@@ -24,6 +24,10 @@
 #   fail and leave no metadata behind
 # - HTTP 404 for repomd.xml starts that repository from scratch
 # - HTTP 500 for repomd.xml fails (no fallback to an empty repository)
+# - HTTP 404 for repomd.xml with publication-status.json present fails,
+#   also when only one subdirectory is 404 and the others are 200, unless
+#   ARCHIVE_ALLOW_EMPTY_INDEX=true (then it warns and starts from scratch)
+# - HTTP 404 for repomd.xml with publication-status.json answering 500 fails
 # The oracle is the exit status of each command plus the files it leaves.
 # The loopback server writes its port after listening. Poll that file and
 # allow up to 60 seconds for Python startup on loaded runners.
@@ -268,8 +272,14 @@ evil_repo dtd repodata/primary-dtd-x86_64 sha256 "" \
 mkdir -p "$www/empty" "$www/half/x86_64"
 # x86_64 exists, SRPMS does not: that repository starts from scratch.
 cp -a "$www/good/x86_64/." "$www/half/x86_64/"
+# Same shapes, but the prefix has been published before.
+mkdir -p "$www/published" "$www/half-published/x86_64" "$www/status500"
+cp -a "$www/good/x86_64/." "$www/half-published/x86_64/"
+printf '{}\n' >"$www/published/publication-status.json"
+printf '{}\n' >"$www/half-published/publication-status.json"
 
-# Serve $www; any path below /error/ answers HTTP 500.
+# Serve $www; any path below /error/ answers HTTP 500, as does
+# publication-status.json below /status500/.
 cat >"$work_dir/server.py" <<'PYEOF'
 import functools
 import http.server
@@ -280,7 +290,7 @@ import sys
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        if self.path.startswith("/error/"):
+        if self.path.startswith("/error/") or self.path == "/status500/publication-status.json":
             self.send_error(500)
             return
         super().do_GET()
@@ -367,5 +377,32 @@ fetch half || fail "fetch failed when only SRPMS is missing (404)"
 	fail "fetch of a half-empty prefix lost the existing x86_64 metadata"
 [ ! -e "$work_dir/rpm-repo/SRPMS/repodata" ] ||
 	fail "fetch invented SRPMS metadata"
+
+# 404 for repomd.xml: publication-status.json decides.
+for name in published half-published status500; do
+	if fetch "$name" >"$work_dir/$name.out" 2>"$work_dir/$name.err"; then
+		fail "fetch accepted the '$name' prefix with a missing repomd.xml"
+	fi
+	no_files_left || fail "fetch of the '$name' prefix left metadata behind"
+done
+grep -q "publication-status.json" "$work_dir/published.err" ||
+	fail "failure for a published prefix does not name publication-status.json"
+for name in published half-published; do
+	ARCHIVE_ALLOW_EMPTY_INDEX=true fetch "$name" >"$work_dir/override.log" 2>&1 ||
+		fail "override did not allow a scratch start for '$name'"
+	grep -Eq "^(WARNING: |::warning::)ARCHIVE_ALLOW_EMPTY_INDEX=true:" "$work_dir/override.log" ||
+		fail "override for '$name' did not log a warning"
+done
+[ -f "$work_dir/rpm-repo/x86_64/repodata/repomd.xml" ] ||
+	fail "override lost the existing x86_64 metadata of a half-published prefix"
+[ ! -e "$work_dir/rpm-repo/SRPMS/repodata" ] ||
+	fail "override invented SRPMS metadata"
+if ARCHIVE_ALLOW_EMPTY_INDEX=true fetch status500 >/dev/null 2>"$work_dir/status500.err"; then
+	fail "override accepted a publication-status.json error"
+fi
+grep -q 'publication-status.json failed (curl exit 22, HTTP 500)' "$work_dir/status500.err" ||
+	fail "override refusal did not report HTTP 500 from publication-status.json"
+grep -q 'cannot determine whether' "$work_dir/status500.err" ||
+	fail "override refusal did not report that the publication state is unknown"
 
 echo "daily-stable rpm metadata fetch checks passed"

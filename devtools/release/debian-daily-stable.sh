@@ -20,6 +20,12 @@ Environment:
                                  to Release and InRelease; unset adds none
   ARCHIVE_REQUIRE_VALID_UNTIL    verify-repo: when "true", the signed
                                  InRelease must carry a future Valid-Until
+  ARCHIVE_ALLOW_EMPTY_INDEX      fetch-verified-indexes: when "true", an
+                                 InRelease answered with HTTP 404 starts
+                                 from empty indexes even though
+                                 <repo-url>/publication-status.json shows
+                                 the prefix was published before (manual
+                                 recovery only)
 EOF
 }
 
@@ -481,13 +487,21 @@ log_warning() {
 
 # Download <url> to <file>.  Returns 0 on success, 4 if the server answered
 # HTTP 404 and 1 on any other failure.  <file> exists only on success.
+# Only HTTPS is accepted (also for redirects) unless the test hook
+# ARCHIVE_FETCH_ALLOW_HTTP=true is set.
 http_fetch() {
   local url="$1"
   local out="$2"
   local code rc=0
+  local -a proto=(--proto '=https' --proto-redir '=https')
 
+  # Test hook for the loopback HTTP fixture. Keep the array non-empty for
+  # Bash 3.2 on macOS under set -u.
+  if [ "${ARCHIVE_FETCH_ALLOW_HTTP:-false}" = true ]; then
+    proto=(--proto '=http,https' --proto-redir '=http,https')
+  fi
   code="$(
-    curl -sS -L --fail --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
+    curl -sS -L --fail "${proto[@]}" --retry "${ARCHIVE_FETCH_RETRIES:-3}" \
       -H 'Cache-Control: no-cache' \
       -o "$out" -w '%{http_code}' "$url"
   )" || rc=$?
@@ -532,7 +546,11 @@ verify_release_text() {
 # must verify with the archive signing key from the local GPG keyring, and
 # every downloaded index must match the SHA-256 and size listed in it.  Any
 # failure is fatal; only an InRelease answered with HTTP 404 (a first
-# publication into an empty prefix) starts from empty indexes.
+# publication into an empty prefix) starts from empty indexes.  A 404 is
+# trusted only if <repo-url>/publication-status.json, which the server
+# writes after applying a publication, is 404 as well.  If that file
+# exists the prefix was published before and the index is wrongly missing:
+# fail, unless ARCHIVE_ALLOW_EMPTY_INDEX=true (manual recovery).
 cmd_fetch_verified_indexes() (
   [ "$#" -ge 6 ] ||
     die "usage: fetch-verified-indexes <repo-url> <repo-dir> <suite> <component> <expected-key-fingerprint> <arch>..."
@@ -584,8 +602,25 @@ cmd_fetch_verified_indexes() (
   case "$rc" in
     0) ;;
     4)
-      log_warning "$repo_url/dists/$suite/InRelease does not exist (HTTP 404):" \
-        "first publication into an empty archive prefix, starting from empty indexes"
+      rc=0
+      http_fetch "$repo_url/publication-status.json" "$tmp_dir/status" || rc=$?
+      case "$rc" in
+        4)
+          log_warning "$repo_url/dists/$suite/InRelease does not exist (HTTP 404)" \
+            "and $repo_url/publication-status.json does not exist:" \
+            "first publication into an empty archive prefix, starting from empty indexes"
+          ;;
+        0)
+          [ "${ARCHIVE_ALLOW_EMPTY_INDEX:-}" = true ] ||
+            die "index $repo_url/dists/$suite/InRelease is missing" \
+              "although the prefix has been published ($repo_url/publication-status.json exists);" \
+              "refusing to start from empty indexes (manual recovery: ARCHIVE_ALLOW_EMPTY_INDEX=true)"
+          log_warning "ARCHIVE_ALLOW_EMPTY_INDEX=true: $repo_url/dists/$suite/InRelease is missing" \
+            "although the prefix has been published ($repo_url/publication-status.json exists);" \
+            "starting from empty indexes, previously published packages will NOT be in the new index"
+          ;;
+        *) die "cannot determine whether $repo_url has been published before" ;;
+      esac
       exit 0
       ;;
     *) die "cannot read the current archive state from $repo_url" ;;

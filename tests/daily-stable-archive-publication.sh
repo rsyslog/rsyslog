@@ -18,12 +18,17 @@
 #
 # debian-daily-stable.sh fetch-verified-indexes (served by a local HTTP
 # server so that HTTP status codes are real):
+# - plain HTTP is refused unless ARCHIVE_FETCH_ALLOW_HTTP=true
 # - a good signed InRelease and matching indexes are copied into place
 # - a Packages.xz that does not match the signed SHA-256/size fails
 # - an InRelease signed by another key, altered after signing, or missing
 #   a required index fails
-# - HTTP 404 for InRelease starts from empty indexes and succeeds
+# - HTTP 404 for both InRelease and publication-status.json starts
+#   from empty indexes and succeeds
 # - HTTP 500 for InRelease fails (no fallback to empty indexes)
+# - HTTP 404 for InRelease with publication-status.json present fails,
+#   unless ARCHIVE_ALLOW_EMPTY_INDEX=true (then it warns and succeeds)
+# - HTTP 404 for InRelease with publication-status.json answering 500 fails
 # The oracle is the exit status of each command plus the files it leaves.
 # The loopback server writes its port after listening. Poll that file and
 # allow up to 60 seconds for Python startup on loaded runners.
@@ -268,9 +273,11 @@ mv "$work_dir/altered-release" "$www/altered/dists/trixie/InRelease"
 make_repo missing-index "$GNUPGHOME"
 sed '/ main\/source\/Sources.xz$/d' "$www/missing-index/dists/trixie/Release" >"$work_dir/missing-release"
 gpg --batch --yes --clearsign --output "$www/missing-index/dists/trixie/InRelease" "$work_dir/missing-release"
-mkdir -p "$www/empty"
+mkdir -p "$www/empty" "$www/published" "$www/status500"
+printf '{}\n' >"$www/published/publication-status.json"
 
-# Serve $www; any path below /error/ answers HTTP 500.
+# Serve $www; any path below /error/ answers HTTP 500, as does
+# publication-status.json below /status500/.
 cat >"$work_dir/server.py" <<'EOF'
 import functools
 import http.server
@@ -281,7 +288,7 @@ import sys
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        if self.path.startswith("/error/"):
+        if self.path.startswith("/error/") or self.path == "/status500/publication-status.json":
             self.send_error(500)
             return
         super().do_GET()
@@ -315,6 +322,7 @@ while [ ! -s "$work_dir/port" ]; do
 done
 base="http://127.0.0.1:$(cat "$work_dir/port")"
 export ARCHIVE_FETCH_RETRIES=0
+export ARCHIVE_FETCH_ALLOW_HTTP=true
 
 fetch() {
 	rm -rf "$work_dir/apt-repo"
@@ -322,6 +330,9 @@ fetch() {
 		trixie main "$fpr" amd64
 }
 
+if ARCHIVE_FETCH_ALLOW_HTTP=false fetch empty >/dev/null 2>&1; then
+	fail "fetch accepted a plain HTTP 404 without the test hook"
+fi
 fetch good || fail "fetch rejected a good archive"
 for f in main/binary-amd64/Packages.xz main/source/Sources.xz; do
 	cmp -s "$www/good/dists/trixie/$f" "$work_dir/apt-repo/dists/trixie/$f" ||
@@ -341,5 +352,33 @@ if find "$work_dir/apt-repo" -type f | grep -q .; then
 fi
 [ -d "$work_dir/apt-repo/dists/trixie/main/binary-amd64" ] ||
 	fail "fetch of an empty prefix did not create the index directories"
+
+# 404 for InRelease: publication-status.json decides.
+if fetch published >/dev/null 2>&1; then
+	fail "fetch accepted a published prefix whose InRelease is missing"
+fi
+fetch published >/dev/null 2>"$work_dir/published.err" || true
+grep -q "publication-status.json" "$work_dir/published.err" ||
+	fail "failure for a published prefix does not name publication-status.json"
+if find "$work_dir/apt-repo" -type f | grep -q .; then
+	fail "failed fetch of a published prefix left index files behind"
+fi
+ARCHIVE_ALLOW_EMPTY_INDEX=true fetch published >"$work_dir/override.log" 2>&1 ||
+	fail "override did not allow an empty start for a published prefix"
+grep -Eq "^(WARNING: |::warning::)ARCHIVE_ALLOW_EMPTY_INDEX=true:" "$work_dir/override.log" ||
+	fail "override did not log a warning"
+if find "$work_dir/apt-repo" -type f | grep -q .; then
+	fail "override created index files"
+fi
+if fetch status500 >/dev/null 2>&1; then
+	fail "fetch accepted a prefix whose publication-status.json answers 500"
+fi
+if ARCHIVE_ALLOW_EMPTY_INDEX=true fetch status500 >/dev/null 2>"$work_dir/status500.err"; then
+	fail "override accepted a publication-status.json error"
+fi
+grep -q 'publication-status.json failed (curl exit 22, HTTP 500)' "$work_dir/status500.err" ||
+	fail "override refusal did not report HTTP 500 from publication-status.json"
+grep -q 'cannot determine whether' "$work_dir/status500.err" ||
+	fail "override refusal did not report that the publication state is unknown"
 
 echo "daily-stable archive publication checks passed"
