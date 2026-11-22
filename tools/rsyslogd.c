@@ -1796,6 +1796,11 @@ static void initAll(int argc, char **argv) {
     resetErrMsgsFlag();
     reloadPreflightNoteCwd(); /* relative -f/-M paths are resolved against this */
     localRet = rsconf.Load(&ourConf, ConfFile);
+    if (localRet == RS_RET_CONF_LOAD_ABORTED) {
+        /* the config requested the abort; the reason is already on stderr.
+         * Same exit code as when the load paths called exit(1) themselves. */
+        exit(1);
+    }
     cfgfilesSeal(); /* all config files are known now */
     /* Never permit an unaudited local graph, including developer/partial-config
      * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */

@@ -1012,7 +1012,7 @@ static int doGetGID(struct nvlst *valnode, struct cnfparamdescr *param, struct c
                         "parameter '%s': error to "
                         "obtaining group id for '%s'",
                         param->name, cstr);
-                exit(1); /* good exit */
+                loadConf->load_abort_requested = 1;
             } else {
                 LogError(e, RS_RET_ERR,
                          "parameter '%s': error to "
@@ -1053,7 +1053,7 @@ static int doGetUID(struct nvlst *valnode, struct cnfparamdescr *param, struct c
                     "parameter '%s': ID for user '%s' could not "
                     "be found: %s",
                     param->name, cstr, errStr);
-            exit(1); /* good exit */
+            loadConf->load_abort_requested = 1;
         } else {
             LogError(err_no, RS_RET_ERR,
                      "parameter '%s': ID for user '%s' could not "
@@ -6768,7 +6768,7 @@ void includeProcessCnf(struct nvlst *const lst) {
                     "include file '%s' mode is set to abort-if-missing "
                     "and the file is indeed missing - thus aborting rsyslog\n",
                     inc_file);
-            exit(1); /* "good exit" - during config processing, requested by user */
+            loadConf->load_abort_requested = 1;
         }
     } else if (text != NULL) {
         es_str_t *estr = es_newStrFromCStr((char *)text, strlen(text));

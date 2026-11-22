@@ -585,6 +585,7 @@ TESTS_DEFAULT = \
 	reload-report-timeout.sh \
 	reload-report-on-unsupported.sh \
 	rscript-parse-error-noleak.sh \
+	config-load-abort.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \
 	rscript_privdropgroup.sh \

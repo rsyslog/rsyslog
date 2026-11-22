@@ -748,6 +748,7 @@ enum rsRetVal_ {
     RS_RET_CONF_RELOAD_INVALID = -2468, /**< config reload check: changed config files are invalid */
     RS_RET_CONF_RELOAD_TIMEOUT = -2469, /**< config reload check: validation child did not finish in time */
     RS_RET_CONF_RELOAD_CHECK_FAILED = -2470, /**< config reload check: validation child could not be run */
+    RS_RET_CONF_LOAD_ABORTED = -2471, /**< config requested to abort the load (e.g. abort-if-missing include) */
 
     /* RainerScript error messages (range 1000.. 1999) */
     RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -431,7 +431,8 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *
     if (getSubString(pp, (char *)szName, sizeof(szName), ' ') != 0) {
         if (loadConf->globals.abortOnIDResolutionFail) {
             fprintf(stderr, "could not extract group name: %s\n", (char *)szName);
-            exit(1); /* good exit */
+            loadConf->load_abort_requested = 1;
+            ABORT_FINALIZE(RS_RET_CONF_LOAD_ABORTED);
         } else {
             LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
             ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -457,7 +458,8 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *
         iRet = RS_RET_NOT_FOUND;
         if (loadConf->globals.abortOnIDResolutionFail) {
             fprintf(stderr, "ID for group '%s' could not be found or error\n", szName);
-            exit(1); /* good exit */
+            loadConf->load_abort_requested = 1;
+            ABORT_FINALIZE(RS_RET_CONF_LOAD_ABORTED);
         }
     } else {
         if (pSetHdlr == NULL) {
@@ -494,7 +496,8 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *
     if (getSubString(pp, (char *)szName, sizeof(szName), ' ') != 0) {
         if (loadConf->globals.abortOnIDResolutionFail) {
             fprintf(stderr, "could not extract user name: %s\n", (char *)szName);
-            exit(1); /* good exit */
+            loadConf->load_abort_requested = 1;
+            ABORT_FINALIZE(RS_RET_CONF_LOAD_ABORTED);
         } else {
             LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
             ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -506,7 +509,8 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *
     if (ppwBuf == NULL) {
         if (loadConf->globals.abortOnIDResolutionFail) {
             fprintf(stderr, "ID for user '%s' could not be found or error\n", (char *)szName);
-            exit(1); /* good exit */
+            loadConf->load_abort_requested = 1;
+            ABORT_FINALIZE(RS_RET_CONF_LOAD_ABORTED);
         } else {
             LogError(0, RS_RET_NOT_FOUND, "ID for user '%s' could not be found or error", (char *)szName);
             iRet = RS_RET_NOT_FOUND;
