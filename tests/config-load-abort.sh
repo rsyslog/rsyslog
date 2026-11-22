@@ -14,9 +14,11 @@
 # Stimulus: a normal (non -N) start of rsyslogd in foreground with each
 # config; it must not get as far as running.
 # Oracle: exit code 1, the expected message on stderr, and no pid file
-# (the daemon never got as far as writing it). The run is bounded by "timeout" only so that a regression that
-# lets the daemon start does not hang the test; no timing is measured.
+# (the daemon never got as far as writing it). The run is bounded (see
+# config-load-abort-common.sh) only so that a regression that lets the daemon
+# start does not hang the test; no timing is measured.
 . ${srcdir:=.}/diag.sh init
+. ${srcdir}/config-load-abort-common.sh
 skip_platform "SunOS" "user/group lookup behaviour differs on Solaris"
 
 NOUSER="nouser_${RSYSLOG_DYNNAME}"
@@ -28,8 +30,7 @@ run_case() {
 	local conf="${RSYSLOG_DYNNAME}.case$CASE_NR.conf"
 	local out="${RSYSLOG_DYNNAME}.case$CASE_NR.out"
 	cat > "$conf"
-	timeout 60 ../tools/rsyslogd -n -C -f"$conf" -M"$RSYSLOG_MODDIR" \
-		-i"${RSYSLOG_DYNNAME}.case$CASE_NR.pid" > "$out" 2>&1
+	cla_run_rsyslogd "$out" "${RSYSLOG_DYNNAME}.case$CASE_NR.pid" "$conf"
 	local rc=$?
 	if [ $rc -ne 1 ]; then
 		echo "FAIL: case $CASE_NR ($1): exit code $rc, expected 1"

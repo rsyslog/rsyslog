@@ -133,7 +133,7 @@ EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 TESTS_JSONF_AUTO = jsonf-auto-leading-zero.sh
 TESTS_JSONF_AUTO_YAML = yaml-jsonf-auto-leading-zero.sh
 TESTS_CONFIG_LOAD_ABORT_YAML = yaml-config-load-abort.sh
-EXTRA_DIST += $(TESTS_CONFIG_LOAD_ABORT_YAML)
+EXTRA_DIST += $(TESTS_CONFIG_LOAD_ABORT_YAML) config-load-abort-common.sh
 EXTRA_DIST += $(TESTS_JSONF_AUTO) $(TESTS_JSONF_AUTO_YAML)
 
 TESTS_TEMPLATE_REGEX_BOUNDS = template-regex-index-bounds.sh

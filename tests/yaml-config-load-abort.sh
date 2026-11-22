@@ -9,8 +9,10 @@
 # RS_RET_CONF_LOAD_ABORTED instead of exit(), and startup still exits 1.
 # Stimulus: a normal (non -N) foreground start with a .yaml main config.
 # Oracle: exit code 1, the lookup message on stderr, and no pid file. The
-# "timeout" only bounds a regression that lets the daemon start.
+# bounded wait (config-load-abort-common.sh) only catches a regression that
+# lets the daemon start.
 . ${srcdir:=.}/diag.sh init
+. ${srcdir}/config-load-abort-common.sh
 skip_platform "SunOS" "user/group lookup behaviour differs on Solaris"
 
 NOUSER="nouser_${RSYSLOG_DYNNAME}"
@@ -27,7 +29,7 @@ rulesets:
         fileOwner: "${NOUSER}"
 YAMLEOF
 
-timeout 60 ../tools/rsyslogd -n -C -f"$CONF" -M"$RSYSLOG_MODDIR" -i"$PIDF" > "$OUT" 2>&1
+cla_run_rsyslogd "$OUT" "$PIDF" "$CONF"
 rc=$?
 if [ $rc -ne 1 ]; then
 	echo "FAIL: exit code $rc, expected 1"
