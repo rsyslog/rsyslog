@@ -63,6 +63,7 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "cfgfiles.h"
 #include "atomic.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
@@ -6596,8 +6597,9 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
         }
     }
 
-/* Use GLOB_MARK to append a trailing slash for directories. */
-/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
+    /* Use GLOB_MARK to append a trailing slash for directories. */
+    /* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
+    cfgfilesRecordGlob(finalName); /* change detection, see cfgfiles.h */
 #ifdef HAVE_GLOB_NOMAGIC
     result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH) {

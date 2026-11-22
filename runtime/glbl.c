@@ -58,6 +58,7 @@
 #include "rainerscript.h"
 #include "srUtils.h"
 #include "operatingstate.h"
+#include "reload-preflight.h"
 #include "net.h"
 #include "rsconf.h"
 #include "queue.h"
@@ -155,6 +156,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"parser.permitslashinprogramname", eCmdHdlrBinary, 0},
     {"stdlog.channelspec", eCmdHdlrString, 0},
     {"janitor.interval", eCmdHdlrPositiveInt, 0},
+    {"config.reloadonhup", eCmdHdlrGetWord, 0},
     {"senders.reportnew", eCmdHdlrBinary, 0},
     {"senders.reportgoneaway", eCmdHdlrBinary, 0},
     {"senders.timeoutafter", eCmdHdlrPositiveInt, 0},
@@ -1271,7 +1273,8 @@ void glblProcessCnf(struct cnfobj *o) {
                          loadConf->globals.operatingStateFile);
             } else {
                 loadConf->globals.operatingStateFile = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-                osf_open();
+                /* the config reload check child must not write to the live daemon's state file */
+                if (!reloadPreflightIsChild()) osf_open();
             }
         } else if (!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
             loadConf->globals.abortOnIDResolutionFail = (int)cnfparamvals[i].val.d.n;
@@ -1497,20 +1500,40 @@ rsRetVal glblDoneLoadCnf(void) {
         } else if (!strcmp(paramblk.descr[i].name, "parser.permitslashinprogramname")) {
             loadConf->globals.parser.bPermitSlashInProgramname = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "debug.logfile")) {
-            if (pszAltDbgFileName == NULL) {
-                pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-                /* can actually happen if debug system also opened altdbg */
-                if (altdbg != -1) {
-                    close(altdbg);
+            if (reloadPreflightIsChild()) {
+                /* config reload check: must not truncate the live daemon's debug log */
+                DBGPRINTF("reload check child: not opening debug.logfile\n");
+            } else {
+                if (pszAltDbgFileName == NULL) {
+                    pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+                    /* can actually happen if debug system also opened altdbg */
+                    if (altdbg != -1) {
+                        close(altdbg);
+                    }
+                    if ((altdbg = open(pszAltDbgFileName, O_WRONLY | O_CREAT | O_TRUNC | O_NOCTTY | O_CLOEXEC,
+                                       S_IRUSR | S_IWUSR)) == -1) {
+                        LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened", pszAltDbgFileName);
+                    }
                 }
-                if ((altdbg = open(pszAltDbgFileName, O_WRONLY | O_CREAT | O_TRUNC | O_NOCTTY | O_CLOEXEC,
-                                   S_IRUSR | S_IWUSR)) == -1) {
-                    LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened", pszAltDbgFileName);
-                }
+                LogMsg(0, RS_RET_OK, LOG_INFO, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
             }
-            LogMsg(0, RS_RET_OK, LOG_INFO, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
         } else if (!strcmp(paramblk.descr[i].name, "janitor.interval")) {
             loadConf->globals.janitorInterval = (int)cnfparamvals[i].val.d.n;
+        } else if (!strcmp(paramblk.descr[i].name, "config.reloadonhup")) {
+            char *const mode = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+            if (mode == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            } else if (!strcasecmp(mode, "off")) {
+                loadConf->globals.reloadOnHUP = 0;
+            } else if (!strcasecmp(mode, "report")) {
+                loadConf->globals.reloadOnHUP = 1;
+            } else if (!strcasecmp(mode, "on")) {
+                LogError(0, RS_RET_CONF_RELOAD_UNSUPPORTED, "config.reloadOnHUP=\"on\" is not yet supported");
+            } else {
+                LogError(0, RS_RET_INVALID_PARAMS,
+                         "invalid config.reloadOnHUP value '%s', must be \"off\" or \"report\"", mode);
+            }
+            free(mode);
         } else if (!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
             char *proto = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
             if (!strcmp(proto, "unspecified")) {

@@ -1,6 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2612.0 (aka 2026.12) 2026-12-20
 
+- 2026-11-20: core: add experimental config.reloadOnHUP="report"
+  On HUP, rsyslog can now check whether its configuration files changed and
+  validate the changed files in a separate "rsyslogd -N1" process, logging
+  whether the new configuration is valid. The running configuration is not
+  changed; a restart is still required to apply it. The default is "off".
+
 - 2026-10-28: rainerscript: compare large integers correctly
   Relational comparisons now preserve full signed integer ordering when
   operands differ by 2^32 or span the signed 64-bit range. Numeric string

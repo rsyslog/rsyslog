@@ -58,6 +58,7 @@
 #include <fcntl.h>
 #include "rsyslog.h"
 #include "srUtils.h"
+#include "cfgfiles.h"
 #include "parserif.h"
 
 PRAGMA_IGNORE_Wsign_compare;
@@ -626,6 +627,7 @@ cnfSetLexFile(const char *const fname)
 			r = 2;
 			goto done;
 		}
+		cfgfilesRecordStream(fp, fname); /* change detection, see cfgfiles.h */
 	}
 	readConfFile(fp, &str);
 	if(fp != stdin)

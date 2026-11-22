@@ -143,6 +143,7 @@ struct globals_s {
     int bActionReportSuspension;
     int bActionReportSuspensionCont;
     short janitorInterval; /* interval (in minutes) at which the janitor runs */
+    int reloadOnHUP; /* config.reloadOnHUP: 0 = off (default), 1 = report (experimental) */
     int reportNewSenders;
     int reportGoneAwaySenders;
     int senderStatsTimeout;

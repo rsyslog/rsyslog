@@ -28,6 +28,10 @@ librsyslog_la_SOURCES = \
 	conf.h \
 	janitor.c \
 	janitor.h \
+	cfgfiles.c \
+	cfgfiles.h \
+	reload-preflight.c \
+	reload-preflight.h \
 	rsconf.c \
 	rsconf.h \
 	parser.h \
