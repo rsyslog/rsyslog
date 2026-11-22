@@ -375,6 +375,8 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.stdlog_chanspec = NULL;
 #endif
     pThis->globals.iMaxLine = 8096;
+    pThis->globals.prometheusMaxNameLength = 1024;
+    pThis->globals.prometheusMaxResponseSize = 16U * 1024U * 1024U;
 
     /* timezone specific*/
     pThis->timezones.tzinfos = NULL;

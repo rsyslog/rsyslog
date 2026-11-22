@@ -393,6 +393,29 @@ avoiding collisions such as a dot and a hyphen both becoming an underscore.
 Names beginning with ``U__`` are also escaped because that prefix is reserved
 by this encoding.
 
+Two global settings bound Prometheus text rendering. Set them in a
+``global()`` object, for example::
+
+   global(prometheus.maxNameLength="2048" prometheus.maxResponseSize="32m")
+
+``prometheus.maxNameLength`` limits each raw object, origin, and counter name
+component in bytes. It defaults to 1024 and accepts values from 1 through
+65536. A counter with an oversized component is omitted without resetting it.
+This limit also applies to impstats Prometheus text output.
+
+``prometheus.maxResponseSize`` limits the imhttp scrape buffer, including its
+terminating byte. It defaults to 16 MiB and accepts values from 1024 bytes
+through 256 MiB. If the next metric would reach or exceed the limit, the
+endpoint returns HTTP 500 instead of a partial scrape. Increasing either limit
+increases the memory that rendering or a scrape can use. Invalid settings are
+reported and leave the default in effect.
+
+The equivalent YAML configuration is::
+
+   global:
+     prometheus.maxNameLength: "2048"
+     prometheus.maxResponseSize: "32m"
+
 The handler sends a ``Content-Length`` header and closes the connection.
 Proxies or load balancers must allow such responses. An ``imhttp_up`` gauge is exported
 alongside the full rsyslog statistics. Name collisions with other

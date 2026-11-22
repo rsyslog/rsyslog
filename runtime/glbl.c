@@ -138,6 +138,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"defaultopensslengine", eCmdHdlrString, 0},
     {"netstreamdrivercaextrafiles", eCmdHdlrString, 0},
     {"maxmessagesize", eCmdHdlrSize, 0},
+    {"prometheus.maxnamelength", eCmdHdlrSize, 0},
+    {"prometheus.maxresponsesize", eCmdHdlrSize, 0},
     {"oversizemsg.errorfile", eCmdHdlrGetWord, 0},
     {"oversizemsg.report", eCmdHdlrBinary, 0},
     {"oversizemsg.input.mode", eCmdHdlrGetWord, 0},
@@ -1184,6 +1186,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     loadConf->globals.systemdNotifyReadyDelay = 0;
     bPreserveFQDN = 0;
     loadConf->globals.iMaxLine = 8192;
+    loadConf->globals.prometheusMaxNameLength = 1024;
+    loadConf->globals.prometheusMaxResponseSize = 16U * 1024U * 1024U;
     loadConf->globals.reportOversizeMsg = 1;
     loadConf->globals.parser.cCCEscapeChar = '#';
     loadConf->globals.parser.bDropTrailingLF = 1;
@@ -1445,6 +1449,19 @@ rsRetVal glblDoneLoadCnf(void) {
             loadConf->globals.bActionReportSuspensionCont = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
             setMaxLine(cnfparamvals[i].val.d.n);
+        } else if (!strcmp(paramblk.descr[i].name, "prometheus.maxnamelength")) {
+            if (cnfparamvals[i].val.d.n < 1 || cnfparamvals[i].val.d.n > 65536) {
+                LogError(0, RS_RET_INVALID_VALUE, "prometheus.maxNameLength must be between 1 and 65536 bytes");
+            } else {
+                loadConf->globals.prometheusMaxNameLength = (size_t)cnfparamvals[i].val.d.n;
+            }
+        } else if (!strcmp(paramblk.descr[i].name, "prometheus.maxresponsesize")) {
+            if (cnfparamvals[i].val.d.n < 1024 || cnfparamvals[i].val.d.n > 268435456) {
+                LogError(0, RS_RET_INVALID_VALUE,
+                         "prometheus.maxResponseSize must be between 1024 and 268435456 bytes");
+            } else {
+                loadConf->globals.prometheusMaxResponseSize = (size_t)cnfparamvals[i].val.d.n;
+            }
         } else if (!strcmp(paramblk.descr[i].name, "maxopenfiles")) {
             loadConf->globals.iMaxOpenFiles = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "oversizemsg.errorfile")) {

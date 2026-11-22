@@ -83,11 +83,6 @@ static pthread_mutex_t mutSenders;
 
 static struct hashtable *stats_senders = NULL;
 
-/* Keep runtime-supplied counter names from causing disproportionate temporary
- * allocations while constructing Prometheus metadata. Names beyond this
- * bound were already omitted by the former fixed-size formatter. */
-#define PROMETHEUS_MAX_RAW_NAME_LEN 1024
-
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
 static rsRetVal statsobjLock(pthread_mutex_t *mutex, const char *lockName) {
@@ -754,10 +749,16 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
     uint64_t value;
     const char *objName = (const char *)o->name;
     const char *origin = o->origin ? (const char *)o->origin : "";
+    const size_t maxNameLength = runConf->globals.prometheusMaxNameLength;
 
     /* Iterate each counter in o->ctrRoot.  Lock while walking the linked list. */
     pthread_mutex_lock(&o->mutCtr);
     for (pCtr = o->ctrRoot; pCtr != NULL; pCtr = pCtr->next) {
+        /* Do not consume resettable counters that cannot be rendered. */
+        if (strlen(objName) > maxNameLength || strlen((const char *)pCtr->name) > maxNameLength ||
+            strlen(origin) > maxNameLength) {
+            continue;
+        }
         /* 1) Read the current accumulated value.  Might be IntCtr or Int. */
         switch (pCtr->ctrType) {
             case ctrType_IntCtr:
@@ -787,12 +788,6 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
         pthread_mutex_unlock(&o->mutCtr);
 
         /* 3) Build the metric name: "<object>_<counter>_total". */
-        if (strlen(objName) > PROMETHEUS_MAX_RAW_NAME_LEN ||
-            strlen((const char *)pCtr->name) > PROMETHEUS_MAX_RAW_NAME_LEN ||
-            strlen(origin) > PROMETHEUS_MAX_RAW_NAME_LEN) {
-            pthread_mutex_lock(&o->mutCtr);
-            continue;
-        }
         if (asprintf(&raw_name, "%s_%s_total", objName, pCtr->name) < 0) {
             raw_name = NULL;
             return RS_RET_OUT_OF_MEMORY;
