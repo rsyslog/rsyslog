@@ -12,8 +12,7 @@
  *    failure. This is necessary for some failover tests, where it is
  *    impossible to totally guard against message loss. By default, NO
  *    message is permitted to be lost.
- * -T anticipate truncation (which means specified payload length may be
- *    more than actual payload (which may have been truncated)
+ * -T accept payloads no longer than their declared length in -E mode.
  * -i increment between messages (default: 1). Can be used for tests which
  *    intentionally leave consistent gaps in the message numbering.
  *
@@ -50,6 +49,13 @@
 
 #define EDBUF_SIZE (500 * 1024)
 
+static int payloadLengthIsValid(int declaredLength, size_t actualLength, int allowShortPayload) {
+    if (declaredLength < 0) return 0;
+
+    const size_t expectedLength = (size_t)declaredLength;
+    return allowShortPayload ? actualLength <= expectedLength : actualLength == expectedLength;
+}
+
 int main(int argc, char *argv[]) {
     FILE *fp;
     int val = -1;
@@ -58,7 +64,7 @@ int main(int argc, char *argv[]) {
     int scanfOK;
     int verbose = 0;
     int bHaveExtraData = 0;
-    int bAnticipateTruncation = 0;
+    int allowShortPayload = 0;
     int dupsPermitted = 0;
     int start = 0, end = 0;
     int opt;
@@ -101,7 +107,7 @@ int main(int argc, char *argv[]) {
                 bHaveExtraData = 1;
                 break;
             case 'T':
-                bAnticipateTruncation = 1;
+                allowShortPayload = 1;
                 break;
             default:
                 printf("Invalid call of chkseq, optchar='%c'\n", opt);
@@ -140,21 +146,10 @@ int main(int argc, char *argv[]) {
             } else {
                 scanfOK = sscanf(ioBuf, extraFmt, &val, &edLen, edBuf) == 3;
             }
-            if (scanfOK && edLen != (int)strlen(edBuf)) {
-                if (bAnticipateTruncation == 1) {
-                    if (edLen < (int)strlen(edBuf)) {
-                        printf(
-                            "extra data length specified %d, but actually is %ld in"
-                            " record %d (truncation was anticipated, but payload should"
-                            " have been smaller than data-length, not larger)\n",
-                            edLen, (long)strlen(edBuf), i);
-                        exit(1);
-                    }
-                } else {
-                    printf("extra data length specified %d, but actually is %ld in record %d\n", edLen,
-                           (long)strlen(edBuf), i);
-                    exit(1);
-                }
+            if (scanfOK && !payloadLengthIsValid(edLen, strlen(edBuf), allowShortPayload)) {
+                fprintf(stderr, "chkseq: invalid payload length in record %d (declared %d, read %zu)\n", i, edLen,
+                        strlen(edBuf));
+                exit(1);
             }
         } else {
             if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
@@ -215,24 +210,10 @@ int main(int argc, char *argv[]) {
                     } else {
                         scanfOK = sscanf(ioBuf, extraFmt, &val, &edLen, edBuf) == 3;
                     }
-                    if (scanfOK && edLen != (int)strlen(edBuf)) {
-                        if (bAnticipateTruncation == 1) {
-                            if (edLen < (int)strlen(edBuf)) {
-                                printf(
-                                    "extra data length specified %d, but "
-                                    "actually is %ld in record %d (truncation was"
-                                    " anticipated, but payload should have been "
-                                    "smaller than data-length, not larger)\n",
-                                    edLen, (long)strlen(edBuf), i);
-                                exit(1);
-                            }
-                        } else {
-                            printf(
-                                "extra data length specified %d, but actually "
-                                "is %ld in record %d\n",
-                                edLen, (long)strlen(edBuf), i);
-                            exit(1);
-                        }
+                    if (scanfOK && !payloadLengthIsValid(edLen, strlen(edBuf), allowShortPayload)) {
+                        fprintf(stderr, "chkseq: invalid payload length in record %d (declared %d, read %zu)\n", i,
+                                edLen, strlen(edBuf));
+                        exit(1);
                     }
                 } else {
                     if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
