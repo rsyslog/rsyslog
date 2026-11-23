@@ -23,7 +23,7 @@ printf 'status\n' | "$TESTTOOL_DIR/diagtalker" -p"$MINITCPSRVR_PORT1" \
 	>"$DIAGTALKER_STDOUT" 2>"$DIAGTALKER_STDERR" &
 DIAGTALKER_PID=$!
 
-wait_content "connect failed, retrying" "$DIAGTALKER_STDERR"
+wait_content "waiting to retry connection" "$DIAGTALKER_STDERR"
 
 : > "$LISTEN_RELEASE"
 wait_file_exists "$LISTEN_READY"
