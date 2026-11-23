@@ -26,6 +26,7 @@ librsyslog_la_SOURCES = \
 	unlimited_select.h \
 	conf.c \
 	conf.h \
+	pri-filter.c \
 	janitor.c \
 	janitor.h \
 	cfgfiles.c \
