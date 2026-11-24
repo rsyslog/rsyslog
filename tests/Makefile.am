@@ -86,6 +86,7 @@ TESTS_RELEASE_PACKAGING = \
 FUZZING_CORPUS = \
 	fuzz/README.md \
 	fuzz/prepare-imtcp-session-corpus.py \
+	fuzz/oss-fuzz-build.sh \
 	fuzz/corpus/imtcp-session/additional-delimiter.hex \
 	fuzz/corpus/imtcp-session/multiline.hex \
 	fuzz/corpus/imtcp-session/octet-counted.hex \

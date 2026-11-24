@@ -32,6 +32,7 @@
 #include "obj.h"
 #include "tcpsrv.h"
 #include "tcps_sess.h"
+#include "fuzz_moddir.h"
 
 DEFobjCurrIf(obj);
 
@@ -53,29 +54,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 
 int LLVMFuzzerInitialize(int *argc __attribute__((unused)), char ***argv) {
     const char *err_obj = "rsyslog runtime";
-    const char *slash;
-    const char *tools_dir;
-    static char executable_path[PATH_MAX];
-    static char module_path[PATH_MAX];
-    int len;
 
-    if (realpath((*argv)[0], executable_path) == NULL) {
-        len = snprintf(executable_path, sizeof(executable_path), "%s", (*argv)[0]);
-        if (len < 0 || (size_t)len >= sizeof(executable_path)) abort();
-    }
-    tools_dir = strstr(executable_path, "/tools/");
-    slash = strrchr(executable_path, '/');
-    if (tools_dir != NULL) {
-        len = snprintf(module_path, sizeof(module_path), "%.*s/runtime/.libs", (int)(tools_dir - executable_path),
-                       executable_path);
-    } else if (slash == NULL) {
-        len = snprintf(module_path, sizeof(module_path), "runtime/.libs");
-    } else {
-        len = snprintf(module_path, sizeof(module_path), "%.*s/../runtime/.libs", (int)(slash - executable_path),
-                       executable_path);
-    }
-    if (len < 0 || (size_t)len >= sizeof(module_path) || setenv("RSYSLOG_MODDIR", module_path, 1) != 0) abort();
-
+    fuzz_set_module_dir((*argv)[0]);
     fuzzAbortOnError(rsrtInit(&err_obj, &obj));
     fuzzAbortOnError(tcps_sessFuzzInit());
     rsrtSetErrLogger(fuzzIgnoreExpectedError);

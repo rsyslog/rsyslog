@@ -95,3 +95,33 @@ tools/fuzz_imtcp_session \
 The target treats rejected malformed or truncated compressed streams as
 expected input handling. Crashes, sanitizer reports, resource leaks, invalid
 submitted frame sizes, and inconsistent byte accounting are failures.
+
+## OSS-Fuzz
+
+`tests/fuzz/oss-fuzz-build.sh` builds the fuzz targets for
+[OSS-Fuzz](https://github.com/google/oss-fuzz). The `build.sh` in the
+OSS-Fuzz project directory only calls this script, so new targets, corpora,
+and build changes are made here, in the rsyslog repository. The script:
+
+- builds zlib, zstd, libestr, and libfastjson from source as static,
+  instrumented libraries (the OSS-Fuzz Dockerfile clones them into `$SRC`),
+- configures rsyslog with `--enable-fuzzing` and only the features the
+  targets need,
+- copies each target listed in `FUZZ_TARGETS` and the runtime modules
+  (`lm*.so`, into `$OUT/rsyslog-modules`) to `$OUT`, and
+- packs each seed corpus as `<target>_seed_corpus.zip`.
+
+The targets load runtime modules from `rsyslog-modules` next to the binary
+when that directory exists, and from the build tree otherwise
+(`tools/fuzz_moddir.h`). To add a target, build it in `tools/Makefile.am`,
+add it to `FUZZ_TARGETS`, and add its seed corpus at the end of the script.
+
+To try the OSS-Fuzz build locally, use the OSS-Fuzz helper with a local
+checkout:
+
+```sh
+python3 infra/helper.py build_image rsyslog
+python3 infra/helper.py build_fuzzers --sanitizer address rsyslog /path/to/rsyslog
+python3 infra/helper.py check_build rsyslog
+python3 infra/helper.py run_fuzzer rsyslog fuzz_rsyslog_message
+```
