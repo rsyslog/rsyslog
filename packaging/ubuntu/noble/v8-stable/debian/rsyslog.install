@@ -7,6 +7,7 @@ debian/reload-apparmor-profile usr/lib/rsyslog/
 usr/sbin/
 usr/share/man/man5/
 usr/share/man/man8/
+usr/share/doc/rsyslog/COPYING.BSD-3-Clause
 usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/fmhash.so
 usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/imfile.so
 usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/imklog.so
