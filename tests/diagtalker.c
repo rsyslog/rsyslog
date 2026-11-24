@@ -1,25 +1,10 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 */
 /* A yet very simple tool to talk to imdiag (this replaces the
  * previous Java implementation in order to get fewer dependencies).
  *
  * Copyright 2010-2018 Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of rsyslog.
- *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Rsyslog is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
  */
 #include "config.h"
 #include <stdio.h>
@@ -52,6 +37,7 @@ int openConn(int *fd) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = 0;
 
+    const int retryLimit = 200;
     for (;;) {
         if (res == NULL) {
             if (getaddrinfo(targetIP, service, &hints, &res) != 0 || res == NULL) {
@@ -82,13 +68,13 @@ int openConn(int *fd) {
             sock = -1;
         }
 
-        if (retries++ == 200) {
+        if (retries++ == retryLimit) {
             perror("connect()");
             fprintf(stderr, "[%d] connect() failed\n", targetPort);
             freeaddrinfo(res);
             exit(1);
         } else {
-            fprintf(stderr, "[%d] connect failed, retrying...\n", targetPort);
+            fprintf(stderr, "[%d] waiting to retry connection (%d/%d)\n", targetPort, retries, retryLimit);
             usleep(100000);
         }
         /* retry with same resolved list to keep overhead low */
@@ -128,22 +114,20 @@ static void waitRsp(int fd, char *buf, int len) {
 
 /* do the actual processing
  */
-static void doProcessing(void) {
+static int doProcessing(void) {
     int fd;
-    int len;
+    int status = EXIT_SUCCESS;
     char line[10 * 1024];
 
     openConn(&fd);
-    while (!feof(stdin)) {
-        if (fgets(line, sizeof(line) - 1, stdin) == NULL) break;
-        len = strlen(line);
-        sendCmd(fd, line, len);
+    while (status == EXIT_SUCCESS && fgets(line, sizeof(line) - 1, stdin) != NULL) {
+        sendCmd(fd, line, strlen(line));
         waitRsp(fd, line, sizeof(line));
         printf("imdiag[%d]: %s", targetPort, line);
-        if (strstr(line, "imdiag::error") != NULL) {
-            exit(1);
-        }
+        status = strstr(line, "imdiag::error") == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
     }
+    close(fd);
+    return status;
 }
 
 
@@ -151,7 +135,6 @@ static void doProcessing(void) {
  * rgerhards, 2009-04-03
  */
 int main(int argc, char *argv[]) {
-    int ret = 0;
     int opt;
 
     while ((opt = getopt(argc, argv, "t:p:")) != -1) {
@@ -169,7 +152,5 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    doProcessing();
-
-    exit(ret);
+    return doProcessing();
 }
