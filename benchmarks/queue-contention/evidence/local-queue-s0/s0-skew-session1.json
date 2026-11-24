@@ -1,0 +1,492 @@
+{
+  "schema_version": 2,
+  "status": "completed",
+  "requested_pairs": 11,
+  "workload": {
+    "name": "multi",
+    "script": "trial-multi.sh",
+    "revision": "62ecf480411f9d8eaedc2efa20bea077d84b4df7",
+    "dirty": true,
+    "messages": 4000000,
+    "input_workers": 8,
+    "configured_consumer_workers": 10,
+    "configured_connections": 16,
+    "active_connections": 1,
+    "producer_mode": "skew",
+    "frontend_capacity": 8,
+    "impstats_enabled": false,
+    "actual_batch_distributions": "not_observed",
+    "payload": 512,
+    "queue_type": "FixedArray",
+    "per_build_configuration": {
+      "before": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      }
+    }
+  },
+  "image": {
+    "reference": "rsyslog/rsyslog_dev_base_ubuntu:26.04",
+    "id": "sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09"
+  },
+  "builds": {
+    "before": {
+      "revision": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "dirty": false
+    },
+    "after": {
+      "revision": "62ecf480411f9d8eaedc2efa20bea077d84b4df7",
+      "dirty": true
+    }
+  },
+  "trial_timeout_seconds": 180,
+  "pairs": [
+    {
+      "pair": 0,
+      "before": 7.961342152,
+      "before_metrics": {
+        "lifecycle_seconds": 9.095108213,
+        "work_seconds": 7.961342152,
+        "generator_seconds": 7.920308749,
+        "drain_seconds": 0.041033403,
+        "receiver_line_barrier_seconds": 7.961342152,
+        "post_shutdown_exact_verification_seconds": 1.701094942
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": 7.833512182,
+      "after_metrics": {
+        "lifecycle_seconds": 8.899004825,
+        "work_seconds": 7.833512182,
+        "generator_seconds": 7.79876833,
+        "drain_seconds": 0.034743852,
+        "receiver_line_barrier_seconds": 7.833512182,
+        "post_shutdown_exact_verification_seconds": 1.639902526
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.983943665834298
+    },
+    {
+      "pair": 1,
+      "after": 7.856055429,
+      "after_metrics": {
+        "lifecycle_seconds": 8.974815372,
+        "work_seconds": 7.856055429,
+        "generator_seconds": 7.821337959,
+        "drain_seconds": 0.03471747,
+        "receiver_line_barrier_seconds": 7.856055429,
+        "post_shutdown_exact_verification_seconds": 1.631905262
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "before": 7.982931311,
+      "before_metrics": {
+        "lifecycle_seconds": 9.105061452,
+        "work_seconds": 7.982931311,
+        "generator_seconds": 7.946319654,
+        "drain_seconds": 0.036611657,
+        "receiver_line_barrier_seconds": 7.982931311,
+        "post_shutdown_exact_verification_seconds": 1.635806038
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.9841066048225704
+    },
+    {
+      "pair": 2,
+      "before": 7.79904179,
+      "before_metrics": {
+        "lifecycle_seconds": 8.910017437,
+        "work_seconds": 7.79904179,
+        "generator_seconds": 7.786766927,
+        "drain_seconds": 0.012274863,
+        "receiver_line_barrier_seconds": 7.79904179,
+        "post_shutdown_exact_verification_seconds": 1.640113853
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": 7.842751974,
+      "after_metrics": {
+        "lifecycle_seconds": 8.96214264,
+        "work_seconds": 7.842751974,
+        "generator_seconds": 7.807531237,
+        "drain_seconds": 0.035220737,
+        "receiver_line_barrier_seconds": 7.842751974,
+        "post_shutdown_exact_verification_seconds": 1.626233566
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 1.0056045582492
+    },
+    {
+      "pair": 3,
+      "after": 7.881418504,
+      "after_metrics": {
+        "lifecycle_seconds": 8.999240637,
+        "work_seconds": 7.881418504,
+        "generator_seconds": 7.846813852,
+        "drain_seconds": 0.034604652,
+        "receiver_line_barrier_seconds": 7.881418504,
+        "post_shutdown_exact_verification_seconds": 1.638809382
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "before": 7.891342108,
+      "before_metrics": {
+        "lifecycle_seconds": 8.950562333,
+        "work_seconds": 7.891342108,
+        "generator_seconds": 7.856253561,
+        "drain_seconds": 0.035088547,
+        "receiver_line_barrier_seconds": 7.891342108,
+        "post_shutdown_exact_verification_seconds": 1.62513174
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.9987424694222875
+    },
+    {
+      "pair": 4,
+      "before": 7.827850864,
+      "before_metrics": {
+        "lifecycle_seconds": 8.889992462,
+        "work_seconds": 7.827850864,
+        "generator_seconds": 7.815767328,
+        "drain_seconds": 0.012083536,
+        "receiver_line_barrier_seconds": 7.827850864,
+        "post_shutdown_exact_verification_seconds": 1.633577898
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": 7.82663045,
+      "after_metrics": {
+        "lifecycle_seconds": 8.953313623,
+        "work_seconds": 7.82663045,
+        "generator_seconds": 7.792687604,
+        "drain_seconds": 0.033942846,
+        "receiver_line_barrier_seconds": 7.82663045,
+        "post_shutdown_exact_verification_seconds": 1.656234671
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.9998440933506266
+    },
+    {
+      "pair": 5,
+      "after": 7.92546364,
+      "after_metrics": {
+        "lifecycle_seconds": 9.04816937,
+        "work_seconds": 7.92546364,
+        "generator_seconds": 7.888372632,
+        "drain_seconds": 0.037091008,
+        "receiver_line_barrier_seconds": 7.92546364,
+        "post_shutdown_exact_verification_seconds": 1.674306004
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "before": 7.805239411,
+      "before_metrics": {
+        "lifecycle_seconds": 8.925349795,
+        "work_seconds": 7.805239411,
+        "generator_seconds": 7.77066493,
+        "drain_seconds": 0.034574481,
+        "receiver_line_barrier_seconds": 7.805239411,
+        "post_shutdown_exact_verification_seconds": 1.619536828
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 1.0154030161881475
+    },
+    {
+      "pair": 6,
+      "before": 7.90205302,
+      "before_metrics": {
+        "lifecycle_seconds": 9.020083461,
+        "work_seconds": 7.90205302,
+        "generator_seconds": 7.867551656,
+        "drain_seconds": 0.034501364,
+        "receiver_line_barrier_seconds": 7.90205302,
+        "post_shutdown_exact_verification_seconds": 1.653540676
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": 7.848701946,
+      "after_metrics": {
+        "lifecycle_seconds": 8.964375982,
+        "work_seconds": 7.848701946,
+        "generator_seconds": 7.811547155,
+        "drain_seconds": 0.037154791,
+        "receiver_line_barrier_seconds": 7.848701946,
+        "post_shutdown_exact_verification_seconds": 1.647709093
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.9932484540580823
+    },
+    {
+      "pair": 7,
+      "after": 7.858861129,
+      "after_metrics": {
+        "lifecycle_seconds": 8.927971741,
+        "work_seconds": 7.858861129,
+        "generator_seconds": 7.824715742,
+        "drain_seconds": 0.034145387,
+        "receiver_line_barrier_seconds": 7.858861129,
+        "post_shutdown_exact_verification_seconds": 1.640734708
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "before": 7.881753177,
+      "before_metrics": {
+        "lifecycle_seconds": 8.997484901,
+        "work_seconds": 7.881753177,
+        "generator_seconds": 7.846820939,
+        "drain_seconds": 0.034932238,
+        "receiver_line_barrier_seconds": 7.881753177,
+        "post_shutdown_exact_verification_seconds": 1.650517017
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.997095563958181
+    },
+    {
+      "pair": 8,
+      "before": 8.00346423,
+      "before_metrics": {
+        "lifecycle_seconds": 9.114734602,
+        "work_seconds": 8.00346423,
+        "generator_seconds": 7.969525723,
+        "drain_seconds": 0.033938507,
+        "receiver_line_barrier_seconds": 8.00346423,
+        "post_shutdown_exact_verification_seconds": 1.63745721
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": 7.812653184,
+      "after_metrics": {
+        "lifecycle_seconds": 8.879786661,
+        "work_seconds": 7.812653184,
+        "generator_seconds": 7.800755385,
+        "drain_seconds": 0.011897799,
+        "receiver_line_barrier_seconds": 7.812653184,
+        "post_shutdown_exact_verification_seconds": 1.62426312
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 0.9761589431130624
+    },
+    {
+      "pair": 9,
+      "after": 7.839707504,
+      "after_metrics": {
+        "lifecycle_seconds": 8.960272718,
+        "work_seconds": 7.839707504,
+        "generator_seconds": 7.804460792,
+        "drain_seconds": 0.035246712,
+        "receiver_line_barrier_seconds": 7.839707504,
+        "post_shutdown_exact_verification_seconds": 1.64171973
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "before": 7.808863749,
+      "before_metrics": {
+        "lifecycle_seconds": 8.927910767,
+        "work_seconds": 7.808863749,
+        "generator_seconds": 7.796787419,
+        "drain_seconds": 0.01207633,
+        "receiver_line_barrier_seconds": 7.808863749,
+        "post_shutdown_exact_verification_seconds": 1.645298613
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 1.0039498390535946
+    },
+    {
+      "pair": 10,
+      "before": 7.851439321,
+      "before_metrics": {
+        "lifecycle_seconds": 8.921744586,
+        "work_seconds": 7.851439321,
+        "generator_seconds": 7.816367173,
+        "drain_seconds": 0.035072148,
+        "receiver_line_barrier_seconds": 7.851439321,
+        "post_shutdown_exact_verification_seconds": 1.632009637
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": 7.888877418,
+      "after_metrics": {
+        "lifecycle_seconds": 8.967467419,
+        "work_seconds": 7.888877418,
+        "generator_seconds": 7.874897114,
+        "drain_seconds": 0.013980304,
+        "receiver_line_barrier_seconds": 7.888877418,
+        "post_shutdown_exact_verification_seconds": 1.670618077
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "ratio": 1.0047683100472884
+    }
+  ],
+  "completed_pairs": 11,
+  "metric": "sender generation through receiver line barrier seconds; post-shutdown exact-ID verification is required and reported separately",
+  "limitations": [
+    "Non-exclusive host",
+    "Uncontrolled caches",
+    "Bounded JSON workload; exact delivery required",
+    "Configured batches are not actual-batch distributions"
+  ],
+  "timing_accepted": true,
+  "summary_accepted": true,
+  "median_after_before": 0.9987424694222875,
+  "ratio_mad": 0.006025840625000889,
+  "binary_provenance": {
+    "before": {
+      "runtime_source_revision": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "checkout_at_initial_build": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "sha256": {
+        "tools/rsyslogd": "1af854c3696f712d79b0d96cc806021773105f25a7e1ae027e39873b17ace15c",
+        "runtime/.libs/librsyslog.a": "d0a34b3300d62dbd4109d68f47edb5016dfe912ad3eb1988d91e3e42413023f7",
+        "runtime/.libs/lmtcpsrv.so": "6f30c491cf811983ad85df86a5bec266f85a1d1d8ca69e9e9dab187845640b2c",
+        "plugins/imtcp/.libs/imtcp.so": "a90f16cc5c828ba11ec6029586177932e36a613f4aea31dc5579f01d30b403b9",
+        "plugins/impstats/.libs/impstats.so": "da93b1a23b5158ecc032766948d44ea626f80d3e955c80a5e1563133a3924907",
+        "tests/tcpflood": "99d7cfe4a6779633d3ba330ac97a1c0759e634a85e69bd1abae43f6be8ba4934",
+        "tests/chkseq": "92326dca4c16fa53f6fdf3c50e45ea4fbe5228651dd3673e97286b7f8deb1eb1"
+      }
+    },
+    "after": {
+      "runtime_source_revision": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "checkout_at_initial_build": "8debb0a697158b7ccd2c243a2262dc2537b7c64a",
+      "sha256": {
+        "tools/rsyslogd": "1af854c3696f712d79b0d96cc806021773105f25a7e1ae027e39873b17ace15c",
+        "runtime/.libs/librsyslog.a": "d0a34b3300d62dbd4109d68f47edb5016dfe912ad3eb1988d91e3e42413023f7",
+        "runtime/.libs/lmtcpsrv.so": "6f30c491cf811983ad85df86a5bec266f85a1d1d8ca69e9e9dab187845640b2c",
+        "plugins/imtcp/.libs/imtcp.so": "a90f16cc5c828ba11ec6029586177932e36a613f4aea31dc5579f01d30b403b9",
+        "plugins/impstats/.libs/impstats.so": "da93b1a23b5158ecc032766948d44ea626f80d3e955c80a5e1563133a3924907",
+        "tests/tcpflood": "99d7cfe4a6779633d3ba330ac97a1c0759e634a85e69bd1abae43f6be8ba4934",
+        "tests/chkseq": "92326dca4c16fa53f6fdf3c50e45ea4fbe5228651dd3673e97286b7f8deb1eb1"
+      }
+    }
+  },
+  "stage_accepted": true,
+  "campaign_interpretation": "S0 unchanged runtime control; no implementation speedup claimed.",
+  "build_configuration": {
+    "compiler": "GCC 15.2.0",
+    "CFLAGS": "-O2 -g",
+    "configure_options": "--enable-testbench --enable-imdiag --enable-omstdout --enable-impstats --enable-imtcp --enable-imptcp --enable-omtesting --enable-elasticsearch --enable-debug",
+    "debug_logging_during_timing": false,
+    "build_jobs": 60
+  },
+  "host": {
+    "cpu": "Intel Core i7-14700K",
+    "logical_cpus": 28,
+    "kernel": "5.15.167.4-microsoft-standard-WSL2",
+    "exclusive": false
+  },
+  "harness_provenance": {
+    "committed_revision": "62ecf4804",
+    "note": "Harness source unchanged during this session; checkout dirty state records pending evidence/documentation only."
+  },
+  "harness_sha256": {
+    "benchmarks/queue-contention/compare.py": "747d4d5b4a51a4b07d787f873a82c3e7a35a3beea47c6c5fa9d94dc27a4c19a7",
+    "benchmarks/queue-contention/trial-multi.sh": "442a234ebd53a89601524a01d39eb73419bf6efd371131a5edf0e73eaa44ea1d",
+    "benchmarks/queue-contention/selftest.sh": "007819c008b454537a2061ef800f350727fc1f16255f563f5bfa98d479b3f445"
+  },
+  "stage_acceptance_scope": "S0 baseline/contracts only; no S1/S2 feature acceptance or PR-readiness claim."
+}

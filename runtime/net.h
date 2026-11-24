@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definitions for network-related stuff.
  *
  * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
@@ -133,7 +134,7 @@ struct permittedPeerWildcard_s {
 struct permittedPeers_s {
     uchar *pszID;
     enum {
-        PERM_PEER_TYPE_UNDECIDED = 0, /**< we have not yet decided the type (fine in some auth modes) */
+        PERM_PEER_TYPE_UNDECIDED = 0, /**< construction only; never published by AddPermittedPeer */
         PERM_PEER_TYPE_PLAIN = 1, /**< just plain text contained */
         PERM_PEER_TYPE_WILDCARD = 2, /**< wildcards are contained, wildcard struture is filled */
     } etryType;

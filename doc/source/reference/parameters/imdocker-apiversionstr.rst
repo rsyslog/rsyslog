@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdocker-apiversionstr:
 .. _imdocker.parameter.module.apiversionstr:
 

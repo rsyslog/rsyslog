@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imuxsock-socket:
 .. _imuxsock.parameter.input.socket:
 
@@ -29,6 +31,10 @@ Adds an additional unix socket. Formerly specified with the ``-a`` option.
 This parameter is required for every ``input(type="imuxsock" ...)`` object,
 because input objects configure additional sockets only. The system log socket
 is configured on the module object with ``SysSock.*`` parameters.
+
+The path must fit into the operating system's UNIX socket address (usually
+107 bytes on Linux and 103 bytes on BSD systems). Longer paths are rejected
+with an error instead of being truncated.
 
 Input usage
 -----------

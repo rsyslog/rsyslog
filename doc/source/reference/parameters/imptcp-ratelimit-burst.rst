@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-ratelimit-burst:
 .. _imptcp.parameter.input.ratelimit-burst:
 

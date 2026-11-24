@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imbeats-streamdriver-tlsverifydepth:
 .. _imbeats.parameter.input.streamdriver-tlsverifydepth:
 

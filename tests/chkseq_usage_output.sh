@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Covers the chkseq testbench helper usage path. The oracle is the diagnostic
 # text for an invalid option, proving the helper still prints actionable usage
 # output instead of failing silently.

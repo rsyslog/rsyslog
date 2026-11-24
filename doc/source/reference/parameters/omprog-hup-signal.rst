@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omprog-hup-signal:
 .. _omprog.parameter.action.hup-signal:
 

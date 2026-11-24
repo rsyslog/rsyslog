@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazuredce-dce_url:
 .. _omazuredce.parameter.action.dce_url:
 

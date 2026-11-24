@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for https://github.com/rsyslog/rsyslog/issues/4486.
 # With net.enableDNS="off", config processing must not call getaddrinfo() to
 # canonicalize a non-FQDN local host name.  The preload helpers return a

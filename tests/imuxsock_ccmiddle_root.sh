@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # note: we must be root and no other syslogd running in order to
 # carry out this test
 echo \[imuxsock_ccmiddle_root.sh\]: test trailing LF handling in imuxsock

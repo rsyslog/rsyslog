@@ -9,12 +9,14 @@
 # the output file. The listener may reject the malformed handshake before the
 # peer can shut down its write side, so that expected socket error is tolerated
 # before observing the close. Socket timeouts only bound a listener that
-# remains disarmed.
+# remains disarmed. Invalid peer-list inputs must also stay unpublished
+# during best-effort startup, while the valid TLS listener completes its ACK.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
 add_conf "
 global(
+	AbortOnUncleanConfig=\"off\" inputStartupPolicy=\"best-effort\"
 	defaultNetstreamDriverCAFile=\"$srcdir/tls-certs/ca.pem\"
 	defaultNetstreamDriverCertFile=\"$srcdir/tls-certs/cert.pem\"
 	defaultNetstreamDriverKeyFile=\"$srcdir/tls-certs/key.pem\"
@@ -23,6 +25,12 @@ global(
 
 add_conf '
 module(load="../plugins/imbeats/.libs/imbeats")
+input(type="imbeats" port="0"
+      listenPortFileName="'$RSYSLOG_DYNNAME'.invalid-first.port"
+      PermittedPeer=["bad*middle.invalid"])
+input(type="imbeats" port="0"
+      listenPortFileName="'$RSYSLOG_DYNNAME'.invalid-tail.port"
+      PermittedPeer=["valid.example.com","*.valid.bad*middle"])
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -108,4 +116,10 @@ wait_shutdown
 EXPECTED='{"message":"after-plaintext"}'
 cmp_exact
 
+for port_file in "$RSYSLOG_DYNNAME.invalid-first.port" "$RSYSLOG_DYNNAME.invalid-tail.port"; do
+    if [ -e "$port_file" ]; then
+        echo "invalid imbeats permitted-peer input activated: $port_file"
+        error_exit 1
+    fi
+done
 exit_test

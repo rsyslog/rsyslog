@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the header file for unicode support.
  *
  * Currently, this is a dummy module.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 echo "****** PREPARE libestr"
 #set -o xtrace
 PWD_HOME=$PWD

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file otlp_json.h
  * @brief OTLP JSON payload builder interface

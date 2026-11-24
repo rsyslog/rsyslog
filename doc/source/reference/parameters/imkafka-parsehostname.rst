@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imkafka-parsehostname:
 .. _imkafka.parameter.input.parsehostname:
 

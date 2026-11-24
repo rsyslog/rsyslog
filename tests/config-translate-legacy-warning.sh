@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check translation warnings for legacy selector syntax.
 #
 # Part of the testbench for rsyslog.

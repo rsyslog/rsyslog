@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Check RainerScript selector bodies translated into canonical YAML statements.
 #
 # This keeps coverage focused on runtime/translate.c without starting a daemon:

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmjsonparse-mode:
 .. _mmjsonparse.parameter.mode:
 

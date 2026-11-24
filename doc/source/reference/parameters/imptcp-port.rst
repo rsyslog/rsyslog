@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-port:
 .. _imptcp.parameter.input.port:
 

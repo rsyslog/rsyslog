@@ -1,0 +1,479 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/*
+ * Unit coverage for the bounded SPSC pointer ring.
+ *
+ * The sequential cases prove exact usable capacity, whole-batch no-fit,
+ * oversize and empty handling, non-power-of-two cursor reuse, and both cursor
+ * and sequence wraparound.  The cached-full case freezes a producer's stale
+ * full observation, releases one consumer slot, and proves the next fitting
+ * batch refreshes the consumer publication before admitting.  The pthread case
+ * varies producer and consumer batch sizes and checks every generated payload
+ * exactly once. Its payload bytes and checksum are initialized before enqueue
+ * and checked after dequeue, making visibility after release/acquire part of
+ * the concurrent-publication oracle rather than only pointer-ID ordering. The
+ * full and empty retry paths yield a few times and then block briefly on a
+ * peer-progress condition variable, so a spinning thread never keeps a CPU
+ * from its peer (loaded macOS runners starved each other with yield/sleep).
+ *
+ * The 31-slot ring and 11/13 batch maxima are intentional: they keep both
+ * threads at the full and empty boundaries, so the cached-index refresh and
+ * cursor-wrap paths run concurrently rather than only in the sequential cases.
+ * The test therefore also requires at least one full and one empty episode.
+ * Each episode is a producer/consumer handoff whose wall-clock cost is set by
+ * the scheduler, not the queue; on a loaded macOS TSan runner it can approach
+ * a scheduler quantum.  Sanitizer builds therefore move fewer items: TSan flags a
+ * missing happens-before edge on the first unordered access, so item volume
+ * adds little there; ASan builds are equally scheduler-bound on loaded macOS
+ * x64 runners (the 60 s alarm fired there with 100k items).  Uninstrumented
+ * builds keep 100k items to give real
+ * weakly ordered hardware more chances to expose a stale payload checksum.
+ * A 60-second watchdog bounds a regression hang and prints progress counters;
+ * it is not the success oracle.
+ */
+#include "config.h"
+
+#include <pthread.h>
+#include <sched.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
+#include <unistd.h>
+
+#include "queue_spsc.h"
+
+/* Keep this primitive unit-testable without linking the full queue runtime. */
+#include "../../runtime/queue_spsc.c"
+
+#define CHECK(condition)                                                                    \
+    do {                                                                                    \
+        if (!(condition)) {                                                                 \
+            fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
+            return 1;                                                                       \
+        }                                                                                   \
+    } while (0)
+
+static void *id_pointer(const uint32_t id) {
+    return (void *)(uintptr_t)id;
+}
+
+static int test_exact_fit_and_no_fit(void) {
+    rs_spsc_queue_t queue;
+    void *slots[5];
+    void *const input[] = {id_pointer(1), id_pointer(2), id_pointer(3), id_pointer(4), id_pointer(5)};
+    void *output[5];
+
+    CHECK(rsSpscQueueInit(&queue, slots, 5));
+    CHECK(rsSpscQueueTryPush(&queue, input, 5));
+    CHECK(rsSpscQueueProducerFree(&queue) == 0);
+    CHECK(!rsSpscQueueTryPush(&queue, input, 1));
+    CHECK(rsSpscQueuePop(&queue, output, 5) == 5);
+    for (uint32_t i = 0; i < 5; ++i) CHECK(output[i] == input[i]);
+    CHECK(rsSpscQueueConsumerAvailable(&queue) == 0);
+    return 0;
+}
+
+static int test_reference_capacity_10000(void) {
+    rs_spsc_queue_t queue;
+    static void *slots[10000];
+    static void *input[10000];
+    static void *output[10000];
+
+    for (uint32_t i = 0; i < 10000; ++i) input[i] = id_pointer(i + 1U);
+    CHECK(rsSpscQueueInit(&queue, slots, 10000));
+    CHECK(rsSpscQueueTryPush(&queue, input, 10000));
+    CHECK(rsSpscQueueProducerFree(&queue) == 0);
+    CHECK(rsSpscQueuePop(&queue, output, 10000) == 10000);
+    for (uint32_t i = 0; i < 10000; ++i) CHECK(output[i] == input[i]);
+    return 0;
+}
+
+static int test_whole_batch_no_fit(void) {
+    rs_spsc_queue_t queue;
+    void *slots[5];
+    void *const resident[] = {id_pointer(1), id_pointer(2), id_pointer(3)};
+    void *const rejected[] = {id_pointer(4), id_pointer(5), id_pointer(6)};
+    void *output[5];
+
+    CHECK(rsSpscQueueInit(&queue, slots, 5));
+    CHECK(rsSpscQueueTryPush(&queue, resident, 3));
+    CHECK(!rsSpscQueueTryPush(&queue, rejected, 3));
+    CHECK(rsSpscQueuePop(&queue, output, 5) == 3);
+    for (uint32_t i = 0; i < 3; ++i) CHECK(output[i] == resident[i]);
+    CHECK(rsSpscQueuePop(&queue, output, 5) == 0);
+    return 0;
+}
+
+static int test_oversize_and_empty(void) {
+    rs_spsc_queue_t queue;
+    void *slots[3];
+    void *const oversized[] = {id_pointer(1), id_pointer(2), id_pointer(3), id_pointer(4)};
+
+    CHECK(rsSpscQueueInit(&queue, slots, 3));
+    CHECK(rsSpscQueueTryPush(&queue, NULL, 0));
+    CHECK(rsSpscQueuePop(&queue, NULL, 0) == 0);
+    CHECK(!rsSpscQueueTryPush(&queue, oversized, 4));
+    CHECK(rsSpscQueuePop(&queue, slots, 1) == 0);
+    CHECK(!rsSpscQueueInit(&queue, slots, 0));
+    CHECK(!rsSpscQueueInit(&queue, slots, RS_SPSC_QUEUE_MAX_CAPACITY + 1U));
+    return 0;
+}
+
+static int test_many_wraps(void) {
+    rs_spsc_queue_t queue;
+    void *slots[7];
+    void *input[7];
+    void *output[7];
+    uint32_t expected[7];
+    uint32_t expected_head = 0;
+    uint32_t expected_tail = 0;
+    uint32_t expected_count = 0;
+    uint32_t next_id = 1;
+
+    CHECK(rsSpscQueueInit(&queue, slots, 7));
+    while (next_id <= 50000 || expected_count != 0) {
+        uint32_t requested = (next_id % 5U) + 1U;
+
+        if (next_id <= 50000 && requested > 50001U - next_id) requested = 50001U - next_id;
+        if (next_id <= 50000 && requested > 7U - expected_count) {
+            const uint32_t pop_count = ((next_id % 3U) + 1U) < expected_count ? (next_id % 3U) + 1U : expected_count;
+            size_t popped;
+
+            for (uint32_t i = 0; i < requested; ++i) input[i] = id_pointer(next_id + i);
+            CHECK(!rsSpscQueueTryPush(&queue, input, requested));
+            popped = rsSpscQueuePop(&queue, output, pop_count);
+            CHECK(popped != 0 && popped <= pop_count);
+            for (size_t i = 0; i < popped; ++i) {
+                CHECK((uint32_t)(uintptr_t)output[i] == expected[expected_head]);
+                expected_head = (expected_head + 1U) % 7U;
+                --expected_count;
+            }
+            continue;
+        }
+        if (next_id <= 50000) {
+            for (uint32_t i = 0; i < requested; ++i) {
+                input[i] = id_pointer(next_id + i);
+                expected[expected_tail] = next_id + i;
+                expected_tail = (expected_tail + 1U) % 7U;
+            }
+            CHECK(rsSpscQueueTryPush(&queue, input, requested));
+            next_id += requested;
+            expected_count += requested;
+        } else {
+            const uint32_t pop_count = expected_count < 4U ? expected_count : 4U;
+            size_t popped;
+
+            popped = rsSpscQueuePop(&queue, output, pop_count);
+            CHECK(popped != 0 && popped <= pop_count);
+            for (size_t i = 0; i < popped; ++i) {
+                CHECK((uint32_t)(uintptr_t)output[i] == expected[expected_head]);
+                expected_head = (expected_head + 1U) % 7U;
+                --expected_count;
+            }
+        }
+    }
+    return 0;
+}
+
+static int test_uint32_sequence_wrap(void) {
+    rs_spsc_queue_t queue;
+    void *slots[5];
+    void *const input[] = {id_pointer(11), id_pointer(12), id_pointer(13)};
+    void *output[3];
+    const uint32_t before_wrap = UINT32_MAX - 2U;
+
+    CHECK(rsSpscQueueInit(&queue, slots, 5));
+    queue.producer.sequence = before_wrap;
+    queue.producer.cached_sequence = before_wrap;
+    queue.producer.slot_cursor = 4;
+    queue.producer_publication.sequence = before_wrap;
+    queue.consumer.sequence = before_wrap;
+    queue.consumer.cached_sequence = before_wrap;
+    queue.consumer.slot_cursor = 4;
+    queue.consumer_publication.sequence = before_wrap;
+
+    CHECK(rsSpscQueueTryPush(&queue, input, 3));
+    CHECK(queue.producer.sequence == 0);
+    CHECK(queue.producer.slot_cursor == 2);
+    CHECK(rsSpscQueuePop(&queue, output, 3) == 3);
+    CHECK(queue.consumer.sequence == 0);
+    CHECK(queue.consumer.slot_cursor == 2);
+    for (uint32_t i = 0; i < 3; ++i) CHECK(output[i] == input[i]);
+    return 0;
+}
+
+static int test_cached_full_and_slot_reuse(void) {
+    rs_spsc_queue_t queue;
+    void *slots[5];
+    void *const initial[] = {id_pointer(1), id_pointer(2), id_pointer(3), id_pointer(4), id_pointer(5)};
+    void *const replacement[] = {id_pointer(6)};
+    void *output[5];
+
+    CHECK(rsSpscQueueInit(&queue, slots, 5));
+    CHECK(rsSpscQueueTryPush(&queue, initial, 5));
+    CHECK(!rsSpscQueueTryPush(&queue, replacement, 1));
+    CHECK(rsSpscQueuePop(&queue, output, 1) == 1);
+    CHECK(output[0] == id_pointer(1));
+    /* The producer only knew the queue was full.  This push must acquire the
+     * consumer's release and reuse slot zero without disturbing slots 1..4. */
+    CHECK(rsSpscQueueTryPush(&queue, replacement, 1));
+    CHECK(rsSpscQueuePop(&queue, output, 5) == 4);
+    for (uint32_t i = 0; i < 4; ++i) CHECK(output[i] == initial[i + 1]);
+    /* Consumer cached the first producer publication.  It must refresh after
+     * draining that publication before observing the reused slot. */
+    CHECK(rsSpscQueuePop(&queue, output, 5) == 1);
+    CHECK(output[0] == replacement[0]);
+    return 0;
+}
+
+#if defined(__SANITIZE_THREAD__) || defined(__SANITIZE_ADDRESS__)
+    #define SPSC_TEST_SANITIZED 1
+#elif defined(__has_feature)
+    #if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
+        #define SPSC_TEST_SANITIZED 1
+    #endif
+#endif
+
+#ifdef SPSC_TEST_SANITIZED
+    #define CONCURRENT_ITEMS 20000U
+#else
+    #define CONCURRENT_ITEMS 100000U
+#endif
+#define PAYLOAD_BYTES 64U
+
+typedef struct publication_payload_s {
+    uint32_t id;
+    uint32_t checksum;
+    unsigned char bytes[PAYLOAD_BYTES];
+} publication_payload_t;
+
+typedef struct spsc_thread_test_state_s {
+    rs_spsc_queue_t queue;
+    void *slots[31];
+    unsigned char seen[CONCURRENT_ITEMS];
+    publication_payload_t payloads[CONCURRENT_ITEMS];
+    pthread_mutex_t start_mutex;
+    pthread_cond_t start_cond;
+    int started;
+    int abort_start;
+    int consumer_result;
+    unsigned long full_episodes;
+    unsigned long empty_episodes;
+    pthread_mutex_t wait_mutex;
+    pthread_cond_t wait_cond;
+    uint32_t produced_items;
+    uint32_t consumed_items;
+    int threads_done;
+} spsc_thread_test_state_t;
+
+static uint32_t payload_checksum(const publication_payload_t *payload) {
+    uint64_t checksum = payload->id;
+
+    for (uint32_t i = 0; i < PAYLOAD_BYTES; ++i) checksum = ((checksum * 33U) ^ payload->bytes[i]) & UINT32_MAX;
+    return (uint32_t)checksum;
+}
+
+static void initialize_payload(publication_payload_t *payload, const uint32_t id) {
+    payload->id = id;
+    for (uint32_t i = 0; i < PAYLOAD_BYTES; ++i) payload->bytes[i] = (unsigned char)(id + (i * 17U));
+    payload->checksum = payload_checksum(payload);
+}
+
+static int wait_for_start(spsc_thread_test_state_t *state) {
+    int abort_start;
+
+    (void)pthread_mutex_lock(&state->start_mutex);
+    while (!state->started) (void)pthread_cond_wait(&state->start_cond, &state->start_mutex);
+    abort_start = state->abort_start;
+    (void)pthread_mutex_unlock(&state->start_mutex);
+    return abort_start;
+}
+
+/* Wake a peer that may be blocked in wait_for_peer(). */
+static void signal_peer(spsc_thread_test_state_t *state) {
+    (void)pthread_cond_signal(&state->wait_cond);
+}
+
+/* Progress counters are only for the watchdog report; guard them with the
+ * wait mutex rather than raw atomics so the test stays portable. */
+static void publish_progress(spsc_thread_test_state_t *state, const int is_producer, const uint32_t items) {
+    (void)pthread_mutex_lock(&state->wait_mutex);
+    if (is_producer)
+        state->produced_items = items;
+    else
+        state->consumed_items = items;
+    (void)pthread_mutex_unlock(&state->wait_mutex);
+}
+
+static void thread_finished(spsc_thread_test_state_t *state) {
+    (void)pthread_mutex_lock(&state->wait_mutex);
+    ++state->threads_done;
+    (void)pthread_mutex_unlock(&state->wait_mutex);
+}
+
+/* Yield a few times, then block briefly on the peer's progress signal.  A
+ * spinning thread must not keep a CPU from its peer: on small macOS runners
+ * sched_yield() alone can leave both threads starving each other past the
+ * alarm.  The timed wait bounds a missed signal to one millisecond. */
+static void wait_for_peer(spsc_thread_test_state_t *state, unsigned *const misses) {
+    if (++*misses < 8U) {
+        (void)sched_yield();
+    } else {
+        struct timespec deadline;
+
+        (void)clock_gettime(CLOCK_REALTIME, &deadline);
+        deadline.tv_nsec += 1000000L;
+        if (deadline.tv_nsec >= 1000000000L) {
+            deadline.tv_nsec -= 1000000000L;
+            ++deadline.tv_sec;
+        }
+        (void)pthread_mutex_lock(&state->wait_mutex);
+        (void)pthread_cond_timedwait(&state->wait_cond, &state->wait_mutex, &deadline);
+        (void)pthread_mutex_unlock(&state->wait_mutex);
+        *misses = 8U;
+    }
+}
+
+static void *producer_main(void *arg) {
+    spsc_thread_test_state_t *const state = arg;
+    void *batch[11];
+    uint32_t next_id = 1;
+    unsigned misses = 0;
+
+    if (wait_for_start(state)) return NULL;
+    while (next_id <= CONCURRENT_ITEMS) {
+        uint32_t count = (next_id % 11U) + 1U;
+
+        if (count > CONCURRENT_ITEMS + 1U - next_id) count = CONCURRENT_ITEMS + 1U - next_id;
+        for (uint32_t i = 0; i < count; ++i) {
+            publication_payload_t *const payload = &state->payloads[next_id + i - 1U];
+
+            initialize_payload(payload, next_id + i);
+            batch[i] = payload;
+        }
+        if (rsSpscQueueTryPush(&state->queue, batch, count)) {
+            next_id += count;
+            misses = 0;
+            publish_progress(state, 1, next_id - 1U);
+            signal_peer(state);
+        } else {
+            if (misses == 0) ++state->full_episodes;
+            wait_for_peer(state, &misses);
+        }
+    }
+    thread_finished(state);
+    return NULL;
+}
+
+static void *consumer_main(void *arg) {
+    spsc_thread_test_state_t *const state = arg;
+    void *batch[13];
+    uint32_t received = 0;
+    unsigned misses = 0;
+
+    if (wait_for_start(state)) return NULL;
+    while (received < CONCURRENT_ITEMS) {
+        const size_t count = rsSpscQueuePop(&state->queue, batch, (received % 13U) + 1U);
+
+        if (count == 0) {
+            if (misses == 0) ++state->empty_episodes;
+            wait_for_peer(state, &misses);
+            continue;
+        }
+        misses = 0;
+        for (size_t i = 0; i < count; ++i) {
+            const publication_payload_t *const payload = batch[i];
+            const uint32_t id = payload->id;
+
+            if (id == 0 || id > CONCURRENT_ITEMS) {
+                state->consumer_result = 1;
+            } else if (state->seen[id - 1]) {
+                state->consumer_result = 1;
+            } else {
+                state->seen[id - 1] = 1;
+            }
+            if (payload->checksum != payload_checksum(payload)) state->consumer_result = 1;
+            ++received;
+        }
+        publish_progress(state, 0, received);
+        signal_peer(state);
+    }
+    thread_finished(state);
+    return NULL;
+}
+
+static int test_variable_batch_threads(void) {
+    static spsc_thread_test_state_t state = {
+        .start_mutex = PTHREAD_MUTEX_INITIALIZER,
+        .start_cond = PTHREAD_COND_INITIALIZER,
+        .wait_mutex = PTHREAD_MUTEX_INITIALIZER,
+        .wait_cond = PTHREAD_COND_INITIALIZER,
+    };
+    int waited_ms = 0;
+    pthread_t producer;
+    pthread_t consumer;
+
+    CHECK(rsSpscQueueInit(&state.queue, state.slots, 31));
+    CHECK(pthread_create(&producer, NULL, producer_main, &state) == 0);
+    if (pthread_create(&consumer, NULL, consumer_main, &state) != 0) {
+        (void)pthread_mutex_lock(&state.start_mutex);
+        state.abort_start = 1;
+        state.started = 1;
+        (void)pthread_cond_broadcast(&state.start_cond);
+        (void)pthread_mutex_unlock(&state.start_mutex);
+        (void)pthread_join(producer, NULL);
+        return 1;
+    }
+    (void)pthread_mutex_lock(&state.start_mutex);
+    state.started = 1;
+    (void)pthread_cond_broadcast(&state.start_cond);
+    (void)pthread_mutex_unlock(&state.start_mutex);
+    /* Watchdog: report progress counters instead of dying silently on SIGALRM. */
+    for (;;) {
+        const struct timespec tick = {0, 10000000};
+        int done;
+
+        (void)pthread_mutex_lock(&state.wait_mutex);
+        done = state.threads_done;
+        (void)pthread_mutex_unlock(&state.wait_mutex);
+        if (done >= 2) break;
+        (void)nanosleep(&tick, NULL);
+        if (++waited_ms > 6000) {
+            (void)pthread_mutex_lock(&state.wait_mutex);
+            fprintf(stderr, "SPSC thread test stalled: produced %u, consumed %u of %u items, %lu full, %lu empty\n",
+                    state.produced_items, state.consumed_items, CONCURRENT_ITEMS, state.full_episodes,
+                    state.empty_episodes);
+            _exit(1);
+        }
+    }
+    CHECK(pthread_join(producer, NULL) == 0);
+    CHECK(pthread_join(consumer, NULL) == 0);
+    CHECK(state.consumer_result == 0);
+    for (uint32_t i = 0; i < CONCURRENT_ITEMS; ++i) CHECK(state.seen[i]);
+    /* Joined threads: their counters are now visible here. */
+    printf("SPSC thread test: %u items, %lu full and %lu empty episodes\n", CONCURRENT_ITEMS, state.full_episodes,
+           state.empty_episodes);
+    CHECK(state.full_episodes > 0);
+    CHECK(state.empty_episodes > 0);
+    return 0;
+}
+
+int main(void) {
+    if (!rsSpscQueueAtomicsAvailable()) {
+        rs_spsc_queue_t queue;
+        void *slots[1];
+
+        if (rsSpscQueueInit(&queue, slots, 1)) {
+            fputs("SPSC queue accepted unsupported atomics\n", stderr);
+            return 1;
+        }
+        fputs("32-bit lock-free atomics unavailable; SPSC queue is intentionally unsupported\n", stderr);
+        return 77;
+    }
+    if (test_exact_fit_and_no_fit() || test_reference_capacity_10000() || test_whole_batch_no_fit() ||
+        test_oversize_and_empty() || test_many_wraps() || test_uint32_sequence_wrap() ||
+        test_cached_full_and_slot_reuse() || test_variable_batch_threads())
+        return 1;
+    puts("SPSC queue tests passed");
+    return 0;
+}

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omfwd with the ossl driver reports a deterministic error when an
 # action-level TLS object is configured via a pkcs11: URI but the referenced
 # PKCS#11 object does not exist. The test is parameterized by

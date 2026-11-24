@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2018-06-27 by Pascal Withopf, released under ASL 2.0
 # Verify UDP RFC-tag truncation to 32 characters via property replacer.
 # The imudp listener owns an OS-assigned port before tcpflood sends, preventing

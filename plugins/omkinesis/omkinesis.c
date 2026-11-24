@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omkinesis.c - Amazon Kinesis Data Streams PutRecord output
  *
  * Concurrency & Locking:

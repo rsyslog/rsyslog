@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhdfs-omhdfsdefaulttemplate:
 .. _omhdfs.parameter.module.omhdfsdefaulttemplate:
 

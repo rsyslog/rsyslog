@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2024-02-19 by rgerhards. Released under ASL 2.0
 : "${srcdir:=.}"
 

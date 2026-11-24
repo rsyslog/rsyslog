@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Exercise concurrent error reporting and first action suspension under TSan.
 # The two-message workload and two-worker main queue cause both actions to enter
 # the barrier; it releases only after both are present, exposing concurrent

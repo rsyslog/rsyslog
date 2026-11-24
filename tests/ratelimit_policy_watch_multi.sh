@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test shared watched-file scheduling across multiple ratelimit policies.
 
 . ${srcdir:=.}/diag.sh init

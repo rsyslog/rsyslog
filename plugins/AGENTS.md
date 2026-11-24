@@ -82,8 +82,11 @@ support expectations change.
 - Update the module's top-of-file "Concurrency & Locking" comment when
   behavior changes.
 - Update `doc/ai/module_map.yaml` if concurrency expectations change.
-- When adding a new module, update `plugins/Makefile.am`, `configure.ac`, and
-  provide tests under `tests/` to cover the new behavior.
+- When adding a new module, create its own `plugins/<module>/Makefile.am`, add
+  the `--enable-<module>` option and `plugins/<module>/Makefile` to
+  `AC_CONFIG_FILES` in `configure.ac`, add a conditional `SUBDIRS +=` entry in
+  the top-level `Makefile.am` (there is no `plugins/Makefile.am`), and provide
+  tests under `tests/` to cover the new behavior.
 - **Documentation**: Every new configuration parameter **must** be documented in
   `doc/source/reference/parameters/` and linked from the module's `.rst` file.
   Include a YAML example alongside the RainerScript example so operators using
@@ -95,17 +98,125 @@ support expectations change.
   touching `grammar/` or adding a new top-level config construct.
 
 ## Testing expectations
+
+- `tests/omfile-legacy-dynafile-programname.sh` requires imtcp and covers
+  legacy dynafile APP-NAME, disabled limiter defaults, and first-drop labels
+  for enabled limits. `tests/yaml-imtcp-ratelimit-first-drop.sh` also requires
+  libyaml and checks the YAML interval and burst configuration.
 - Prefer module-focused tests in `tests/` named after the module (e.g.
   `omxyz-basic.sh`).
 - Ensure new tests run cleanly when invoked directly via `./tests/<script>.sh`.
   When reviewers request a CI reproduction, confirm the test also passes under
   `make check`.
+- mmleefparse delimiter coverage lives in
+  `tests/mmleefparse-delimiter-backslash.sh` and
+  `tests/yaml-mmleefparse-delimiter-backslash.sh`; these check explicit
+  backslash separators, recognised escapes, and ordinary-delimiter controls.
 - When a module requires external services (databases, message queues, etc.),
   document setup steps in the module metadata and reference any helper scripts
   placed under `tests/`.
+
+### imjournal state-file paths
+
+`tests/imjournal-statefile-directory.sh` checks a directory at the configured
+state-file path. `tests/imjournal-statefile-fifo.sh` checks a FIFO without a
+writer. `tests/yaml-imjournal-statefile-directory.sh` loads imjournal and its
+parameters from an included YAML file and repeats the directory scenario.
+With the default `IgnoreNonValidStatefile` setting, each test checks that
+imjournal delivers the journal message exactly once and preserves the path's
+original type after shutdown.
+
+Configure with `--enable-testbench --enable-imjournal` and libyaml support.
+Run the tests on a host with a readable systemd journal:
+
+```sh
+make check TESTS="imjournal-statefile-directory.sh imjournal-statefile-fifo.sh yaml-imjournal-statefile-directory.sh"
+```
+
+### mmaudit audit identifiers
+
+`tests/mmaudit-auditid.sh` verifies complete audit IDs, numeric types, body
+fields, parse status, original messages, leading whitespace, and non-audit
+records. `tests/yaml-mmaudit-auditid.sh` runs the same oracle through a YAML
+ruleset. These tests use mmaudit's supported legacy action syntax; they do not
+exercise the separately documented quoted-value limitation.
+
+### imbeats non-object metadata
+
+`tests/imbeats-metadata-non-object.sh` (run with
+`make check TESTS=imbeats-metadata-non-object.sh`, or directly via
+`./tests/imbeats-metadata-non-object.sh`) sends one Lumberjack v2 window whose
+events carry a non-object `metadata` member (string, number, array, null,
+boolean) or a non-object `metadata.imbeats`. It proves that the window is
+ACKed with the last sequence number, every event is delivered exactly once in
+order, the module-owned `$!metadata!imbeats` is present, and `%rawmsg%` keeps
+the original client payload.
 
 ## Documentation touchpoints
 - Mention significant behavior or dependency changes in `doc/` (for example,
   module reference guides or changelog entries).
 - Cross-link any new documentation from the appropriate `index.rst` so users
   can discover it easily.
+
+## Focused omsnmp coverage
+
+`tests/omsnmp-traptype-range.sh` and its YAML companion decode loopback
+SNMPv1 datagrams to check valid generic trap types, the omitted default,
+and the invalid-value fallback.
+The test-owned receiver binds an ephemeral port and needs no external SNMP
+service, pysnmp, or MIB package.
+
+## mmsnmptrapd validation coverage
+
+Enable `--enable-mmsnmptrapd` and run `tests/mmsnmptrapd-severity-sign.sh`
+and `tests/yaml-mmsnmptrapd-severity-sign-yamlonly.sh` to compare sign-only
+severity codes with valid and invalid numeric controls using configuration
+validation exit status. The YAML test exercises the existing legacy directive
+and action through a ruleset script.
+
+## imuxsock PRI digit coverage
+
+`tests/imuxsock-pri-digit-limit.sh` sends an overlong numeric PRI field through
+a real Unix socket. Run it in an instrumented build when checking integer
+arithmetic in the receive path.
+## Module regression coverage
+
+- `tests/mmjsonparse-find-json-scan-stats.sh` and its pure-YAML companion
+  verify that `scan.truncated` counts byte-window cutoffs rather than completed
+  unsuccessful searches. They also assert exact message bytes, parse outcomes,
+  and lengths for final-brace, boundary, ordinary-miss, and valid-object cases.
+
+## imuxsock timestamp rewrite coverage
+
+`tests/imuxsock-timestamp-rewrite.sh`, its `-vg.sh` wrapper, and the YAML
+companion exercise malformed PRI and short/variable-width timestamps through
+real Unix sockets, checking raw-message preservation and tag/body cursors.
+
+## Permitted-peer construction coverage
+
+`tests/tls-permittedpeer-invalid.sh` checks malformed module and omfwd peer
+lists. `tests/imtcp-permittedpeer-invalid-input.sh` and
+`tests/yaml-tls-permittedpeer-invalid.sh` keep invalid input overrides
+disabled during best-effort startup, including a partially compiled list, while
+a healthy listener continues to receive. Plain and wildcard many-connection
+TLS controls exercise immutable matching under sanitizer lanes.
+
+The imbeats TLS listener-rearm and YAML basic tests also keep malformed peer
+arrays disabled while valid Lumberjack events still receive their ACKs. Legacy
+omfwd peer directive failures remain sticky until configuration reset and reject
+TCP actions; the TLS malformed-list tests cover that path in both frontends.
+
+## imklog LogPath coverage
+
+`tests/imklog-logpath-eof.sh` checks that imklog resumes reading when records
+are appended after EOF and logs a single warning. It samples daemon CPU use
+when Linux `/proc/<pid>/stat` is readable. `tests/imklog-logpath-read-error.sh`
+checks that a non-retryable read error ends the input thread. It requires
+Linux `/proc/self/mem` with a successful open and a failing read.
+The `yaml-imklog-logpath-*.sh` companions run the same checks with YAML.
+
+## imklog internal message facility
+
+`tests/imklog-internalmsgfacility.sh` and its YAML companion
+`tests/yaml-imklog-internalmsgfacility.sh` check that an imklog diagnostic
+uses the configured facility and retains its error severity.

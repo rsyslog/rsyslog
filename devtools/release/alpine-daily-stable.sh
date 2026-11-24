@@ -44,7 +44,10 @@ cmd_version() {
 	printf '%s\n' "$attempt" | grep -Eq '^[0-9]+$' ||
 		die "GITHUB_RUN_ATTEMPT must be numeric"
 	[ "$attempt" -le 99 ] || die "GITHUB_RUN_ATTEMPT exceeds two digits"
-	serial="$(printf '%s%010d%02d' "$date" "$run" "$attempt")"
+	# Keep the serial well below 2^63: newer apk-tools reject longer numeric
+	# version components ("is not a valid version").
+	[ "$run" -le 99999 ] || die "GITHUB_RUN_NUMBER exceeds five digits"
+	serial="$(printf '%s%05d%02d' "$date" "$run" "$attempt")"
 	pkgver="${base}_p${serial}"
 	expected_version="${pkgver}-r0"
 
@@ -100,25 +103,51 @@ policy = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 pkgver = sys.argv[3]
 text = path.read_text(encoding="utf-8")
 
+MAKEDEPENDS_RE = re.compile(
+    r"(?ms)(?P<head>^makedepends=(?P<quote>[\"']))(?P<body>.*?)(?P=quote)"
+)
+
+
+def add_makedepends(text, package):
+    """Add package to the APKBUILD makedepends assignment (no-op if present).
+
+    Supports both multi-line (one dependency per line, tab or space
+    indented) and single-line (space separated) assignments, independent
+    of which other dependencies the assignment lists.
+    """
+    match = MAKEDEPENDS_RE.search(text)
+    if not match:
+        raise SystemExit("could not find makedepends assignment in APKBUILD")
+    body = match.group("body")
+    if package in body.split():
+        return text
+    stripped = body.rstrip()
+    trailing = body[len(stripped):]
+    if "\n" in body:
+        indent = "\t"
+        for line in stripped.split("\n")[1:]:
+            if line.strip():
+                indent = line[: len(line) - len(line.lstrip())]
+                break
+        body = f"{stripped}\n{indent}{package}{trailing}"
+    else:
+        body = f"{stripped} {package}{trailing}" if stripped else package
+    return text[: match.start("body")] + body + text[match.end("body"):]
+
+
 for entry in policy.get("supplemental_makedepends", []):
     package = entry.get("package", "").strip()
     if not package:
         raise SystemExit("policy contains an empty supplemental makedepends package")
-    if re.search(rf"(?m)^\s*{re.escape(package)}\s*$", text):
-        continue
-    text, count = re.subn(
-        r"(?m)^(\s*autoconf\s*)$",
-        rf"\1\n\t{package}",
-        text,
-        count=1,
-    )
-    if count != 1:
-        raise SystemExit(f"could not insert supplemental makedepends: {package}")
+    text = add_makedepends(text, package)
 
 text, version_count = re.subn(r"(?m)^pkgver=.*$", f"pkgver={pkgver}", text)
 text, release_count = re.subn(r"(?m)^pkgrel=.*$", "pkgrel=0", text)
 text, source_count = re.subn(
-    r'(?m)^source="\$pkgname-\$pkgver\.tar\.gz::[^\n]+$',
+    # Older baselines name the file ("$pkgname-$pkgver.tar.gz::URL"); newer
+    # ones list the bare release URL as the first source entry. Leave any
+    # closing quote in place when the assignment ends on the same line.
+    r'(?m)^source="(?:\$pkgname-\$pkgver\.tar\.gz::[^"\n]+|https?://[^\s"]+/rsyslog-\$pkgver\.tar\.gz)(?="?$)',
     'source="$pkgname-$pkgver.tar.gz',
     text,
 )

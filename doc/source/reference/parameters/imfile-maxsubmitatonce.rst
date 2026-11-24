@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-maxsubmitatonce:
 .. _imfile.parameter.input.maxsubmitatonce:
 .. _imfile.parameter.maxsubmitatonce:

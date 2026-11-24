@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omclickhouse-template:
 .. _omclickhouse.parameter.input.template:
 
@@ -26,11 +28,21 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-This is the message format that will be sent to ClickHouse. The resulting
-string needs to be a valid INSERT Query, otherwise ClickHouse will return an
-error. Custom INSERT templates must enable the template-level SQL escaping
-option, for example ``option.stdsql="on"`` in RainerScript. ``stdSQL`` is not
-an ``omclickhouse`` action parameter. Defaults to:
+This is the message format that will be sent to ClickHouse. With the default
+``format="values"``, the rendered string must be an INSERT statement.
+For ``format="values"``, custom INSERT templates must enable
+``option.sql="on"`` in RainerScript.
+ClickHouse accepts backslash escape sequences inside string literals, so
+``option.stdsql="on"`` is not safe for this module. These are template-level
+options, not ``omclickhouse`` action parameters. Only string and list
+templates apply SQL escaping to rendered fields; plugin and subtree templates
+are rejected for this action even if they declare ``option.sql="on"``.
+
+With ``format="jsoneachrow"``, the template renders one JSON object per
+event. Use a list template with ``option.jsonf="on"``, or escape each field
+with a property option such as ``:::json``. ``option.stdsql``,
+``option.sql``, and ``option.json`` are rejected. The module puts the INSERT
+in the request URL. Defaults to:
 
 .. note::
 
@@ -55,7 +67,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="omclickhouse")
-   template(name="CustomClickHouseFmt" type="string" option.stdsql="on"
+   template(name="CustomClickHouseFmt" type="string" option.sql="on"
             string="INSERT INTO rsyslog.SystemEvents (severity, facility, timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, '%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')")
    action(type="omclickhouse" template="CustomClickHouseFmt")
 

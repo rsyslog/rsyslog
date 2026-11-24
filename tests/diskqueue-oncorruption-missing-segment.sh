@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate queue.onCorruption behavior when a middle disk-queue segment
 # is missing at startup.
 # In-memory recovery is proven by its two internal diagnostics before an

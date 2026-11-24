@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imptcp.c
  * This is a native implementation of plain tcp. It is intentionally
  * duplicate work (imtcp). The intent is to gain very fast and simple
@@ -44,6 +46,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -53,6 +56,7 @@
 #include "compat_queue.h"
 #include <netinet/tcp.h>
 #include <stdint.h>
+#include <limits.h>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <regex.h>
@@ -122,6 +126,14 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #define COMPRESS_AUTO_MIN_SNIFF_BYTES 2
 #define COMPRESS_AUTO_MAX_SNIFF_BYTES 4096
 
+/* Decompression-amplification guards for stream compression. These mirror the
+ * imtcp defaults (TCPSRV_COMPRESS_MAX_*_DEFAULT in runtime/tcps_sess.h) so both
+ * TCP inputs share one decompression-safety contract. A value of 0 disables the
+ * respective guard.
+ */
+#define DFLT_compressionMaxExpansionRatio 1024ULL
+#define DFLT_compressionMaxDecompressedBytesPerReceive (64ULL * 1024ULL * 1024ULL)
+
 /* config settings */
 typedef struct configSettings_s {
     int bKeepAlive; /* support keep-alive packets */
@@ -154,6 +166,8 @@ struct instanceConf_s {
     int socketBacklog;
     sbool multiLine;
     uint8_t compressionMode;
+    uint64_t compressionMaxExpansionRatio; /* max decompressed:compressed bytes per stream, 0=off */
+    uint64_t compressionMaxDecompressedBytesPerReceive; /* max decompressed bytes per receive, 0=off */
     uchar *pszBindPort; /* port to bind to */
     uchar *pszLstnPortFileName; /* Name of the file with dynamic port used by testbench*/
     uchar *pszBindAddr; /* IP to bind socket to */
@@ -221,6 +235,8 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, 0}, /* legac
                                            {"notifyonconnectionclose", eCmdHdlrBinary, 0},
                                            {"notifyonconnectionopen", eCmdHdlrBinary, 0},
                                            {"compression.mode", eCmdHdlrGetWord, 0},
+                                           {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
                                            {"keepalive", eCmdHdlrBinary, 0},
                                            {"keepalive.probes", eCmdHdlrInt, 0},
                                            {"keepalive.time", eCmdHdlrInt, 0},
@@ -299,11 +315,15 @@ struct ptcpsess_s {
     DEF_ATOMIC_HELPER_MUT(mutWorkQueued);
     sbool bzInitDone; /* did we do an init of zstrm already? */
     sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
+    sbool bZipStreamFailed; /* a decompression guard rejected the stream; do not drain it on close */
     sbool bStreamDecompressed; /* current bytes came from stream decompression */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
     uint8_t compressionAutoDetectPending; /* AUTO mode: still sniffing? */
     size_t compressionAutoDetectLen; /* bytes buffered while AUTO mode is still ambiguous */
+    uint64_t compressionTotalBytesIn; /* compressed bytes fed to inflate() over the session */
+    uint64_t compressionTotalBytesOut; /* decompressed bytes produced over the session */
+    uint64_t compressionReceiveBytesOut; /* decompressed bytes produced by the current receive */
     uchar compressionAutoDetectBuf[COMPRESS_AUTO_MAX_SNIFF_BYTES];
     int iMsg; /* index of next char to store in msg */
     int iCurrLine; /* 2nd char of current line in regex framing mode */
@@ -354,6 +374,7 @@ static struct wrkrInfo_s {
     int wrkrIdx; /* index for this worker - shortcut for thread name */
 } *wrkrInfo;
 static int wrkrRunning;
+static int wrkrStarted;
 
 
 /* type of object stored in epoll descriptor */
@@ -522,6 +543,93 @@ finalize_it:
     RETiRet;
 }
 
+/* Bind failures are rare; inspect procfs only to explain a failed port. A port
+ * may have several listeners, so a visible owner is a clue, not proof that it
+ * caused this bind failure. */
+static unsigned long listener_inode_for_port(const char *path, unsigned port) {
+    FILE *fp = fopen(path, "r");
+    char line[512];
+    unsigned localPort, state;
+    unsigned long inode;
+
+    if (fp == NULL) return 0;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (sscanf(line, " %*u: %*32[0-9A-Fa-f]:%x %*s %x %*s %*s %*s %*s %*s %lu", &localPort, &state, &inode) == 3 &&
+            localPort == port && state == 0x0a) {
+            fclose(fp);
+            return inode;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+static int describe_listener_owner(unsigned long inode, char *out, size_t outSize) {
+    DIR *procs = opendir("/proc");
+    struct dirent *proc;
+    if (procs == NULL) return 0;
+    while ((proc = readdir(procs)) != NULL) {
+        char fdDirPath[80], commPath[80], expected[64], linkPath[160], target[80], comm[80];
+        DIR *fds;
+        struct dirent *fd;
+        FILE *fp;
+        ssize_t len;
+        if (!isdigit((unsigned char)proc->d_name[0])) continue;
+        snprintf(fdDirPath, sizeof(fdDirPath), "/proc/%s/fd", proc->d_name);
+        fds = opendir(fdDirPath);
+        if (fds == NULL) continue;
+        snprintf(expected, sizeof(expected), "socket:[%lu]", inode);
+        while ((fd = readdir(fds)) != NULL) {
+            if (!isdigit((unsigned char)fd->d_name[0])) continue;
+            snprintf(linkPath, sizeof(linkPath), "%s/%s", fdDirPath, fd->d_name);
+            len = readlink(linkPath, target, sizeof(target) - 1);
+            if (len < 0) continue;
+            target[len] = '\0';
+            if (strcmp(target, expected) != 0) continue;
+            snprintf(commPath, sizeof(commPath), "/proc/%s/comm", proc->d_name);
+            fp = fopen(commPath, "r");
+            if (fp != NULL && fgets(comm, sizeof(comm), fp) != NULL) {
+                comm[strcspn(comm, "\n")] = '\0';
+                for (size_t i = 0; comm[i] != '\0'; ++i) {
+                    if ((unsigned char)comm[i] < 32 || (unsigned char)comm[i] == 127) comm[i] = '?';
+                }
+                snprintf(out, outSize, "one visible listener is PID %s (%s)", proc->d_name, comm);
+            } else {
+                snprintf(out, outSize, "one visible listener is PID %s", proc->d_name);
+            }
+            if (fp != NULL) fclose(fp);
+            closedir(fds);
+            closedir(procs);
+            return 1;
+        }
+        closedir(fds);
+    }
+    closedir(procs);
+    return 0;
+}
+
+static void log_bind_failure(const int bindErrno, const unsigned port) {
+    unsigned long inode = 0;
+    char owner[160];
+    if (bindErrno == EADDRINUSE) {
+        inode = listener_inode_for_port("/proc/net/tcp", port);
+        if (inode == 0) inode = listener_inode_for_port("/proc/net/tcp6", port);
+    }
+    if (inode != 0 && describe_listener_owner(inode, owner, sizeof(owner))) {
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u: %s", port, owner);
+    } else if (bindErrno == EADDRINUSE) {
+#ifdef __linux__
+        LogError(bindErrno, NO_ERRCODE,
+                 "imptcp: Error binding TCP port %u; listener owner unavailable (try ss -ltnp 'sport = :%u')", port,
+                 port);
+#else
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u; listener owner unavailable", port);
+#endif
+    } else {
+        LogError(bindErrno, NO_ERRCODE, "imptcp: Error binding TCP port %u", port);
+    }
+}
+
 /* Start up a server. That means all of its listeners are created.
  * Does NOT yet accept/process any incoming data (but binds ports). Hint: this
  * code is to be executed before dropping privileges.
@@ -646,7 +754,10 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
 #endif
         ) {
             /* TODO: check if *we* bound the socket - else we *have* an error! */
-            LogError(errno, NO_ERRCODE, "imptcp: Error while binding tcp socket");
+            const int bindErrno = errno;
+            savecast.sa = (struct sockaddr *)r->ai_addr;
+            const unsigned port = ntohs(r->ai_family == AF_INET6 ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port);
+            log_bind_failure(bindErrno, port);
             close(sock);
             sock = -1;
             continue;
@@ -701,6 +812,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
          * create our listener object. -- rgerhards, 2010-08-10
          */
         CHKiRet(addLstn(pSrv, sock, isIPv6));
+        sock = -1; /* listener owns the socket */
         ++numSocks;
     }
 
@@ -711,8 +823,8 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
             numSocks, maxs);
     }
 
-    if (numSocks == 0) {
-        DBGPRINTF("No TCP listen sockets could successfully be initialized");
+    if (numSocks == 0 || (runConf->globals.bRequireAllInputs && numSocks != maxs)) {
+        DBGPRINTF("imptcp: TCP listener activation failed (%d of %d sockets opened)\n", numSocks, maxs);
         ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
     }
 
@@ -1371,6 +1483,52 @@ static rsRetVal logCompressedStreamFailure(ptcpsess_t *const pThis, const char *
     return RS_RET_ZLIB_ERR;
 }
 
+/* Account for freshly inflated bytes and enforce the decompression-amplification
+ * guards (stream expansion ratio and per-receive output cap). Must be called for
+ * every chunk inflate() produces, before the chunk is parsed into messages.
+ * Without these limits a tiny compressed stream can force unbounded inflate and
+ * parse work (zip-bomb style CPU denial of service).
+ */
+static rsRetVal checkDecompressedBytesLimit(ptcpsess_t *const pThis, const size_t len) {
+    const instanceConf_t *const inst = pThis->pLstn->pSrv->inst;
+    const uint64_t maxRatio = inst->compressionMaxExpansionRatio;
+    const uint64_t maxPerReceive = inst->compressionMaxDecompressedBytesPerReceive;
+    const char *failure = NULL;
+    DEFiRet;
+
+    if (UINT64_MAX - pThis->compressionReceiveBytesOut < len || UINT64_MAX - pThis->compressionTotalBytesOut < len) {
+        failure = "decompressed byte counter overflowed";
+    } else {
+        const uint64_t newReceiveTotal = pThis->compressionReceiveBytesOut + len;
+        const uint64_t newStreamTotal = pThis->compressionTotalBytesOut + len;
+        if (maxPerReceive != 0 && newReceiveTotal > maxPerReceive) {
+            failure = "decompressed bytes exceeded configured per-receive limit";
+        } else if (maxRatio != 0) {
+            const uint64_t maxByRatio = pThis->compressionTotalBytesIn > UINT64_MAX / maxRatio
+                                            ? UINT64_MAX
+                                            : pThis->compressionTotalBytesIn * maxRatio;
+            if (newStreamTotal > maxByRatio) {
+                failure = "decompressed bytes exceeded configured expansion ratio";
+            }
+        }
+        if (failure == NULL) {
+            pThis->compressionReceiveBytesOut = newReceiveTotal;
+            pThis->compressionTotalBytesOut = newStreamTotal;
+        }
+    }
+
+    if (failure != NULL) {
+        LogError(0, RS_RET_ZLIB_ERR, "imptcp: received invalid compressed stream from peer %s[%s]: %s",
+                 propGetSzStrOrDefault(pThis->peerName, "(hostname unknown)"),
+                 propGetSzStrOrDefault(pThis->peerIP, "(IP unknown)"), failure);
+        pThis->bZipStreamFailed = RSTRUE;
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
     struct syslogTime stTime;
     time_t ttGenTime;
@@ -1402,6 +1560,11 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         pThis->bzInitDone = RSTRUE;
     }
 
+    if (UINT64_MAX - pThis->compressionTotalBytesIn < len) {
+        pThis->compressionTotalBytesIn = UINT64_MAX;
+    } else {
+        pThis->compressionTotalBytesIn += len;
+    }
     pThis->zstrm.next_in = (Bytef *)buf;
     pThis->zstrm.avail_in = len;
     /* run inflate() on buffer until everything has been uncompressed */
@@ -1419,6 +1582,7 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         }
         outavail = sizeof(zipBuf) - pThis->zstrm.avail_out;
         if (outavail != 0) {
+            CHKiRet(checkDecompressedBytesLimit(pThis, outavail));
             outtotal += outavail;
             ATOMIC_ADD_uint64(&pThis->pLstn->rcvdDecompressed, &pThis->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressedFromStream(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
@@ -1505,6 +1669,7 @@ static rsRetVal DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen) {
     struct syslogTime stTime;
     DEFiRet;
     ATOMIC_ADD_uint64(&pThis->pLstn->rcvdBytes, &pThis->pLstn->mut_rcvdBytes, iLen);
+    pThis->compressionReceiveBytesOut = 0; /* per-receive decompression budget starts fresh */
 
     if (pThis->compressionAutoDetectPending) {
         /* Buffer session-start bytes until a zlib-looking prefix is proven
@@ -1673,7 +1838,7 @@ static rsRetVal addSess(
     DEFiRet;
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
-    int pmsg_size_factor;
+    const size_t msgBufSize = 1 + (size_t)iMaxLine * (pLstn->pSrv->inst->startRegex == NULL ? 1 : 2);
     sbool bWorkQueuedMutInit = 0;
     int sessLinked = 0;
 
@@ -1686,14 +1851,12 @@ static rsRetVal addSess(
     bWorkQueuedMutInit = 1;
     pSess->next = NULL;
     if (pLstn->pSrv->inst->startRegex == NULL) {
-        pmsg_size_factor = 1;
         pSess->pMsg_save = NULL;
     } else {
-        pmsg_size_factor = 2;
         pSess->pMsg = NULL;
-        CHKmalloc(pSess->pMsg_save = malloc(1 + iMaxLine * pmsg_size_factor));
+        CHKmalloc(pSess->pMsg_save = malloc(msgBufSize));
     }
-    CHKmalloc(pSess->pMsg = malloc(1 + iMaxLine * pmsg_size_factor));
+    CHKmalloc(pSess->pMsg = malloc(msgBufSize));
     pSess->pLstn = pLstn;
     pSess->sock = sock;
     pSess->bSuppOctetFram = pLstn->bSuppOctetFram;
@@ -1770,7 +1933,12 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
 
     if (!pSess->bzInitDone) goto done;
     if (pSess->bZipStreamEnd) goto finalize_it;
+    /* A rejected stream must not be drained: the remaining inflate output would
+     * be parsed into messages even though the guard declared the stream invalid.
+     */
+    if (pSess->bZipStreamFailed) goto finalize_it;
 
+    pSess->compressionReceiveBytesOut = 0; /* final drain gets its own per-receive budget */
     pSess->zstrm.avail_in = 0;
     /* run inflate() on buffer until everything has been compressed */
     do {
@@ -1788,6 +1956,7 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
         }
         outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
         if (outavail != 0) {
+            CHKiRet(checkDecompressedBytesLimit(pSess, outavail));
             ATOMIC_ADD_uint64(&pSess->pLstn->rcvdDecompressed, &pSess->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressedFromStream(pSess, (char *)zipBuf, outavail, &stTime, 0));
             // TODO: query time!
@@ -1888,6 +2057,8 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->ratelimitBurst = -1;
     inst->ratelimitInterval = -1;
     inst->compressionMode = COMPRESS_NEVER;
+    inst->compressionMaxExpansionRatio = DFLT_compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = DFLT_compressionMaxDecompressedBytesPerReceive;
     inst->multiLine = 0;
     inst->socketBacklog = 64;
     inst->pszLstnPortFileName = NULL;
@@ -2042,23 +2213,32 @@ finalize_it:
 
 /* destroy worker pool structures and wait for workers to terminate
  */
-static void startWorkerPool(void) {
+static rsRetVal startWorkerPool(void) {
     int i;
+    rsRetVal result = RS_RET_OK;
     pthread_mutex_lock(&io_q.mut); /* locking to keep Coverity happy */
     wrkrRunning = 0;
+    wrkrStarted = 0;
     pthread_mutex_unlock(&io_q.mut);
     DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
     wrkrInfo = calloc(runModConf->wrkrMax, sizeof(struct wrkrInfo_s));
     if (wrkrInfo == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "imptcp: worker-info array allocation failed.");
-        return;
+        return runConf->globals.bRequireAllInputs ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
     }
     for (i = 0; i < runModConf->wrkrMax; ++i) {
         /* init worker info structure! */
         wrkrInfo[i].wrkrIdx = i;
         wrkrInfo[i].numCalled = 0;
-        pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+        const int err = pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+        if (err != 0) {
+            LogError(err, RS_RET_SYS_ERR, "imptcp: failed to start worker thread %d", i);
+            if (runConf->globals.bRequireAllInputs) result = RS_RET_SYS_ERR;
+            break;
+        }
+        ++wrkrStarted;
     }
+    return result;
 }
 
 /* destroy worker pool structures and wait for workers to terminate
@@ -2069,11 +2249,13 @@ static void stopWorkerPool(void) {
     pthread_mutex_lock(&io_q.mut);
     pthread_cond_broadcast(&io_q.wakeup_worker); /* awake wrkr if not running */
     pthread_mutex_unlock(&io_q.mut);
-    for (i = 0; i < runModConf->wrkrMax; ++i) {
+    for (i = 0; i < wrkrStarted; ++i) {
         pthread_join(wrkrInfo[i].tid, NULL);
         DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
     }
     free(wrkrInfo);
+    wrkrInfo = NULL;
+    wrkrStarted = 0;
 }
 
 
@@ -2083,6 +2265,7 @@ static void stopWorkerPool(void) {
 static rsRetVal startupServers(void) {
     DEFiRet;
     rsRetVal localRet, lastErr;
+    int any_failed = 0;
     int iOK;
     int iAll;
     ptcpsrv_t *pSrv;
@@ -2095,14 +2278,18 @@ static rsRetVal startupServers(void) {
         localRet = startupSrv(pSrv);
         if (localRet == RS_RET_OK)
             iOK++;
-        else
+        else {
             lastErr = localRet;
+            any_failed = 1;
+        }
         ++iAll;
         pSrv = pSrv->pNext;
     }
 
     DBGPRINTF("imptcp: %d out of %d servers started successfully\n", iOK, iAll);
-    if (iOK == 0) /* iff all fails, we report an error */
+    if (iOK == 0)
+        iRet = lastErr;
+    else if (runConf->globals.bRequireAllInputs && any_failed)
         iRet = lastErr;
 
     RETiRet;
@@ -2497,6 +2684,10 @@ BEGINnewInpInst
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
             free(cstr);
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
+            inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
             inst->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "keepalive")) {
@@ -2673,9 +2864,21 @@ BEGINactivateCnfPrePrivDrop
     iMaxLine = glbl.GetMaxLine(runConf); /* get maximum size we currently support */
     DBGPRINTF("imptcp: config params iMaxLine %d\n", iMaxLine);
 
+    /* The regex path doubles iMaxLine in an int expression while framing. */
+    for (inst = pModConf->root; inst != NULL; inst = inst->next) {
+        if (inst->startRegex != NULL && iMaxLine > (INT_MAX - 1) / 2) {
+            LogError(
+                0, RS_RET_INVALID_PARAMS,
+                "imptcp: framing.delimiter.regex requires maxMessageSize <= %d to avoid signed framing-size overflow",
+                (INT_MAX - 1) / 2);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    }
+
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(pModConf, inst);
+        const rsRetVal localRet = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
     if (pSrvRoot == NULL) {
         LogError(0, RS_RET_NO_LSTN_DEFINED, "imptcp: no ptcp server defined, module can not run.");
@@ -2743,7 +2946,7 @@ BEGINrunInput
     struct epoll_event events[128];
     CODESTARTrunInput;
     initIoQ();
-    startWorkerPool();
+    CHKiRet(startWorkerPool());
     DBGPRINTF("imptcp: now beginning to process input data\n");
     while (glbl.GetGlobalInputTermState() == 0) {
         DBGPRINTF("imptcp going on epoll_wait\n");
@@ -2753,6 +2956,7 @@ BEGINrunInput
     }
     DBGPRINTF("imptcp: successfully terminated\n");
     /* we stop the worker pool in AfterRun, in case we get cancelled for some reason (old Interface) */
+finalize_it:
 ENDrunInput
 
 

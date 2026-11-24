@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright 2026 Rainer Gerhards and Others
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +37,7 @@ END_RE = re.compile(
     r"status=(success|failure) exit_code=([0-9]+)"
 )
 AUTOMAKE_RE = re.compile(
-    r"^(?:FAIL|ERROR): |^# (?:FAIL|ERROR):\s*[1-9][0-9]*\s*$|^FAIL: Test \./",
+    r"^(?:FAIL|ERROR|XPASS): |^# (?:FAIL|ERROR|XPASS):\s*[1-9][0-9]*\s*$|^FAIL: Test \./",
     re.MULTILINE,
 )
 

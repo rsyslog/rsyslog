@@ -39,10 +39,11 @@ env:
 jobs:
   changes:
     name: check change scope
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     timeout-minutes: 10
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       c_headers: ${{ steps.c_headers.outputs.any_changed }}
       code: ${{ steps.code.outputs.any_changed }}
@@ -61,6 +62,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -71,6 +73,7 @@ jobs:
         id: c_headers
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -81,6 +84,7 @@ jobs:
         id: code
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -89,6 +93,10 @@ jobs:
             grammar/lexer.l
             grammar/grammar.y
             tests/*.sh
+            devtools/pr-coverage-source.cjs
+            devtools/validate-pr-coverage.py
+            tests/pr-coverage-source.cjs
+            tests/pr-coverage-artifact.py
             diag.sh
             **/Makefile.am
             configure.ac
@@ -100,6 +108,7 @@ jobs:
         id: package_ubuntu
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -120,6 +129,7 @@ jobs:
         id: package_rpm
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -141,6 +151,7 @@ jobs:
         id: journal
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -161,6 +172,7 @@ jobs:
         id: analyzer
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -177,6 +189,7 @@ jobs:
         id: elasticsearch
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -221,6 +234,7 @@ jobs:
         id: victorialogs
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -235,6 +249,7 @@ jobs:
         id: kafka
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -307,10 +322,18 @@ jobs:
 
   compile:
     name: compile (${{ matrix.config }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 30 }}
     permissions:
       contents: read
+      pull-requests: read
     strategy:
       fail-fast: true
       matrix:
@@ -325,6 +348,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
             **/*.c
             **/*.h
@@ -376,8 +400,15 @@ jobs:
     name: extended compile (${{ matrix.config }})
     needs: [compile, changes]
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.c_headers == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 30 }}
     permissions:
       contents: read
     strategy:
@@ -437,8 +468,16 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 50
+      pull-requests: read
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 50 }}
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
@@ -458,6 +497,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -468,6 +508,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -476,6 +517,10 @@ jobs:
             grammar/lexer.l
             grammar/grammar.y
             tests/*.sh
+            devtools/pr-coverage-source.cjs
+            devtools/validate-pr-coverage.py
+            tests/pr-coverage-source.cjs
+            tests/pr-coverage-artifact.py
             diag.sh
             **/Makefile.am
             configure.ac
@@ -491,6 +536,27 @@ jobs:
           key: >
             cfgcache-ci-${{ matrix.config }}
             -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/apply-service-relevance.sh','devtools/run-configure.sh','devtools/run-ci.sh') }}
+
+      # The dev containers need not include Node. Execute both trust-boundary
+      # regressions on the host, without the optional-tool skip wrappers.
+      - name: Set up pinned Node for coverage contracts
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.1'
+          package-manager-cache: false
+
+      - name: Verify coverage contract interpreters
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          test "$(node --version)" = v24.22.1
+          python3 --version
+
+      - name: Test coverage trust boundaries on the host
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          devtools/ci-flake-phase.sh run pr-coverage-source custom -- node tests/pr-coverage-source.cjs
+          devtools/ci-flake-phase.sh run pr-coverage-artifact custom -- python3 tests/pr-coverage-artifact.py
 
       - name: run container CI pipeline
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -554,6 +620,11 @@ jobs:
               export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp"
               ;;
           'ubuntu_24')
+              # Reuse this representative runtime lane for PR coverage. No token
+              # enters PR execution; the trusted workflow_run job uploads later.
+              export CFLAGS='-g --coverage'
+              export LDFLAGS='--coverage'
+              export DOCKER_RUN_EXTRA_OPTS='-e LDFLAGS'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               # TODO: enable disabled components when the issues are fixed
@@ -656,6 +727,31 @@ jobs:
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
+      - name: Capture representative PR coverage
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+        run: |
+          # Expand the report-size command inside the container.
+          # shellcheck disable=SC2016
+          devtools/devcontainer.sh --rm bash -euc '
+            lcov --capture --directory . --output-file coverage.raw.info \
+              --gcov-tool gcov --ignore-errors mismatch,negative --filter range
+            lcov --remove coverage.raw.info "/usr/*" "*/tests/*" -o coverage.info
+            rm coverage.raw.info
+            test -s coverage.info
+            test "$(wc -c < coverage.info)" -le 33554432
+          '
+
+      - name: Preserve coverage for the trusted uploader
+        if: matrix.config == 'ubuntu_24' && steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-ubuntu-24-pr-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage.info
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Upload test failure evidence
         if: >-
           ${{ failure()
@@ -674,8 +770,16 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_ubuntu == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
+      pull-requests: read
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 35 }}
     strategy:
       fail-fast: true
       matrix:
@@ -692,6 +796,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -702,6 +807,7 @@ jobs:
         id: package_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -761,8 +867,16 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_rpm == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-22.04
-    timeout-minutes: 45
+      pull-requests: read
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-22.04' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 45 }}
     strategy:
       fail-fast: false
       matrix:
@@ -783,6 +897,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -794,6 +909,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -818,13 +934,44 @@ jobs:
         run: |
           chmod -R go+rw .
           echo "== Selected mock target: $MOCK_CONFIG =="
+          # Refresh stale mirror metadata between bounded setup retries. Never
+          # retry the package build: compiler/spec failures must remain visible.
+          dnf_retry() {
+            for attempt in 1 2 3; do
+              if dnf "$@"; then
+                return 0
+              else
+                status=$?
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                return "$status"
+              fi
+              echo "::warning::dnf setup failed (attempt $attempt/3); refreshing metadata before retry"
+              dnf clean metadata || true
+              sleep "$((attempt * 10))"
+            done
+          }
           echo "== Install EPEL and mock =="
-          dnf install -y epel-release
-          dnf install -y mock dnf-utils
+          dnf_retry install -y epel-release
+          dnf_retry install -y mock dnf-utils
+          # On private runners, mock's PAM helper cannot read shadow while
+          # it has mode 0000. Permit only root to read it for the build.
+          chmod 0400 /etc/shadow
+          mock --version
           echo "== Install build tools for autoreconf/configure/make dist =="
-          dnf install -y autoconf autoconf-archive automake libtool gcc make flex bison
+          dnf_retry install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
-          curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
+          # Retry the idempotent key GET on all curl errors: mixed IPv4/IPv6
+          # failures can hide connection refusal from --retry-connrefused.
+          # Keep incomplete downloads away from the key path consumed by dnf.
+          key_tmp=$(mktemp /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon.XXXXXX)
+          if curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 --retry-max-time 180 --connect-timeout 15 --max-time 60 -o "$key_tmp" https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon; then
+            mv "$key_tmp" /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon
+          else
+            status=$?
+            rm -f "$key_tmp"
+            exit "$status"
+          fi
           {
             echo '[adiscon]'
             echo 'name=adiscon'
@@ -833,9 +980,9 @@ jobs:
             echo 'gpgcheck=1'
             echo 'gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon'
           } > /etc/yum.repos.d/adiscon.repo
-          dnf install -y dnf-plugins-core
+          dnf_retry install -y dnf-plugins-core
           dnf config-manager --set-enabled crb
-          dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel libyaml-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
+          dnf_retry install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel libyaml-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
           echo "== Copy mock configs =="
           # Replace symlink targets with regular files so custom configs do not
           # overwrite shared mock-core-configs aliases like centos-stream+epel-*.
@@ -853,8 +1000,9 @@ jobs:
         run: echo "No relevant changes detected; skipping RPM build."
 
       - name: Upload RPM artifacts
-        if: steps.code_changes.outputs.any_changed == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        # Preserve mock build.log/root.log when the RPM build fails.
+        if: ${{ !cancelled() && steps.code_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rpms-${{ matrix.mock_config }}
           path: build-result/
@@ -862,27 +1010,29 @@ jobs:
 
   macos_CI:
     needs: [compile, changes]
-    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
+    if: ${{ !github.event.repository.private && needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: true
       matrix:
         include:
-          # 1 x from macos-14 (x64 NONE)
-          - os: macos-14
+          # Pin Intel labels for both x64 lanes; generic macos-15 is arm64.
+          # macos-14 is retiring and scheduled brownouts prevent jobs starting.
+          - os: macos-15-intel
             arch: x64
             sanitizer: none
-          # 2 x from macos-15 (x64 ASAN and arm64 TSAN)
-          - os: macos-15
+          - os: macos-15-intel
             arch: x64
             sanitizer: asan
           - os: macos-15
             arch: arm64
             sanitizer: tsan
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    # Leave time for setup and failure evidence after the test watchdog fires.
+    timeout-minutes: ${{ matrix.sanitizer == 'tsan' && 35 || 25 }}
     name: macOS CI (${{ matrix.os }}, ${{ matrix.arch }}, ${{ matrix.sanitizer }})
     env:
       USE_AUTO_DEBUG: true
@@ -898,6 +1048,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1018,6 +1169,7 @@ jobs:
         id: run_tests
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
+          MAKE_CHECK_TIMEOUT_SECONDS: ${{ matrix.sanitizer == 'tsan' && 1500 || 1200 }}
           RSYSLOG_FLAKE_PHASE_NAME: >-
             macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
         run: |
@@ -1039,7 +1191,6 @@ jobs:
             echo "Running without sanitizers"
           fi
 
-          export MAKE_CHECK_TIMEOUT_SECONDS=1200
           devtools/ci-flake-phase.sh begin "$RSYSLOG_FLAKE_PHASE_NAME" automake
 
           set +e
@@ -1167,8 +1318,15 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.elasticsearch == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 45 }}
     name: elasticsearch-8-tests
     env:
       RSYSLOG_TESTBENCH_EXTERNAL_ES_URL: http://127.0.0.1:19200
@@ -1238,8 +1396,16 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.victorialogs == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+      pull-requests: read
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 25 }}
     name: victorialogs-tests
     env:
       DOCKER_RUN_EXTRA_OPTS: --network host
@@ -1259,6 +1425,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1326,7 +1493,8 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.analyzer == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+      pull-requests: read
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     name: clang static analyzer
     steps:
       - name: Checkout repository
@@ -1339,6 +1507,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1382,7 +1551,7 @@ jobs:
       - name: Upload clang static analyzer report
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
         id: upload-report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clang-static-analyzer-report
           path: scan-build-report
@@ -1421,8 +1590,15 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.kafka == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 50
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 50 }}
     name: kafka distcheck CI
     steps:
       - name: git checkout project
@@ -1475,7 +1651,8 @@ jobs:
     needs: [changes]
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+      pull-requests: read
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     timeout-minutes: 180
     name: dev container definition CI
     steps:
@@ -1486,6 +1663,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -1496,6 +1674,7 @@ jobs:
         id: dev_container_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1593,9 +1772,10 @@ jobs:
 
   arm_CI:
     needs: [compile, changes]
-    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
+    if: ${{ !github.event.repository.private && needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 150
     name: arm64 CI (native, asan), asan
@@ -1607,6 +1787,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -1617,6 +1798,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1646,6 +1828,7 @@ jobs:
           file: devtools/ci/Dockerfile.arm
           platforms: linux/arm64
           tags: rsyslog-cross-dev:arm64
+          build-args: LLVM_VERSION=19
           load: true
           cache-from: type=gha,scope=cross-dev-arm64
           cache-to: type=gha,mode=max,scope=cross-dev-arm64
@@ -1654,8 +1837,17 @@ jobs:
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
           chmod -R go+rw .
+          # Write cores to a plain path instead of the host's systemd-coredump
+          # pipe, so the intermittent ASan thread-registry CHECK abort
+          # (sanitizer_thread_registry.cpp:316) leaves a core that the
+          # testbench backtraces and the flake-evidence upload collects.
+          sudo mkdir -p /cores
+          sudo chmod 1777 /cores
+          sudo sysctl -w kernel.core_pattern=/cores/core.%e.%p
           docker run --rm --platform linux/arm64 \
             -e ARCH=arm64 \
+            -v /cores:/cores \
+            --ulimit core=-1 \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
@@ -1666,7 +1858,11 @@ jobs:
               export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
               export LDFLAGS="-fsanitize=address"
               export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
-              export CC=gcc
+              # LLVM 19 includes the thread-context allocator race fix absent
+              # from LLVM 18 and GCC libasan8 (llvm/llvm-project#88177).
+              # Keep the compiler and ASan runtime on the same major version.
+              export CC=clang-19
+              export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-19
               export TEST_MAX_RUNTIME=1200
               time_phase() {
                 phase="$1"
@@ -1680,6 +1876,9 @@ jobs:
                 echo "timing: arm64 $phase $((end - start))s"
                 return "$rc"
               }
+              "$CC" --version | head -n1
+              uname -r
+              cat /proc/sys/vm/mmap_rnd_bits || true
               time_phase autoreconf autoreconf -fvi
               time_phase configure ./configure --enable-silent-rules --enable-testbench \
                 --enable-imdiag --disable-imdocker \
@@ -1730,8 +1929,16 @@ jobs:
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
-    runs-on: ubuntu-24.04
-    timeout-minutes: 75
+      pull-requests: read
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 75 }}
     name: i386 CI (Debian 13, linux/386)
     steps:
       - name: git checkout project
@@ -1741,6 +1948,7 @@ jobs:
           persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
+        if: ${{ !github.event.repository.private }}
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
@@ -1751,6 +1959,7 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
@@ -1768,10 +1977,16 @@ jobs:
 
       - name: Run i386 build and regular testbench
         if: steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_I386_CHECK_TIMEOUT: >-
+            ${{ github.event.repository.private &&
+            ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+             github.event.pull_request.head.repo.full_name == github.repository) && '150m' || '45m' }}
         run: |
           chmod -R go+rw .
           docker run --rm --platform linux/386 \
             -e ARCH=i386 \
+            -e RSYSLOG_I386_CHECK_TIMEOUT \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
@@ -1860,7 +2075,7 @@ jobs:
               time_su_phase "config sanity" "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
               time_su_phase build "make -j8"
               time_su_phase check "devtools/ci-flake-phase.sh run i386-check automake -- \
-                timeout 45m make -j10 check VERBOSE=1"
+                timeout ${RSYSLOG_I386_CHECK_TIMEOUT} make -j10 check VERBOSE=1"
             '
 
       - name: Upload test failure evidence

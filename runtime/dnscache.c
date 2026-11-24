@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* dnscache.c
  * Implementation of a real DNS cache
  *

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmleefparse.c
  * This is a message modification module that parses LEEF events and
  * exposes them as structured data inside the message object.
@@ -157,7 +159,10 @@ static inline const char *find_next_segment(const char *start, char delim, size_
     sbool escaped = 0;
 
     while (*p != '\0') {
-        if (!escaped && *p == '\\') {
+        /* If backslash is the delimiter, retain only the escape pairs that
+         * leef_unescape_copy() recognizes; other backslashes separate fields.
+         */
+        if (!escaped && *p == '\\' && (delim != '\\' || p[1] == '\\' || p[1] == '=' || p[1] == '|')) {
             escaped = 1;
             ++p;
             continue;

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-dynafile-dangerouspermitpathescape:
 .. _omfile.parameter.module.dynafile-dangerouspermitpathescape:
 .. _omfile.parameter.action.dynafile-dangerouspermitpathescape:

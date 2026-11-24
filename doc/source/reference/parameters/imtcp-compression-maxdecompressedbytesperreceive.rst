@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-compression-maxdecompressedbytesperreceive:
 .. _imtcp.parameter.input.compression-maxdecompressedbytesperreceive:
 

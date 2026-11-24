@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify configured window, frame, decompression, and batch limits reject
 # oversized traffic while preserving valid boundary traffic.
 . ${srcdir:=.}/diag.sh init

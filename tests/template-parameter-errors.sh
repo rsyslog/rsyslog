@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Exercise malformed legacy property-replacer parameters one configuration at
 # a time. Each case must make rsyslogd -N1 fail under abortOnUncleanConfig and
 # emit its specific parser diagnostic; separate invocations prove that an

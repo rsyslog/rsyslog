@@ -2,7 +2,9 @@
 /*
  * Verify the queue-mutex-protected WTP waiter protocol. Real pthread waiters
  * register under one mutex, are reserved before individual signals, and clear
- * their reservation after signal, timeout, or deferred cancellation.
+ * their reservation after signal, timeout, or deferred cancellation. Also
+ * verify that start advice is handed to a slot that is exiting but not yet
+ * joinable, instead of being dropped.
  */
 #include "config.h"
 
@@ -97,6 +99,7 @@ static void init_budget_worker(wti_t *worker, const int state, const int waiting
     worker->bWaitingForWork = waiting;
     worker->bWakeupReserved = reserved;
     worker->bExiting = 0;
+    worker->bRestartRequested = 0;
 }
 
 static void destruct_budget_worker(wti_t *worker) {
@@ -233,6 +236,52 @@ static int check_cancel_exit_budget(void) {
     return 0;
 }
 
+static int check_exiting_restart_handoff(void) {
+    wti_t worker;
+    wti_t *worker_ptrs[1] = {&worker};
+
+    /* A single-slot pool (the DA transfer pool) whose only worker has left
+     * its queue loop: the slot is RUNNING but exiting, so it is neither
+     * startable (wtpAdviseMaxWorkers() only starts STOPPED/WAIT_JOIN slots)
+     * nor wakeable. The start advice must be handed to that slot exactly
+     * once, after which the slot counts as live capacity so later advice
+     * neither re-requests nor signals for it.
+     */
+    init_budget_worker(&worker, WRKTHRD_RUNNING, 0, 0);
+    wtiMarkExiting(&worker);
+    CHECK(wtiGetWorkerStartBudget(worker_ptrs, 1, 1) == 1);
+    CHECK(!wtiReserveWakeup(&worker));
+    CHECK(wtiRequestRestart(&worker));
+    CHECK(!wtiRequestRestart(&worker));
+    CHECK(wtiGetWorkerStartBudget(worker_ptrs, 1, 1) == 0);
+    CHECK(wtiGetWakeupBudget(worker_ptrs, 1, 1) == 0);
+
+    /* The exiting thread consumes the request under the queue mutex before
+     * publishing WAIT_JOIN and resumes as a normal, non-exiting worker. */
+    CHECK(wtiConsumeRestartRequest(&worker));
+    CHECK(!worker.bExiting && !worker.bRestartRequested);
+    CHECK(!wtiConsumeRestartRequest(&worker));
+
+    /* Without a request the thread proceeds to exit. Once WAIT_JOIN is
+     * visible the slot is startable, so no hand-off is accepted; a slot that
+     * is not exiting needs none either. */
+    wtiMarkExiting(&worker);
+    CHECK(!wtiConsumeRestartRequest(&worker));
+    ATOMIC_STORE_32BIT(&worker.bIsRunning, &worker.mutIsRunning, WRKTHRD_WAIT_JOIN);
+    CHECK(!wtiRequestRestart(&worker));
+    init_budget_worker(&worker, WRKTHRD_RUNNING, 1, 0);
+    CHECK(!wtiRequestRestart(&worker));
+
+    /* wtpStartWrkr() clears both marks when it reuses a slot. */
+    wtiMarkExiting(&worker);
+    CHECK(wtiRequestRestart(&worker));
+    wtiClearExiting(&worker);
+    CHECK(!worker.bRestartRequested);
+
+    destruct_budget_worker(&worker);
+    return 0;
+}
+
 int main(void) {
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t registered = PTHREAD_COND_INITIALIZER;
@@ -248,6 +297,7 @@ int main(void) {
     CHECK(check_start_missing_budget() == 0);
     CHECK(check_persistent_first_worker_budget() == 0);
     CHECK(check_cancel_exit_budget() == 0);
+    CHECK(check_exiting_restart_handoff() == 0);
 
     memset(waiters, 0, sizeof(waiters));
     for (i = 0; i < 3; ++i) {

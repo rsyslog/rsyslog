@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test CRL handling with OpenSSL TLS driver.
 # Phase 1: Valid (non-expired) CRL with a non-revoked cert - communication should succeed.
 # Phase 2: Expired CRL - connection should be rejected.

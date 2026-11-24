@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## test gemini provider with invalid API key
 . ${srcdir:=.}/diag.sh init
 

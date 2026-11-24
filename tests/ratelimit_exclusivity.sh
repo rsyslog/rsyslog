@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test checks that ratelimit.name is mutually exclusive with ratelimit.interval
 # and ratelimit.name is mutually exclusive with ratelimit.burst
 . ${srcdir:=.}/diag.sh init

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 *******************************
 imklog: Kernel Log Input Module
 *******************************
@@ -32,6 +34,10 @@ Module Parameters
 
    * - Parameter
      - Summary
+   * - :ref:`param-imklog-ruleset`
+     - .. include:: ../../reference/parameters/imklog-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imklog-internalmsgfacility`
      - .. include:: ../../reference/parameters/imklog-internalmsgfacility.rst
         :start-after: .. summary-start
@@ -132,6 +138,7 @@ Unsupported |FmtObsoleteName| directives
 .. toctree::
    :hidden:
 
+   ../../reference/parameters/imklog-ruleset
    ../../reference/parameters/imklog-internalmsgfacility
    ../../reference/parameters/imklog-permitnonkernelfacility
    ../../reference/parameters/imklog-consoleloglevel

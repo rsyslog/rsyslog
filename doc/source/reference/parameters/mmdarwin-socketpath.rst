@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmdarwin-socketpath:
 .. _mmdarwin.parameter.input.socketpath:
 

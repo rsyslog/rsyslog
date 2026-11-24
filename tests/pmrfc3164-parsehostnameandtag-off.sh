@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for parser.parseHostnameAndTag="off".
 # The global setting is parsed after the built-in RFC3164 parser is
 # initialized, so the parser must read the active config at parse time. The

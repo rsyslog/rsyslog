@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2016-03-11 by Thomas D., released under ASL 2.0
 # Several tests make use of faketime. They all need to know when
 # faketime is missing or the system isn't year-2038 complaint.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for strict JSON-frame consumption. A real imbeats
 # listener receives frames whose declared payload is a valid object followed
 # by either non-whitespace garbage or a second JSON value, plus non-object and

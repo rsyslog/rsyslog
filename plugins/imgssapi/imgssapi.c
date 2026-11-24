@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* imgssapi.c
  * This is the implementation of the GSSAPI input module.
  *

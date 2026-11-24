@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omazuredce-max_batch_bytes:
 .. _omazuredce.parameter.action.max_batch_bytes:
 

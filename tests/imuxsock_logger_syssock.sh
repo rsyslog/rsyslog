@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test trailing LF handling in imuxsock
 # note: we use the system socket, but assign a different name to
 # it. This is not 100% the same thing as running as root, but it

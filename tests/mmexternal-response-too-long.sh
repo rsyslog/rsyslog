@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for bounded mmexternal replies: a helper that emits an
 # oversized unterminated JSON line must be restarted before responseTimeout is
 # reached, and the queue must continue to the following action. The oracle uses

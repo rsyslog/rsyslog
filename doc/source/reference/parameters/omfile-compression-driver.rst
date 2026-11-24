@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-compression-driver:
 .. _omfile.parameter.module.compression-driver:
 

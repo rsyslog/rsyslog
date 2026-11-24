@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Test that imptcp inherits per-source limiting through ratelimitAddMsg().
 ## The policy key template is configured only in the ratelimit YAML file; the
 ## module should not compute or pass a per-source key itself.

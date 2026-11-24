@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-msgdiscardingerror:
 .. _imfile.parameter.input.msgdiscardingerror:
 .. _imfile.parameter.msgdiscardingerror:

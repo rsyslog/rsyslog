@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify malformed compressed input is rejected without an ACK and is counted
 # by the imbeats failure statistics.
 . ${srcdir:=.}/diag.sh init

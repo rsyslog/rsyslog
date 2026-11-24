@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmexternal-interface-input:
 .. _mmexternal.parameter.input.interface-input:
 

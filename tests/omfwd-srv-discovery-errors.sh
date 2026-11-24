@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## @brief Validate SRV error handling and mutual exclusivity for omfwd targetSrv.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3

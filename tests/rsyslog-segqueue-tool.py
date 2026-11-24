@@ -3,7 +3,8 @@
 
 The test builds a small deterministic format-v2 store without starting
 rsyslogd. Exact issue codes, JSONL selection, repair backups, and post-repair
-validation are the oracle; no timing or external service is involved.
+validation and source preservation on export are the oracle; no timing or
+external service is involved.
 """
 
 import importlib.machinery
@@ -118,6 +119,78 @@ def main():
         status = run_cli("status", queue, "--json")
         check(status.returncode == 0, "JSON status failed: {}".format(status.stderr))
         check(json.loads(status.stdout)["state"]["selected"]["generation"] == 1, "wrong state selected")
+
+        # Export must preserve the read-only queue contract when its destination
+        # names a store file; the unchanged bytes are the data-integrity oracle.
+        state_collision_queue = os.path.join(root, "state-collision.segq")
+        create_store(state_collision_queue)
+        state_collision_path = os.path.join(state_collision_queue, "state")
+        state_before = open(state_collision_path, "rb").read()
+        state_collision = run_cli("export", state_collision_queue, "--output", state_collision_path)
+        state_unchanged = open(state_collision_path, "rb").read() == state_before
+
+        segment_collision_queue = os.path.join(root, "segment-collision.segq")
+        create_store(segment_collision_queue)
+        segment_collision_path = os.path.join(
+            segment_collision_queue, "segment-00000000000000000001.seg"
+        )
+        segment_before = open(segment_collision_path, "rb").read()
+        segment_collision = run_cli("export", segment_collision_queue, "--output", segment_collision_path)
+        segment_unchanged = open(segment_collision_path, "rb").read() == segment_before
+
+        existing_export = os.path.join(root, "existing-export.jsonl")
+        with open(existing_export, "w", encoding="utf-8") as stream:
+            stream.write("old destination contents\n")
+        existing_export_result = run_cli("export", queue, "--output", existing_export)
+        check(existing_export_result.returncode == 0,
+              "export to an existing external destination failed: {}".format(existing_export_result.stderr))
+        existing_export_lines = [json.loads(line) for line in open(existing_export, encoding="utf-8")]
+        check(len(existing_export_lines) == 2, "existing external destination was not replaced by the export")
+        check(state_collision.returncode != 0, "export accepted the queue state file as its output")
+        check(state_unchanged, "export changed the queue state file when output collided")
+        check(segment_collision.returncode != 0, "export accepted a queue segment as its output")
+        check(segment_unchanged, "export changed a queue segment when output collided")
+
+        # A directory alias must not bypass source protection, and a new file
+        # inside the queue is still a source-directory mutation. A similarly
+        # named sibling output remains a valid, replaceable external target.
+        alias_queue = os.path.join(root, "alias-collision.segq")
+        create_store(alias_queue)
+        alias_path = os.path.join(root, "queue-alias")
+        os.symlink(alias_queue, alias_path)
+        alias_state = os.path.join(alias_queue, "state")
+        alias_before = open(alias_state, "rb").read()
+        alias_collision = run_cli("export", alias_queue, "--output", os.path.join(alias_path, "state"))
+        check(alias_collision.returncode != 0, "export accepted a directory alias into its source queue")
+        check(open(alias_state, "rb").read() == alias_before, "export changed source state through a path alias")
+        internal_output = os.path.join(alias_queue, "export.jsonl")
+        internal_collision = run_cli("export", alias_queue, "--output", internal_output)
+        check(internal_collision.returncode != 0, "export accepted a new output inside its source queue")
+        check(not os.path.exists(internal_output), "rejected export created an output inside its source queue")
+        sibling_output = alias_queue + ".jsonl"
+        sibling_export = run_cli("export", alias_queue, "--output", sibling_output)
+        check(sibling_export.returncode == 0, "export rejected a similarly named external sibling output")
+        check(len(open(sibling_output, encoding="utf-8").readlines()) == 2, "external sibling export count is wrong")
+
+        # Replacement changes the leaf entry, not its symlink target: protect
+        # internal entries while allowing replacement of an external symlink.
+        external_target = os.path.join(root, "leaf-target.txt")
+        with open(external_target, "w", encoding="utf-8") as stream:
+            stream.write("external target contents\n")
+        internal_link = os.path.join(alias_queue, "export-link")
+        os.symlink(external_target, internal_link)
+        internal_link_export = run_cli("export", alias_queue, "--output", internal_link)
+        check(internal_link_export.returncode != 0, "export accepted an internal symlink leaf pointing outside")
+        check(os.path.islink(internal_link), "export replaced an internal symlink leaf")
+        check(open(external_target, encoding="utf-8").read() == "external target contents\n",
+              "export changed the external symlink target")
+        external_link = os.path.join(root, "external-export-link")
+        os.symlink(alias_state, external_link)
+        external_link_export = run_cli("export", alias_queue, "--output", external_link)
+        check(external_link_export.returncode == 0, "export rejected replacement of an external symlink leaf")
+        check(not os.path.islink(external_link), "export did not replace the external symlink leaf")
+        check(len(open(external_link, encoding="utf-8").readlines()) == 2, "external symlink export count is wrong")
+        check(open(alias_state, "rb").read() == alias_before, "external symlink export changed source state")
 
         state_path = os.path.join(queue, "state")
         state_data = bytearray(open(state_path, "rb").read())

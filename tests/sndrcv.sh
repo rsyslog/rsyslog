@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests two rsyslog instances. Instance
 # TWO sends data to instance ONE. A number of messages is injected into
 # the instance 2 and we finally check if all those messages

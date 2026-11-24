@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-keepalive-interval:
 .. _imptcp.parameter.input.keepalive-interval:
 

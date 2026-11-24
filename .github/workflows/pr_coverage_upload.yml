@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: Apache-2.0
+name: upload PR coverage
+
+'on':
+  # The consumer must be present on main before this trigger can run.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: [check, documentation build]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: pr-coverage-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.repository == 'rsyslog/rsyslog' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      # Checkout is always the trusted default-branch workflow revision. Never
+      # checkout the source run's SHA, restore its caches, or execute its files.
+      - name: Checkout trusted artifact validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate source run and resolve PR head
+        id: source
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await require('./devtools/pr-coverage-source.cjs')({github, context, core});
+
+      - name: Download bounded report archive
+        if: steps.source.outputs.artifact != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          ARTIFACT_ID: ${{ steps.source.outputs.artifact }}
+        with:
+          script: |
+            const {data} = await github.rest.actions.downloadArtifact({
+              ...context.repo, artifact_id: Number(process.env.ARTIFACT_ID), archive_format: 'zip'
+            });
+            const buffer = Buffer.from(data);
+            if (buffer.length > 10485760) throw new Error('Coverage archive exceeds download limit');
+            require('fs').writeFileSync(`${process.env.RUNNER_TEMP}/pr-coverage.zip`, buffer, {flag: 'wx'});
+
+      - name: Validate report as data without extracting archive paths
+        if: steps.source.outputs.artifact != ''
+        env:
+          COVERAGE_KIND: ${{ steps.source.outputs.kind }}
+        run: |
+          case "$COVERAGE_KIND" in
+            runtime) source_root=/rsyslog ;;
+            docs) source_root="$GITHUB_WORKSPACE/doc-builder" ;;
+            *) echo "Unexpected coverage profile" >&2; exit 1 ;;
+          esac
+          python3 devtools/validate-pr-coverage.py "$RUNNER_TEMP/pr-coverage.zip" coverage.info \
+            --source-root "$source_root"
+
+      # Same-repository and private PRs require the token. If it is missing,
+      # skip the upload with a warning instead of attempting a tokenless one.
+      - name: Check upload credentials
+        if: steps.source.outputs.artifact != ''
+        id: auth
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          TOKENLESS: ${{ steps.source.outputs.tokenless }}
+        run: |
+          if [ "$TOKENLESS" != "true" ] && [ -z "$CODECOV_TOKEN" ]; then
+            echo "::warning title=Codecov upload skipped::CODECOV_TOKEN is unavailable for this PR."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # This consumer intentionally publishes no GitHub status/check on the PR
+      # head: synthetic checks can attach to an unrelated Actions suite, such
+      # as Code Style Check, and make a successful job appear failed.
+      # Public fork uploads use Codecov's colon-prefixed branch contract.
+      # Trusted provenance/report validation above remains mandatory. Other
+      # PRs retain credentials; never fall back after an authentication error.
+      # Coverage is informational: a Codecov outage, rate limit or rejected
+      # token must never turn CI red or force test reruns. Failures stay
+      # visible as a warning in this run's log and summary only.
+      - name: Upload coverage from the trusted consumer
+        if: steps.source.outputs.artifact != '' && steps.auth.outputs.ready == 'true'
+        id: upload
+        continue-on-error: true
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ steps.source.outputs.tokenless != 'true' && secrets.CODECOV_TOKEN || '' }}
+          slug: rsyslog/rsyslog
+          files: coverage.info
+          disable_search: true
+          disable_file_fixes: true
+          plugins: noop
+          override_commit: ${{ steps.source.outputs.sha }}
+          override_pr: ${{ steps.source.outputs.pr }}
+          override_branch: ${{ steps.source.outputs.branch }}
+          override_build_url: ${{ steps.source.outputs.url }}
+          flags: ${{ steps.source.outputs.flag }}
+          name: ${{ steps.source.outputs.flag }}-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          fail_ci_if_error: true
+
+      - name: Warn about a failed upload
+        if: steps.upload.outcome == 'failure'
+        run: |
+          msg="Coverage was not uploaded; see the upload step log. CI results are unaffected."
+          echo "::warning title=Codecov upload failed::$msg"

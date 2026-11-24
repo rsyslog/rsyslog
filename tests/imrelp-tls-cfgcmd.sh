@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2019-11-14 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_relpEngineSetTLSLibByName

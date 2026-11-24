@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 *******************************
 pmdb2diag: DB2 Diag file parser
 *******************************

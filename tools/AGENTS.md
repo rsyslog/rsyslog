@@ -15,9 +15,29 @@ core but are compiled directly into the rsyslog binary:
   additional `./configure` flags are required.
 - **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to incrementally build the tools and test dependencies.
 - **Bootstrap:** Run `./autogen.sh` only when autotools inputs change.
-- There are no standalone regression scripts for these built-in modules. When
-  modifying them, rely on targeted configuration tests under `tests/` (e.g.
-  `./tests/omfile-basic.sh`) or add new ones as needed.
+- Validate built-in modules with targeted configuration tests under `tests/`
+  (e.g. `./tests/omfile-basic.sh`) and add regressions as needed.
+- ompipe template coverage: `tests/ompipe-module-template.sh` checks module
+  defaults, explicit action overrides, and legacy selector compatibility;
+  `tests/yaml-ompipe-module-template.sh` checks the modern actions through YAML.
+  `tests/ompipe-default-template.sh` checks the unchanged built-in default when
+  no module template is configured.
+
+- Internal diagnostic mutex fallback coverage is registered as
+  `runtime_unit_iminternal_lock` from `tests/unit/iminternal_lock_test.c`.
+  It checks transient contention and bounded timeout without daemon startup.
+  `runtime_unit_iminternal_contention` from
+  `tests/unit/iminternal_contention_test.c` also exercises the real message-list
+  callers, checking ownership transfer, timeout destruction, and cancellation
+  cleanup through the existing macOS path on every platform.
+
+## Compiled file formatting
+
+`smfile.c` implements `RSYSLOG_FileFormat`. Run
+`tests/smfile-final-lf.sh` and its `-vg` companion for exact output checks
+against the documented list template. Binary TCP frames preserve zero, one,
+and two terminal message LFs; empty-MSG controls cover zero-length safety
+without changing the existing compiled separator behavior.
 
 ## Metadata
 - Shared metadata lives in `tools/MODULE_METADATA.json` so we do not duplicate
@@ -34,3 +54,15 @@ core but are compiled directly into the rsyslog binary:
   change defaults or add features.
 - Cross-reference changes in `doc/ai/module_map.yaml` if the concurrency or
   locking guidance shifts.
+
+## omfwd UDP source-address coverage
+
+- `tests/omfwd-udp-source-family.sh` and its YAML/send-to-all wrappers check
+  exact compatible-family delivery with controlled DNS ordering.
+- `tests/omfwd-udp-source-family-dual-local.sh` checks both actual local socket
+  families against an IPv4 destination.
+- `tests/omfwd-udp-source-address.sh` exercises numeric-source socket lifecycle
+  without a preload, including sanitizer builds.
+- `tests/omfwd-udp-source-socket-failure.sh` and its YAML companion check the
+  valid-source control and suspended fallback when socket creation fails.
+  The `-vg` wrapper checks target-resolution cleanup across failed retries.

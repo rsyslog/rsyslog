@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is test driver for testing asynchronous file output.
 # This test intentionally uses legacy format.
 # added 2010-03-09 by Rgerhards, re-written 2019-08-15

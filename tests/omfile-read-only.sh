@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2016-06-16 by RGerhards, released under ASL 2.0
 # Verifies that omfile suspends a read-only primary file action and then uses
 # the fallback action. The oracle requires the current user and filesystem to

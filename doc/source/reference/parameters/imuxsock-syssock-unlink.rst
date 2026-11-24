@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imuxsock-syssock-unlink:
 .. _imuxsock.parameter.module.syssock-unlink:
 

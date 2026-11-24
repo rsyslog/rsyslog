@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 libossl Log Crypto Provider (ossl)
 ====================================
 

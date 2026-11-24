@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies that freshStartTail still reads a wildcard-matched file created
 # after startup and continues to follow later appends to that same file.
 # Added 2018-05-17 by Pascal Withopf, released under ASL 2.0

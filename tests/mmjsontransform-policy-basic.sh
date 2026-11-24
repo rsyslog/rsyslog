@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmjsontransform YAML policy rename/drop preprocessing, mode, HUP reload,
 # and malformed dotted-key conflict handling without leaking or double-freeing values.
 . ${srcdir:=.}/diag.sh init

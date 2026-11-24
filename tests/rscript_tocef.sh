@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for tocef() and cef_ext_escape() RainerScript functions.
 # Verifies CEF header construction, header escaping, and extension
 # value escaping per the CEF spec (Character Encoding section). The

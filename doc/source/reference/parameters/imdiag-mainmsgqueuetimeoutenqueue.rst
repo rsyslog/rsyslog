@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdiag-mainmsgqueuetimeoutenqueue:
 .. _imdiag.parameter.module.mainmsgqueuetimeoutenqueue:
 

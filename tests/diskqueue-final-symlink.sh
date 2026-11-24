@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that a persistent disk queue rejects a symlinked segment file. The
 # first phase saves a real segmented queue; the second replaces its newest
 # final-path-component segment with a link to a copy. A legacy queue would

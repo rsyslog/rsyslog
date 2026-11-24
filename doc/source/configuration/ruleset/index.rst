@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Ruleset-Specific Legacy Configuration Statements
 ================================================
 These statements can be used to set ruleset parameters. To set

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that the -o command line option works
 # added 2019-04-26 by Rainer Gerhards; Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

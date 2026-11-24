@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-06-23 by Codex, released under ASL 2.0
 # Sends a minimal zstd frame that advertises a 128 MiB window while the imtcp
 # listener allows only 1 MiB of aggregate retained decoder-window memory. The

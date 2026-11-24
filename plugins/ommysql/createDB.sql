@@ -2,7 +2,7 @@ CREATE DATABASE Syslog;
 USE Syslog;
 CREATE TABLE SystemEvents
 (
-        ID int unsigned not null auto_increment primary key,
+        ID bigint unsigned not null auto_increment primary key,
         CustomerID bigint,
         ReceivedAt datetime NULL,
         DeviceReportedTime datetime NULL,
@@ -30,8 +30,8 @@ CREATE TABLE SystemEvents
 
 CREATE TABLE SystemEventsProperties
 (
-        ID int unsigned not null auto_increment primary key,
-        SystemEventID int NULL ,
+        ID bigint unsigned not null auto_increment primary key,
+        SystemEventID bigint unsigned NULL ,
         ParamName varchar(255) NULL ,
         ParamValue text NULL
 );

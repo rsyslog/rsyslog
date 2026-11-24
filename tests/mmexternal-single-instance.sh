@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This regression verifies that mmexternal forceSingleInstance="on" really
 # shares one helper across many workers. The oracle checks that the helper
 # writes exactly one Starting line, one Terminating line, and one Received line

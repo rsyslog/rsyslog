@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Control whether mmkubernetes queries and adds Kubernetes namespace metadata.
    :keywords: rsyslog, mmkubernetes, namespace, metadata, Kubernetes

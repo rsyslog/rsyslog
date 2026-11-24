@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test the b64_decode() RainerScript function, including binary output.
 # The var10 case routes a decoded NUL byte through re_match(), a C-string
 # consumer. This documents the intentional C-string truncation boundary and

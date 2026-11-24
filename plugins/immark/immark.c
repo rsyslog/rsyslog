@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* immark.c
  * This is the implementation of the build-in mark message input module.
  *

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: FAQ explaining why blocking actions stall queues and how to fix it using action queues
    :keywords: blocking, action, queue, stall, hang, decouple, performance, rsyslog

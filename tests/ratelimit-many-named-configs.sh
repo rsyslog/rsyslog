@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Regression test for the named ratelimit configuration registry.
 ##
 ## The test creates many output-scope ratelimit configs and actions that look

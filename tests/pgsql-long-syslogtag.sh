@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that the default ompgsql schema accepts a Docker-style syslog tag
 # longer than the historical 60-character column. The exact value selected
 # from PostgreSQL after synchronized shutdown is the regression oracle.

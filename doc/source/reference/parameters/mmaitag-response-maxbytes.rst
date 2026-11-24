@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmaitag-response-maxbytes:
 .. _mmaitag.parameter.action.response-maxbytes:
 

@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -12,7 +13,9 @@ concurrency:
 
 jobs:
   style-check:
-    runs-on: ubuntu-latest
+    # Keep the hosted image on the release that provides clang-format-18.
+    # ubuntu-latest can move to a release with a different formatter set.
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-24.04' }}
 
     steps:
       - name: Checkout repository
@@ -24,10 +27,14 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
             **/*.c
             **/*.h
+            .github/workflows/ci_codestyle_check.yml
             devtools/format-code.sh
+            devtools/check-raw-atomics.py
+            devtools/raw-atomics-baseline.txt
 
       - name: Enforce code style
         env:
@@ -47,3 +54,9 @@ jobs:
             echo "can help apply formatting fixes if needed."
             exit 1
           fi
+
+      - name: Check for unguarded atomic builtins
+        # Same script contributors run locally; builds without atomic
+        # builtins (e.g. Solaris Studio) break on raw __atomic_*/__sync_*.
+        if: ${{ !cancelled() && steps.code_changes.outputs.any_changed == 'true' }}
+        run: python3 devtools/check-raw-atomics.py

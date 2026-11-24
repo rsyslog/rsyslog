@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* gcry.c - rsyslog's libgcrypt based crypto provider
  *
  * Copyright 2013-2018 Adiscon GmbH.

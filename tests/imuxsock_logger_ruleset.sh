@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test imuxsock with ruleset definition
 # rgerhards, 2016-02-02 released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

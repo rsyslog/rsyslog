@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Legacy Configuration Directives
 ===============================
 All legacy configuration directives need to be specified on a line by their own

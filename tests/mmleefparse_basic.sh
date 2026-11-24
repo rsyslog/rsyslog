@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2025-09-?? by AI assistant, released under ASL 2.0
 # Basic parsing test for the mmleefparse module using Palo Alto Networks samples.
 # The regression covers allow, drop and reset-both events provided with the task.

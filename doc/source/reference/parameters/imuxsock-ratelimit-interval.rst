@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imuxsock-ratelimit-interval:
 .. _imuxsock.parameter.input.ratelimit-interval:
 

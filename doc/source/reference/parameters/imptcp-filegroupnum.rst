@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-filegroupnum:
 .. _imptcp.parameter.input.filegroupnum:
 

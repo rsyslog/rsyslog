@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! omfwd; tcp_user_timeout
 
 .. _param-omfwd-tcp-user-timeout:

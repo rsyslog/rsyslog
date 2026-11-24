@@ -1,0 +1,67 @@
+#!/bin/bash
+# Validate the same static graph through native RainerScript and YAML queue
+# objects. An acyclic graph must pass; a cycle and a dynamic call must fail
+# before activation. -N1 status plus the dedicated local-config diagnostic is
+# the oracle; timeout is only a hang guard. No listener or output is started.
+# Python 3 and GNU-compatible timeout/gtimeout are required; the test skips
+# with status 77 when either prerequisite is missing.
+# This file is part of the rsyslog project, released under ASL 2.0.
+. ${srcdir:=.}/diag.sh init
+check_command_available python3
+timeout_cmd=${timeout_cmd:-timeout}
+"$timeout_cmd" --version >/dev/null 2>&1 || timeout_cmd=gtimeout
+"$timeout_cmd" --version >/dev/null 2>&1 || {
+    echo 'Testbench requires GNU-compatible timeout or gtimeout'
+    exit 77
+}
+if [ "${LOCAL_QUEUE_S4_YAML:-0}" -eq 1 ]; then require_yaml_support; fi
+for scenario in valid cycle indirect; do
+    CONF="$PWD/$RSYSLOG_DYNNAME.$scenario.conf"
+    if [ "${LOCAL_QUEUE_S4_YAML:-0}" -eq 1 ]; then CONF="${CONF%.conf}.yaml"; fi
+    python3 - "$CONF" "$scenario" "${LOCAL_QUEUE_S4_YAML:-0}" <<'PY'
+import json
+import sys
+filename, scenario, yaml = sys.argv[1:]
+queue = {'queue.type': 'FixedArray', 'queue.scope': 'local', 'queue.size': '1000',
+         'queue.local.frontendSize': '100', 'queue.local.maxFrontends': '4'}
+action = {'type': 'omfile', 'file': '/dev/null', 'template': 'msg', 'action.copyMsg': 'on'}
+action.update(queue)
+leaf = 'call root' if scenario == 'cycle' else ''
+root = 'call_indirect "leaf";' if scenario == 'indirect' else 'call leaf'
+if yaml == '1':
+    # JSON scalars are also YAML scalars; emit native objects without requiring
+    # PyYAML in test environments. Script bodies exercise the shared AST.
+    text = 'templates:\n  - name: msg\n    type: string\n    string: "%msg%\\n"\nrulesets:\n'
+    for name, script in [('leaf', leaf), ('root', root)]:
+        text += '  - name: {}\n'.format(name)
+        text += ''.join('    {}: {}\n'.format(key, json.dumps(value)) for key, value in queue.items())
+        if script:
+            text += '    script: {}\n'.format(json.dumps(script))
+        else:
+            text += '    statements:\n      - ' + '\n        '.join(
+                '{}: {}'.format(key, json.dumps(value)) for key, value in action.items()) + '\n'
+else:
+    attrs = ' '.join('{}={}'.format(key, json.dumps(value)) for key, value in queue.items())
+    sink = 'action(' + ' '.join('{}={}'.format(key, json.dumps(value)) for key, value in action.items()) + ')'
+    text = 'template(name="msg" type="string" string="%msg%\\n")\n'
+    text += 'ruleset(name="leaf" {}) {{ {} }}\n'.format(attrs, leaf or sink)
+    text += 'ruleset(name="root" {}) {{ {} }}\n'.format(attrs, root)
+with open(filename, 'w') as config:
+    config.write(text)
+PY
+    LOG="$PWD/$RSYSLOG_DYNNAME.$scenario.log"
+    "$timeout_cmd" -k 2 20 ../tools/rsyslogd -N1 -f "$CONF" -M../runtime/.libs:../.libs >"$LOG" 2>&1
+    result=$?
+    if [ "$scenario" = valid ]; then
+        if [ "$result" -ne 0 ]; then cat "$LOG"; error_exit 1; fi
+    elif [ "$result" -eq 0 ] || [ "$result" -eq 124 ] || [ "$result" -eq 137 ] ||
+        ! grep -F -- '-2466' "$LOG" >/dev/null; then
+        cat "$LOG"
+        error_exit 1
+    fi
+    if grep -E 'syntax error|parameter .* not known' "$LOG" >/dev/null; then
+        cat "$LOG"
+        error_exit 1
+    fi
+done
+exit_test

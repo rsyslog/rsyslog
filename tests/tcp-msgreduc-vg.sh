@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check if valgrind violations occur. Correct output is not checked.
 # added 2011-03-01 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0

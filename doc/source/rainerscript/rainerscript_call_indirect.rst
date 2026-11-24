@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 The rsyslog "call_indirect" statement
 =====================================
 

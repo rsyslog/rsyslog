@@ -25,14 +25,13 @@ Focused host-side tests from `rsyslog_test` are still the right first step when
 debugging a specific behavior. After the patch is stable, run this skill before
 pushing if the change is intended for review.
 
-For agent-led PR completion, first apply `rsyslog-security-pr-review` to the
-stabilized candidate. Rebuild its deterministic input immediately before this
-container gate and require a local `receipt.json` with the same diff digest and
-model revision and a `passed` or `not_applicable` disposition. A missing,
-stale, `blocked`, or `needs_human` receipt means the agent may still run useful
-container checks, but must not claim the candidate is PR-ready. This is an
-agent workflow rule, not a shell or CI dependency; repository scripts must not
-invoke an AI client.
+Security review takes place in the PR through the available hosted and
+maintainer review process. Local AI security review is optional and independent
+of this deterministic container gate. Do not require a reviewer model, input
+package, receipt, or local security pass before running validation or reporting
+its actual result. Report PR security-review status separately; local tests and
+container success do not establish a security-review pass. Repository scripts
+must not invoke an AI client.
 
 ## Pre-PR Testbed Tiers
 
@@ -114,6 +113,13 @@ is too noisy for routine rsyslog PR validation.
   when the edited instructions include command snippets whose syntax is
   uncertain. If the agent-doc change also edits code, testbench files,
   workflows, build files, or scripts, validate those touched areas normally.
+- **Local validation tooling only**. When the planner classifies a change as
+  `local-validation-tooling`, run `devtools/local-validation-plan.sh --run`.
+  It applies the available tooling linters and, for formatter/selector/planner
+  changes, runs the isolated Git-history regression in
+  `devtools/tests/test_format_code.py`. This reduced lane does not need runtime
+  container CI or a static analyzer unless the change also affects their
+  execution. Missing Python 3 or Bash is a reported regression-test coverage gap.
 - **User-facing documentation changes**. If the diff changes rendered
   user-facing docs, such as `doc/source/**` or Sphinx support files that affect
   that tree, do not run the Ubuntu 26.04 runtime check just because docs
@@ -674,8 +680,9 @@ from an isolated pass. The audit outcome is `flake_reconciled` and
 This is an acceptable push outcome under the maintainer's rerun policy, not a
 claim that the broad run was clean. Errors, unexpected passes, missing reruns,
 failed reruns or source/image mismatches cannot be reconciled this way. Other
-required lanes (security review, analyzer, sanitizers as applicable) retain their
+required validation lanes (analyzer and sanitizers as applicable) retain their
 own reporting and acceptance requirements; this marker does not replace them.
+Security review remains part of PR review, without a local receipt gate.
 
 After source/test/build changes, rerun the affected validation and record new
 evidence. The marker deliberately remains at the validated source commit when

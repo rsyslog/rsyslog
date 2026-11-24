@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # a very basic test for omjournal. Right now, we have no
 # reliable way of verifying that data was actually written
 # to the journal, but at least we check that rsyslog does

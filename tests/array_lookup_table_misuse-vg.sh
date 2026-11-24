@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test cleanup for array lookup-table and HUP based reloading of it
 # added 2015-10-30 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0

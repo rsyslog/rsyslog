@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test debounce handling for inotify-based ratelimit policy reloads.
 
 . ${srcdir:=.}/diag.sh init

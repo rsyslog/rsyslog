@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* smfwd.c
  * This is a strgen module for the traditional (network) forwarding format.
  *

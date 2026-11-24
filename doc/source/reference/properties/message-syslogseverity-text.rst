@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-syslogseverity-text:
 .. _properties.message.syslogseverity-text:
 .. _properties.alias.syslogpriority-text:

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmpstrucdata-sd_name.lowercase:
 .. _mmpstrucdata.parameter.action.sd_name.lowercase:
 

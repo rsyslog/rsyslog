@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-impstats-log-file:
 .. _impstats.parameter.module.log-file:
 

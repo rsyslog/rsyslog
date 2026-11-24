@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-dynsearchindex:
 .. _omelasticsearch.parameter.module.dynsearchindex:
 

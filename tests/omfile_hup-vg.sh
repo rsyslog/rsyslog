@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 export USE_VALGRIND="YES"
 export NUMMESSAGES=200000 # reduce for slower valgrind run
 . ${srcdir:-.}/omfile_hup.sh

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests a ruleset with an inline RainerScript script: block in YAML.
 # The script uses an if/then filter expression and a stop statement,
 # verifying that cnfAddConfigBuffer() correctly re-enters the RainerScript

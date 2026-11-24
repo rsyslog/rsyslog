@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmjsonparse.c
  * This is a message modification module. If give, it extracts JSON data
  * and populates the EE event structure with it.
@@ -286,7 +288,8 @@ static int find_first_json_object(wrkrInstanceData_t *pWrkrData,
         i++;
     }
 
-    return 2; /* scan truncated or no valid JSON found */
+    /* Exhausting the message is not truncation unless the scan window omitted bytes. */
+    return (scan_end < len) ? 2 : 1;
 }
 
 

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* janitor.c - rsyslog's janitor
  *
  * The rsyslog janitor can be used to periodically clean out

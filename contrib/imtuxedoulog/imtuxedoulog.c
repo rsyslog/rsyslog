@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imtuxedoulog.c
  *
  * This is the input module for reading Tuxedo ULOG files. The particularity of this file

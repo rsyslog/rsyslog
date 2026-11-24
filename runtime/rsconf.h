@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* The rsconf object. It models a complete rsyslog configuration.
  *
  * Copyright 2011-2026 Rainer Gerhards and Adiscon GmbH.
@@ -107,6 +108,9 @@ struct globals_s {
     int maxErrMsgToStderr; /* how many messages to forward at most to stderr? */
     int bAbortOnUncleanConfig; /* abort run (rather than starting with partial
                       config) if there was any issue in conf */
+    int bRequireAllInputs; /* fail startup if a configured input cannot start */
+    int bInputRulesetMissing; /* an input would be routed to the default ruleset */
+    int bInputDeclarationFailed; /* an input() or module() object could not be loaded */
     int bAbortOnFailedQueueStartup; /* similar to bAbortOnUncleanConfig, but abort if a queue
                        startup fails. This is not exactly an unclan config. */
     int compatConfigFormatLegacy; /* policy for legacy $-directives */
@@ -139,6 +143,7 @@ struct globals_s {
     int bActionReportSuspension;
     int bActionReportSuspensionCont;
     short janitorInterval; /* interval (in minutes) at which the janitor runs */
+    int reloadOnHUP; /* config.reloadOnHUP: 0 = off (default), 1 = report (experimental) */
     int reportNewSenders;
     int reportGoneAwaySenders;
     int senderStatsTimeout;
@@ -271,6 +276,12 @@ struct rulesets_s {
 struct rsconf_s {
     BEGINobjInstance
         ; /* Data to implement generic object - MUST be the first data element! */
+        /* Sticky during load, including failed/dropped local queue objects. */
+        sbool local_config_requested;
+        sbool local_config_error;
+        sbool local_legacy_numeric_error; /* whole-config local qualification only */
+        sbool local_custom_parser; /* explicit parser instances are outside S2 */
+        struct local_queue_graph_s *local_queue_graph; /* immutable S4 queue dependency inventory */
         cfgmodules_t modules;
         globals_t globals;
         defaults_t defaults;

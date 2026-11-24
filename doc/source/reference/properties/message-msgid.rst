@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-msgid:
 .. _properties.message.msgid:
 

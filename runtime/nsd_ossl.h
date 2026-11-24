@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* An implementation of the nsd interface for OpenSSL.
  *
  * Copyright 2018-2026 Adiscon GmbH.

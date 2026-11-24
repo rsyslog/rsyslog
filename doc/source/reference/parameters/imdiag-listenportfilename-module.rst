@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdiag-listenportfilename-module:
 .. _imdiag.parameter.module.listenportfilename:
 

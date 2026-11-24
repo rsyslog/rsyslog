@@ -2,10 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 # A live imtcp listener on a kernel-assigned loopback port must reject a second
-# listener. Only failOnBindError plus abortOnUncleanConfig may abort startup.
+# listener. Only inputStartupPolicy=require-all may abort startup. Also verify
+# that the policy rejects a missing input module, an invalid port, the port-0 fallback, and a
+# missing ruleset that would otherwise route messages to the default ruleset.
 # A ten-second bound detects a strict-mode hang; surviving three seconds
-# proves the compatibility cases stayed running. The port file proves that the
-# holder is listening before each conflicting rsyslogd starts.
+# after the bind diagnostic proves the conflicting best-effort input stayed
+# running. Slow startup must not consume that window. The port file proves that the
+# holder is listening before each conflicting rsyslogd starts. For the
+# missing-module control, wait for its expected diagnostic; for the
+# missing-ruleset fallback, wait for its own listener before starting the
+# three-second survival window; that window must not include startup time.
 # A two-second termination grace is followed by SIGKILL if a daemon hangs.
 # Test both RainerScript and YAML when the YAML frontend is built. Diagnostics
 # are read from process output because activation fails before input delivery.
@@ -33,42 +39,23 @@ cleanup_holder() {
 }
 trap cleanup_holder EXIT
 
-# Keep the startup bound portable to macOS, where GNU timeout is unavailable.
-# Return 124 when rsyslogd is still running at the deadline, after stopping it.
-run_bounded() {
-	local seconds=$1
-	local config=$2
-	local log=$3
-	local pid elapsed status
-	"$daemon" -n -iNONE -f "$config" -M "$modules" > "$log" 2>&1 &
-	pid=$!
-	for ((elapsed = 0; elapsed < seconds; elapsed++)); do
-		if ! kill -0 "$pid" 2>/dev/null; then
-			wait "$pid"
-			return $?
-		fi
-		sleep 1
-	done
-	if kill -0 "$pid" 2>/dev/null; then
-		kill "$pid" 2>/dev/null || :
-		for ((elapsed = 0; elapsed < 2; elapsed++)); do
-			if ! kill -0 "$pid" 2>/dev/null; then
-				break
-			fi
-			sleep 1
-		done
-		if kill -0 "$pid" 2>/dev/null; then
-			kill -KILL "$pid" 2>/dev/null || :
-		fi
-		wait "$pid" 2>/dev/null || :
-		return 124
-	fi
-	wait "$pid"
-	status=$?
-	return "$status"
-}
+. ${srcdir:=.}/testsuites/imtcp-bind-failure-common.sh
 
 wait_file_exists_for_process "$portfile" "$holder_pid" 10 "imtcp holder" "$holder_log"
+# A live process that never publishes the requested file must time out rather
+# than being mistaken for ready. Zero allows one 100 ms poll; this deliberately
+# absent file tests the timeout branch, not daemon startup speed. The holder
+# stays alive and remains owned by cleanup_holder.
+never_ready_log="$testdir/$RSYSLOG_DYNNAME.never-ready.log"
+if (error_exit() { exit "$1"; }; wait_file_exists_for_process \
+	"$testdir/$RSYSLOG_DYNNAME.never.port" "$holder_pid" 0 \
+	"never-ready helper" "") > "$never_ready_log" 2>&1; then
+	error_exit 1 "readiness wait accepted a live helper without its file"
+fi
+grep -Fq 'Timeout waiting for never-ready helper readiness file' "$never_ready_log" ||
+	error_exit 1 "readiness wait did not diagnose the live never-ready helper"
+kill -0 "$holder_pid" 2>/dev/null || error_exit 1 "readiness timeout stopped the holder"
+
 port=$(cat "$portfile")
 case "$port" in
 	''|*[!0-9]*) error_exit 1 "invalid holder port: $port" ;;
@@ -79,11 +66,10 @@ if grep -q '^#define HAVE_LIBYAML 1$' "$root/config.h"; then
 	formats='rsyslog yaml'
 fi
 for format in $formats; do
-	for case_name in default strict_no_abort strict_abort; do
+	for case_name in default strict; do
 		case "$case_name" in
-			default) fail_on_bind=off; abort_unclean=on; should_exit=no ;;
-			strict_no_abort) fail_on_bind=on; abort_unclean=off; should_exit=no ;;
-			strict_abort) fail_on_bind=on; abort_unclean=on; should_exit=yes ;;
+			default) policy=best-effort; should_exit=no ;;
+			strict) policy=require-all; should_exit=yes ;;
 		esac
 		log="$testdir/$RSYSLOG_DYNNAME.$format.$case_name.log"
 		if [ "$format" = yaml ]; then
@@ -91,10 +77,9 @@ for format in $formats; do
 			cat > "$config" <<EOF
 version: 2
 global:
-  abortOnUncleanConfig: "$abort_unclean"
+  inputStartupPolicy: "$policy"
 modules:
   - load: imtcp
-    failOnBindError: "$fail_on_bind"
 inputs:
   - type: imtcp
     address: "127.0.0.1"
@@ -107,8 +92,8 @@ EOF
 		else
 			config="$testdir/$RSYSLOG_DYNNAME.$case_name.conf"
 			cat > "$config" <<EOF
-global(abortOnUncleanConfig="$abort_unclean")
-module(load="imtcp" failOnBindError="$fail_on_bind")
+global(inputStartupPolicy="$policy")
+module(load="imtcp")
 input(type="imtcp" address="127.0.0.1" port="$port")
 action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
 EOF
@@ -122,7 +107,7 @@ EOF
 			fi
 			grep -Fq 'activation of module imtcp failed' "$log" || error_exit 1 "$format $case_name missing activation error"
 		else
-			run_bounded 3 "$config" "$log"
+			run_bounded 3 "$config" "$log" "" "Could not create tcp listener"
 			status=$?
 			if [ "$status" -ne 124 ]; then
 				cat "$log"
@@ -137,6 +122,113 @@ EOF
 			grep -Fq 'listener owner unavailable' "$log" || error_exit 1 "$format $case_name missing owner fallback"
 		fi
 	done
+done
+
+# A missing input module must also be fatal under the global policy. The
+# best-effort control must report the missing module before its three-second
+# survival window begins; startup time is not evidence of continued operation.
+for policy in best-effort require-all; do
+	config="$testdir/$RSYSLOG_DYNNAME.missing-$policy.conf"
+	log="$testdir/$RSYSLOG_DYNNAME.missing-$policy.log"
+	cat > "$config" <<EOF
+global(inputStartupPolicy="$policy")
+module(load="imtcp-startup-policy-missing")
+input(type="imtcp-startup-policy-missing" port="0")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+	if [ "$policy" = require-all ]; then
+		run_bounded 10 "$config" "$log"
+		status=$?
+		if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+			cat "$log"
+			error_exit 1 "missing input module did not fail strict startup (status $status)"
+		fi
+	else
+		run_bounded 3 "$config" "$log" "" "input module name 'imtcp-startup-policy-missing' is unknown"
+		status=$?
+		if [ "$status" -ne 124 ]; then
+			cat "$log"
+			error_exit 1 "missing input module stopped best-effort startup (status $status)"
+		fi
+	fi
+	grep -Fq "input module name 'imtcp-startup-policy-missing' is unknown" "$log" ||
+		error_exit 1 "missing input-module diagnostic"
+done
+
+# In strict mode, imtcp must not replace an unspecified ephemeral port with 514.
+config="$testdir/$RSYSLOG_DYNNAME.port-zero.conf"
+log="$testdir/$RSYSLOG_DYNNAME.port-zero.log"
+cat > "$config" <<EOF
+global(inputStartupPolicy="require-all")
+module(load="imtcp")
+input(type="imtcp" address="127.0.0.1" port="0")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+run_bounded 10 "$config" "$log"
+status=$?
+if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+	cat "$log"
+	error_exit 1 "port zero without port file did not fail strict startup (status $status)"
+fi
+grep -Fq 'port 0 needs listenPortFileName' "$log" || error_exit 1 "missing port fallback diagnostic"
+
+# A missing ruleset would route messages elsewhere in best-effort mode.
+for policy in best-effort require-all; do
+	config="$testdir/$RSYSLOG_DYNNAME.ruleset-$policy.conf"
+	log="$testdir/$RSYSLOG_DYNNAME.ruleset-$policy.log"
+	portfile="$testdir/$RSYSLOG_DYNNAME.ruleset-$policy.port"
+	cat > "$config" <<EOF
+global(inputStartupPolicy="$policy")
+module(load="imtcp")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="$portfile" ruleset="missing")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+	if [ "$policy" = require-all ]; then
+		run_bounded 10 "$config" "$log"
+		status=$?
+		if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+			cat "$log"
+			error_exit 1 "missing ruleset did not fail strict startup (status $status)"
+		fi
+		grep -Fq "input-bound ruleset 'missing' not found" "$log" || error_exit 1 "missing strict ruleset diagnostic"
+	else
+		run_bounded 3 "$config" "$log" "$portfile"
+		status=$?
+		if [ "$status" -ne 124 ] || [ ! -s "$portfile" ]; then
+			cat "$log"
+			error_exit 1 "missing ruleset stopped best-effort startup (status $status)"
+		fi
+		grep -Fq 'using default ruleset instead' "$log" || error_exit 1 "missing fallback diagnostic"
+	fi
+done
+
+# An out-of-range or malformed port must not silently create a required
+# listener on a different port. Each case must exit and name the bad value.
+for case_name in out-of-range malformed; do
+	case "$case_name" in
+		out-of-range) invalid_port=65536 ;;
+		malformed) invalid_port='12/abc' ;;
+	esac
+	config="$testdir/$RSYSLOG_DYNNAME.invalid-$case_name.conf"
+	log="$testdir/$RSYSLOG_DYNNAME.invalid-$case_name.log"
+	cat > "$config" <<EOF
+global(inputStartupPolicy="require-all")
+module(load="imtcp")
+input(type="imtcp" address="127.0.0.1" port="$invalid_port")
+action(type="omfile" file="$testdir/$RSYSLOG_DYNNAME.out")
+EOF
+	run_bounded 10 "$config" "$log"
+	status=$?
+	if [ "$status" -eq 0 ] || [ "$status" -ge 124 ]; then
+		cat "$log"
+		error_exit 1 "invalid TCP port $invalid_port did not fail strict startup (status $status)"
+	fi
+	if [ "$invalid_port" = 65536 ]; then
+		grep -Fq "Invalid TCP listen port $invalid_port" "$log" || error_exit 1 "missing invalid port diagnostic"
+	else
+		grep -Fq "Could not create tcp listener for port $invalid_port" "$log" ||
+			error_exit 1 "missing malformed port diagnostic"
+	fi
 done
 
 exit_test

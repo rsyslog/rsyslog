@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate that mmsnareparse regex trailing extra-data detection does not let
 # the search-window boundary act as the end of the trailing token. The oracle is
 # that an end-anchored pattern must not match only the bounded prefix of a longer

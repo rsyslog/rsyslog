@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file net_ossl_store.h
  * @brief Helper interfaces for loading TLS objects into the OpenSSL

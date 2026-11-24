@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests YAML subtree template: a template of type=subtree produces a JSON
 # rendering of the specified message-variable subtree.
 #

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test named rate limits for imhttp (config-validation)
 # Verifies that imhttp accepts ratelimit.name without error.
 . ${srcdir:=.}/diag.sh init

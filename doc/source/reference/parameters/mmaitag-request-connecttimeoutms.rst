@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmaitag-request-connecttimeoutms:
 .. _mmaitag.parameter.action.request-connecttimeoutms:
 

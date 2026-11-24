@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-08-07 by Julien Thomas, released under ASL 2.0
 # Same null-value regression as mmexternal-set-msg-null-crash.sh, but on
 # "syslogtag" ({"syslogtag": null}) -- shows the crash was not specific to

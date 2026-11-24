@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Validate that backticks with `echo` expand environment variables even
 ## when punctuation is directly attached to the name.
 . ${srcdir:=.}/diag.sh init

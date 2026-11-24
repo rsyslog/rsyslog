@@ -16,5 +16,40 @@ AI agents working in `contrib/` MUST follow the standardized skills in `.agent/s
 - Changes SHOULD preserve backward compatibility.
 - Use `MODULE_METADATA.yaml` to document third-party dependencies and manual setup.
 
+## imhiredis regression coverage
+
+- `tests/imhiredis-queue-lpop.sh` and
+  `tests/yaml-imhiredis-default-server-port-yamlonly.sh` verify that omitting
+  `server` preserves an explicit Redis port, using exactly three ordered
+  queue records. The YAML test uses the pure-YAML configuration frontend.
+- `tests/imhiredis-queue.sh` covers an explicit host and port as a
+  connection/control path. These tests use the standard isolated Redis helper.
+## Regression coverage
+
+- `imbatchreport`: `tests/imbatchreport-multiple-inputs.sh` and its native
+  YAML wrapper configure three distinct report globs with three files each.
+  Exact output and consumed-file checks cover retention of every input
+  instance; the existing single-input tests remain controls.
+
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](../CONTRIBUTING.md).*
+
+## Batch-report whitespace regression
+
+`tests/imbatchreport-newline-state.sh` and its pure-YAML companion
+`tests/yaml-imbatchreport-newline-state-yamlonly.sh` verify that trailing-space
+deduplication preserves every encoded newline, including consecutive blank
+lines. Each dedup mode runs in a separate single-input daemon and compares
+exact message bytes against ordinary-space and dedup-off controls.
+
+## Focused coverage
+
+- `tests/imkubernetes-defaultfacility-unknown.sh` and
+  `tests/imkubernetes-defaultfacility-range.sh` verify invalid symbolic or
+  numeric facilities retain the default ordinal for queued messages.
+- `tests/mmcount-distinct-values.sh` verifies independent counters for distinct
+  property values with colliding hashes. Its YAML companion checks action
+  parameter parity.
+- `tests/mmcount-maxcardinality.sh` verifies that `maxCardinality` bounds the
+  number of tracked values, keeps counting already tracked values, and warns
+  once. Its YAML companion checks action parameter parity.

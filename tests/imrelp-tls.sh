@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # addd 2019-01-31 by PascalWithopf, released under ASL 2.0
 # Validate RELP/TLS certvalid input with a direct tcpflood call because this
 # test intentionally accepts rc=1 for older RELP/TLS stacks. The direct call

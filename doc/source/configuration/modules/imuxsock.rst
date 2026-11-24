@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 **********************************
 imuxsock: Unix Socket Input Module
 **********************************
@@ -473,7 +475,11 @@ Append to end of message
 
 The following sample is used to activate message annotation and thus
 trusted properties on the system log socket. These trusted properties
-are appended to the end of each message.
+are appended to the end of each message. String values in this plain format
+are enclosed in double quotes. Embedded quotes and backslashes use a preceding
+backslash, and control bytes use ``\xNN`` hexadecimal escapes. Consumers of
+the annotation must honor this quoting instead of splitting fields at every
+space or closing bracket.
 
 .. code-block:: none
    :emphasize-lines: 2

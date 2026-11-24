@@ -16,11 +16,13 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 |-------|---------|
 | [`rsyslog_build`](.agent/skills/rsyslog_build/SKILL.md) | Environment setup and incremental parallel builds. |
 | [`rsyslog_test`](.agent/skills/rsyslog_test/SKILL.md) | Standardized validation and debugging via `diag.sh`. |
-| [`rsyslog-security-pr-review`](.agent/skills/rsyslog-security-pr-review/SKILL.md) | Local, digest-bound threat-model delta review and explicitly authorized confirmed-finding fix workflow. |
+| [`rsyslog-security-pr-review`](.agent/skills/rsyslog-security-pr-review/SKILL.md) | Security review in the PR, optional local delta review, and authorized finding fixes. |
+| [`rsyslog-security-audit`](.agent/skills/rsyslog-security-audit/SKILL.md) | Deep vulnerability audit of a component: per-surface threat model, worst-case write tracing, ASan/UBSan reproduction, chain analysis, private reporting. |
 | [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md) | CI-style local dev-container validation, change-gated Ubuntu 26.04 first, late prompt audits, service-skip checks, and clean-tree rules. |
 | [`rsyslog_pr_babysitting`](.agent/skills/rsyslog_pr_babysitting/SKILL.md) | Post-push PR monitoring, including CI failures, reruns, and unresolved review-thread checks. |
 | [`rsyslog_changelog`](.agent/skills/rsyslog_changelog/SKILL.md) | Selective ChangeLog maintenance that follows release-note style and avoids low-signal churn. |
 | [`rsyslog_v8stable_patch_flow`](.agent/skills/rsyslog_v8stable_patch_flow/SKILL.md) | Post-.0 v8-stable patch updates, patch-release ChangeLog sections, and clean stable-to-main merges. |
+| [`rsyslog-release`](.agent/skills/rsyslog-release/SKILL.md) | Scheduled-stable release preparation, publication, stable-to-main handoff, and next-cycle milestone rotation. |
 | [`rsyslog_doc`](.agent/skills/rsyslog_doc/SKILL.md) | Structured, RAG-optimized documentation and metadata. |
 | [`rsyslog_doc_dist`](.agent/skills/rsyslog_doc_dist/SKILL.md) | Syncing documentation files in `doc/Makefile.am`. |
 | [`rsyslog_module`](.agent/skills/rsyslog_module/SKILL.md) | Technical patterns for concurrency and module authoring. |
@@ -37,15 +39,32 @@ Follow these steps for a typical development task:
 
 1.  **Build**: Use the `rsyslog_build` skill to set up and compile.
 2.  **Validate**: Use the `rsyslog_test` skill to run relevant shell tests.
-3.  **Security Review**: Use `rsyslog-security-pr-review` on the stabilized
-    local PR candidate. It is a compact, local delta review and writes an
-    ignored digest-bound receipt; it is not a shell or CI gate.
-4.  **Container Validation**: Use the `rsyslog_local_container_testing` skill
+3.  **Container Validation**: Use the `rsyslog_local_container_testing` skill
     when Docker or Podman container tooling is available.
-5.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
+4.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
+5.  **PR Review**: Follow `rsyslog-security-pr-review` for security review in
+    the PR and address actionable findings alongside the normal PR review.
 
 Tip: You do NOT need to re-run your build, test, or container validation cycle
 after formatting if you already validated the code immediately before.
+
+## Security Review Policy
+
+Security review belongs in the PR, using the available hosted review and
+maintainer review process. Local AI security review is optional. Do not require
+a local reviewer model, input package, receipt, or pass status before pushing,
+opening a PR, running validation, or finishing local work.
+
+Codex execution and approval restrictions can block local security-review
+completion and leave sessions stuck, including when using Daybreak Blue.
+Choosing a security-focused model does not guarantee execution permission.
+Report an unavailable optional review plainly and continue to PR review; do not
+repeatedly retry it or treat its absence as a local completion blocker.
+
+This policy does not waive deterministic checks, tests, container validation,
+CI, or actionable security findings. Report the actual PR review status; an
+opened PR or unavailable reviewer is not evidence of a security-review pass.
+Follow `SECURITY.md` for confidential vulnerability handling.
 
 ## Repository Overview
 
@@ -63,13 +82,23 @@ after formatting if you already validated the code immediately before.
   issues, hardening, and invalid findings before using security severity or CWE
   language.
 
+Maintainer background tasks can run on the separate `rsyslog-background-tasks`
+VM. Its first use is the time-gated public PR handoff for coordinated security
+disclosures. The private GHSA Desk and Adiscon infrastructure repositories own
+the case workflow, scheduling, and host details; keep case data and credentials
+out of this public repository. The VM is not a CI runner. Authorized agents
+should start in the private
+[`rgerhards/rsyslog-security-ops`](https://github.com/rgerhards/rsyslog-security-ops)
+repository at `AGENTS.md` and `DISCLOSURE_RUNBOOK.md`; its exact-SHA PR handoff
+procedure is in `SCHEDULED_PUBLIC_PR.md`. Verify access before handling a case.
+
 ## Package Archive Automation
 
 For any daily-stable, scheduled-release packaging, package archive, or
 distribution-extension work, first read the
 [`Daily Stable Package Archive Program`](.github/DAILY_STABLE_PACKAGE_ARCHIVE.md).
 It defines the current-main/native-baseline model, DigitalOcean Spaces archive,
-five-year retention, publication verification, and common feature-contract
+retention (dailies 7 days during the PoC, 90 days in production; releases indefinitely), publication verification, and common feature-contract
 rules.  Treat a package build as incomplete until the public archive has been
 signature-verified and the exact published package has been installed and
 smoke-tested on the matching target.
@@ -397,13 +426,12 @@ than duplicating them.
 - `TEST`: Triggers the `rsyslog_test` validation workflow.
 - `CHANGELOG`: Triggers the `rsyslog_changelog` release-note maintenance workflow.
 - `SUMMARIZE`: Generates PR and commit summaries using `rsyslog_commit` templates.
-- `SECURITY REVIEW`: Runs the local threat-model delta review for the current PR candidate.
+- `SECURITY REVIEW`: Reviews the current PR delta for security findings; a
+  local pass is optional and does not replace review in the PR.
 - `SECURITY RESOLVE <candidate-id>`: Starts the separately authorized fix loop for one independently confirmed candidate.
-- `FINISH`: Final review of code and style before conclusion. For agent-led code
-  PR work, this includes a current `.codex/security-review/receipt.json` whose
-  digest and model revision match a freshly built input package. A stale,
-  blocking, or `needs_human` receipt prevents an agent from claiming PR
-  readiness; ordinary human shell use remains unaffected.
+- `FINISH`: Final review of code, style, required validation, and actual PR
+  checks/review status before conclusion. A local AI security-review receipt
+  is not required; report pending or unavailable PR security review honestly.
 
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md) and [DEVELOPING.md](DEVELOPING.md).*

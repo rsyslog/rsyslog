@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Author: John Cantu
 # Test that "localhost" is sent as SNI by omfwd, when connecting to a hostname and no SNI is configured
 

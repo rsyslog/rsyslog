@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-dynafile-donotsuspend:
 .. _omfile.parameter.module.dynafile-donotsuspend:
 

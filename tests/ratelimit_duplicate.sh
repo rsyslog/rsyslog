@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for duplicate named rate limits.
 #
 # The oracle is config-validation failure with the duplicate-name diagnostic on

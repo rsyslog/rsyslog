@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate YAML frontend parity for omfile followSymlinks. The config uses
 # backward-compatible global defaults but sets followSymlinks false on the
 # action, so the symlink target must remain empty after synchronized shutdown.

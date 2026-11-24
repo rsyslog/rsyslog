@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-compression-mode:
 .. _imptcp.parameter.input.compression-mode:
 
@@ -48,6 +50,12 @@ This receive path is a fixed-policy implementation:
 - it logs malformed or truncated compressed streams and closes the session.
 
 ``imptcp`` does not support the sender-side ``single`` compression mode here.
+
+Decompression is bounded by :ref:`param-imptcp-compression-maxexpansionratio`
+(default 1024:1 per session) and
+:ref:`param-imptcp-compression-maxdecompressedbytesperreceive` (default 64 MiB).
+A stream that exceeds either limit is logged as invalid and the session is
+closed.
 
 Accepted values
 ---------------
@@ -103,4 +111,6 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/imptcp`.
+See also :ref:`param-imptcp-compression-maxexpansionratio`,
+:ref:`param-imptcp-compression-maxdecompressedbytesperreceive`, and
+:doc:`../../configuration/modules/imptcp`.

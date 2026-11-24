@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This wrapper retries the shared skeleton once more when TCP timing
 # races trigger the known flake. Keeping the configuration identical
 # between attempts mirrors the original scenario while providing extra

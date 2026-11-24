@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## @file tests/mmsnareparse-enhanced-validation.sh
 ## @brief Validate enhanced parsing, validation, and stats for mmsnareparse.
 

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Definition of serial stream class (strm).
  *
  * A serial stream provides serial data access. In theory, serial streams
@@ -139,6 +140,7 @@ struct strm_s {
         /* support for async flush procesing */
         sbool bAsyncWrite; /* do asynchronous writes (always if a flush interval is given) */
         sbool bStopWriter; /* shall writer thread terminate? */
+        sbool bSizeLimitReached; /* writer saw iCurrOffs >= iSizeLimit (async only, guarded by mut) */
         sbool bDoTimedWait; /* instruct writer thread to do a times wait to support flush timeouts */
         sbool bzInitDone; /* did we do an init of zstrm already? */
         sbool bFlushNow; /* shall we flush with the next async write? */
@@ -177,6 +179,7 @@ struct strm_s {
         sbool bNoFollowFinal; /* if set, do not follow final path component on open */
         int ignoringMsg;
         strm_compressionDriver_t compressionDriver;
+        sbool localOutput; /* preopened local-queue output: workers never reopen/close */
 };
 
 
@@ -243,6 +246,10 @@ ENDinterface(strm)
     /* V17, 2026-06-23: added bNoFollowFinal stream property setter */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
+
+/* Private built-in omfile support; callers serialize all access. */
+rsRetVal strmPrepareLocalOutput(strm_t *pThis);
+void strmDiscardLocalOutput(strm_t *pThis);
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);

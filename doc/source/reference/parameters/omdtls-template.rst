@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omdtls-template:
 .. _omdtls.parameter.module.template:
 .. _omdtls.parameter.input.template:

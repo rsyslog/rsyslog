@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Generic design of a syslogd
 ---------------------------
 

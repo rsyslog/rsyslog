@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test hardens mmanon against truncated dotted IPv4-looking suffixes.
 # The oracle is normal shutdown plus exact output: malformed suffixes at the
 # end of a rewritten message must be preserved and must not read past the

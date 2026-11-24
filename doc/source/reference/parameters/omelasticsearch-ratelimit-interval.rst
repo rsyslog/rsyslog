@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-ratelimit-interval:
 .. _omelasticsearch.parameter.module.ratelimit-interval:
 .. _omelasticsearch.parameter.module.ratelimit.interval:

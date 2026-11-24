@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # we only test if the parameter is accepted - we cannot
 # reliably deduce from the outside if it really worked.
 # addd 2016-03-03 by RGerhards, released under ASL 2.0

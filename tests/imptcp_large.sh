@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test imptcp with large messages
 # added 2010-08-10 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0

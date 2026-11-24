@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* An implementation of the nsd interface for Mbed TLS.
  *
  * Copyright 2008-2021 Adiscon GmbH.
@@ -24,8 +26,11 @@
 #define INCLUDED_NSD_MBEDTLS_H
 
 #include <mbedtls/net_sockets.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/version.h>
+#if MBEDTLS_VERSION_MAJOR < 4
+    #include <mbedtls/entropy.h>
+    #include <mbedtls/ctr_drbg.h>
+#endif
 #include <mbedtls/ssl.h>
 #include <mbedtls/x509_crt.h>
 
@@ -69,8 +74,10 @@ struct nsd_mbedtls_s {
                              * one successful authentication. */
         int sock;
 
+#if MBEDTLS_VERSION_MAJOR < 4
         mbedtls_entropy_context entropy;
         mbedtls_ctr_drbg_context ctr_drbg;
+#endif
         mbedtls_ssl_context ssl;
         mbedtls_ssl_config conf;
         int bHaveCaCert;

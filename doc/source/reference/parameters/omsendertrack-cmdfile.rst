@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omsendertrack-cmdfile:
 .. _omsendertrack.parameter.action.cmdfile:
 
@@ -41,8 +43,9 @@ Action usage
 .. code-block:: rsyslog
 
    module(load="omsendertrack")
+   template(name="sender-hostname" type="string" string="%hostname%")
    action(type="omsendertrack"
-          senderId="%hostname%"
+          senderId="sender-hostname"
           stateFile="/var/lib/rsyslog/senderstats.json"
           cmdFile="/var/lib/rsyslog/sendercommands.txt")
 

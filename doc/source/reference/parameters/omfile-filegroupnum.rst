@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-filegroupnum:
 .. _omfile.parameter.module.filegroupnum:
 

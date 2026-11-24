@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests imfifo input parameters configured via YAML.
 #
 # The Setup:

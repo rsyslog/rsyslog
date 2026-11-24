@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This script "validates" a PR from a git PoV. We check that best
 # practices are kept which most importantly means we try to detect
 # fixup commits. These should not be part of a PR and squashed into

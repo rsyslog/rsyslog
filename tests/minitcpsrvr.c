@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* a very simplistic tcp receiver for the rsyslog testbench.
  *
  * Copyright 2016,2024 Rainer Gerhards and Adiscon GmbH.
@@ -36,7 +38,7 @@
     #include <netinet/in.h>
 #endif
 
-#define MAX_CONNECTIONS 10
+#define MAX_CONNECTIONS 32
 /* Keep complete testbench records buffered per connection. The segmented DA
  * TCP spill regression deliberately uses multi-kilobyte messages so TCP
  * backpressure cannot be hidden by buffers. The historic 1 KiB buffer treated
@@ -57,6 +59,7 @@ int dropConnection_MaxTimes = 0;
 int opt;
 int sleepStartup = 0;
 int useReusePort = 0;
+int exclusiveOffline = 0;
 int receiveBufferSize = 0;
 char *targetIP = NULL;
 int targetPort = -1;
@@ -82,9 +85,10 @@ static void errout(char *reason) {
 
 static void usage(void) {
     fprintf(stderr,
-            "usage: minitcpsrv [-R] [-b receiveBufferBytes] [-r response] [-w listenFile] [-L listenReadyFile] "
+            "usage: minitcpsrv [-E] [-R] [-b receiveBufferBytes] [-r response] [-w listenFile] [-L listenReadyFile] "
             "[-A acceptReadyFile] "
-            "[-Q readReleaseFile] [-K keepRunningFile] -t ip-addr -p port -P portFile -f outfile\n");
+            "[-Q readReleaseFile] [-K keepRunningFile] -t ip-addr -p port -P portFile -f outfile\n"
+            "-E reserves an exclusive offline port; requires -w and cannot be combined with -R\n");
     exit(1);
 }
 
@@ -192,9 +196,10 @@ static void createListenSocket(void) {
     /* Set before listen() for TCP window negotiation, then repeat on accepted
      * sockets so the helper does not rely on platform-specific inheritance. */
     setReceiveBuffer(listen_fd);
-    /* SO_REUSEADDR is enough for the test helper's restart use cases. */
+    /* Keep restart behavior by default. Offline reservations opt out so another
+     * SO_REUSEADDR listener cannot claim their bound-but-not-listening port. */
     int opt = 1;
-    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    if (!exclusiveOffline && setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         errout("setsockopt failed for SO_REUSEADDR");
     }
     if (useReusePort) {
@@ -272,7 +277,7 @@ int main(int argc, char *argv[]) {
     memset(fds, 0, sizeof(fds));
     memset(buffer_offs, 0, sizeof(buffer_offs));
 
-    while ((opt = getopt(argc, argv, "aA:b:B:D:K:L:Q:Rr:t:p:P:f:s:S:w:")) != -1) {
+    while ((opt = getopt(argc, argv, "aA:b:B:D:EK:L:Q:Rr:t:p:P:f:s:S:w:")) != -1) {
         switch (opt) {
             case 'a':  // abort listener: act like the server has died (shutdown and re-open listen socket)
                 abortListener = 1;
@@ -288,6 +293,9 @@ int main(int argc, char *argv[]) {
                 receiveBufferSize = (int)value;
                 break;
             }
+            case 'E':
+                exclusiveOffline = 1;
+                break;
             case 'R':
                 useReusePort = 1;
                 break;
@@ -343,6 +351,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    if (exclusiveOffline && (waitListenFileName == NULL || useReusePort)) {
+        fprintf(stderr, "-E requires -w and cannot be combined with -R\n");
+        usage();
+    }
     if (targetIP == NULL) {
         fprintf(stderr, "-t parameter missing -- terminating\n");
         usage();
@@ -418,6 +430,9 @@ int main(int argc, char *argv[]) {
 
                 fds[nfds].fd = conn_fd;
                 fds[nfds].events = POLLIN;
+                /* A compacted slot can retain readiness from its old socket.
+                 * The new connection has not participated in poll() yet. */
+                fds[nfds].revents = 0;
                 buffer_offs[nfds] = 0;
                 nfds++;
             } else {

@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.2610.0.daily],[rsyslog@lists.adiscon.com])     # UPDATE on release
+AC_INIT([rsyslog],[8.2612.0.daily],[rsyslog@lists.adiscon.com])     # UPDATE on release
 AC_DEFINE(VERSION_YEAR,  26, [year part of real rsyslog version])   # UPDATE on release
-AC_DEFINE(VERSION_MONTH, 10, [month part of real rsyslog version])  # UPDATE on release
+AC_DEFINE(VERSION_MONTH, 12, [month part of real rsyslog version])  # UPDATE on release
 
 AM_INIT_AUTOMAKE([tar-pax subdir-objects])
 
@@ -64,9 +64,14 @@ then
 	# Note: we *really* want to have this error out during CI testing!
 	# rgerhards, 2018-05-09
 	WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
+	# GCC-style flag that lets a single target opt out of -Winline;
+	# non-GCC compilers (e.g. Solaris Studio cc) reject it, so keep it empty there.
+	WNO_INLINE_CFLAGS="-Wno-inline"
 else
 	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
+	WNO_INLINE_CFLAGS=""
 fi
+AC_SUBST(WNO_INLINE_CFLAGS)
 
 PKG_PROG_PKG_CONFIG
 
@@ -1832,6 +1837,23 @@ fi
 AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
 AM_CONDITIONAL(LOGNORM_TURBO_SUPPORTED, test x$lognorm_turbo_supported = xyes)
 AM_CONDITIONAL(LOGNORM_TURBO_TRUNCATION_SUPPORTED, test x$lognorm_turbo_truncation_supported = xyes)
+# The turbo unit test links the whole runtime archive. GNU ld and lld spell
+# that --whole-archive (probed: darwin is classified as "bsd" above), Apple
+# ld64 spells it -force_load. Other linkers do not build the test.
+AC_CACHE_CHECK([whether the linker accepts --whole-archive], [rsyslog_cv_ld_whole_archive], [
+	save_LDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS -Wl,--whole-archive -Wl,--no-whole-archive"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+		[rsyslog_cv_ld_whole_archive=yes], [rsyslog_cv_ld_whole_archive=no])
+	LDFLAGS="$save_LDFLAGS"
+])
+case "$rsyslog_cv_ld_whole_archive:$host_os" in
+	yes:*) ld_whole_archive_mode=gnu ;;
+	no:darwin*) ld_whole_archive_mode=ld64 ;;
+	*) ld_whole_archive_mode=none ;;
+esac
+AM_CONDITIONAL(LD_WHOLE_ARCHIVE, test x$ld_whole_archive_mode = xgnu)
+AM_CONDITIONAL(LD_LINK_WHOLE_RUNTIME, test x$ld_whole_archive_mode != xnone)
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 if test "x$lognorm_turbo_supported" = "xyes"; then
 	AC_DEFINE(HAVE_LOGNORM_TURBO, 1, [liblognorm has turbo VM support])
@@ -2756,6 +2778,8 @@ if test "x$enable_omjournal" = "xyes"; then
 	AC_CHECK_FUNCS(sd_journal_stream_fd_with_namespace,,)
 	LIBS=$save_libs
 fi
+AM_CONDITIONAL(HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE,
+	test "x$enable_omjournal" = xyes -a "x$ac_cv_func_sd_journal_stream_fd_with_namespace" = xyes)
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
 # capability to enable journal testbench tests. They have very special requirements,

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * The dtls input module, uses OpenSSL as library to implement DTLS.
  *
@@ -33,6 +35,7 @@
 #include <poll.h>
 #include <assert.h>
 #include <time.h>
+#include <limits.h>
 
 // --- Include openssl headers as well
 #include <openssl/ssl.h>
@@ -96,6 +99,10 @@ struct dtlsClient_s {
     SSL *sslClient; /* DTSL (SSL) Client */
     time_t lastActivityTime; /* Last Activity Time */
     int clientfd; /* ClientFD */
+    int peerVerified; /* post-handshake permitted-peer check completed */
+    long verifiedRenegotiations; /* handshake generation covered by peerVerified */
+    short pollEvents; /* readiness needed by the handshake */
+    int drainPending; /* continue after the per-client read limit */
 };
 
 // Use typedef to define a type 'dtlsClient_t' based on 'struct dtlsClient_s'
@@ -106,6 +113,7 @@ struct instanceConf_s {
     uchar *pszBindAddr; /* Listening IP Address */
     uchar *pszBindPort; /* Port to bind socket to */
     uchar *pszLstnPortFileName; /* file receiving port selected by bind(0) */
+    sbool port_file_written;
     int timeout; /* Default timeout for DTLS Sessions */
     /* Common properties */
     uchar *pszBindRuleset; /* name of ruleset to bind to */
@@ -118,6 +126,7 @@ struct instanceConf_s {
     /* OpenSSL properties */
     uchar *tlscfgcmd; /* OpenSSL Config Command used to override any OpenSSL Settings */
     permittedPeers_t *pPermPeersRoot; /* permitted peers */
+    rsRetVal permitted_peers_result;
     int CertVerifyDepth; /* Verify Depth for certificate chains */
     /* Instance Variables */
     char *pszRcvBuf;
@@ -136,6 +145,7 @@ struct instanceConf_s {
     int id; /* Thread ID */
     thrdInfo_t *pThrd; /* Thread Instance Info */
     pthread_t tid; /* the instances thread ID */
+    int workerStarted;
 
     struct instanceConf_s *next;
     struct instanceConf_s *prev;
@@ -190,15 +200,18 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszBindAddr = NULL;
     inst->pszBindPort = NULL;
     inst->pszLstnPortFileName = NULL;
+    inst->port_file_written = 0;
     inst->timeout = 1800;
     inst->pszBindRuleset = loadModConf->pszBindRuleset;
     inst->pszInputName = NULL;
     inst->pInputName = NULL;
     inst->pBindRuleset = NULL;
     inst->bEnableLstn = 0;
+    inst->workerStarted = 0;
 
     inst->tlscfgcmd = NULL;
     inst->pPermPeersRoot = NULL;
+    inst->permitted_peers_result = RS_RET_OK;
     inst->CertVerifyDepth = 2;
     inst->pszRcvBuf = NULL;
     inst->lenRcvBuf = -1;
@@ -279,6 +292,7 @@ static rsRetVal writeListenPortFile(instanceConf_t *const inst) {
         LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to open file");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
+    inst->port_file_written = 1;
     for (int off = 0; off < len;) {
         wr = write(fd, portBuf + off, (size_t)(len - off));
         if (wr < 0) {
@@ -355,9 +369,9 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
     if (bind(inst->sockfd, (struct sockaddr *)&inst->server_addr, sizeof(struct sockaddr_in)) < 0) {
         LogError(0, NO_ERRCODE,
                  "imdtls: Unable to create DTLS listener,"
-                 " unable to bind, "
-                 " ignoring port %d bind-address %s.",
-                 inst->port, inst->pszBindAddr);
+                 " unable to bind, %s port %d bind-address %s.",
+                 runConf->globals.bRequireAllInputs ? "failing startup for" : "ignoring", inst->port,
+                 inst->pszBindAddr);
         ABORT_FINALIZE(RS_RET_ERR);
     }
     CHKiRet(writeListenPortFile(inst));
@@ -433,6 +447,12 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     if (!inst->bEnableLstn) {
         DBGPRINTF("imdtls: DTLS Listener not started because it is disabled by config error\n");
         FINALIZE;
+    }
+
+    if (runConf->globals.bRequireAllInputs && inst->permitted_peers_result != RS_RET_OK) {
+        LogError(0, inst->permitted_peers_result,
+                 "imdtls: tls.permittedpeer is not supported by the configured authentication mode; input rejected");
+        ABORT_FINALIZE(inst->permitted_peers_result);
     }
 
     inst->pszInputName = ustrdup((inst->pszInputName == NULL) ? UCHAR_CONSTANT("imdtls") : inst->pszInputName);
@@ -557,6 +577,32 @@ static void DTLScleanupSession(instanceConf_t *inst, int idx) {
     }
     inst->dtlsClients[idx]->sslClient = NULL;
     inst->dtlsClients[idx]->lastActivityTime = 0;
+    inst->dtlsClients[idx]->peerVerified = 0;
+    inst->dtlsClients[idx]->verifiedRenegotiations = 0;
+    inst->dtlsClients[idx]->pollEvents = POLLIN;
+    inst->dtlsClients[idx]->drainPending = 0;
+}
+
+static int DTLSVerifySession(instanceConf_t *inst, int idx) {
+    dtlsClient_t *client = inst->dtlsClients[idx];
+    if (!SSL_is_init_finished(client->sslClient)) {
+        client->peerVerified = 0;
+        return 0;
+    }
+    long renegotiations = SSL_total_renegotiations(client->sslClient);
+    if (client->peerVerified && client->verifiedRenegotiations == renegotiations) {
+        return 1;
+    }
+
+    if (imdtls_verify_callback(1, client->sslClient) == 0) {
+        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: Cert Verify FAILED for DTLS client idx (%d)", idx);
+        DTLScleanupSession(inst, idx);
+        return 0;
+    }
+    client->peerVerified = 1;
+    client->verifiedRenegotiations = renegotiations;
+    DBGPRINTF("imdtls: Cert Verify SUCCESS for DTLS client idx (%d)\n", idx);
+    return 1;
 }
 
 static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
@@ -572,7 +618,7 @@ static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
         if (ret <= 0) {
             err = SSL_get_error(ssl, ret);
             if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
-                // Non-blocking operation did not complete; retry later
+                inst->dtlsClients[idx]->pollEvents = (err == SSL_ERROR_WANT_WRITE) ? POLLIN | POLLOUT : POLLIN;
                 DBGPRINTF("imdtls: SSL_accept didn't complete (%d). Will retry.\n", err);
             } else if (err == SSL_ERROR_SYSCALL) {
                 DBGPRINTF("imdtls: SSL_accept failed SSL_ERROR_SYSCALL idx (%d), removing client.\n", idx);
@@ -587,18 +633,12 @@ static void DTLSAcceptSession(instanceConf_t *inst, int idx) {
         } else {
             DBGPRINTF("imdtls: SSL_accept success idx (%d), adding client.\n", idx);
             inst->dtlsClients[idx]->lastActivityTime = time(NULL);
-
-            int status = 1;
-            status = imdtls_verify_callback(status, ssl);
-            if (status == 0) {
-                LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: Cert Verify FAILED for DTLS client idx (%d)", idx);
-                DTLScleanupSession(inst, idx);
-            } else {
-                DBGPRINTF("imdtls: Cert Verify SUCCESS for DTLS client idx (%d)\n", idx);
-            }
+            inst->dtlsClients[idx]->pollEvents = POLLIN;
+            DTLSVerifySession(inst, idx);
         }
     } else {
         DBGPRINTF("imdtls: SSL_get_state for DTLS client idx (%d) is %d\n", idx, ret);
+        DTLSVerifySession(inst, idx);
     }
 }
 
@@ -615,26 +655,51 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
     int err;
     SSL *ssl = inst->dtlsClients[idx]->sslClient;
     DBGPRINTF("imdtls: DEBUG Check Client activity on index %d.\n", idx);
-    if (revents & POLLIN) {
+    if (revents & (POLLERR | POLLHUP | POLLNVAL)) {
+        /* A queued socket error stays pending and makes poll() return
+         * immediately again. Reap the session instead of repolling it. */
+        DBGPRINTF("imdtls: socket error events 0x%x on index %d, removing client.\n", (unsigned)revents, idx);
+        DTLScleanupSession(inst, idx);
+        return;
+    }
+    if (revents & (POLLIN | POLLOUT)) {
         if (ssl == NULL) {
             DBGPRINTF("imdtls: DTLSHandleSessions MISSING SSL OBJ for index %d.\n", idx);
+            return;
+        }
+        if (!SSL_is_init_finished(ssl)) {
+            DTLSAcceptSession(inst, idx);
+            ssl = inst->dtlsClients[idx]->sslClient;
+            if (ssl == NULL || !SSL_is_init_finished(ssl)) {
+                return;
+            }
+        }
+        if (!DTLSVerifySession(inst, idx) || !(revents & inst->dtlsClients[idx]->pollEvents)) {
             return;
         }
         DBGPRINTF("imdtls: Read Client activity on index %d.\n", idx);
         char buf[MAX_DTLS_MSGSIZE];
         int len = 0;
+        int reads = 0;
+        inst->dtlsClients[idx]->drainPending = 0;
         do {
             len = SSL_read(ssl, buf, sizeof(buf) - 1);
             if (len > 0) {
+                inst->dtlsClients[idx]->pollEvents = POLLIN;
+                if (!DTLSVerifySession(inst, idx)) {
+                    return;
+                }
                 buf[len] = '\0';
                 processMsg(inst, inst->dtlsClients[idx], buf, len);
             } else {
                 err = SSL_get_error(ssl, len);
                 if (err == SSL_ERROR_WANT_READ) {
+                    inst->dtlsClients[idx]->pollEvents = POLLIN;
                     DBGPRINTF("imdtls: SSL_ERROR_WANT_READ flush rbio on index %d.\n", idx);
                     BIO *rbio = SSL_get_rbio(ssl);
                     BIO_flush(rbio);
                 } else if (err == SSL_ERROR_WANT_WRITE) {
+                    inst->dtlsClients[idx]->pollEvents = POLLIN | POLLOUT;
                     DBGPRINTF("imdtls: SSL_ERROR_WANT_WRITE flush wbio on index %d.\n", idx);
                     BIO *wbio = SSL_get_wbio(ssl);
                     BIO_flush(wbio);
@@ -653,7 +718,15 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
                     break;
                 }
             }
-        } while (len > 0);
+            ++reads;
+        } while (len > 0 && reads < 32);
+        /* OpenSSL can retain complete DTLS records after the datagram socket
+         * has been drained. Retry once on the next loop after the limit,
+         * even if poll reports no new socket data. A WANT_READ clears this
+         * flag, so an incomplete record cannot spin the event loop. */
+        if (len > 0 && reads == 32) {
+            inst->dtlsClients[idx]->drainPending = 1;
+        }
     }
 }
 
@@ -663,6 +736,8 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     int optval = 1;
     int fdcount = 0;
     int ret, err;
+    int pollTimeout = -1;
+    time_t now = time(NULL);
     memset(clientIdxByPollSlot, -1, sizeof(clientIdxByPollSlot));
     memset(fds, 0, sizeof(fds));
     fds[0].fd = inst->sockfd;
@@ -681,13 +756,36 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
             fdcount++;
             DBGPRINTF("imdtls: DTLSHandleSessions handle client %d (%d)\n", fdcount, clientfd);
             fds[fdcount].fd = clientfd;
-            fds[fdcount].events = POLLIN;
+            fds[fdcount].events = inst->dtlsClients[i]->pollEvents;
             clientIdxByPollSlot[fdcount] = i;
+            if (inst->dtlsClients[i]->drainPending) {
+                pollTimeout = 0;
+            }
+
+            /* A nonblocking DTLS handshake needs its retransmission timer
+             * serviced even if no socket becomes ready. */
+            if (!SSL_is_init_finished(inst->dtlsClients[i]->sslClient)) {
+                struct timeval tv;
+                if (DTLSv1_get_timeout(inst->dtlsClients[i]->sslClient, &tv)) {
+                    long long ms = (long long)tv.tv_sec * 1000 + (tv.tv_usec + 999) / 1000;
+                    int delay = ms > INT_MAX ? INT_MAX : (int)ms;
+                    if (pollTimeout < 0 || delay < pollTimeout) {
+                        pollTimeout = delay;
+                    }
+                }
+            }
+            long long idleSeconds =
+                (long long)inst->timeout - (long long)difftime(now, inst->dtlsClients[i]->lastActivityTime);
+            long long idleMs = idleSeconds <= 0 ? 0 : idleSeconds * 1000;
+            int idleDelay = idleMs > INT_MAX ? INT_MAX : (int)idleMs;
+            if (pollTimeout < 0 || idleDelay < pollTimeout) {
+                pollTimeout = idleDelay;
+            }
         }
     }
 
     DBGPRINTF("imdtls: Waiting for poll (clients %d) ...\n", fdcount);
-    ret = poll(fds, fdcount + 1, -1);
+    ret = poll(fds, fdcount + 1, pollTimeout);
     if (glbl.GetGlobalInputTermState() == 1) {
         DBGPRINTF("imdtls: DTLSHandleSessions Terminate State\n");
         return; /* terminate input! */
@@ -701,14 +799,25 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     DBGPRINTF("imdtls: DTLSHandleSessions handle client sockets (%d) \n", fdcount);
     for (int i = 1; i <= fdcount; ++i) {
         if (clientIdxByPollSlot[i] >= 0) {
-            DTLSReadClient(inst, clientIdxByPollSlot[i], fds[i].revents);
+            int idx = clientIdxByPollSlot[i];
+            short revents = fds[i].revents | (inst->dtlsClients[idx]->drainPending ? POLLIN : 0);
+            DTLSReadClient(inst, idx, revents);
         }
     }
 
     // Check session timeouts
     for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
         if (inst->dtlsClients[i]->sslClient != NULL) {
-            if (difftime(time(NULL), inst->dtlsClients[i]->lastActivityTime) > inst->timeout) {
+            if (!SSL_is_init_finished(inst->dtlsClients[i]->sslClient)) {
+                struct timeval tv;
+                if (DTLSv1_get_timeout(inst->dtlsClients[i]->sslClient, &tv) && tv.tv_sec == 0 && tv.tv_usec == 0 &&
+                    DTLSv1_handle_timeout(inst->dtlsClients[i]->sslClient) < 0) {
+                    DBGPRINTF("imdtls: DTLS retransmission failed for client index %d.\n", i);
+                    DTLScleanupSession(inst, i);
+                    continue;
+                }
+            }
+            if (difftime(time(NULL), inst->dtlsClients[i]->lastActivityTime) >= inst->timeout) {
                 DBGPRINTF("imdtls: Session timeout (%d) for client index %d.\n", i, inst->timeout);
                 DTLScleanupSession(inst, i);
                 continue;
@@ -817,12 +926,25 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     int addedClient = 0;
                     BIO_ctrl_set_connected(rbio, client_addr);
                     DBGPRINTF("imdtls: BIO_connect succeeded.\n");
+                    /* BIO_connect can reset the socket's blocking mode. Set
+                     * O_NONBLOCK only after the BIO has been connected. */
+                    int flags = fcntl(clientfd, F_GETFL, 0);
+                    if (flags < 0 || fcntl(clientfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+                        LogError(0, NO_ERRCODE, "imdtls: unable to make client socket non-blocking");
+                        close(clientfd);
+                        SSL_free(ssl);
+                        break;
+                    }
 
                     // Add to DTLS Clients
                     for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
                         if (inst->dtlsClients[i]->sslClient == NULL) {
                             inst->dtlsClients[i]->sslClient = ssl;
                             inst->dtlsClients[i]->lastActivityTime = time(NULL);
+                            inst->dtlsClients[i]->peerVerified = 0;
+                            inst->dtlsClients[i]->verifiedRenegotiations = 0;
+                            inst->dtlsClients[i]->pollEvents = POLLIN;
+                            inst->dtlsClients[i]->drainPending = 0;
                             DBGPRINTF("imdtls: New Client added at idx %d.\n", i);
                             DTLSAcceptSession(inst, i);
                             addedClient = 1;
@@ -842,10 +964,11 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                 /* Retry on EAGAIN (recv timeout, no datagram) and on ret == 0
                  * with an empty error queue (no usable handshake data yet). */
                 if (err == SSL_ERROR_SYSCALL && (errno == EAGAIN || (ret == 0 && ERR_peek_error() == 0))) {
-                    DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), retry\n", ret, err, errno);
-                    // Wait little and retry DTLSv1_listen
-                    srSleep(0, 100000);
-                    continue;
+                    DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), defer\n", ret, err, errno);
+                    /* DTLSv1_listen is stateless across the cookie exchange.
+                     * Return to poll instead of waiting here for a second flight. */
+                    SSL_free(ssl);
+                    break;
                 } else {
                     DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), abort\n", ret, err, errno);
                     net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING, "DTLSHandleSessions",
@@ -887,8 +1010,7 @@ static rsRetVal SetPermPeers(instanceConf_t *inst, permittedPeers_t *pPermPeers)
 
     if (inst->pNetOssl->authMode != OSSL_AUTH_CERTFINGERPRINT && inst->pNetOssl->authMode != OSSL_AUTH_CERTNAME) {
         LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE,
-                 "authentication not supported by "
-                 "imdtls in the configured authentication mode - ignored");
+                 "authentication not supported by imdtls in the configured authentication mode");
         ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
     }
     inst->pNetOssl->pPermPeers = pPermPeers;
@@ -971,8 +1093,10 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
             for (j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                CHKiRet(iRet);
             }
         } else {
             dbgprintf(
@@ -993,7 +1117,7 @@ BEGINnewInpInst
     }
 
     // Assign Loaded Peers to Netossl
-    SetPermPeers(inst, inst->pPermPeersRoot);
+    inst->permitted_peers_result = SetPermPeers(inst, inst->pPermPeersRoot);
 
     /* all ok, ready to start up */
     inst->bEnableLstn = -1;
@@ -1084,6 +1208,12 @@ BEGINcheckCnf
     instanceConf_t *inst;
     CODESTARTcheckCnf;
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
+        if (pModConf->pConf->globals.bRequireAllInputs && inst->permitted_peers_result != RS_RET_OK) {
+            LogError(
+                0, inst->permitted_peers_result,
+                "imdtls: tls.permittedpeer is not supported by the configured authentication mode; input rejected");
+            ABORT_FINALIZE(inst->permitted_peers_result);
+        }
         if (inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
             CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
         }
@@ -1099,7 +1229,18 @@ BEGINactivateCnfPrePrivDrop
     runModConf = pModConf;
     DBGPRINTF("imdtls: activate addListners for dtls\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(pModConf, inst);
+        const rsRetVal local_ret = addListner(pModConf, inst);
+        if (runConf->globals.bRequireAllInputs && local_ret != RS_RET_OK) ABORT_FINALIZE(local_ret);
+    }
+finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) {
+        for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+            if (inst->port_file_written) {
+                unlink((const char *)inst->pszLstnPortFileName);
+                inst->port_file_written = 0;
+            }
+            DTLSCloseSocket(inst);
+        }
     }
 ENDactivateCnfPrePrivDrop
 
@@ -1167,7 +1308,13 @@ BEGINrunInput
     DBGPRINTF("imdtls: create dtls handling threads\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->bEnableLstn) {
-            pthread_create(&inst->tid, &wrkrThrdAttr, startDtlsHandler, inst);
+            const int err = pthread_create(&inst->tid, &wrkrThrdAttr, startDtlsHandler, inst);
+            if (err == 0) {
+                inst->workerStarted = 1;
+            } else {
+                LogError(err, RS_RET_SYS_ERR, "imdtls: failed to start listener thread on port %d", inst->port);
+                thrd_report_fatal_input_failure();
+            }
         }
     }
     pthread_attr_destroy(&wrkrThrdAttr);
@@ -1179,7 +1326,7 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: received close signal, signaling instance threads...\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bEnableLstn) {
+        if (inst->workerStarted) {
             pthread_kill(inst->tid, SIGTTIN);
             if (inst->sockfd >= 0) {
                 shutdown(inst->sockfd, SHUT_RDWR);
@@ -1189,10 +1336,11 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: threads signaled, waiting for join...");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        if (inst->bEnableLstn) {
+        if (inst->workerStarted) {
             pthread_join(inst->tid, NULL);
-            DTLSCloseSocket(inst);
+            inst->workerStarted = 0;
         }
+        DTLSCloseSocket(inst);
     }
 
     DBGPRINTF("imdtls: finished threads, stopping\n");

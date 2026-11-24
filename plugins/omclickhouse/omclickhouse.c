@@ -1,5 +1,17 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omclickhouse.c
  * This is the https://clickhouse.yandex/ output module.
+ *
+ * Concurrency & Locking:
+ * - Action configuration in instanceData, including the request query built
+ *   for format=jsoneachrow, is not changed after newActInst(). The one
+ *   exception is older: a worker that cannot allocate its batch buffer turns
+ *   bulk mode off for the action.
+ * - Each worker owns its CURL handles, header lists, reply buffer, batch
+ *   buffer, and maxConsecutiveRejects count in wrkrInstanceData_t.
+ * - The error file descriptor is shared by the workers of an action. It is
+ *   opened, written, and closed (on HUP) under mutErrFile.
  *
  * Copyright 2018 Pascal Withopf and Adiscon GmbH.
  *
@@ -26,6 +38,8 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
+#include <strings.h>
+#include <limits.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <assert.h>
@@ -39,6 +53,7 @@
     #include <unistd.h>
 #endif
 #include <json.h>
+#include <zlib.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -72,6 +87,15 @@ STATSCOUNTER_DEF(indexFail, mutIndexFail)
 STATSCOUNTER_DEF(indexSuccess, mutIndexSuccess)
 
 
+/* format=values keeps the historical INSERT ... VALUES body. format=jsoneachrow
+ * puts the INSERT in the URL and posts one JSON object per line.
+ */
+#define CH_FMT_VALUES 0
+#define CH_FMT_JSONEACHROW 1
+#define CH_COMP_OFF 0
+#define CH_COMP_GZIP 1
+#define CH_TABLE_MAX 128
+
 typedef struct curl_slist HEADER;
 typedef struct instanceConf_s {
     uchar *serverBaseUrl;
@@ -86,12 +110,20 @@ typedef struct instanceConf_s {
     sbool allowUnsignedCerts;
     sbool skipVerifyHost;
     int fdErrFile;
+    pthread_mutex_t mutErrFile; /* guards fdErrFile */
+    sbool bMutErrFileInit; /* mutErrFile was initialized */
     uchar *errorFile;
     sbool bulkmode;
     size_t maxbytes;
+    int maxConsecutiveRejects; /* 0: never stop dropping rejected rows */
     uchar *caCertFile;
     uchar *myCertFile;
     uchar *myPrivKeyFile;
+    int format;
+    int compression;
+    sbool asyncInsert;
+    uchar *table;
+    uchar *restQuery; /* URL suffix starting with '?'. NULL keeps the values URL. */
     struct instanceConf_s *next;
 } instanceData;
 
@@ -105,16 +137,26 @@ typedef struct wrkrInstanceData {
     PTR_ASSERT_DEF
     instanceData *pData;
     CURL *curlPostHandle; /* libcurl session handle for posting data to the server */
-    HEADER *curlHeader; /* json POST request info */
+    HEADER *curlHeader; /* headers for the plain-text health check */
+    HEADER *curlPostHeader; /* insert headers, including gzip when enabled */
     CURL *curlCheckConnHandle; /* libcurl session handle for checking the server connection */
     int replyLen;
     char *reply;
+    long exceptionCode; /* X-ClickHouse-Exception-Code of the last insert, -1 if none */
+    int rejectsInRow; /* final rejections since the last accepted insert */
+    int insertFailures; /* inserts ClickHouse answered with a failure, in a row */
+    sbool backoffPending; /* the next tryResume() reports SUSPENDED */
+    sbool rejectLimitLogged;
     uchar *restURL;
     struct {
         es_str_t *data;
         int nmemb; /* number of messages in batch (for statistics counting) */
+        size_t *rowOff; /* start of each message's part in data */
+        int rowCap; /* allocated entries in rowOff */
+        size_t valuesPrefix; /* length of "INSERT ... VALUES " in the first row, 0 if none */
+        sbool heldInTx; /* an early flush was suspended; its rows stay, no more early flushes */
+        sbool failedInTx; /* a local error; endTransaction() suspends the transaction */
     } batch;
-    sbool insertErrorSent; /* needed for insert error message */
 } wrkrInstanceData_t;
 
 /* tables for interfacing with the v6 config system */
@@ -132,24 +174,37 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrGetWord, 0},
                                            {"errorfile", eCmdHdlrGetWord, 0},
                                            {"bulkmode", eCmdHdlrBinary, 0},
                                            {"maxbytes", eCmdHdlrSize, 0},
+                                           {"maxconsecutiverejects", eCmdHdlrNonNegInt, 0},
                                            {"tls.cacert", eCmdHdlrString, 0},
                                            {"tls.mycert", eCmdHdlrString, 0},
-                                           {"tls.myprivkey", eCmdHdlrString, 0}};
+                                           {"tls.myprivkey", eCmdHdlrString, 0},
+                                           {"format", eCmdHdlrGetWord, 0},
+                                           {"table", eCmdHdlrString, 0},
+                                           {"asyncinsert", eCmdHdlrBinary, 0},
+                                           {"compression", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
+    int r;
     pData->fdErrFile = -1;
+    if ((r = pthread_mutex_init(&pData->mutErrFile, NULL)) != 0) {
+        LogError(r, RS_RET_ERR, "omclickhouse: cannot create error file mutex, failing this action");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    pData->bMutErrFileInit = 1;
     pData->caCertFile = NULL;
     pData->myCertFile = NULL;
     pData->myPrivKeyFile = NULL;
+finalize_it:
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
     pWrkrData->curlHeader = NULL;
+    pWrkrData->curlPostHeader = NULL;
     pWrkrData->curlPostHandle = NULL;
     pWrkrData->curlCheckConnHandle = NULL;
     pWrkrData->restURL = NULL;
@@ -161,7 +216,16 @@ BEGINcreateWrkrInstance
             pData->bulkmode = 0; /* at least it works */
         }
     }
-    pWrkrData->insertErrorSent = 0;
+    pWrkrData->batch.rowOff = NULL;
+    pWrkrData->batch.rowCap = 0;
+    pWrkrData->batch.valuesPrefix = 0;
+    pWrkrData->batch.heldInTx = 0;
+    pWrkrData->batch.failedInTx = 0;
+    pWrkrData->exceptionCode = -1;
+    pWrkrData->rejectsInRow = 0;
+    pWrkrData->insertFailures = 0;
+    pWrkrData->backoffPending = 0;
+    pWrkrData->rejectLimitLogged = 0;
 
     iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
@@ -178,11 +242,14 @@ BEGINfreeInstance
     free(pData->pwd);
     free(pData->authBuf);
     if (pData->fdErrFile != -1) close(pData->fdErrFile);
+    if (pData->bMutErrFileInit) pthread_mutex_destroy(&pData->mutErrFile);
     free(pData->errorFile);
     free(pData->tplName);
     free(pData->caCertFile);
     free(pData->myCertFile);
     free(pData->myPrivKeyFile);
+    free(pData->table);
+    free(pData->restQuery);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -190,6 +257,10 @@ BEGINfreeWrkrInstance
     if (pWrkrData->curlHeader != NULL) {
         curl_slist_free_all(pWrkrData->curlHeader);
         pWrkrData->curlHeader = NULL;
+    }
+    if (pWrkrData->curlPostHeader != NULL) {
+        curl_slist_free_all(pWrkrData->curlPostHeader);
+        pWrkrData->curlPostHeader = NULL;
     }
     if (pWrkrData->curlCheckConnHandle != NULL) {
         curl_easy_cleanup(pWrkrData->curlCheckConnHandle);
@@ -204,6 +275,7 @@ BEGINfreeWrkrInstance
         pWrkrData->restURL = NULL;
     }
     es_deleteStr(pWrkrData->batch.data);
+    free(pWrkrData->batch.rowOff);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
@@ -212,7 +284,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tserver='%s'\n", pData->serverBaseUrl);
     dbgprintf("\tport='%d'\n", pData->port);
     dbgprintf("\tuser='%s'\n", pData->user);
-    dbgprintf("\tpwd='%s'\n", pData->pwd);
+    dbgprintf("\tpwd='%s'\n", (pData->pwd == NULL || pData->pwd[0] == '\0') ? "" : "[redacted]");
     dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
     dbgprintf("\ttimeout=%lu\n", pData->timeout);
     dbgprintf("\ttemplate='%s'\n", pData->tplName);
@@ -222,9 +294,14 @@ BEGINdbgPrintInstInfo
     dbgprintf("\terrorFile='%s'\n", pData->errorFile);
     dbgprintf("\tbulkmode='%d'\n", pData->bulkmode);
     dbgprintf("\tmaxbytes='%zu'\n", pData->maxbytes);
+    dbgprintf("\tmaxconsecutiverejects=%d\n", pData->maxConsecutiveRejects);
     dbgprintf("\ttls.cacert='%s'\n", pData->caCertFile);
     dbgprintf("\ttls.mycert='%s'\n", pData->myCertFile);
     dbgprintf("\ttls.myprivkey='%s'\n", pData->myPrivKeyFile);
+    dbgprintf("\tformat='%s'\n", pData->format == CH_FMT_JSONEACHROW ? "jsoneachrow" : "values");
+    dbgprintf("\ttable='%s'\n", pData->table == NULL ? "" : (char *)pData->table);
+    dbgprintf("\tasyncinsert='%d'\n", pData->asyncInsert);
+    dbgprintf("\tcompression='%s'\n", pData->compression == CH_COMP_GZIP ? "gzip" : "off");
 ENDdbgPrintInstInfo
 
 
@@ -242,7 +319,15 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
     curl = pWrkrData->curlCheckConnHandle;
 
 
-    curl_easy_setopt(curl, CURLOPT_URL, pWrkrData->restURL);
+    /* Health checks always post SELECT 1 to the base URL. The insert URL for
+     * JSONEachRow carries ?query=INSERT..., and ClickHouse would treat the
+     * body as rows for that query.
+     */
+    curl_easy_setopt(curl, CURLOPT_URL, pWrkrData->pData->serverBaseUrl);
+    /* The health check is a POST. Set the method explicitly so libcurl does
+     * not leave it implied by POSTFIELDS.
+     */
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, healthCheckMessage);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(healthCheckMessage));
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
@@ -253,9 +338,8 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         ABORT_FINALIZE(RS_RET_OK);
     }
 
-    DBGPRINTF("omclickhouse: checkConn failed: %s\n", curl_easy_strerror(res));
-
-    LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING, "omclickhouse: checkConn failed.");
+    LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING, "omclickhouse: checkConn failed: %s",
+           errbuf[0] != '\0' ? errbuf : curl_easy_strerror(res));
     ABORT_FINALIZE(RS_RET_SUSPENDED);
 
 finalize_it:
@@ -268,24 +352,45 @@ finalize_it:
 BEGINtryResume
     CODESTARTtryResume;
     dbgprintf("omclickhouse: tryResume called\n");
+    /* SELECT 1 succeeds while ClickHouse keeps failing the insert itself (a
+     * missing table, missing grants, overload). Resuming at once would post
+     * the batch again without a pause: the engine skips its retry sleep with
+     * action.resumeRetryCount="0", and every rebuilt batch resets its count
+     * of quick resumes. So once two inserts in a row failed, report one more
+     * suspension and let the engine apply action.resumeInterval before the
+     * next check.
+     */
+    if (pWrkrData->backoffPending) {
+        pWrkrData->backoffPending = 0;
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
     iRet = checkConn(pWrkrData);
+finalize_it:
 ENDtryResume
 
 
 /*
- * Dumps entire bulk request and response in error log
+ * Render a rejected request as one JSON object: URL and body of the request,
+ * HTTP status, and ClickHouse reply. The action drops data that ClickHouse
+ * rejects, so this record is the only copy of it that is kept.
  */
-static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, const char *reply, uchar *reqmsg, char **rendered) {
+static rsRetVal getDataErrorDefault(
+    wrkrInstanceData_t *pWrkrData, const char *reply, const uchar *reqmsg, const long httpStatus, char **rendered) {
     DEFiRet;
     fjson_object *req = NULL;
     fjson_object *errRoot = NULL;
 
     if ((req = fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-    fjson_object_object_add(req, "url", fjson_object_new_string((char *)pWrkrData->restURL));
-    fjson_object_object_add(req, "postdata", fjson_object_new_string((char *)reqmsg));
+    /* restURL is unset when the first row of a worker is rejected before it is
+     * posted (a VALUES row that is not an INSERT).
+     */
+    fjson_object_object_add(req, "url",
+                            fjson_object_new_string(pWrkrData->restURL == NULL ? "" : (char *)pWrkrData->restURL));
+    fjson_object_object_add(req, "postdata", fjson_object_new_string((const char *)reqmsg));
 
     if ((errRoot = fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
     fjson_object_object_add(errRoot, "request", req);
+    fjson_object_object_add(errRoot, "http_status", fjson_object_new_int64(httpStatus));
     fjson_object_object_add(errRoot, "reply", fjson_object_new_string(reply));
     *rendered = strdup((char *)fjson_object_to_json_string(errRoot));
     if (*rendered == NULL) {
@@ -307,13 +412,16 @@ finalize_it:
  * Note: we open the file but never close it before exit. If it
  * needs to be closed, HUP must be sent.
  */
-static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrData, uchar *const reqmsg) {
+static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrData,
+                                              const uchar *const reqmsg,
+                                              const long httpStatus,
+                                              const char *const reply) {
     DEFiRet;
     instanceData *pData = pWrkrData->pData;
-    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
     char *rendered = NULL;
     size_t toWrite;
     ssize_t wrRet;
+    sbool bMutLocked = 0;
 
     if (pData->errorFile == NULL) {
         dbgprintf(
@@ -322,24 +430,44 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
         FINALIZE;
     }
 
+    pthread_mutex_lock(&pData->mutErrFile);
+    bMutLocked = 1;
 
     if (pData->fdErrFile == -1) {
-        pData->fdErrFile = open((char *)pData->errorFile, O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE | O_CLOEXEC,
-                                S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+        pData->fdErrFile =
+            open((char *)pData->errorFile, O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE | O_CLOEXEC, S_IRUSR | S_IWUSR);
         if (pData->fdErrFile == -1) {
             LogError(errno, RS_RET_ERR, "omclickhouse: error opening error file %s", pData->errorFile);
             ABORT_FINALIZE(RS_RET_ERR);
         }
+        /* The mode argument applies only when the file is created. A regular
+         * file that group or others may read is tightened to 0600; if that
+         * fails, no rejected row is written to it. A device or a FIFO keeps
+         * its mode.
+         */
+        struct stat st;
+        if (fstat(pData->fdErrFile, &st) != 0) {
+            LogError(errno, RS_RET_IO_ERROR, "omclickhouse: cannot stat error file %s", pData->errorFile);
+            close(pData->fdErrFile);
+            pData->fdErrFile = -1;
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        if (S_ISREG(st.st_mode) && (st.st_mode & (S_IRWXG | S_IRWXO)) != 0 &&
+            fchmod(pData->fdErrFile, S_IRUSR | S_IWUSR) != 0) {
+            LogError(errno, RS_RET_IO_ERROR,
+                     "omclickhouse: error file %s is open to group or others and its mode cannot be set to "
+                     "0600, not writing rejected rows to it",
+                     pData->errorFile);
+            close(pData->fdErrFile);
+            pData->fdErrFile = -1;
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
     }
 
-    if (getDataErrorDefault(pWrkrData, reply, reqmsg, &rendered) != RS_RET_OK) {
+    if (getDataErrorDefault(pWrkrData, reply, reqmsg, httpStatus, &rendered) != RS_RET_OK) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
-    /* we do not do real error-handling on the err file, as this finally complicates
-     * things way to much.
-     */
-    dbgprintf("omclickhouse: message sent: '%s'\n", reqmsg);
     dbgprintf("omclickhouse: error record: '%s'\n", rendered);
     toWrite = strlen(rendered) + 1;
     /* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
@@ -350,60 +478,226 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
     if (wrRet != (ssize_t)toWrite) {
         LogError(errno, RS_RET_IO_ERROR, "omclickhouse: error writing error file %s, write returned %lld",
                  pData->errorFile, (long long)wrRet);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
 
 finalize_it:
+    if (bMutLocked) pthread_mutex_unlock(&pData->mutErrFile);
     free(rendered);
     RETiRet;
 }
 
 
-static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, const long httpStatus) {
-    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
+/* ClickHouse error codes caused by the content of a row. ClickHouse sends them
+ * with HTTP 400, 404 (UNKNOWN_IDENTIFIER for a bad token in a VALUES row) or
+ * 500 (VIOLATED_CONSTRAINT), so the code decides, not the status. Names are
+ * from errorCodeToName() in ClickHouse 26.8. CANNOT_READ_ALL_DATA is left out:
+ * a body cut short in transit is not bad data.
+ */
+static int isDataErrorCode(const long code) {
+    switch (code) {
+        case 6: /* CANNOT_PARSE_TEXT */
+        case 25: /* CANNOT_PARSE_ESCAPE_SEQUENCE */
+        case 26: /* CANNOT_PARSE_QUOTED_STRING */
+        case 27: /* CANNOT_PARSE_INPUT_ASSERTION_FAILED */
+        case 32: /* ATTEMPT_TO_READ_AFTER_EOF */
+        case 38: /* CANNOT_PARSE_DATE */
+        case 41: /* CANNOT_PARSE_DATETIME */
+        case 47: /* UNKNOWN_IDENTIFIER */
+        case 53: /* TYPE_MISMATCH */
+        case 62: /* SYNTAX_ERROR */
+        case 70: /* CANNOT_CONVERT_TYPE */
+        case 72: /* CANNOT_PARSE_NUMBER */
+        case 117: /* INCORRECT_DATA */
+        case 128: /* TOO_LARGE_ARRAY_SIZE */
+        case 130: /* CANNOT_READ_ARRAY_FROM_TEXT */
+        case 131: /* TOO_LARGE_STRING_SIZE */
+        case 190: /* SIZES_OF_ARRAYS_DONT_MATCH */
+        case 321: /* VALUE_IS_OUT_OF_RANGE_OF_DATA_TYPE */
+        case 349: /* CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN */
+        case 376: /* CANNOT_PARSE_UUID */
+        case 441: /* CANNOT_PARSE_DOMAIN_VALUE_FROM_STRING */
+        case 467: /* CANNOT_PARSE_BOOL */
+        case 469: /* VIOLATED_CONSTRAINT */
+        case 675: /* CANNOT_PARSE_IPV4 */
+        case 676: /* CANNOT_PARSE_IPV6 */
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+/* ClickHouse exception code of the last reply: the X-ClickHouse-Exception-Code
+ * header, else the "Code: N." that starts the body. -1 if there is neither.
+ */
+static long replyExceptionCode(const wrkrInstanceData_t *const pWrkrData, const char *const reply) {
+    char *end = NULL;
+    long code;
+
+    if (pWrkrData->exceptionCode >= 0) return pWrkrData->exceptionCode;
+    if (strncmp(reply, "Code: ", 6) != 0) return -1;
+    errno = 0;
+    code = strtol(reply + 6, &end, 10);
+    if (errno != 0 || end == reply + 6 || *end != '.' || code < 0) return -1;
+    return code;
+}
+
+/* ClickHouse answered an insert with a failure that suspends the action. The
+ * engine retries once at once, which keeps a single failure cheap. A second one
+ * in a row turns on the backoff in tryResume().
+ */
+static void ATTR_NONNULL() noteInsertFailed(wrkrInstanceData_t *const pWrkrData) {
+    if (pWrkrData->insertFailures < INT_MAX) ++pWrkrData->insertFailures;
+    if (pWrkrData->insertFailures >= 2) pWrkrData->backoffPending = 1;
+}
+
+
+/* A row rejected as bad data, by ClickHouse (httpStatus > 0) or by the module
+ * itself (httpStatus 0). For a request of several messages nothing is
+ * recorded: the caller resends each row on its own. A final rejection is
+ * written to the error file and dropped. It is kept instead when the error
+ * file cannot be written, or when maxConsecutiveRejects rows in a row were
+ * rejected; RS_RET_SUSPENDED then keeps the row queued.
+ */
+static rsRetVal rejectData(wrkrInstanceData_t *pWrkrData,
+                           const uchar *const reqmsg,
+                           const long httpStatus,
+                           const char *const reply,
+                           const int nmsgs,
+                           const sbool final) {
+    const int limit = pWrkrData->pData->maxConsecutiveRejects;
     DEFiRet;
 
-    if (httpStatus >= 400 || strstr(reply, " = DB::Exception") != NULL || strstr(reply, "DB::NetException") != NULL ||
-        strstr(reply, "DB::ParsingException") != NULL) {
-        dbgprintf("omclickhouse: action failed with HTTP status %ld and reply: %s\n", httpStatus, reply);
-        iRet = RS_RET_DATAFAIL;
+    if (!final) {
+        LogMsg(0, RS_RET_DATAFAIL, LOG_WARNING,
+               "omclickhouse: a batch of %d messages was rejected with HTTP status %ld, "
+               "retrying them one at a time: %s",
+               nmsgs, httpStatus, reply);
+        ABORT_FINALIZE(RS_RET_DATAFAIL);
     }
-
-    if (iRet == RS_RET_DATAFAIL) {
-        STATSCOUNTER_INC(indexFail, mutIndexFail);
-        LogError(0, RS_RET_DATAFAIL, "omclickhouse: ClickHouse request failed with HTTP status %ld: %s", httpStatus,
+    if (limit > 0 && pWrkrData->rejectsInRow >= limit) {
+        if (!pWrkrData->rejectLimitLogged) {
+            LogError(0, RS_RET_SUSPENDED,
+                     "omclickhouse: %d rows in a row were rejected, which points to a schema or template "
+                     "problem rather than bad data; keeping rows queued until ClickHouse accepts them: %s",
+                     limit, reply);
+            pWrkrData->rejectLimitLogged = 1;
+        }
+        noteInsertFailed(pWrkrData);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+    if (pWrkrData->pData->errorFile != NULL && writeDataError(pWrkrData, reqmsg, httpStatus, reply) != RS_RET_OK) {
+        LogError(0, RS_RET_SUSPENDED,
+                 "omclickhouse: could not record a rejected row in the error file, keeping it queued: %s", reply);
+        noteInsertFailed(pWrkrData);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+    ++pWrkrData->rejectsInRow;
+    if (httpStatus > 0) {
+        LogError(0, RS_RET_DATAFAIL, "omclickhouse: ClickHouse rejected the data with HTTP status %ld: %s", httpStatus,
                  reply);
-        writeDataError(pWrkrData, reqmsg);
-        iRet = RS_RET_OK; /* we have handled the problem! */
+    } else {
+        LogError(0, RS_RET_DATAFAIL, "omclickhouse: dropping a row: %s", reply);
     }
+    ABORT_FINALIZE(RS_RET_DATAFAIL);
+
+finalize_it:
+    RETiRet;
+}
 
 
-    if (iRet != RS_RET_OK) {
-        STATSCOUNTER_INC(indexFail, mutIndexFail);
+/* Case-insensitive search for "INSERT INTO". */
+static int hasInsertInto(const char *msg) {
+    static const char word[] = "INSERT INTO";
+    for (; *msg != '\0'; ++msg) {
+        if (strncasecmp(msg, word, sizeof(word) - 1) == 0) return 1;
     }
+    return 0;
+}
+
+
+/* Note an accepted insert: the run of rejected rows is over. */
+static void ATTR_NONNULL() noteAccepted(wrkrInstanceData_t *const pWrkrData) {
+    if (pWrkrData->rejectLimitLogged) {
+        LogMsg(0, RS_RET_OK, LOG_INFO, "omclickhouse: ClickHouse accepts rows again, dropping rejected rows resumes");
+    }
+    pWrkrData->rejectsInRow = 0;
+    pWrkrData->rejectLimitLogged = 0;
+    pWrkrData->insertFailures = 0;
+    pWrkrData->backoffPending = 0;
+}
+
+/* Classify a reply that is not a plain success.
+ *
+ * A data error is a ClickHouse exception code from isDataErrorCode(), or,
+ * when the reply carries no code, HTTP 400 or 413. It returns RS_RET_DATAFAIL.
+ * When the request held several messages, nothing is recorded yet:
+ * postRowsOneByOne() resends each message on its own and only those that are
+ * still rejected are dropped. A final rejection (one message) goes to the
+ * error file.
+ *
+ * After maxConsecutiveRejects final rejections with no accepted insert between
+ * them, a further rejection suspends the action instead of dropping the row.
+ * A schema change or a broken template rejects every row, and those rows are
+ * then kept in the queue until ClickHouse accepts them again.
+ *
+ * Every other failure suspends the action. Authentication failures, a missing
+ * table or column, overload, and server errors are not caused by the data, so
+ * the batch stays queued and is retried.
+ */
+static rsRetVal checkResult(
+    wrkrInstanceData_t *pWrkrData, const uchar *reqmsg, const long httpStatus, const int nmsgs, const sbool final) {
+    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
+    const long code = replyExceptionCode(pWrkrData, reply);
+    int dataError;
+    DEFiRet;
+
+    if (httpStatus < 400 && code < 0 && strstr(reply, "DB::Exception") == NULL &&
+        strstr(reply, "DB::NetException") == NULL) {
+        noteAccepted(pWrkrData);
+        FINALIZE;
+    }
+
+    dbgprintf("omclickhouse: action failed with HTTP status %ld, code %ld and reply: %s\n", httpStatus, code, reply);
+    STATSCOUNTER_INC(indexFail, mutIndexFail);
+    dataError = (code >= 0) ? isDataErrorCode(code) : (httpStatus == 400 || httpStatus == 413);
+    if (!dataError) {
+        LogError(0, RS_RET_SUSPENDED, "omclickhouse: ClickHouse request failed with HTTP status %ld: %s", httpStatus,
+                 reply);
+        noteInsertFailed(pWrkrData);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+    ABORT_FINALIZE(rejectData(pWrkrData, reqmsg, httpStatus, reply, nmsgs, final));
+
+finalize_it:
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData) {
-    char *baseUrl;
-    es_str_t *url;
+    const char *base;
+    const char *query;
+    size_t blen;
+    size_t qlen;
     DEFiRet;
-    instanceData *const pData = pWrkrData->pData;
 
-    baseUrl = (char *)pData->serverBaseUrl;
-    url = es_newStrFromCStr(baseUrl, strlen(baseUrl));
-    if (url == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "omclickhouse: error allocating new estr for POST url.");
+    base = (const char *)pWrkrData->pData->serverBaseUrl;
+    query = (const char *)pWrkrData->pData->restQuery;
+    if (base == NULL) {
+        LogError(0, RS_RET_ERR, "omclickhouse: server URL is not set");
         ABORT_FINALIZE(RS_RET_ERR);
     }
+    blen = strlen(base);
+    qlen = query == NULL ? 0 : strlen(query);
 
     if (pWrkrData->restURL != NULL) free(pWrkrData->restURL);
-
-    pWrkrData->restURL = (uchar *)es_str2cstr(url, NULL);
+    CHKmalloc(pWrkrData->restURL = (uchar *)malloc(blen + qlen + 1));
+    memcpy(pWrkrData->restURL, base, blen);
+    if (qlen > 0) memcpy((char *)pWrkrData->restURL + blen, query, qlen);
+    pWrkrData->restURL[blen + qlen] = '\0';
     curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_URL, pWrkrData->restURL);
     dbgprintf("omclickhouse: using REST URL: '%s'\n", pWrkrData->restURL);
 
 finalize_it:
-    if (url != NULL) es_deleteStr(url);
     RETiRet;
 }
 
@@ -417,8 +711,19 @@ static size_t computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
                                  const char **newMessage) {
     size_t r = 0;
     const char *v;
-    if (pWrkrData->batch.nmemb != 0 && (v = strstr((const char *)message, "VALUES")) != NULL &&
-        (v = strchr(v, '(')) != NULL) {
+    /* JSONEachRow is one object per message. Do not cut the line at VALUES. */
+    if (pWrkrData->pData->format == CH_FMT_JSONEACHROW) {
+        *newMessage = (const char *)message;
+        r = strlen(*newMessage);
+        if (r == 0 || (*newMessage)[r - 1] != '\n') ++r;
+        return r;
+    }
+    /* A later row is cut to its "(...)" part only when the first row gave
+     * the statement in front of it, so that postRowsOneByOne() can rebuild a
+     * whole statement for every row.
+     */
+    if (pWrkrData->batch.nmemb != 0 && pWrkrData->batch.valuesPrefix > 0 &&
+        (v = strstr((const char *)message, "VALUES")) != NULL && (v = strchr(v, '(')) != NULL) {
         *newMessage = v;
         r = strlen(*newMessage);
     } else {
@@ -436,13 +741,34 @@ static size_t computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
 static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, const char *message) {
     DEFiRet;
     int length = strlen(message);
+    size_t start;
     int r;
 
-    r = es_addBuf(&pWrkrData->batch.data, message, length);
+    if (pWrkrData->batch.nmemb >= pWrkrData->batch.rowCap) {
+        const int cap = pWrkrData->batch.rowCap == 0 ? 64 : 2 * pWrkrData->batch.rowCap;
+        size_t *const rows = realloc(pWrkrData->batch.rowOff, sizeof(size_t) * (size_t)cap);
+        CHKmalloc(rows);
+        pWrkrData->batch.rowOff = rows;
+        pWrkrData->batch.rowCap = cap;
+    }
+    start = es_strlen(pWrkrData->batch.data);
+    if (pWrkrData->batch.nmemb == 0 && pWrkrData->pData->format != CH_FMT_JSONEACHROW) {
+        /* Later rows hold only their "(...)" part. Keep the length of the
+         * statement before the first one, to resend a row on its own.
+         * A JSONEachRow row is a whole line and needs no prefix.
+         */
+        const char *v = strstr(message, "VALUES");
+        if (v != NULL && (v = strchr(v, '(')) != NULL) pWrkrData->batch.valuesPrefix = (size_t)(v - message);
+    }
+    r = es_addBuf(&pWrkrData->batch.data, (char *)message, length);
+    if (r == 0 && pWrkrData->pData->format == CH_FMT_JSONEACHROW && (length == 0 || message[length - 1] != '\n')) {
+        r = es_addChar(&pWrkrData->batch.data, '\n');
+    }
     if (r != 0) {
         LogError(0, RS_RET_ERR, "omclickhouse: growing batch failed with code %d", r);
         ABORT_FINALIZE(RS_RET_ERR);
     }
+    pWrkrData->batch.rowOff[pWrkrData->batch.nmemb] = start;
     ++pWrkrData->batch.nmemb;
     iRet = RS_RET_OK;
 
@@ -454,34 +780,88 @@ finalize_it:
 static void ATTR_NONNULL() initializeBatch(wrkrInstanceData_t *pWrkrData) {
     es_emptyStr(pWrkrData->batch.data);
     pWrkrData->batch.nmemb = 0;
+    pWrkrData->batch.valuesPrefix = 0;
+}
+
+
+/* ClickHouse Content-Encoding: gzip is a gzip wrapper. compress2() emits a
+ * zlib wrapper, which ClickHouse rejects, so this uses windowBits 15+16.
+ */
+static rsRetVal gzipBody(const uchar *src, int srcLen, uchar **out, int *outLen) {
+    z_stream strm;
+    Bytef *dest = NULL;
+    uLong cap;
+    int z;
+    DEFiRet;
+
+    *out = NULL;
+    *outLen = 0;
+    if (srcLen < 0) ABORT_FINALIZE(RS_RET_ERR);
+    cap = compressBound((uLong)srcLen) + 32;
+    if (cap > UINT_MAX) ABORT_FINALIZE(RS_RET_ERR);
+    dest = malloc(cap);
+    if (dest == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+    memset(&strm, 0, sizeof(strm));
+    strm.next_in = (Bytef *)src;
+    strm.avail_in = (uInt)srcLen;
+    strm.next_out = dest;
+    strm.avail_out = (uInt)cap;
+    z = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+    if (z != Z_OK) {
+        LogError(0, RS_RET_ERR, "omclickhouse: gzip init failed with %d", z);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+    z = deflate(&strm, Z_FINISH);
+    if (z != Z_STREAM_END) {
+        deflateEnd(&strm);
+        LogError(0, RS_RET_ERR, "omclickhouse: gzip deflate failed with %d", z);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+    if (strm.total_out > INT_MAX) {
+        deflateEnd(&strm);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    *outLen = (int)strm.total_out;
+    *out = (uchar *)dest;
+    dest = NULL;
+    deflateEnd(&strm);
+
+finalize_it:
+    free(dest);
+    RETiRet;
 }
 
 
 static rsRetVal ATTR_NONNULL(1, 2)
-    curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, const int nmsgs) {
+    curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, const int nmsgs, const sbool final) {
     CURLcode code;
     CURL *const curl = pWrkrData->curlPostHandle;
     char errbuf[CURL_ERROR_SIZE] = "";
     long httpStatus = 0;
+    uchar *gzipped = NULL;
+    uchar *payload = message;
+    int payloadLen = msglen;
     DEFiRet;
 
-    if (!strstr((char *)message, "INSERT INTO") && !pWrkrData->insertErrorSent) {
+    if (pWrkrData->pData->format != CH_FMT_JSONEACHROW && !hasInsertInto((char *)message)) {
         indexHTTPFail += nmsgs;
-        LogError(0, RS_RET_ERR,
-                 "omclickhouse: Message is no Insert query: "
-                 "Message suspended: %s",
-                 (char *)message);
-        pWrkrData->insertErrorSent = 1;
-        ABORT_FINALIZE(RS_RET_ERR);
+        ABORT_FINALIZE(rejectData(pWrkrData, message, 0, "message is not an INSERT query", nmsgs, final));
     }
 
     pWrkrData->reply = NULL;
     pWrkrData->replyLen = 0;
+    pWrkrData->exceptionCode = -1;
 
     CHKiRet(setPostURL(pWrkrData));
 
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)msglen);
+    if (pWrkrData->pData->compression == CH_COMP_GZIP) {
+        CHKiRet(gzipBody(message, msglen, &gzipped, &payloadLen));
+        payload = gzipped;
+    }
+
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)payload);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)payloadLen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
@@ -493,12 +873,15 @@ static rsRetVal ATTR_NONNULL(1, 2)
                  "omclickhouse: we are suspending ourselfs due "
                  "to server failure %lld: %s",
                  (long long)code, errbuf);
+        /* SELECT 1 may still succeed while the insert connection is dropped */
+        noteInsertFailed(pWrkrData);
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
-    if (pWrkrData->reply == NULL && httpStatus < 400) {
+    if (pWrkrData->reply == NULL && httpStatus < 400 && pWrkrData->exceptionCode < 0) {
         dbgprintf("omclickhouse: pWrkrData reply==NULL, replyLen = '%d'\n", pWrkrData->replyLen);
         STATSCOUNTER_INC(indexSuccess, mutIndexSuccess);
+        noteAccepted(pWrkrData);
     } else {
         dbgprintf("omclickhouse: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
         if (pWrkrData->reply != NULL && pWrkrData->replyLen > 0) {
@@ -506,30 +889,122 @@ static rsRetVal ATTR_NONNULL(1, 2)
             /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
         }
         dbgprintf("omclickhouse: pWrkrData reply: '%s'\n", pWrkrData->reply == NULL ? "" : pWrkrData->reply);
-        CHKiRet(checkResult(pWrkrData, message, httpStatus));
+        CHKiRet(checkResult(pWrkrData, message, httpStatus, nmsgs, final));
     }
 
 finalize_it:
+    free(gzipped);
     free(pWrkrData->reply);
     pWrkrData->reply = NULL; /* don't leave dangling pointer */
     RETiRet;
 }
 
 
-static rsRetVal submitBatch(wrkrInstanceData_t *pWrkrData) {
-    char *cstr = NULL;
+/* ClickHouse rejected a batch as bad data. It inserts all rows of a request or
+ * none, so each row is sent again on its own: accepted rows are inserted, and
+ * rows that are still rejected are recorded and dropped. Leaving the split to
+ * the action engine through RS_RET_DATAFAIL is not safe: the engine's retry
+ * loop for a transaction that was suspended before does not handle that code
+ * and posts the batch again without a pause.
+ */
+static rsRetVal postRowsOneByOne(wrkrInstanceData_t *pWrkrData,
+                                 const char *const batch,
+                                 const size_t len,
+                                 int *const handled) {
+    const size_t prefix = pWrkrData->batch.valuesPrefix;
+    char *row = NULL;
+    int i;
     DEFiRet;
 
-    cstr = es_str2cstr(pWrkrData->batch.data, NULL);
-    dbgprintf("omclickhouse: submitBatch, batch: '%s'\n", cstr);
+    *handled = 0;
+    for (i = 0; i < pWrkrData->batch.nmemb; ++i) {
+        const size_t start = pWrkrData->batch.rowOff[i];
+        const size_t end = (i + 1 < pWrkrData->batch.nmemb) ? pWrkrData->batch.rowOff[i + 1] : len;
+        const size_t rowLen = end - start;
+        const size_t head = (i > 0 && prefix > 0 && batch[start] == '(') ? prefix : 0;
+        rsRetVal rowRet;
 
-    CHKiRet(curlPost(pWrkrData, (uchar *)cstr, strlen(cstr), pWrkrData->batch.nmemb));
+        free(row);
+        CHKmalloc(row = malloc(head + rowLen + 1));
+        memcpy(row, batch, head);
+        memcpy(row + head, batch + start, rowLen);
+        row[head + rowLen] = '\0';
+        rowRet = curlPost(pWrkrData, (uchar *)row, (int)(head + rowLen), 1, 1);
+        if (rowRet != RS_RET_OK && rowRet != RS_RET_DATAFAIL) {
+            ABORT_FINALIZE(rowRet);
+        }
+        *handled = i + 1;
+    }
 
 finalize_it:
-    free(cstr);
+    free(row);
     RETiRet;
 }
 
+
+/* A held batch keeps only the rows from "first" on: the rows before it were
+ * inserted or recorded while it was resent one row at a time. Without this,
+ * the next post would insert those rows again and record a rejected row twice.
+ * An allocation failure is returned: doAction() then treats it as a local
+ * error and endTransaction() suspends the whole transaction.
+ */
+static rsRetVal keepRowsFrom(wrkrInstanceData_t *pWrkrData,
+                             const char *const batch,
+                             const size_t len,
+                             const int first) {
+    const size_t start = pWrkrData->batch.rowOff[first];
+    const size_t prefix = pWrkrData->batch.valuesPrefix;
+    const size_t head = (prefix > 0 && batch[start] == '(') ? prefix : 0;
+    es_str_t *data;
+    int k;
+
+    if ((data = es_newStr((es_size_t)(head + len - start + 1))) == NULL) return RS_RET_OUT_OF_MEMORY;
+    if ((head > 0 && es_addBuf(&data, (char *)batch, (es_size_t)head) != 0) ||
+        es_addBuf(&data, (char *)batch + start, (es_size_t)(len - start)) != 0) {
+        es_deleteStr(data);
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    for (k = 0; k + first < pWrkrData->batch.nmemb; ++k) {
+        pWrkrData->batch.rowOff[k] = (k == 0) ? 0 : pWrkrData->batch.rowOff[k + first] - start + head;
+    }
+    pWrkrData->batch.nmemb -= first;
+    es_deleteStr(pWrkrData->batch.data);
+    pWrkrData->batch.data = data;
+    return RS_RET_OK;
+}
+
+
+/* Post the batch. Returns RS_RET_OK when every row was inserted or recorded
+ * as rejected, RS_RET_SUSPENDED to retry, or a local error.
+ * keepOnSuspend: leave the rows in the batch when the post is suspended, so a
+ * later post sends them again.
+ */
+static rsRetVal submitBatch(wrkrInstanceData_t *pWrkrData, const sbool keepOnSuspend) {
+    char *cstr = NULL;
+    size_t len = 0;
+    int handled = 0;
+    DEFiRet;
+
+    CHKmalloc(cstr = es_str2cstr(pWrkrData->batch.data, NULL));
+    len = strlen(cstr);
+    dbgprintf("omclickhouse: submitBatch, batch: '%s'\n", cstr);
+
+    iRet = curlPost(pWrkrData, (uchar *)cstr, (int)len, pWrkrData->batch.nmemb, pWrkrData->batch.nmemb == 1);
+    if (iRet == RS_RET_DATAFAIL && pWrkrData->batch.nmemb > 1) {
+        iRet = postRowsOneByOne(pWrkrData, cstr, len, &handled);
+    }
+    /* A final rejection is recorded and dropped; nothing is left to retry. */
+    if (iRet == RS_RET_DATAFAIL) iRet = RS_RET_OK;
+
+finalize_it:
+    if (!(keepOnSuspend && iRet == RS_RET_SUSPENDED)) {
+        initializeBatch(pWrkrData);
+    } else if (handled > 0 && keepRowsFrom(pWrkrData, cstr, len, handled) != RS_RET_OK) {
+        iRet = RS_RET_OUT_OF_MEMORY;
+    }
+    free(cstr);
+    RETiRet;
+}
 
 BEGINbeginTransaction
     CODESTARTbeginTransaction;
@@ -538,6 +1013,8 @@ BEGINbeginTransaction
     }
 
     initializeBatch(pWrkrData);
+    pWrkrData->batch.heldInTx = 0;
+    pWrkrData->batch.failedInTx = 0;
 finalize_it:
 ENDbeginTransaction
 
@@ -549,42 +1026,94 @@ BEGINdoAction
     STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
     if (pWrkrData->pData->bulkmode) {
+        if (pWrkrData->batch.failedInTx) {
+            /* endTransaction() suspends this transaction; the engine resends
+             * all of its messages.
+             */
+            ABORT_FINALIZE(RS_RET_DEFER_COMMIT);
+        }
         const size_t nBytes = computeBulkMessage(pWrkrData, ppString[0], &batchPart);
         dbgprintf("pascal: doAction: message: %s\n", batchPart);
 
         /* If max bytes is set and this next message will put us over the limit,
          * submit the current buffer and reset */
-        if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes) {
+        if (pWrkrData->pData->maxbytes > 0 && pWrkrData->batch.nmemb > 0 && !pWrkrData->batch.heldInTx &&
+            es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes) {
             dbgprintf(
                 "omclickhouse: maxbytes limit reached, submitting partial "
                 "batch of %d elements.\n",
                 pWrkrData->batch.nmemb);
-            CHKiRet(submitBatch(pWrkrData));
-            initializeBatch(pWrkrData);
-            batchPart = (const char *)ppString[0];
+            /* A rejected row is handled inside submitBatch(). A suspended
+             * flush keeps its rows, and endTransaction() posts them with the
+             * rest: RS_RET_SUSPENDED from here would make the engine retry
+             * only this message after beginTransaction() cleared the batch.
+             */
+            const rsRetVal flushRet = submitBatch(pWrkrData, 1);
+            if (flushRet == RS_RET_OK) {
+                batchPart = (const char *)ppString[0];
+            } else if (flushRet == RS_RET_SUSPENDED) {
+                pWrkrData->batch.heldInTx = 1;
+            } else {
+                ABORT_FINALIZE(flushRet);
+            }
         }
 
         CHKiRet(buildBatch(pWrkrData, batchPart));
 
         iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
     } else {
-        CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char *)ppString[0]), 1));
+        /* One message per request: a rejection is final and already recorded.
+         * RS_RET_DATAFAIL from doAction() would leave the worker dropping
+         * later messages, so the failure is consumed here.
+         */
+        const rsRetVal postRet = curlPost(pWrkrData, ppString[0], strlen((char *)ppString[0]), 1, 1);
+        if (postRet != RS_RET_DATAFAIL) {
+            CHKiRet(postRet);
+        }
     }
 finalize_it:
+    /* The engine handles only these codes without dropping messages. Anything
+     * else is a local failure such as an allocation error. In bulk mode the
+     * whole transaction is suspended at endTransaction(), so the rows already
+     * batched are resent; a single message is suspended here.
+     */
+    if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
+        iRet != RS_RET_SUSPENDED && iRet != RS_RET_DISABLE_ACTION) {
+        LogError(0, iRet, "omclickhouse: could not process message, suspending the action");
+        if (pWrkrData->pData->bulkmode) {
+            pWrkrData->batch.failedInTx = 1;
+            iRet = RS_RET_DEFER_COMMIT;
+        } else {
+            iRet = RS_RET_SUSPENDED;
+        }
+    }
 ENDdoAction
 
 
 BEGINendTransaction
     CODESTARTendTransaction;
+    if (pWrkrData->batch.failedInTx) {
+        initializeBatch(pWrkrData);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
     /* End Transaction only if batch data is not empty */
     if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
-        CHKiRet(submitBatch(pWrkrData));
+        CHKiRet(submitBatch(pWrkrData, 0));
     } else {
         dbgprintf(
             "omclickhouse: endTransaction, pWrkrData->batch.data is NULL, "
             "nothing to send. \n");
     }
 finalize_it:
+    pWrkrData->batch.heldInTx = 0;
+    pWrkrData->batch.failedInTx = 0;
+    /* Only OK and SUSPENDED: the engine's retry loop does not handle
+     * RS_RET_DATAFAIL from here.
+     */
+    if (iRet != RS_RET_OK && iRet != RS_RET_SUSPENDED && iRet != RS_RET_DISABLE_ACTION) {
+        LogError(0, iRet, "omclickhouse: could not send batch, suspending the action");
+        iRet = RS_RET_SUSPENDED;
+    }
 ENDendTransaction
 
 static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
@@ -602,9 +1131,15 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->errorFile = NULL;
     pData->bulkmode = 1;
     pData->maxbytes = 104857600;  // 100MB
+    pData->maxConsecutiveRejects = 0;
     pData->caCertFile = NULL;
     pData->myCertFile = NULL;
     pData->myPrivKeyFile = NULL;
+    pData->format = CH_FMT_VALUES;
+    pData->compression = CH_COMP_OFF;
+    pData->asyncInsert = 0;
+    pData->table = NULL;
+    pData->restQuery = NULL;
 }
 
 /* POST result string ... useful for debugging */
@@ -622,6 +1157,29 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
     pWrkrData->replyLen = newlen;
     pWrkrData->reply = buf;
     return size * nmemb;
+}
+
+/* Keep X-ClickHouse-Exception-Code of the insert reply. Header lines are not
+ * NUL terminated.
+ */
+static size_t curlHeaderCb(char *buffer, size_t size, size_t nitems, void *userdata) {
+    static const char name[] = "X-ClickHouse-Exception-Code:";
+    wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)userdata;
+    const size_t len = size * nitems;
+    char value[24];
+    size_t i;
+    size_t n = 0;
+
+    if (len > sizeof(name) - 1 && strncasecmp(buffer, name, sizeof(name) - 1) == 0) {
+        for (i = sizeof(name) - 1; i < len && (buffer[i] == ' ' || buffer[i] == '\t'); ++i) {
+        }
+        for (; i < len && n < sizeof(value) - 1 && buffer[i] >= '0' && buffer[i] <= '9'; ++i) {
+            value[n++] = buffer[i];
+        }
+        value[n] = '\0';
+        if (n > 0) pWrkrData->exceptionCode = strtol(value, NULL, 10);
+    }
+    return len;
 }
 
 static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
@@ -658,6 +1216,14 @@ static void ATTR_NONNULL() curlCheckConnSetup(wrkrInstanceData_t *const pWrkrDat
 
 static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
     curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
+    curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_HEADERFUNCTION, curlHeaderCb);
+    curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_HEADERDATA, pWrkrData);
+    /* The health check posts plain "SELECT 1". Gzip applies to inserts only,
+     * so the post handle gets its own header list when compression is on.
+     */
+    if (pWrkrData->curlPostHeader != NULL) {
+        curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_HTTPHEADER, pWrkrData->curlPostHeader);
+    }
     curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1L);
     if (pWrkrData->pData->timeout) {
         curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TIMEOUT_MS, pWrkrData->pData->timeout);
@@ -665,10 +1231,26 @@ static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
+#define CONTENT_NDJSON "Content-Type: application/x-ndjson"
+#define CONTENT_GZIP "Content-Encoding: gzip"
 
 static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *const pWrkrData) {
+    const char *ctype;
     DEFiRet;
-    pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
+    ctype = pWrkrData->pData->format == CH_FMT_JSONEACHROW ? CONTENT_NDJSON : CONTENT_JSON;
+    pWrkrData->curlHeader = curl_slist_append(NULL, ctype);
+    CHKmalloc(pWrkrData->curlHeader);
+    if (pWrkrData->pData->compression == CH_COMP_GZIP) {
+        HEADER *postHdr = curl_slist_append(NULL, ctype);
+        HEADER *gzipHdr;
+        if (postHdr == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        gzipHdr = curl_slist_append(postHdr, CONTENT_GZIP);
+        if (gzipHdr == NULL) {
+            curl_slist_free_all(postHdr);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        pWrkrData->curlPostHeader = gzipHdr;
+    }
     CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());
     curlPostSetup(pWrkrData);
 
@@ -679,6 +1261,14 @@ finalize_it:
     if (iRet != RS_RET_OK && pWrkrData->curlPostHandle != NULL) {
         curl_easy_cleanup(pWrkrData->curlPostHandle);
         pWrkrData->curlPostHandle = NULL;
+    }
+    if (iRet != RS_RET_OK && pWrkrData->curlHeader != NULL) {
+        curl_slist_free_all(pWrkrData->curlHeader);
+        pWrkrData->curlHeader = NULL;
+    }
+    if (iRet != RS_RET_OK && pWrkrData->curlPostHeader != NULL) {
+        curl_slist_free_all(pWrkrData->curlPostHeader);
+        pWrkrData->curlPostHeader = NULL;
     }
     RETiRet;
 }
@@ -762,6 +1352,108 @@ finalize_it:
     RETiRet;
 }
 
+/* database.table or table. One dot, no empty side, nothing else. Each part
+ * starts with a letter or underscore, as an unquoted ClickHouse identifier
+ * must. The value is copied into the request URL, so this is the injection
+ * boundary.
+ */
+static int tableNameOk(const char *table) {
+    size_t i;
+    size_t n;
+    const char *dot;
+
+    if (table == NULL) return 0;
+    n = strlen(table);
+    if (n == 0 || n > CH_TABLE_MAX) return 0;
+    if (table[0] == '.' || table[n - 1] == '.') return 0;
+    dot = strchr(table, '.');
+    if (dot != NULL && strchr(dot + 1, '.') != NULL) return 0;
+    for (i = 0; i < n; ++i) {
+        unsigned char c = (unsigned char)table[i];
+        const int partStart = (i == 0 || table[i - 1] == '.');
+        if (c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) continue;
+        if (!partStart && (c == '.' || (c >= '0' && c <= '9'))) continue;
+        return 0;
+    }
+    return 1;
+}
+
+static rsRetVal rejectEscapedJsonTemplate(instanceData *const pData) {
+    struct template *tpl;
+    DEFiRet;
+
+    if (loadModConf == NULL || loadModConf->pConf == NULL || pData->tplName == NULL) FINALIZE;
+    tpl = tplFind(loadModConf->pConf, (char *)pData->tplName, (int)strlen((char *)pData->tplName));
+    /* option.jsonf builds one escaped object per message and is accepted.
+     * Whole-string SQL or JSON escaping would rewrite the object's own quotes.
+     */
+    if (tpl != NULL && (tpl->optFormatEscape == SQL_ESCAPE || tpl->optFormatEscape == STDSQL_ESCAPE ||
+                        tpl->optFormatEscape == JSON_ESCAPE)) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omclickhouse: format jsoneachrow does not accept template '%s' "
+                 "with option.stdsql, option.sql, or option.json",
+                 pData->tplName);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal appendQuery(char *dst, size_t cap, size_t *off, const char *src) {
+    size_t n = strlen(src);
+    if (*off + n >= cap) return RS_RET_ERR;
+    memcpy(dst + *off, src, n);
+    *off += n;
+    dst[*off] = '\0';
+    return RS_RET_OK;
+}
+
+static rsRetVal buildRestQuery(instanceData *const pData) {
+    char query[1024];
+    size_t off = 0;
+    DEFiRet;
+
+    query[0] = '\0';
+    if (pData->format == CH_FMT_JSONEACHROW) {
+        char sql[CH_TABLE_MAX + 64];
+        const char *s;
+        int n = snprintf(sql, sizeof(sql), "INSERT INTO %s FORMAT JSONEachRow", (const char *)pData->table);
+        if (n < 0 || (size_t)n >= sizeof(sql)) {
+            LogError(0, RS_RET_ERR, "omclickhouse: internal query buffer too small");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        CHKiRet(appendQuery(query, sizeof(query), &off, "?query="));
+        for (s = sql; *s != '\0'; ++s) {
+            /* CHKiRet expands to an if. Brace it so the else stays attached here. */
+            if (*s == ' ') {
+                CHKiRet(appendQuery(query, sizeof(query), &off, "%20"));
+            } else {
+                char one[2];
+                one[0] = *s;
+                one[1] = '\0';
+                CHKiRet(appendQuery(query, sizeof(query), &off, one));
+            }
+        }
+    }
+    if (pData->asyncInsert) {
+        CHKiRet(appendQuery(
+            query, sizeof(query), &off,
+            off == 0 ? "?async_insert=1&wait_for_async_insert=1" : "&async_insert=1&wait_for_async_insert=1"));
+    }
+    if (pData->compression == CH_COMP_GZIP) {
+        CHKiRet(appendQuery(query, sizeof(query), &off,
+                            off == 0 ? "?enable_http_compression=1" : "&enable_http_compression=1"));
+    }
+    if (off > 0) CHKmalloc(pData->restQuery = (uchar *)strdup(query));
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(pData->restQuery);
+        pData->restQuery = NULL;
+    }
+    RETiRet;
+}
+
 BEGINnewActInst
     struct cnfparamvals *pvals;
     uchar *server = NULL;
@@ -804,6 +1496,8 @@ BEGINnewActInst
             pData->bulkmode = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "maxbytes")) {
             pData->maxbytes = (size_t)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "maxconsecutiverejects")) {
+            pData->maxConsecutiveRejects = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
             CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
@@ -826,6 +1520,36 @@ BEGINnewActInst
             } else {
                 fclose(fp);
             }
+        } else if (!strcmp(actpblk.descr[i].name, "format")) {
+            char *fmt = NULL;
+            CHKmalloc(fmt = es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (!strcasecmp(fmt, "values")) {
+                pData->format = CH_FMT_VALUES;
+            } else if (!strcasecmp(fmt, "jsoneachrow")) {
+                pData->format = CH_FMT_JSONEACHROW;
+            } else {
+                LogError(0, RS_RET_CONFIG_ERROR, "omclickhouse: format must be values or jsoneachrow");
+                free(fmt);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
+            free(fmt);
+        } else if (!strcmp(actpblk.descr[i].name, "table")) {
+            CHKmalloc(pData->table = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "asyncinsert")) {
+            pData->asyncInsert = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "compression")) {
+            char *comp = NULL;
+            CHKmalloc(comp = es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (!strcasecmp(comp, "off")) {
+                pData->compression = CH_COMP_OFF;
+            } else if (!strcasecmp(comp, "gzip")) {
+                pData->compression = CH_COMP_GZIP;
+            } else {
+                LogError(0, RS_RET_CONFIG_ERROR, "omclickhouse: compression must be off or gzip");
+                free(comp);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
+            free(comp);
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
             CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
@@ -854,10 +1578,31 @@ BEGINnewActInst
 
     if (pData->user != NULL) CHKiRet(computeAuthHeader((char *)pData->user, (char *)pData->pwd, &pData->authBuf));
 
+    if (pData->format == CH_FMT_JSONEACHROW) {
+        if (pData->tplName == NULL) {
+            LogError(0, RS_RET_CONFIG_ERROR, "omclickhouse: format jsoneachrow requires a template");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (!tableNameOk((const char *)pData->table)) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "omclickhouse: table must be table or database.table and contain only "
+                     "[A-Za-z0-9_.]");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        CHKiRet(rejectEscapedJsonTemplate(pData));
+    } else if (pData->table != NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omclickhouse: table is only valid with format jsoneachrow");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    CHKiRet(buildRestQuery(pData));
+
     CODE_STD_STRING_REQUESTnewActInst(1);
-    CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-                         (uchar *)strdup((pData->tplName == NULL) ? " StdClickHouseFmt" : (char *)pData->tplName),
-                         OMSR_RQD_TPL_OPT_SQL));
+    /* JSONEachRow must not ask the core for SQL escaping. SQL escaping would
+     * rewrite quotes inside the JSON object.
+     */
+    CHKiRet(OMSRsetEntry(
+        *ppOMSR, 0, (uchar *)strdup((pData->tplName == NULL) ? " StdClickHouseFmt" : (char *)pData->tplName),
+        (pData->format == CH_FMT_JSONEACHROW) ? OMSR_NO_RQD_TPL_OPTS : OMSR_RQD_TPL_OPT_SQL_BACKSLASH));
 
     if (server != NULL) {
         CHKiRet(computeBaseUrl((const char *)server, pData->port, pData->useHttps, pData));
@@ -911,10 +1656,12 @@ ENDfreeCnf
 
 BEGINdoHUP
     CODESTARTdoHUP;
+    pthread_mutex_lock(&pData->mutErrFile);
     if (pData->fdErrFile != -1) {
         close(pData->fdErrFile);
         pData->fdErrFile = -1;
     }
+    pthread_mutex_unlock(&pData->mutErrFile);
 ENDdoHUP
 
 

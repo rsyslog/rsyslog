@@ -209,8 +209,8 @@ rst_epilog = """
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
 # BOTH release AND version are needed for manual release builds.
-version = '8.2610'  # IMPORTANT: keep in sync with scheduled stable; build docs before commit.
-# release = '8.2610.0'
+version = '8.2612'  # IMPORTANT: keep in sync with scheduled stable; build docs before commit.
+# release = '8.2612.0'
 release = version + ' daily stable'
 
 # Allow override from environment (e.g. Docker/CI builds without .git)

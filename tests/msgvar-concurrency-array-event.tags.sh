@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test concurrency of message variables
 # Added 2015-11-03 by rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0

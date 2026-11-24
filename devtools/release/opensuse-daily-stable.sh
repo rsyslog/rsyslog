@@ -172,8 +172,21 @@ for package in packages:
 core_files = policy.get("supplemental_core_files", [])
 if any(not path.strip() for path in core_files):
     raise SystemExit("policy contains an empty supplemental core file")
+module_dir = re.compile(r"^%\{rsyslog_module_dir_(?:no|with)deps\}/")
 for path in core_files:
     if has_manifest_path(path):
+        continue
+    # Newer native specs may package the module in a subpackage instead
+    # (8.2608.0 ships mmleefparse.so in module-mmnormalize).  Both module
+    # directory macros expand to the same path, so do not list it twice.
+    module = module_dir.sub("", path)
+    # Allow RPM directives such as %attr(...) before the path, but not
+    # %exclude, which means the file is not shipped there.
+    if module != path and re.search(
+        r"(?m)^(?:%(?!exclude\b)[A-Za-z]+(?:\([^)]*\))?\s+)*"
+        rf"%\{{rsyslog_module_dir_(?:no|with)deps\}}/{re.escape(module)}\s*$",
+        spec,
+    ):
         continue
     spec, count = re.subn(
         r"(?m)^(%\{rsyslog_module_dir_nodeps\}/lmzlibw\.so\s*)$",
@@ -206,6 +219,24 @@ for entry in main_files:
     if count != 1:
         raise SystemExit(f"could not add supplemental main file: {path}")
 
+# Preserve the native feature set when new optional modules auto-enable.
+for entry in policy.get("disabled_optional_modules", []):
+    module = entry.get("module", "")
+    if not re.fullmatch(r"[a-z][a-z0-9]*", module) or not entry.get("reason", "").strip():
+        raise SystemExit("disabled optional module requires a valid module and reason")
+    if re.search(rf"--enable-{re.escape(module)}(?:\s|$|=(?!no(?:\s|$)))", spec):
+        raise SystemExit(f"native spec explicitly enables optional module: {module}")
+    flag = f"--disable-{module}"
+    if flag not in spec:
+        spec, count = re.subn(
+            r"(?m)^(\s*--enable-omhttp\s*\\)$",
+            lambda match: match.group(1) + f"\n\t\t{flag} \\",
+            spec,
+            count=1,
+        )
+        if count != 1:
+            raise SystemExit(f"could not disable optional module: {module}")
+
 spec, macro_count = re.subn(
     r"(?m)^# drop this with next release when doc tarball version lines up\n"
     r"%define rsyslog_major .*\n%define rsyslog_patch .*\n",
@@ -222,7 +253,11 @@ spec, source_count = re.subn(
 spec, doc_source_count = re.subn(
     r"(?m)^Source14:\s*.*$", "Source14:       rsyslog-doc-%{version}.tar.gz", spec
 )
-if (macro_count, version_count, release_count, source_count, doc_source_count) != (1, 1, 1, 1, 1):
+# Since 8.2608.0 the native spec takes its documentation from the release
+# tarball's doc/source tree; older specs used a separate doc tarball
+# (Source14) and a version macro workaround.  Accept both layouts.
+if (version_count, release_count, source_count) != (1, 1, 1) or \
+        macro_count > 1 or doc_source_count > 1:
     raise SystemExit("openSUSE spec version/source fields did not match exactly once")
 
 stamp = datetime.now(timezone.utc).strftime("%a %b %d %Y")

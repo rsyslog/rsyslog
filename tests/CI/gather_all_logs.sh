@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Some generic cleanup to be done before buildbot processes
 # tests.
 echo gather all logs left from make check.

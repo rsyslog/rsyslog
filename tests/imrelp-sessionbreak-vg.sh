@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2020-04-10 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000000 

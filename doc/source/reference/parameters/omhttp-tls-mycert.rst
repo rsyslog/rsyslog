@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-tls-mycert:
 .. _omhttp.parameter.input.tls-mycert:
 

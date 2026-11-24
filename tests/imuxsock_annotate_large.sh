@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS" "trusted property annotation depends on Linux credentials/procfs behavior"
 

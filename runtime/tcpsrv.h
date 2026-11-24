@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definitions for tcpsrv class.
  *
  * Copyright 2008-2026 Adiscon GmbH.
@@ -226,7 +228,6 @@ struct tcpsrv_s {
         /* work queue */
         workQueue_t workQueue;
         int currWrkrs;
-        int failOnBindError; /**< return a listener bind error after session setup */
 };
 
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmsnareparse parsing with trailing extra-data section truncation.
 # This test verifies both the with-tabs code path and documents the bug fix for the no-tabs path.
 unset RSYSLOG_DYNNAME

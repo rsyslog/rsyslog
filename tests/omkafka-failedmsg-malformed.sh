@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for GitHub issue #4452's restart-crash class. omkafka
 # must ignore malformed persisted failed-message records instead of
 # dereferencing a missing tab separator while loading replay state.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test many concurrent tcp connections
 # addd 2016-03-02 by RGerhards, released under ASL 2.0
 # the key point of this test is that we do not abort and

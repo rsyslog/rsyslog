@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test named rate limits for imtcp and imptcp
 # This test defines a rate limit policy and applies it to listeners.
 . ${srcdir:=.}/diag.sh init --suppress-abort-on-error

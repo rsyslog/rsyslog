@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML configuration parity for mmpstrucdata container and no-SD null
 # handling. The YAML frontend must pass the same action parameters to the
 # module as RainerScript, and the oracle is the configured omfile output after

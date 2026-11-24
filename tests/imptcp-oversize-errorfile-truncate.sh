@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for oversizemsg.errorfile with imptcp truncation.
 # imptcp can detect and truncate an oversized TCP frame before core
 # submission sees rawmsg > maxMessageSize. The test passes only if that

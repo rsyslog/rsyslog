@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-impstats-push-timeout-ms:
 .. _impstats.parameter.module.push-timeout-ms:
 

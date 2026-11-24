@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* tcpclt.h
  *
  * This are the definitions for the TCP based clients class.

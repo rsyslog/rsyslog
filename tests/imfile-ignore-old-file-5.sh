@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # [polling mode] Don't read a file with old timestamp
 # touch the file, then read it
 

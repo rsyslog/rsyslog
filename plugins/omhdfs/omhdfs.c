@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omhdfs.c
  * This is an output module to support Hadoop's HDFS.
  *

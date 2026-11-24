@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2025-02-27 by RGerhards, released under ASL 2.0
 # This checks primarily that impstats and imtcp work together. There is little
 # we can tell about the actual stats.

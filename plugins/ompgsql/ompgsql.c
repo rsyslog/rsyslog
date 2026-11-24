@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* ompgsql.c
  * This is the implementation of the build-in output module for PgSQL.
  *

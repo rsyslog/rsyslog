@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2021-07-07 by Rgerhards
 # This test checks if rsyslog handles a non-starting imtcp listener gracefully.
 # This file is part of the rsyslog project, released under ASL 2.0

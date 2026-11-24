@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Reference for rsyslog queue parameters, including memory, disk, and disk-assisted queue behavior.
    :keywords: rsyslog, queue parameters, disk queue, segmented disk, disk assisted, RainerScript, YAML
@@ -44,6 +46,82 @@ Configuration Parameters
    As with other configuration objects, parameters for this
    object are case-insensitive.
 
+
+.. _queue-scope-local:
+
+queue.scope
+-----------
+
+``global`` (default) retains one shared queue per configured main queue,
+ruleset queue or action queue. ``local`` adds producer-specific SPSC front
+queues (FE) ahead of that queue's shared backend (BE). This is one logical
+queue, not a separate action or ruleset per producer.
+
+Local scope is experimental and supports ``FixedArray`` and ``LinkedList``
+memory backends, including disk assistance using either classic or segmented
+storage. Pure ``Disk`` and ``Direct`` queues cannot themselves have local scope.
+Direct actions inside a supported local pipeline still execute on the calling
+queue worker. See :ref:`local-queue-operation` for support restrictions,
+ordering, persistence and troubleshooting.
+
+Local scope requires lock-free 64-bit atomics and POSIX condition variables
+using ``CLOCK_MONOTONIC``. It is unavailable on platforms that lack these
+primitives, including macOS; attempting to start a local queue fails. Global
+scope remains available on those platforms.
+
+queue.local.frontendSize
+------------------------
+
+Positive integer, explicitly required with ``queue.scope="local"``. Sets the
+number of messages each FE ring can buffer. A producer's entire submitted
+batch must fit the available FE space; otherwise that batch goes to the BE.
+A batch larger than the FE capacity also goes to the BE. The producer does
+not wait for FE space before taking this fallback path, but BE enqueue can
+apply its normal flow control and timeout.
+
+``10000`` is a useful starting point for experiments, not a universal sizing
+recommendation. Batches have a maximum size and can be smaller. Increasing
+this setting reserves more slots per frontend and can increase queued-message
+memory substantially.
+
+queue.local.maxFrontends
+------------------------
+
+Positive integer, explicitly required with local scope. Caps registered
+frontends for the queue's lifetime. Each registered FE has one consumer worker;
+``queue.workerThreads`` independently controls BE workers. Size the cap for
+actual calling workers, including upstream FE/BE workers at queued boundaries,
+not TCP connections. Producers that cannot register use the BE. Registration
+slots are not reclaimed for reuse during that queue's lifetime.
+
+For BE capacity ``B=queue.size``, FE capacity ``F``, cap ``N``, and
+``D=min(queue.dequeueBatchSize,F)``, the conservative memory delivery-obligation
+bound is ``B + N*(F+D)``. It includes FE active batches as well as rings.
+It is not a byte/RSS limit and excludes disk backlog and downstream queues.
+``queue.size`` and full/light delay marks remain BE-specific.
+
+queue.local.helperBatchSize
+---------------------------
+
+Optional nonnegative integer. Defaults to ``D=min(queue.dequeueBatchSize,F)``;
+``0`` disables BE helping. An explicit value must not exceed ``D``. When an
+FE worker has no FE work, it can take up to this many messages from the memory
+BE using the existing consumer callback. Helping does not wait to accumulate
+a minimum-size batch and does not directly dequeue the disk store.
+
+queue.local.frontendStats
+-------------------------
+
+Boolean, default ``off``. Enables individual impstats objects named
+``<queue-name>.local.frontend.<id>``. Aggregate local counters remain available
+as ``<queue-name>.local`` when impstats is enabled. Useful fields include
+``route.fe.messages``, ``route.be.messages``, ``outstanding.messages``,
+``fe.queued.messages``, ``fe.inflight.messages`` and ``terminal.help``.
+These are observations, not a synchronized admission or shutdown API.
+
+All four ``queue.local.*`` parameters above require local scope. RainerScript
+and YAML frontends use the same queue validation. Validate the complete
+configuration with ``rsyslogd -N1`` before deployment.
 
 queue.filename
 --------------
@@ -370,12 +448,14 @@ queue.discardSeverity
    :widths: auto
    :class: parameter-table
 
-   "integer", "8", "no", "``$ActionQueueDiscardSeverity``"
+   "integer or severity name", "8", "no", "``$ActionQueueDiscardSeverity``"
 
 As soon as the threshold of the parameter queue.discardMark is reached
 incoming as well as queued messages with a priority equal or lower than
 specified will be erased. With the default no messages will be erased.
-You have to specify a numeric severity value for this parameter.
+Specify a numeric severity from ``0`` (emergency) through ``7`` (debug), or a
+syslog severity name such as ``warning``. The default ``8`` disables severity
+discarding. A numeric value has the same meaning for global and local queues.
 
 
 queue.checkpointInterval
@@ -708,11 +788,35 @@ queue.dequeueSlowDown
 
    "integer", "0", "no", "``$ActionQueueDequeueSlowDown``"
 
-Regulates how long dequeueing should be delayed. This value must be specified
-in microseconds (1000000us is 1sec). It can be used to slow down rsyslog so
-it won't send things to fast.
-For example if this parameter is set to 10000 on a UDP send action, the action
-won't be able to put out more than 100 messages per second.
+Adds a delay after a queue worker processes a dequeued batch.
+The value is specified in microseconds (1000000 microseconds is one second);
+``0`` disables the delay. The delay applies once per batch, not once per
+message, so messages within a batch can be sent in a burst.
+
+The resulting message rate depends on the actual batch size, processing time,
+and number of active workers. ``queue.dequeueBatchSize`` limits the number of
+messages in each batch; a larger batch can send more messages between delays.
+For example, with one worker, full batches of 100 messages, and
+``queue.dequeueSlowDown="10000"``, the delay alone permits roughly 10000
+messages per second, rather than 100. Processing time reduces that rate.
+
+With ``queue.dequeueBatchSize="1"`` and one worker, the same delay is applied
+after each processed message, giving roughly 100 messages per second before
+accounting for processing time. This is approximate throttling,
+not a precise message-rate guarantee; multiple workers can process batches
+independently. Reducing the batch size to one can reduce throughput.
+
+For per-message output rate limiting, prefer ``action.ratelimit.name`` with a
+named :doc:`ratelimit output policy <configuration_objects/ratelimit>`.
+Use ``scope: output`` and ``mode: pace`` to preserve messages while the action
+queue worker waits for the next permitted rate-limit window. Pacing requires
+a non-direct action queue, such as ``queue.type="linkedlist"``. The policy's
+``interval`` and ``burst`` control messages per window; delivery can still be
+bursty. Each action has its own quota, even when actions reference the same
+named policy. Pacing can grow the action-queue backlog; normal queue capacity,
+backpressure, and discard settings still apply. Use ``mode: drop`` only when
+discarding excess messages is acceptable.
+
 
 
 queue.dequeueTimeBegin

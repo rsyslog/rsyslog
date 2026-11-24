@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-httpcontenttype:
 .. _omhttp.parameter.input.httpcontenttype:
 

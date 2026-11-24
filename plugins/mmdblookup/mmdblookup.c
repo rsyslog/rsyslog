@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmdblookup.c
  * Parse ipaddress field of the message into structured data using
  * MaxMindDB.

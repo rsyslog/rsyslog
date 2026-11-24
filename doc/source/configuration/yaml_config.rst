@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _yaml_config:
 
 YAML Configuration Format

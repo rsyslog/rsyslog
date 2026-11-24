@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* lmcry_gcry.c
  *
  * An implementation of the cryprov interface for libgcrypt.

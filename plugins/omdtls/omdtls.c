@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omdtls.c
  * The dtls output module, uses OpenSSL as library to implement DTLS.
  *

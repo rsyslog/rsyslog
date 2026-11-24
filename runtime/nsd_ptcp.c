@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* nsd_ptcp.c
  *
  * An implementation of the nsd interface for plain tcp sockets.

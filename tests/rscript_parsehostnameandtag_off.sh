@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test global(parser.parseHostnameAndTag="off") for the RFC3164 parser.
 # The oracle is the configured omfile output after synchronized shutdown:
 # syslogtag must remain empty and the hostname/tag text must remain in %msg%.

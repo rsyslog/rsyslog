@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This script shall be executed before the real CI run to make sure
 # the environment is "clean enough". In the past we have seen some
 # left-over instances on some (buildbot) systems

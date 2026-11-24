@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imkafka-split-json-records:
 .. _imkafka.parameter.input.split.json.records:
 

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imkubernetes.c
  * Kubernetes-native container log input module.
  *
@@ -188,7 +190,7 @@ static struct cnfparamdescr modpdescr[] = {
     {"cacheentryttl", eCmdHdlrPositiveInt, 0},
     {"freshstarttail", eCmdHdlrBinary, 0},
     {"defaultseverity", eCmdHdlrSeverity, 0},
-    {"defaultfacility", eCmdHdlrFacility, 0},
+    {"defaultfacility", eCmdHdlrString, 0},
     {"escapelf", eCmdHdlrBinary, 0},
     {"enrichkubernetes", eCmdHdlrBinary, 0},
     {"kubernetesurl", eCmdHdlrString, 0},
@@ -1389,7 +1391,16 @@ static rsRetVal applyConfigParams(struct nvlst *lst, struct cnfparamblk *parambl
         } else if (!strcmp(paramblk->descr[i].name, "defaultseverity")) {
             loadModConf->iDfltSeverity = (int)pvals[i].val.d.n;
         } else if (!strcmp(paramblk->descr[i].name, "defaultfacility")) {
-            loadModConf->iDfltFacility = (int)pvals[i].val.d.n;
+            char *facility_name = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(facility_name);
+            const int facility = decodeSyslogName((uchar *)facility_name, syslogFacNames);
+            /* Numeric settings are ordinals; symbolic names decode to shifted LOG_* values. */
+            const int ordinal = facility < 0 || isdigit((unsigned char)facility_name[0]) ? facility : pri2fac(facility);
+            if (ordinal < 0 || ordinal > 23)
+                LogError(0, RS_RET_INVALID_PARAMS, "imkubernetes: invalid defaultfacility '%s'", facility_name);
+            else
+                loadModConf->iDfltFacility = ordinal;
+            free(facility_name);
         } else if (!strcmp(paramblk->descr[i].name, "escapelf")) {
             loadModConf->bEscapeLf = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(paramblk->descr[i].name, "enrichkubernetes")) {

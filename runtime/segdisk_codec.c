@@ -160,10 +160,16 @@ static rsRetVal add_time(encbuf_t *b, uint16_t f, const struct syslogTime *t) {
     return add_tlv(b, f, TLV_TIME, 0, d, sizeof(d));
 }
 
-static rsRetVal add_json(encbuf_t *b, uint16_t f, smsg_t *msg, struct json_object *json) {
+/* root is read under the message mutex: another holder may replace or free
+ * the tree until it is taken */
+static rsRetVal add_json(encbuf_t *b, uint16_t f, smsg_t *msg, struct json_object **root) {
     char *copy = NULL;
-    if (json == NULL) return RS_RET_OK;
     MsgLock(msg);
+    struct json_object *const json = *root;
+    if (json == NULL) {
+        MsgUnlock(msg);
+        return RS_RET_OK;
+    }
     const char *text = json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
     if (text != NULL) copy = strdup(text);
     MsgUnlock(msg);
@@ -212,8 +218,12 @@ rsRetVal segdiskCodecEncode(smsg_t *msg, unsigned char **buf, size_t *len) {
     text = getRcvFromPort(msg);
     ADD(add_bytes(&b, F_RCVFROMPORT, text, strlen((char *)text)));
     if (msg->pszStrucData != NULL) ADD(add_bytes(&b, F_STRUCTURED_DATA, msg->pszStrucData, msg->lenStrucData));
-    ADD(add_json(&b, F_JSON, msg, msg->json));
-    ADD(add_json(&b, F_LOCALVARS, msg, msg->localvars));
+#ifdef HAVE_LOGNORM_TURBO
+    /* the turbo snapshot is module-owned and cannot cross a queue file */
+    ADD(MsgTurboMaterialize(msg));
+#endif
+    ADD(add_json(&b, F_JSON, msg, &msg->json));
+    ADD(add_json(&b, F_LOCALVARS, msg, &msg->localvars));
     ADD(add_cstr(&b, F_APPNAME, msg, msg->pCSAPPNAME));
     ADD(add_cstr(&b, F_PROCID, msg, msg->pCSPROCID));
     ADD(add_cstr(&b, F_MSGID, msg, msg->pCSMSGID));
@@ -266,6 +276,8 @@ static rsRetVal decode_time(const unsigned char *p, uint32_t len, struct syslogT
 rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) {
     smsg_t *msg = NULL;
     uint32_t seen = 0;
+    uint32_t msg_offset = 0;
+    uint32_t after_pri_offset = 0;
     size_t pos = 0;
     rsRetVal r = msgConstructForDeserializer(&msg);
     if (r != RS_RET_OK) return r;
@@ -323,11 +335,25 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
             case F_SEVERITY:
                 NEED(TLV_U16, 2);
+                if (get16(p) > LOG_DEBUG) {
+                    r = RS_RET_INVALID_VALUE;
+                    goto fail;
+                }
                 msg->iSeverity = get16(p);
                 break;
             case F_FACILITY:
                 NEED(TLV_U16, 2);
-                msg->iFacility = get16(p);
+                /* Ordinals 0..24 take precedence where shifted LOG_* values
+                 * overlap; queue records do not carry their source representation. */
+                if (get16(p) < LOG_NFACILITIES || get16(p) == LOG_INVLD) {
+                    msg->iFacility = get16(p);
+                } else if (get16(p) <= LOG_LOCAL7 && (get16(p) & 7u) == 0) {
+                    /* Older module records may contain an unambiguous shifted LOG_* value. */
+                    msg->iFacility = pri2fac(get16(p));
+                } else {
+                    r = RS_RET_INVALID_VALUE;
+                    goto fail;
+                }
                 break;
             case F_FLAGS:
                 NEED(TLV_U32, 4);
@@ -440,11 +466,11 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
             case F_MSG_OFFSET:
                 NEED(TLV_U32, 4);
-                MsgSetMSGoffs(msg, (int)get32(p));
+                msg_offset = get32(p);
                 break;
             case F_AFTER_PRI_OFFSET:
                 NEED(TLV_U32, 4);
-                if ((r = MsgSetAfterPRIOffs(msg, (int)get32(p))) != RS_RET_OK) goto fail;
+                after_pri_offset = get32(p);
                 break;
             case F_PARSE_SUCCESS:
                 NEED(TLV_U8, 1);
@@ -467,6 +493,31 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
         r = RS_RET_INVALID_VALUE;
         goto fail;
     }
+    /* TLVs may arrive in any order. Check offsets against the final raw message
+     * before invoking setters that assert their preconditions. */
+    if ((msg_offset != UINT32_MAX && (msg_offset > (uint32_t)msg->iLenRawMsg + 1u || msg_offset > INT_MAX)) ||
+        after_pri_offset > INT_MAX) {
+        r = RS_RET_INVALID_VALUE;
+        goto fail;
+    }
+    /* MsgSetRawMsg() may leave any cached offset stale, even zero or an
+     * in-bounds delimiter. Derive it from the current raw message using the
+     * same bounded PRI-prefix check as getRawMsgAfterPRI(). */
+    const uchar *raw = msg->pszRawMsg;
+    const int raw_len = msg->iLenRawMsg;
+    after_pri_offset = 0;
+    if (raw_len > 2 && raw[0] == '<') {
+        if (raw[2] == '>')
+            after_pri_offset = 3;
+        else if (raw_len > 3 && raw[3] == '>')
+            after_pri_offset = 4;
+        else if (raw_len > 4 && raw[4] == '>')
+            after_pri_offset = 5;
+    }
+    MsgSetMSGoffs(msg, msg_offset == UINT32_MAX ? -1 : (int)msg_offset);
+    if ((seen & (1u << (F_AFTER_PRI_OFFSET - 1))) != 0 &&
+        (r = MsgSetAfterPRIOffs(msg, (int)after_pri_offset)) != RS_RET_OK)
+        goto fail;
     *out = msg;
     return RS_RET_OK;
 fail:

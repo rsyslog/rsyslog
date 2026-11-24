@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-deletestateonfilemove:
 .. _imfile.parameter.input.deletestateonfilemove:
 .. _imfile.parameter.deletestateonfilemove:

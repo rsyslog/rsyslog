@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that segmentedDisk rejects missing storage identity, unsupported
 # corruption/encryption modes, and legacy action syntax. Each case must fail
 # -N1 with its specific diagnostic rather than silently changing queue type.

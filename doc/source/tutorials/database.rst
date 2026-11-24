@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database
 =====================================================================================
 

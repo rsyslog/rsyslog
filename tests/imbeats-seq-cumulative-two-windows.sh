@@ -1,6 +1,11 @@
 #!/bin/bash
-# Verify cumulative sequence tracking and ACKs across two Lumberjack windows
-# on one connection.
+# SPDX-License-Identifier: Apache-2.0
+# Verify that cumulative sequence numbering across two Lumberjack windows on
+# one connection is still accepted. Beats clients restart at 1 in every
+# window (see imbeats-seq-restart-per-window.sh); senders that instead
+# continue from the last ACKed sequence number must keep working.
+# Oracle: both one-event windows (seq 1, then seq 2) are delivered and ACKed
+# with the sequence number of their last event (1, then 2).
 . ${srcdir:=.}/diag.sh init
 
 generate_conf

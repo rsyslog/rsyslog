@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: The mmjsontransform policyWatchDebounce parameter sets the quiet period before watched policy reloads.
    :keywords: rsyslog, mmjsontransform, policyWatchDebounce, debounce, watched reload

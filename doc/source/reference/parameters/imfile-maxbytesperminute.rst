@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-maxbytesperminute:
 .. _imfile.parameter.input.maxbytesperminute:
 .. _imfile.parameter.maxbytesperminute:

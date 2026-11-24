@@ -1,0 +1,7 @@
+interface:
+  display_name: "rsyslog Security Audit"
+  short_description: "Deep, private vulnerability audit of an rsyslog component"
+  default_prompt: >-
+    Use $rsyslog-security-audit to audit the named rsyslog component for
+    vulnerabilities; trace every write, verify with ASan/UBSan, and keep
+    findings private.

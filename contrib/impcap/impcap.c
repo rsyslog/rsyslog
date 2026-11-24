@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* impcap.c
  *
  * This is an input module using libpcap, a

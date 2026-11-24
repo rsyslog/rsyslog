@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-08-07 by Julien Thomas, released under ASL 2.0
 # Regression test: an mmexternal program that returns a core property set to a
 # JSON null ({"msg": null}) must NOT crash rsyslogd. jsonToString() returns NULL

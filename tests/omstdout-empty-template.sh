@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for empty rendered templates reaching omstdout with
 # ensureLFEnding enabled. The stimulus is a real action invocation whose
 # configured string template renders to the empty C string. The oracle is

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _faq-tls-mode0-disables-tls:
 .. _faq.tls.mode0.disables.tls:
 

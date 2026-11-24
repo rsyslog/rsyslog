@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*! \file srUtils.h
  *  \brief General, small utilities that fit nowhere else.
  *

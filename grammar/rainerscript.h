@@ -388,6 +388,8 @@ struct funcData_prifilt {
 #define RS_SCRIPT_EINVAL 1
 
 void varFreeMembers(const struct svar *r);
+int cnfexprIsLocalQueueSafe(const struct cnfexpr *expr);
+int cnfvarIsLocalQueueSafe(const uchar *name);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
 void readConfFile(FILE *fp, es_str_t **str);
 struct objlst *objlstNew(struct cnfobj *obj);
@@ -404,6 +406,7 @@ struct nvlst *nvlstFindName(struct nvlst *lst, es_str_t *name);
 int nvlstChkDisabled(struct nvlst *lst);
 struct cnfobj *cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
+void cnfobjDestructAll(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr *cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
@@ -446,6 +449,9 @@ struct cnfarray *cnfarrayNew(es_str_t *val);
 struct cnfarray *cnfarrayDup(struct cnfarray *old);
 struct cnfarray *cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
 void cnfarrayContentDestruct(struct cnfarray *ar);
+void cnfarrayDestruct(struct cnfarray *ar);
+void cnffparamlstDestruct(struct cnffparamlst *params);
+void cnfIteratorDestruct(struct cnfitr *itr);
 const char *getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);

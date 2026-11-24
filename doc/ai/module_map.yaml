@@ -3,9 +3,19 @@
 # directory as `MODULE_METADATA.yaml`; update both the metadata file and this map
 # when concurrency guidance changes.
 runtime_queue:
+  operator_docs:
+    - "doc/source/concepts/queues.rst#local-queue-operation"
+    - "doc/source/rainerscript/queue_parameters.rst#queue-scope-local"
   paths:
     - "runtime/queue.c"
     - "runtime/queue.h"
+    - "runtime/queue_local.c"
+    - "runtime/queue_local.h"
+    - "runtime/queue_local_stats.c"
+    - "runtime/queue_local_stats.h"
+    - "runtime/queue_spsc.c"
+    - "runtime/queue_spsc.h"
+    - "runtime/queue_lease.h"
     - "runtime/queue_da.c"
     - "runtime/queue_da.h"
     - "runtime/wti.c"
@@ -14,8 +24,93 @@ runtime_queue:
     - "runtime/segdisk_store.h"
   requires_serialization: true
   notes:
+    - >-
+      Worker batches carry physical-source and logical-owner attribution.
+      Ordinary acquisition and completion require the source to match the
+      worker pool user and held mutex; a DA child keeps its parent as logical
+      owner. Local FE helpers use separate, explicitly validated memory-BE
+      borrowing/completion APIs. Their home pool and module worker state never
+      change. Returned store-completion failure retains the source lease and
+      opaque context; inherited terminal disk cleanup is not repaired here.
+    - >-
+      Experimental local scope uses bounded producer-owned SPSC front ends
+      and an existing FixedArray or LinkedList backend. Each front end has its own worker pool,
+      source identity and module worker state. An eligible worker checks its
+      FE first and otherwise borrows one bounded available BE batch, with
+      completion attributed to BE and a fresh FE check before further borrowing.
+      Helpers never publish retries into their SPSC ring. Idle registration and
+      notification use BE-before-FE locking; ordinary successful FE publication
+      does not take the BE mutex. This implementation remains subject to the
+      staged local-queue qualification gates.
+    - >-
+      Local sampling and severity discard are logical preadmission policies.
+      Enabled policies serialize sequence selection and sample aggregate FE/BE memory
+      pressure under the BE mutex; default FE routing does not acquire that mutex.
+      Surviving messages retain one whole-batch routing decision. Transfers and
+      source retries bypass sampling, including DA handoff. Policy drops are
+      separate from preadmission errors and accepted-message terminal discard.
+      LinkedList retry insertion failure must have an explicit ownership outcome.
+    - >-
+      Local queue.size and full/light delay marks remain BE-specific. Resource
+      reservation is B+N*(F+D), with D=min(dequeueBatchSize,F) and a lifetime FE
+      registration cap N. It bounds memory delivery obligations, not RSS or disk
+      backlog. Resource gauges and allocation estimates are reported separately.
+      FE minimum-batch waiting clamps to D; helper acquisition never waits for a
+      minimum. FE execution also honors dequeue time windows and slowdown.
+    - >-
+      Local queue graphs register actual FE, BE and disk recovery execution workers as
+      downstream producers, including workers at global memory boundaries.
+      Static ruleset calls and module retry destinations contribute queue edges;
+      cycles and dynamic call targets are rejected before activation. Shutdown
+      joins upstream workers before closing downstream admission, retains all
+      queue objects until graph termination, and shares absolute graceful/action
+      deadlines across nodes. Full downstream enqueue waits respect that budget.
+      Graph worker execution marks accepted handoffs independently of FE trust;
+      new input admission retains full-queue FORCE_TERM. Input termination wakes
+      blocked graph admissions before input joins without closing worker handoff.
+      Asynchronous action copying still follows action.copyMsg; synchronous calls
+      retain the caller's worker state. Graph activation releases recovery only after
+      all destinations are initialized. Graph node startup failures propagate
+      before input release, and incomplete worker pools roll back constructed
+      slots before queue storage and synchronization are released. DA children
+      unwind under the parent mutex; their parent stops the graph after unlock.
+      Callback pools stop in topological order
+      before a second pass consolidates remaining FE obligations and invokes the
+      existing DA save/checkpoint machinery. The existing persistence phase may
+      extend beyond shared callback deadlines; it has no new bounded-save promise.
+    - >-
+      omfwd connection eligibility and transaction suspension use worker-local
+      active-target counts; shared target counts are telemetry only. Local omfwd
+      excludes networkNamespace because its saved namespace descriptor is shared.
+      omelasticsearch exposes its retry ruleset as an explicit graph edge;
+      retries to the same execution queue are rejected as cycles.
+    - >-
+      Local routing quiescence and source-specific immediate flags let frontend
+      workers stop and join before maintenance transfers their retained references
+      to the still-running backend. Shutdown phases share monotonic deadlines;
+      expiry never authorizes freeing live callback state. Snapshot objects are
+      unlinked before worker pools and fixed frontend descriptors are freed.
+    - >-
+      Local DA reuses both classic and segmented disk assistance, engine selection,
+      spool identity and recovery formats. FE helpers borrow memory only when
+      existing DA arbitration permits it. An activated graph DA transfer worker
+      parks at low water and is awakened by existing high-water advice, retaining
+      one idle transfer thread instead of entering an unnotified exit/refill
+      window. Shutdown/save bypass parking. BE-to-disk transfer is not action
+      completion. Local outcome counters distinguish executed, persisted and
+      discarded obligations; segmented restored counts grow as lazy recovery
+      discovers actual records, excluding its scheduling sentinel. Unscanned
+      durable records remain in the existing recovery store and are not invented
+      as a one-record logical obligation. Detached emergency disk children remain
+      lifetime-owned for graph joining without changing the existing fallback.
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
     - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
+    - >-
+      Segmented integer statistics mirrors publish via PREFER_STORE_INT to match
+      statsobj's atomic readers. Writer-side queue locking alone does not
+      synchronize with the independent impstats reader. Local disk snapshots load
+      pqDA once with acquire semantics; a detached child remains lifetime-owned
+      until statistics unlink and graph teardown.
     - >-
       Targeted worker wakeups in wtpAdviseMaxWorkers track registered waiters
       with bWaitingForWork and bWakeupReserved under each pool's pmutUsr (the
@@ -23,7 +118,18 @@ runtime_queue:
       signaling, and normal or cancellation wait cleanup clears the
       reservation under that mutex. Both wtpAdviseMaxWorkers and
       wtpWakeupAllWrkr require callers to hold pmutUsr.
-    - Completed message references move to a bounded worker buffer after store completion and are destroyed outside the queue mutex, before callbacks or waits; cancellation is disabled during this transfer and disposal.
+    - >-
+      Local graph workers record each outer callback outcome before subsequent
+      cancellation points. Successful return preserves COMM through slowdown
+      and immediate stop, while RDY remains replayable. Non-OK Direct commits
+      make tentative ruleset COMM uncertain even when the outer callback returns
+      OK. Interrupted and non-OK callbacks retain at-least-once replay, which may
+      repeat earlier script mutations or successful action effects.
+    - Classic queues destroy completed messages under the queue mutex (unlocked disposal was reverted, issue #7884). Local queue backends move completed references to a bounded worker buffer and destroy them outside the mutex, before callbacks or waits, with cancellation disabled.
+    - >-
+      For terminal workers, publish the exiting state under the queue mutex before
+      local-backend deferred-message disposal releases it. Producer start advice
+      during disposal is retained as a restart request for that exiting slot.
     - RAM retirement releases completed counts independently of batch order; segmentedDisk retains its ordered persistent frontier.
     - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.
     - The segmented store is lazy only for a disk-assisted child, and dematerialization requires an empty store with no recovery, batch, retry, or completion work pending.
@@ -62,13 +168,43 @@ runtime_tcpsrv:
     - imtcp sessions own independent decompressor state.
     - A finite zstd aggregate-window limit uses a listener-local 64-bit atomic reservation counter; only platforms without 64-bit atomics use the helper-mutex fallback.
 
+runtime_config_lifecycle:
+  paths:
+    - "runtime/rsconf.c"
+    - "runtime/rsconf.h"
+    - "runtime/lookup.c"
+    - "runtime/lookup.h"
+    - "runtime/outchannel.c"
+    - "runtime/outchannel.h"
+    - "runtime/perctile_stats.c"
+    - "runtime/perctile_stats.h"
+  requires_serialization: true
+  notes:
+    - activate() runs once per process; runConf is set exactly once and there is no in-process config replacement on HUP yet.
+    - lookupDestroyCnf, ochDeleteAll and perctileBucketsDestruct take the rsconf_t that owns the objects and free only that config's tables, outchannels and buckets; they never read runConf. Callers must ensure no worker can still reach that config.
+    - A worker's actWrkrInfo array is sized at worker creation; every scan must stay below wti->n_act_wrkr_info, not the current global action count.
+
 runtime_msg:
   paths: ["runtime/msg.c", "runtime/msg.h"]
   requires_serialization: true
   notes:
     - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
-    - MsgDup locks the source message while coherently copying JSON state and the lazy turbo snapshot callbacks.
-    - Turbo parse snapshots are immutable and may be shared by MsgDup copies through an atomic reference count; each owner must release only through MsgReleaseTurboResult while holding the message lock or exclusive access.
+    - Turbo snapshots are write-once at attach and immutable afterwards. Attach, overwrite, release and every snapshot getter (msgTurboGetStr, and the expression path in msgGetJSONPropSVar) take the message mutex, including on a sole holder. Materialize is an idempotent one-way projection into pMsg->json under the message mutex and does not clear turbo callbacks; jsonFind and msgGetJSONMESG materialize too, as does a leaf-level msgDelJSON; unset $! releases the snapshot without materializing it.
+    - MsgDup locks the source message to publish the lazy turbo_result_refs counter, copy turbo slots against a concurrent overwrite, and jsonDeepCopy the legacy tree. Counter malloc failure fails the duplicate; it does not materialize.
+    - Each owner releases only through MsgReleaseTurboResult while holding the message lock or exclusive access.
+
+runtime_stream:
+  paths: ["runtime/stream.c", "runtime/stream.h"]
+  requires_serialization: true
+  locks:
+    - type: recursive-mutex
+      field: strm_t.mut
+  notes:
+    - strm_t.mut, notFull, notEmpty and isEmpty exist only when bAsyncWrite is set; omfile is the only caller that enables async streams and it serializes writes behind its own pData.mutWrite.
+    - The async writer thread is created once in strmConstructFinalize(); no other code path recreates it, so any caller that stops it must be done with the stream.
+    - strmCloseFile() stops the async writer and, as a documented side effect, leaves pThis->mut unlocked on return; callers must either hold no expectation of the lock or use the non-stopping variant.
+    - In async mode the writer thread owns fd and iCurrOffs while it writes, so it checks the size limit itself under mut and sets bSizeLimitReached; strmWrite() acts only on that flag and drains the writer before rotating.
+    - Size-limit rotation uses the non-stopping close: the writer thread survives, pending buffers are drained with strmWaitAsyncWriterDone() before the fd is closed, and the caller's mutex stays held across the rotation command.
 
 mmnormalize:
   paths: ["plugins/mmnormalize/"]
@@ -110,6 +246,16 @@ omfile:
 omfwd:
   paths: ["plugins/omfwd/"]
   requires_serialization: false
+
+omclickhouse:
+  paths: ["plugins/omclickhouse/"]
+  requires_serialization: false
+  locks:
+    - type: mutex
+      field: pData.mutErrFile
+  notes:
+    - Each worker owns its CURL handles, header lists, reply buffer, batch buffer, and maxConsecutiveRejects count; action configuration is immutable after newActInst().
+    - The error file descriptor is shared by the workers of an action and is opened, written, and closed on HUP under mutErrFile.
 
 omelasticsearch:
   paths: ["plugins/omelasticsearch/"]
@@ -223,9 +369,9 @@ imbeats:
     - Use starvationProtection.maxReads to keep one busy sender from monopolizing imbeats worker time.
     - maxInFlightBytes accounts incomplete receive buffers, inflate scratch space, event copies, and lazy window descriptors exactly across each input instance.
     - maxCompressionRatio and maxDecompressedSize jointly bound compressed-frame expansion.
-    - idleTimeout closes sessions with no byte progress; frameTimeout bounds one frame and windowTimeout bounds one advertised window with absolute deadlines that trickle traffic cannot extend. These network deadlines pause while a complete batch is submitted and resume for its ACK. A value of 0 disables the corresponding timeout.
+    - idleTimeout closes sessions with no byte progress; frameTimeout bounds one frame and windowTimeout bounds one advertised window with absolute deadlines that trickle traffic cannot extend. These network deadlines pause while a complete batch is submitted and resume for its ACK. On epoll builds, time a ready session waits in the work queue for a free worker is not charged against these deadlines; the same applies after a starvation-protection requeue of a session that had already made progress. On the poll fallback, sessions are queued without readiness information, so its accept and re-arm hand-offs are charged and idle peers still time out. A value of 0 disables the corresponding timeout.
     - JSON event payloads must be exactly one object, apart from surrounding whitespace. Malformed, non-object, trailing-content, resource-limited, or timed-out traffic is not acknowledged.
-    - Valid Lumberjack v2 W, J, and C flows retain cumulative A acknowledgement behavior.
+    - Lumberjack v2 sequence numbers are per window (1..n as sent by Beats, or continuing from the last ACK for cumulative senders) and must be consecutive; each completed window is ACKed with the sequence number of its last event.
     - TLS deployments require an installed rsyslog TLS stream-driver package or module, such as rsyslog-gnutls or rsyslog-openssl.
     - The common Elastic Agent TLS setup validates the rsyslog server certificate but does not present a client certificate; use streamDriver.authMode=anon for that pattern and stricter auth modes only with sender client certificates.
     - Compressed Lumberjack v2 frames are supported and should be tested with Beats compression enabled.
@@ -238,3 +384,25 @@ imfifo:
     - Reads log messages line-by-line from local POSIX named pipes (FIFOs).
     - Utilizes non-blocking poll() loops with a 100ms timeout to ensure clean and immediate shutdown.
     - Uses O_RDWR opening technique to keep a dummy writer in the daemon itself to avoid startup hangs and EOF reopening loops.
+
+imjournal:
+  paths: ["plugins/imjournal/"]
+  requires_serialization: false
+  notes:
+    - The framework input thread runs the head journal input (main="on", else the default input); each further input runs in its own worker thread.
+    - Each list entry owns its journal context and state file; willRun opens all contexts and afterRun persists, closes and frees them.
+    - runInput stops and joins all started workers before returning, also when the head input fails; it then waits for shutdown or until no worker is left in doRun().
+    - Worker thread creation failures and a failing head input are reported via thrd_report_fatal_input_failure(), which only stops rsyslogd under inputStartupPolicy="require-all".
+    - Module-global state shared by the threads includes the cs settings, input name props, stats counters, the ratelimiter, and pidFieldName/bPidFallBack/cs.dfltTag assigned in doRun().
+
+runtime_permitted_peers:
+  paths:
+    - "runtime/net.c"
+    - "runtime/net.h"
+  requires_serialization: false
+  notes:
+    - >-
+      AddPermittedPeer fully compiles plain/wildcard classification and domain
+      components before publishing an entry. TLS workers may concurrently match
+      the immutable list; configuration owns construction and destruction and
+      must retain entries until all session users have stopped.

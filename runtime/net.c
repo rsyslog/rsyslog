@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* net.c
  * Implementation of network-related stuff.
  *
@@ -245,10 +247,11 @@ static rsRetVal DestructPermittedPeerWildcards(permittedPeers_t *pPeer) {
 }
 
 
+static rsRetVal PermittedPeerWildcardCompile(permittedPeers_t *pPeer);
+
 /* add a permitted peer. PermittedPeers is an interim solution until we can provide
  * access control via enhanced RainerScript methods.
- * Note: the provided string is handed over to this function, caller must
- * no longer access it. -- rgerhards, 2008-05-19
+ * The ID is copied; the caller retains ownership of the provided string.
  */
 static rsRetVal AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar *pszID) {
     permittedPeers_t *pNew = NULL;
@@ -259,6 +262,10 @@ static rsRetVal AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar *pszID) {
 
     CHKmalloc(pNew = calloc(1, sizeof(permittedPeers_t))); /* we use calloc() for consistency with "real" objects */
     CHKmalloc(pNew->pszID = (uchar *)strdup((char *)pszID));
+    /* Concurrency & Locking: compile before publishing the entry. TLS sessions
+     * share this list, so matching must never mutate its type or wildcard nodes.
+     */
+    CHKiRet(PermittedPeerWildcardCompile(pNew));
 
     if (*ppRootPeer != NULL) {
         pNew->pNext = *ppRootPeer;
@@ -267,7 +274,11 @@ static rsRetVal AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar *pszID) {
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        if (pNew != NULL) free(pNew);
+        if (pNew != NULL) {
+            DestructPermittedPeerWildcards(pNew);
+            free(pNew->pszID);
+            free(pNew);
+        }
     }
     RETiRet;
 }
@@ -348,9 +359,9 @@ finalize_it:
 }
 
 
-/* Do a (potential) wildcard match. The function first checks if the wildcard
- * has already been compiled and, if not, compiles it. If the peer entry in
- * question does NOT contain a wildcard, a simple strcmp() is done.
+/* Match an entry compiled by AddPermittedPeer before publication. The entry
+ * and its wildcard nodes stay immutable until all users have stopped. If the
+ * peer entry does NOT contain a wildcard, a simple strcmp() is done.
  * *pbIsMatching is set to 0 if there is no match and something else otherwise.
  * rgerhards, 2008-05-27 */
 static rsRetVal PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
@@ -364,10 +375,6 @@ static rsRetVal PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
     assert(pPeer != NULL);
     assert(pszNameToMatch != NULL);
     assert(pbIsMatching != NULL);
-
-    if (pPeer->etryType == PERM_PEER_TYPE_UNDECIDED) {
-        PermittedPeerWildcardCompile(pPeer);
-    }
 
     if (pPeer->etryType == PERM_PEER_TYPE_PLAIN) {
         *pbIsMatching = !strcmp((char *)pPeer->pszID, (char *)pszNameToMatch);
@@ -1529,6 +1536,14 @@ static int *create_udp_socket(uchar *hostname,
             "We could initialize %d UDP listen sockets out of %d we received "
             "- this may or may not be an error indication.\n",
             *socks, maxs);
+
+    if (bIsServer && runConf->globals.bRequireAllInputs && *socks != maxs) {
+        LogError(0, RS_RET_COULD_NOT_BIND,
+                 "UDP listener startup requires all resolved addresses, but only %d of %d sockets were created", *socks,
+                 maxs);
+        closeUDPListenSockets(socks);
+        return NULL;
+    }
 
     if (*socks == 0) {
         LogError(0, NO_ERRCODE,

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definitions for config file handling (not yet an object).
  *
  * Copyright 2008-2012 Adiscon GmbH.

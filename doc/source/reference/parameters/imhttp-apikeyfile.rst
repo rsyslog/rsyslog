@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Configure imhttp to protect an input with API key authentication.
    :keywords: rsyslog, imhttp, apikeyfile, api key authentication, http

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-streamdriver-permitexpiredcerts:
 .. _imtcp.parameter.module.streamdriver-permitexpiredcerts:
 .. _imtcp.parameter.input.streamdriver-permitexpiredcerts:

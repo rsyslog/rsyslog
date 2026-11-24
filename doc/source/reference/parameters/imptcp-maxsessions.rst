@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-maxsessions:
 .. _imptcp.parameter.module.maxsessions:
 .. _imptcp.parameter.input.maxsessions:

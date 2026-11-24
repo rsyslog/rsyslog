@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that CRI partial assembly honors oversizemsg.input.mode="accept".
 # A properly closed P...F record that is larger than maxMessageSize but below
 # the imkubernetes partial hard cap must reach the core submit path intact.

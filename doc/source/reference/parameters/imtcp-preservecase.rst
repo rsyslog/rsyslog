@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imtcp-preservecase:
 .. _imtcp.parameter.module.preservecase:
 .. _imtcp.parameter.input.preservecase:

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2016-04-15 by Thomas D., released under ASL 2.0
 # Several tests need another user/group to test impersonation.
 # This script can be sourced to prevent duplicated code.

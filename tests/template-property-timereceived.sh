@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This focused template/property test proves that timereceived is accepted as a
 # message property alias for timegenerated and formats the same received-time
 # value under deterministic faketime.

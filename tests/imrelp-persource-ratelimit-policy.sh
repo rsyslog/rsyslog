@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Test that imrelp inherits per-source limiting through ratelimitAddMsg().
 ## The oracle also covers discard handling: rate-limited RELP messages must not
 ## make librelp treat the receive callback as a session-level failure.

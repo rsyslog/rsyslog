@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-filecreatemode:
 .. _omfile.parameter.module.filecreatemode:
 

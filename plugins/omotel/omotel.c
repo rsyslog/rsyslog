@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file omotel.c
  * @brief OpenTelemetry (OTLP) output module for rsyslog

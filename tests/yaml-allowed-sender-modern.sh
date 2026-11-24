@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML parsing for modern imtcp/imudp allowedSender parameters. The
 # module default denies localhost while input-level overrides allow it; blocked
 # inputs prove the module default is active. Allowed paths synchronize on exact

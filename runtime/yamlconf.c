@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /** @file yamlconf.c
  * @brief YAML configuration file loader for rsyslog.
  *
@@ -61,6 +63,7 @@
 
     #include "rsyslog.h"
     #include "errmsg.h"
+    #include "cfgfiles.h"
     #include "yamlconf.h"
     #include "grammar/rainerscript.h"
     #include "grammar/parserif.h"
@@ -1972,6 +1975,8 @@ rsRetVal yamlconf_load(const char *fname) {
         LogError(errno, RS_RET_CONF_FILE_NOT_FOUND, "yamlconf: cannot open config file '%s'", fname);
         ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
     }
+
+    cfgfilesRecordStream(fh, fname); /* change detection, see cfgfiles.h */
 
     if (!yaml_parser_initialize(&parser)) {
         LogError(0, RS_RET_INTERNAL_ERROR, "yamlconf: failed to initialize YAML parser");

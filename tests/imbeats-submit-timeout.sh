@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imbeats timeout ownership while a complete batch is
 # submitted. A direct ruleset deliberately spends longer than idleTimeout on
 # each event, and starvation protection yields between the two submissions.

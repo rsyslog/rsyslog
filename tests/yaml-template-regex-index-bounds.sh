@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate that YAML list-template regex.match and regex.submatch values outside
 # the fixed regexec pmatch[] range are rejected during config parsing.
 # Oracle: rsyslogd -N1 must fail for both YAML configs and log the same range

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML-native statements: unset: and call_indirect: constructs.
 # rs1 sets a variable to a ruleset name, then uses call_indirect to dispatch
 # to that ruleset.  The target ruleset (rs2) uses unset: to clear a variable

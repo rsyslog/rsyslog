@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify malformed RFC5424 structured data is rejected without invalid memory
 # reads or leaks. The oracle is Valgrind; the malformed cases include
 # delimiter errors plus truncated wire messages so this CI path keeps covering

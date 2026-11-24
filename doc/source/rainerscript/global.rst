@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 global() configuration object
 =============================
 
@@ -211,6 +213,68 @@ The following parameters can be set:
   Sets the interval at which the
   :doc:`janitor process <../concepts/janitor>`
   runs.
+
+.. _global_config_reloadOnHUP:
+
+- **config.reloadOnHUP** [off|report], default "off", available 8.2612.0+,
+  **experimental**
+
+  Controls what rsyslog does with changed configuration files when it
+  receives a HUP signal. A HUP always performs its classic duties first (for
+  example closing and re-opening output files) and never re-reads the
+  configuration; this parameter only adds a check on top of that.
+
+  - ``off``: a HUP does exactly what it did before. No check is made.
+  - ``report``: rsyslog remembers all configuration files it read at startup
+    (including ``include()`` files, ``$IncludeConfig`` files, YAML files and
+    the expansion of include wildcards). On HUP it compares them with the
+    files on disk (content, and file type and permission bits). If they are
+    unchanged, nothing happens. If they changed, rsyslog runs its own binary in a separate process to validate the new
+    configuration. The validation process gets the daemon's configuration
+    related options (``-f``, ``-M``, ``-4``, ``-6``, ``-A``, ``-q``, ``-Q``,
+    ``-x``, ``-w``, ``-S``, ``-u`` and ``-C``) plus ``-N1``; options such as
+    ``-n``, ``-i``, ``-d``, ``-T`` or ``-o`` are not passed on. rsyslog
+    then logs one message with the result:
+
+    - "configuration changed and is valid; restart rsyslog to apply it"
+    - "changed configuration is invalid, running configuration kept: ..."
+      followed by the first error messages of the validation run
+    - "validation of the changed configuration timed out ..." if the
+      validation did not finish within 30 seconds
+    - "could not run the validation process ..." (or "the validation process
+      died from signal ...") if the check itself failed, for example because
+      the rsyslogd binary could not be executed; nothing is known about the
+      configuration in this case
+
+    The running configuration is never changed, so a restart is still needed
+    to apply a change. The value of ``report`` is to learn at HUP time that
+    the configuration on disk is broken, before a restart takes the service
+    down. Identical consecutive results are logged only once. Several HUPs in
+    quick succession start at most one validation at a time.
+
+  The validation process runs with the privileges, user, group and chroot the
+  daemon currently has, so it sees exactly what the running daemon can read.
+  A configuration that cannot be read with those privileges is reported as
+  invalid. Files that are only referenced by module parameters (for example
+  certificates or lookup tables) are not tracked as configuration files.
+
+  The value ``on`` (live reload) is reserved for a future release and is
+  rejected with an error. With statistics enabled (:doc:`impstats
+  <../configuration/modules/impstats>`), the counters ``attempted``,
+  ``unchanged``, ``coalesced``, ``invalid``, ``valid_changed``, ``timeout``
+  and ``failed`` are available in the ``config.reload.check`` statistics
+  object while ``report`` is active.
+
+  .. code-block:: none
+
+     global(config.reloadOnHUP="report")
+
+  YAML equivalent:
+
+  .. code-block:: yaml
+
+     global:
+       config.reloadOnHUP: report
 
 - **debug.onShutdown** available 7.5.8+
 
@@ -613,6 +677,22 @@ The following parameters can be set:
   real error and a warning-like condition. As such, the startup will also
   prevented if warnings are present. I consider this a good thing in being
   "strict", but I admit there also currently is no other way of doing it.
+
+- **inputStartupPolicy** [``best-effort`` or ``require-all``]
+
+  The default, ``best-effort``, keeps healthy inputs running if another
+  configured input cannot start. ``require-all`` makes rsyslog exit with an
+  error when an input cannot activate, a configured listener cannot open, or
+  an input-bound ruleset is missing. Invalid ``module()`` or ``input()``
+  declarations also stop startup, as does an imtcp port-0 request without a
+  port file (which would otherwise fall back to port 514). This setting acts
+  independently of ``abortOnUncleanConfig``. A required input worker that
+  terminates abnormally after startup also stops rsyslog, since it can no
+  longer collect messages. Ordinary connection retries remain recoverable,
+  and monitored files need not exist before startup.
+
+  Example: ``global(inputStartupPolicy="require-all")``. YAML uses
+  ``global: {inputStartupPolicy: require-all}``.
 
 - **abortOnFailedQueueStartup** [boolean (on/off)] available 8.2210.0+
 

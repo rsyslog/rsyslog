@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* lookup.c
  * Support for lookup tables in RainerScript.
  *
@@ -323,9 +325,9 @@ void lookupInitCnf(lookup_tables_t *lu_tabs) {
     lu_tabs->last = NULL;
 }
 
-void lookupDestroyCnf(void) {
+void lookupDestroyCnf(rsconf_t *const cnf) {
     lookup_ref_t *luref, *luref_next;
-    for (luref = runConf->lu_tabs.root; luref != NULL;) {
+    for (luref = cnf->lu_tabs.root; luref != NULL;) {
         luref_next = luref->next;
         lookupRefDestruct(luref);
         luref = luref_next;

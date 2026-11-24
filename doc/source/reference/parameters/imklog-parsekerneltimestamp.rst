@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imklog-parsekerneltimestamp:
 .. _imklog.parameter.module.parsekerneltimestamp:
 

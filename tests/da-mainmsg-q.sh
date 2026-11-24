@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test disk-assisted mode on the main message queue. The test uses a very small
 # in-memory main queue so the 2000-message burst must spill to disk and then
 # drain back into the configured omfile action. imdiag injection is marked fully

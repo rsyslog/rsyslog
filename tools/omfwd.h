@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omfwd.h
  * These are the definitions for the build-in forwarding output module.
  *

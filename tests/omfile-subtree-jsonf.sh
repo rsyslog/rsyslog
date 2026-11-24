@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate that subtree templates provide data to jsonf list templates
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

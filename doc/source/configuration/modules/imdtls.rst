@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 **********************************************************
 imdtls: Input Module for DTLS Protocol over UDP
 **********************************************************

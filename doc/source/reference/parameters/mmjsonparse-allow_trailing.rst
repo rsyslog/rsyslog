@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmjsonparse-allow_trailing:
 .. _mmjsonparse.parameter.allow_trailing:
 

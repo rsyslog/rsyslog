@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that parser.dropTrailingCROnReception removes an explicit carriage
 # return left in the message payload after the normal LF framing byte is
 # stripped. The oracle is the final omfile output after synchronized shutdown;

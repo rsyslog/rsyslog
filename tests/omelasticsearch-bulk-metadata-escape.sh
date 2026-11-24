@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for omelasticsearch bulk metadata JSON escaping. Dynamic
 # metadata templates can be derived from remote message content; the oracle is
 # the captured _bulk request body from a local HTTP endpoint. The first bulk
@@ -8,8 +9,8 @@
 . ${srcdir:=.}/diag.sh init
 require_plugin omelasticsearch
 
-if ! command -v python3 >/dev/null 2>&1; then
-	printf 'SKIP: python3 is required for local omelasticsearch capture server\n'
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+	printf 'SKIP: python3 >= 3.6 is required for local omelasticsearch capture server\n'
 	skip_test
 fi
 

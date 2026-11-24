@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* nsd_gtls.c
  *
  * An implementation of the nsd interface for GnuTLS.
@@ -365,6 +366,29 @@ static int gtlsClientCertCallback(gnutls_session_t session,
 }
 
 
+/* Grow the scratch buffer used by gtlsGetCertInfo() to at least
+ * "needed" bytes. The buffer starts out as the caller's stack buffer
+ * szBufA and is moved to the heap on first growth. On allocation
+ * failure, the current buffer is kept unchanged (so it is neither
+ * leaked nor replaced by NULL) and RS_RET_OUT_OF_MEMORY is returned.
+ */
+static rsRetVal gtlsGrowCertInfoBuf(uchar **const pszBuf,
+                                    uchar *const szBufA,
+                                    size_t *const pszBufLen,
+                                    const size_t needed) {
+    uchar *newBuf;
+    DEFiRet;
+
+    if (needed <= *pszBufLen) FINALIZE; /* already large enough */
+    CHKmalloc(newBuf = realloc((*pszBuf == szBufA) ? NULL : *pszBuf, needed));
+    *pszBuf = newBuf;
+    *pszBufLen = needed;
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* This function extracts some information about this session's peer
  * certificate. Works for X.509 certificates only. Adds all
  * of the info to a cstr_t, which is handed over to the caller.
@@ -380,6 +404,7 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
     const gnutls_datum_t *cert_list;
     unsigned cert_list_size = 0;
     gnutls_x509_crt_t cert;
+    int bMustDeinitCert = 0;
     cstr_t *pStr = NULL;
     int gnuRet;
     DEFiRet;
@@ -396,6 +421,7 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
     if (cert_list_size > 0) {
         /* we only print information about the first certificate */
         CHKgnutls(gnutls_x509_crt_init(&cert));
+        bMustDeinitCert = 1;
         CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
 
         expiration_time = gnutls_x509_crt_get_expiration_time(cert);
@@ -414,22 +440,31 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
         algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
         CHKiRet(rsCStrAppendStrf(pStr, "Certificate public key: %s; ", gnutls_pk_algorithm_get_name(algo)));
 
-        /* names */
+        /* names
+         * Only print a name if GnuTLS actually filled the buffer; on
+         * failure its content is unspecified and may not be terminated.
+         */
         tmp = szBufLen;
-        if (gnutls_x509_crt_get_dn(cert, (char *)szBuf, &tmp) == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-            szBufLen = tmp;
-            szBuf = malloc(tmp);
-            gnutls_x509_crt_get_dn(cert, (char *)szBuf, &tmp);
+        gnuRet = gnutls_x509_crt_get_dn(cert, (char *)szBuf, &tmp);
+        if (gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+            CHKiRet(gtlsGrowCertInfoBuf(&szBuf, szBufA, &szBufLen, tmp));
+            tmp = szBufLen;
+            gnuRet = gnutls_x509_crt_get_dn(cert, (char *)szBuf, &tmp);
         }
-        CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
+        if (gnuRet == 0) {
+            CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
+        }
 
         tmp = szBufLen;
-        if (gnutls_x509_crt_get_issuer_dn(cert, (char *)szBuf, &tmp) == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-            szBufLen = tmp;
-            szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
-            gnutls_x509_crt_get_issuer_dn(cert, (char *)szBuf, &tmp);
+        gnuRet = gnutls_x509_crt_get_issuer_dn(cert, (char *)szBuf, &tmp);
+        if (gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+            CHKiRet(gtlsGrowCertInfoBuf(&szBuf, szBufA, &szBufLen, tmp));
+            tmp = szBufLen;
+            gnuRet = gnutls_x509_crt_get_issuer_dn(cert, (char *)szBuf, &tmp);
         }
-        CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
+        if (gnuRet == 0) {
+            CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
+        }
 
         /* dNSName alt name */
         iAltName = 0;
@@ -437,8 +472,10 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
             tmp = szBufLen;
             gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName, szBuf, &tmp, NULL);
             if (gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-                szBufLen = tmp;
-                szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
+                /* retry this entry only if the buffer actually grows,
+                 * so a misbehaving size report cannot loop forever */
+                if (tmp <= szBufLen) break;
+                CHKiRet(gtlsGrowCertInfoBuf(&szBuf, szBufA, &szBufLen, tmp));
                 continue;
             } else if (gnuRet < 0)
                 break;
@@ -459,14 +496,13 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
             }
             ++iAltName;
         }
-
-        gnutls_x509_crt_deinit(cert);
     }
 
     cstrFinalize(pStr);
     *ppStr = pStr;
 
 finalize_it:
+    if (bMustDeinitCert) gnutls_x509_crt_deinit(cert);
     if (iRet != RS_RET_OK) {
         if (pStr != NULL) rsCStrDestruct(&pStr);
     }
@@ -1333,6 +1369,22 @@ finalize_it:
 }
 
 
+/* Log the peer certificate details after a validity check failed.
+ * gtlsGetCertInfo() can fail (e.g. out of memory) and then hands back
+ * no string, so do not dereference or destruct it in that case.
+ */
+static void gtlsLogInvalidCertInfo(nsd_gtls_t *const pThis, const int errCode) {
+    cstr_t *pStr = NULL;
+
+    if (gtlsGetCertInfo(pThis, &pStr) == RS_RET_OK && pStr != NULL) {
+        LogError(0, errCode, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+        cstrDestruct(&pStr);
+    } else {
+        LogError(0, errCode, "invalid cert info: (could not be obtained)");
+    }
+}
+
+
 /* Verify the validity of the remote peer's certificate.
  * rgerhards, 2008-05-21
  */
@@ -1340,11 +1392,11 @@ static rsRetVal gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
     DEFiRet;
     const char *pszErrCause;
     int gnuRet;
-    cstr_t *pStr = NULL;
     unsigned stateCert;
     const gnutls_datum_t *cert_list;
     unsigned cert_list_size = 0;
     gnutls_x509_crt_t cert;
+    int bMustDeinitCert = 0;
     unsigned i;
     time_t ttCert;
     time_t ttNow;
@@ -1432,9 +1484,7 @@ static rsRetVal gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
         nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
         LogError(0, NO_ERRCODE, "not permitted to talk to peer '%s', certificate invalid: %s", fromHost, pszErrCause);
         free(fromHost);
-        gtlsGetCertInfo(pThis, &pStr);
-        LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-        cstrDestruct(&pStr);
+        gtlsLogInvalidCertInfo(pThis, NO_ERRCODE);
         ABORT_FINALIZE(iAbortCode);
     }
 
@@ -1447,6 +1497,7 @@ static rsRetVal gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
      */
     for (i = 0; i < cert_list_size; ++i) {
         CHKgnutls(gnutls_x509_crt_init(&cert));
+        bMustDeinitCert = 1;
         CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
         ttCert = gnutls_x509_crt_get_activation_time(cert);
         if (ttCert == -1)
@@ -1459,16 +1510,16 @@ static rsRetVal gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
                      "certificate %d not yet active",
                      fromHost, i);
             free(fromHost);
-            gtlsGetCertInfo(pThis, &pStr);
-            LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-            cstrDestruct(&pStr);
+            gtlsLogInvalidCertInfo(pThis, RS_RET_CERT_NOT_YET_ACTIVE);
             ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
         }
 
         gnutls_x509_crt_deinit(cert);
+        bMustDeinitCert = 0;
     }
 
 finalize_it:
+    if (bMustDeinitCert) gnutls_x509_crt_deinit(cert);
     RETiRet;
 }
 
@@ -1555,6 +1606,19 @@ static rsRetVal gtlsEndSess(nsd_gtls_t *pThis) {
         pThis->bHaveSess = 0;
     }
     RETiRet;
+}
+
+/* Drop the session without gnutls_bye(). The transport fd cached by
+ * gnutls_transport_set_ptr() may already have been closed and reused.
+ */
+static void gtlsAbortSess(nsd_gtls_t *pThis) {
+    if (pThis->bHaveSess) {
+        gnutls_deinit(pThis->sess);
+        pThis->bHaveSess = 0;
+    }
+    pThis->bAbortConn = 1;
+    pThis->iMode = 0;
+    pThis->rtryCall = gtlsRtry_None;
 }
 
 
@@ -2056,16 +2120,28 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
 }
 
 
-/* This function checks if the connection is still alive - well, kind of...
- * This is a dummy here. For details, check function common in ptcp driver.
+/* This function checks if the connection is still alive.
+ * When the underlying ptcp layer detects a closed/broken connection it closes
+ * the fd. In that case we must immediately abort the GnuTLS session
+ * (gnutls_deinit without gnutls_bye), because the fd number cached inside the
+ * GnuTLS transport pointer may already have been reused by another part of
+ * the same process (e.g. an omfile open()); any later gnutls_bye would then
+ * write a TLS close_notify into that unrelated fd.
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
+    DEFiRet;
     nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
-    return nsd_ptcp.CheckConnection(pThis->pTcp);
+    iRet = nsd_ptcp.CheckConnection(pThis->pTcp);
+    if (iRet != RS_RET_OK) {
+        /* ptcp closed the fd; drop the session without gnutls_bye so the
+         * cached transport fd cannot be written again. */
+        gtlsAbortSess(pThis);
+    }
+    RETiRet;
 }
 
 

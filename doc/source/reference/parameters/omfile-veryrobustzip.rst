@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-veryrobustzip:
 .. _omfile.parameter.module.veryrobustzip:
 

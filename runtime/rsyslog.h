@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /**
  * @file rsyslog.h
  * @brief Public interface for the rsyslog runtime library.
@@ -740,6 +741,13 @@ enum rsRetVal_ {
     RS_RET_SYSTEMD_VERSION_ERR = -2463, /**< systemd version doesn't support journal namespacing */
     RS_RET_NO_TEMPLATE_SUPPORT_ERR = -2464, /**< journald namespace doesn't support template yet */
     RS_RET_SERVER_NO_TLS = -2465, /**< server received TLS handshake but is not configured for TLS */
+
+    RS_RET_LOCAL_QUEUE_CONFIG = -2466, /**< experimental local queue configuration is not safe to activate */
+
+    RS_RET_CONF_RELOAD_UNSUPPORTED = -2467, /**< requested config.reloadOnHUP mode is not (yet) supported */
+    RS_RET_CONF_RELOAD_INVALID = -2468, /**< config reload check: changed config files are invalid */
+    RS_RET_CONF_RELOAD_TIMEOUT = -2469, /**< config reload check: validation child did not finish in time */
+    RS_RET_CONF_RELOAD_CHECK_FAILED = -2470, /**< config reload check: validation child could not be run */
 
     /* RainerScript error messages (range 1000.. 1999) */
     RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

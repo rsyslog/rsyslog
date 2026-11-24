@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imklog.h
  * These are the definitions for the klog message generation module.
  *

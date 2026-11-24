@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright 2026 Rainer Gerhards and Others
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,13 +33,18 @@ EXPECTED_UPLOADS = {
     "run_cross_arch_weekly.yml": 1,
     "run_macos_weekly.yml": 1,
     "imbeats.yml": 1,
+    "doc_build.yml": 1,
     "imhttp_prometheus_scrape.yml": 1,
     "impstats_push_victoriametrics.yml": 1,
     "debian_daily_stable.yml": 2,
     "ubuntu_daily_stable.yml": 2,
     "el10_daily_stable.yml": 2,
 }
-TEST_COMMAND_RE = re.compile(r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh")
+TEST_COMMAND_RE = re.compile(
+    r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh"
+    r"|(?:node|python3)\s+tests/pr-coverage-(?:source\.cjs|artifact\.py)"
+    r"|python3\s+doc/tools/validate-doc-samples\.py\b"
+)
 UPLOAD_RE = re.compile(
     r"^(?:      - |        )uses:\s+"
     r"(?:\./|\$/)\.github/actions/upload-flake-evidence\s*(?:#.*)?$",

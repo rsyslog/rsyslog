@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify idle sessions do not prevent an active peer from being serviced and
 # cumulatively acknowledged by the shared worker pool.
 . ${srcdir:=.}/diag.sh init

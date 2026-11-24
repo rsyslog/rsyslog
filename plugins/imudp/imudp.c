@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* imudp.c
  * This is the implementation of the UDP input module.
  *
@@ -27,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -62,6 +64,7 @@
 #include "statsobj.h"
 #include "ratelimit.h"
 #include "unicode-helper.h"
+#include "imudp_buffer.h"
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
@@ -93,7 +96,6 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(prop) D
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
 static int bDoACLCheck; /* are ACL checks neeed? Cached once immediately before listener startup */
-static int iMaxLine; /* maximum UDP message size supported */
 #define BATCH_SIZE_DFLT 32 /* do not overdo, has heavy toll on memory, especially with large msgs */
 #define TIME_REQUERY_DFLT 2
 #define SCHED_PRIO_UNSET -12345678 /* a value that indicates that the scheduling priority has not been set */
@@ -162,6 +164,14 @@ struct modConfData_s {
     int iSchedPrio; /* scheduling priority */
     int iTimeRequery; /* how often is time to be queried inside tight recv loop? 0=always */
     int batchSize; /* max nbr of input batch --> also recvmmsg() max count */
+    int max_line; /* maximum UDP message size supported */
+    size_t rcv_buf_stride;
+    size_t rcv_buf_size;
+#ifdef HAVE_RECVMMSG
+    size_t recvmsg_iov_size;
+    size_t recvmsg_mmh_size;
+    size_t frominet_size;
+#endif
     int8_t wrkrMax; /* max nbr of worker threads */
     sbool configSetViaV2Method;
     sbool bPreserveCase; /* preserves the case of fromhost; "off" by default */
@@ -177,7 +187,7 @@ static struct cnfparamdescr modpdescr[] = {{"schedulingpolicy", eCmdHdlrGetWord,
                                            {"schedulingpriority", eCmdHdlrInt, 0},
                                            {"batchsize", eCmdHdlrInt, 0},
                                            {"threads", eCmdHdlrPositiveInt, 0},
-                                           {"timerequery", eCmdHdlrInt, 0},
+                                           {"timerequery", eCmdHdlrNonNegInt, 0},
                                            {"preservecase", eCmdHdlrBinary, 0},
                                            {"allowedsender", eCmdHdlrArray, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
@@ -499,8 +509,9 @@ static rsRetVal addListner(instanceConf_t *inst) {
     } else {
         LogError(0, NO_ERRCODE,
                  "imudp: Could not create udp listener,"
-                 " ignoring port %s bind-address %s.",
-                 port, bindAddr);
+                 " %s port %s bind-address %s.",
+                 runConf->globals.bRequireAllInputs ? "failing startup for" : "ignoring", port, bindAddr);
+        if (runConf->globals.bRequireAllInputs) iRet = RS_RET_COULD_NOT_BIND;
     }
 
 finalize_it:
@@ -524,12 +535,68 @@ finalize_it:
     RETiRet;
 }
 
+static void discard_udp_listeners(void) {
+    struct lstn_s *lstn = lcnfRoot;
+    while (lstn != NULL) {
+        struct lstn_s *next = lstn->next;
+        statsobj.Destruct(&lstn->stats);
+        ratelimitDestruct(lstn->ratelimiter);
+        close(lstn->sock);
+        prop.Destruct(&lstn->pInputName);
+        free(lstn);
+        lstn = next;
+    }
+    lcnfRoot = lcnfLast = NULL;
+}
+
 
 static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
     LogError(0, NO_ERRCODE,
              "imudp: ruleset '%s' for %s:%s not found - "
              "using default ruleset instead",
              inst->pszBindRuleset, inst->pszBindAddr == NULL ? "*" : (char *)inst->pszBindAddr, inst->pszBindPort);
+}
+
+
+#ifdef HAVE_RECVMMSG
+static rsRetVal validate_batch_size(const long long value) {
+    if (value < 1 || value > INT_MAX) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imudp: invalid value for 'BatchSize' parameter given is %lld, valid range is 1..%d", value, INT_MAX);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    return RS_RET_OK;
+}
+#endif
+
+
+static rsRetVal compute_receive_buffer_sizes(modConfData_t *const modConf) {
+    size_t batch_size = 1;
+
+    modConf->max_line = glbl.GetMaxLine(modConf->pConf);
+#ifdef HAVE_RECVMMSG
+    batch_size = (size_t)modConf->batchSize;
+#endif
+    if (!imudp_compute_buffer_layout((size_t)modConf->max_line, batch_size, &modConf->rcv_buf_stride,
+                                     &modConf->rcv_buf_size)) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imudp: maxMessageSize (%d) and BatchSize (%zu) exceed the addressable receive buffer size",
+                 modConf->max_line, batch_size);
+        return RS_RET_PARAM_ERROR;
+    }
+
+#ifdef HAVE_RECVMMSG
+    if (!imudp_checked_size_mul(batch_size, sizeof(struct iovec), &modConf->recvmsg_iov_size) ||
+        !imudp_checked_size_mul(batch_size, sizeof(struct mmsghdr), &modConf->recvmsg_mmh_size) ||
+        !imudp_checked_size_mul(batch_size, sizeof(struct sockaddr_storage), &modConf->frominet_size)) {
+        LogError(0, RS_RET_PARAM_ERROR, "imudp: BatchSize (%zu) exceeds the addressable receive metadata size",
+                 batch_size);
+        return RS_RET_PARAM_ERROR;
+    }
+#endif
+
+    return RS_RET_OK;
 }
 
 
@@ -645,18 +712,19 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
     iNbrTimeUsed = 0;
     while (1) { /* loop is terminated if we have a "bad" receive, done below in the body */
         if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
-        memset(pWrkr->recvmsg_iov, 0, runModConf->batchSize * sizeof(struct iovec));
-        memset(pWrkr->recvmsg_mmh, 0, runModConf->batchSize * sizeof(struct mmsghdr));
-        memset(pWrkr->frominet, 0, runModConf->batchSize * sizeof(struct sockaddr_storage));
+        memset(pWrkr->recvmsg_iov, 0, runModConf->recvmsg_iov_size);
+        memset(pWrkr->recvmsg_mmh, 0, runModConf->recvmsg_mmh_size);
+        memset(pWrkr->frominet, 0, runModConf->frominet_size);
         for (i = 0; i < runModConf->batchSize; ++i) {
-            pWrkr->recvmsg_iov[i].iov_base = pWrkr->pRcvBuf + (i * (iMaxLine + 1));
-            pWrkr->recvmsg_iov[i].iov_len = iMaxLine;
+            const size_t offset = (size_t)i * runModConf->rcv_buf_stride;
+            pWrkr->recvmsg_iov[i].iov_base = pWrkr->pRcvBuf + offset;
+            pWrkr->recvmsg_iov[i].iov_len = (size_t)runModConf->max_line;
             pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen = sizeof(struct sockaddr_storage);
             pWrkr->recvmsg_mmh[i].msg_hdr.msg_name = &(pWrkr->frominet[i]);
             pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov = &(pWrkr->recvmsg_iov[i]);
             pWrkr->recvmsg_mmh[i].msg_hdr.msg_iovlen = 1;
         }
-        nelem = recvmmsg(lstn->sock, pWrkr->recvmsg_mmh, runModConf->batchSize, 0, NULL);
+        nelem = recvmmsg(lstn->sock, pWrkr->recvmsg_mmh, (unsigned int)runModConf->batchSize, 0, NULL);
         STATSCOUNTER_INC(pWrkr->ctrCall_recvmmsg, pWrkr->mutCtrCall_recvmmsg);
         DBGPRINTF("imudp: recvmmsg returned %d (errno %d)\n", nelem, errno);
         if (nelem < 0 && errno == ENOSYS) {
@@ -736,7 +804,7 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
         memset(&frominet, 0, sizeof(frominet));
         memset(iov, 0, sizeof(iov));
         iov[0].iov_base = pWrkr->pRcvBuf;
-        iov[0].iov_len = iMaxLine;
+        iov[0].iov_len = (size_t)runModConf->max_line;
         memset(&mh, 0, sizeof(mh));
         mh.msg_name = &frominet;
         mh.msg_namelen = sizeof(struct sockaddr_storage);
@@ -887,7 +955,7 @@ finalize_it:
 static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
     DEFiRet;
     int nfds;
-    int efd;
+    int efd = -1;
     int i;
     struct sockaddr_storage frominetPrev;
     struct lstn_s *lstnPrev;
@@ -962,6 +1030,7 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
     }
 
 finalize_it:
+    if (efd >= 0) close(efd);
     if (udpEPollEvt != NULL) free(udpEPollEvt);
 
     RETiRet;
@@ -1249,7 +1318,12 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "timerequery")) {
             loadModConf->iTimeRequery = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "batchsize")) {
+#ifdef HAVE_RECVMMSG
+            CHKiRet(validate_batch_size(pvals[i].val.d.n));
             loadModConf->batchSize = (int)pvals[i].val.d.n;
+#else
+            DBGPRINTF("imudp: BatchSize ignored because recvmmsg() is unavailable\n");
+#endif
         } else if (!strcmp(modpblk.descr[i].name, "schedulingpriority")) {
             loadModConf->iSchedPrio = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "schedulingpolicy")) {
@@ -1323,6 +1397,7 @@ ENDendCnfLoad
 BEGINcheckCnf
     instanceConf_t *inst;
     CODESTARTcheckCnf;
+    CHKiRet(compute_receive_buffer_sizes(pModConf));
     checkSchedParam(pModConf); /* this can not cause fatal errors */
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
         std_checkRuleset(pModConf, inst);
@@ -1333,6 +1408,7 @@ BEGINcheckCnf
                  "no listeners defined - no input will be gathered");
         iRet = RS_RET_NO_LISTNERS;
     }
+finalize_it:
 ENDcheckCnf
 
 
@@ -1341,7 +1417,8 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(inst);
+        const rsRetVal local_ret = addListner(inst);
+        if (runConf->globals.bRequireAllInputs && local_ret != RS_RET_OK) ABORT_FINALIZE(local_ret);
     }
     /* if we could not set up any listeners, there is no point in running... */
     if (lcnfRoot == NULL) {
@@ -1352,27 +1429,22 @@ BEGINactivateCnfPrePrivDrop
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs) discard_udp_listeners();
 ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
     int i;
-    int lenRcvBuf;
     CODESTARTactivateCnf;
-    /* caching various settings */
-    iMaxLine = glbl.GetMaxLine(runConf);
-    lenRcvBuf = iMaxLine + 1;
-#ifdef HAVE_RECVMMSG
-    lenRcvBuf *= runModConf->batchSize;
-#endif
-    DBGPRINTF("imudp: config params iMaxLine %d, lenRcvBuf %d\n", iMaxLine, lenRcvBuf);
+    DBGPRINTF("imudp: config params max_line %d, rcv_buf_stride %zu, rcv_buf_size %zu\n", runModConf->max_line,
+              runModConf->rcv_buf_stride, runModConf->rcv_buf_size);
     for (i = 0; i < runModConf->wrkrMax; ++i) {
 #ifdef HAVE_RECVMMSG
-        CHKmalloc(wrkrInfo[i].recvmsg_iov = malloc(runModConf->batchSize * sizeof(struct iovec)));
-        CHKmalloc(wrkrInfo[i].recvmsg_mmh = malloc(runModConf->batchSize * sizeof(struct mmsghdr)));
-        CHKmalloc(wrkrInfo[i].frominet = malloc(runModConf->batchSize * sizeof(struct sockaddr_storage)));
+        CHKmalloc(wrkrInfo[i].recvmsg_iov = malloc(runModConf->recvmsg_iov_size));
+        CHKmalloc(wrkrInfo[i].recvmsg_mmh = malloc(runModConf->recvmsg_mmh_size));
+        CHKmalloc(wrkrInfo[i].frominet = malloc(runModConf->frominet_size));
 #endif
-        CHKmalloc(wrkrInfo[i].pRcvBuf = malloc(lenRcvBuf));
+        CHKmalloc(wrkrInfo[i].pRcvBuf = malloc(runModConf->rcv_buf_size));
         wrkrInfo[i].id = i;
     }
 finalize_it:
@@ -1467,6 +1539,7 @@ BEGINrunInput
             wrkrInfo[i].started = 1;
         } else {
             LogError(err, RS_RET_SYS_ERR, "imudp: failed to create worker thread %d", i);
+            thrd_report_fatal_input_failure();
         }
     }
     pthread_attr_destroy(&wrkrThrdAttr);
@@ -1506,21 +1579,11 @@ ENDwillRun
 
 
 BEGINafterRun
-    struct lstn_s *lstn, *lstnDel;
     int i;
     CODESTARTafterRun;
     /* do cleanup here */
     net.clearAllowedSenders((uchar *)"UDP");
-    for (lstn = lcnfRoot; lstn != NULL;) {
-        statsobj.Destruct(&(lstn->stats));
-        ratelimitDestruct(lstn->ratelimiter);
-        close(lstn->sock);
-        prop.Destruct(&lstn->pInputName);
-        lstnDel = lstn;
-        lstn = lstn->next;
-        free(lstnDel);
-    }
-    lcnfRoot = lcnfLast = NULL;
+    discard_udp_listeners();
     for (i = 0; i < runModConf->wrkrMax; ++i) {
         if (wrkrInfo[i].stats != NULL) {
             statsobj.Destruct(&(wrkrInfo[i].stats));
@@ -1606,7 +1669,7 @@ BEGINmodInit()
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt, NULL, &cs.iSchedPrio,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
-    CHKiRet(regCfSysLineHdlr2((uchar *)"udpservertimerequery", 0, eCmdHdlrInt, NULL, &cs.iTimeRequery,
+    CHKiRet(regCfSysLineHdlr2((uchar *)"udpservertimerequery", 0, eCmdHdlrNonNegInt, NULL, &cs.iTimeRequery,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,

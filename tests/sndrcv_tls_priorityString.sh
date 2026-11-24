@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Pascal Withopf, 2017-07-25
 # testing sending and receiving via TLS with anon auth
 # NOTE: When this test fails, it could be due to the priorityString being outdated!

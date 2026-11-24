@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Some type definitions and macros for the obj object.
  * I needed to move them out of the main obj.h, because obj.h's
  * prototypes use other data types. However, their .h's rely

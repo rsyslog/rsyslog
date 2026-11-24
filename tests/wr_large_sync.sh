@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests async writing large data records. We use up to 10K
 # record size.
 

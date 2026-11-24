@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for long and overflowing severity names reaching decodeSyslogName().
 . ${srcdir:=.}/diag.sh init
 

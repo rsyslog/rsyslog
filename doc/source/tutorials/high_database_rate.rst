@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Handling a massive syslog database insert rate with Rsyslog
 ===========================================================
 

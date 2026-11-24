@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for issue #1030. A standalone negated exact-priority PRI
 # filter such as local4.!=debug must start from all priorities for the selected
 # facility before clearing the excluded one, without resetting masks built by

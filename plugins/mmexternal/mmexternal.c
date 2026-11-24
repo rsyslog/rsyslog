@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmexternal.c
  * This core plugin is an interface module to message modification
  * modules written in languages other than C.
@@ -627,7 +629,7 @@ static rsRetVal callExtProg(instanceData *__restrict__ const pData,
         getRawMsg(pMsg, (uchar **)&inputstr, &lenWrite);
         bFreeInputstr = 0;
     } else {
-        inputstr = msgGetJSONMESG(pMsg);
+        CHKmalloc(inputstr = msgGetJSONMESG(pMsg));
         lenWrite = strlen((const char *)inputstr);
     }
 

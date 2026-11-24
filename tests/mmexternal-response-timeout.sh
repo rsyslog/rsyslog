@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-22 by Codex, released under ASL 2.0
 # Regression coverage for issue #5206: responseTimeout bounds how long
 # mmexternal waits for a JSON reply. A helper that never emits LF must be

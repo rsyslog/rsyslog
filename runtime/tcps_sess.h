@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definitions for tcps_sess class. This implements a session of the
  * plain TCP server.
  *
@@ -59,6 +61,7 @@ struct tcps_sess_s {
             eInMsgCheckMultiLine
         } inputState; /* our current state */
         sbool bFrameOversize; /* current frame exceeded maxMessageSize before submit */
+        sbool bFrameOversizeReported; /* delimiter-framed overflow was reported once for this frame */
         int iOctetsRemain; /* Number of Octets remaining in message */
         TCPFRAMINGMODE eFraming;
         uchar *pMsg; /* message (fragment) received */

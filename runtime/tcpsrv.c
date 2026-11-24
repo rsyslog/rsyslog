@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* tcpsrv.c
  *
  * Common code for plain TCP syslog based servers. This is currently being
@@ -69,6 +71,7 @@
 #include "srUtils.h"
 #include "conf.h"
 #include "tcpsrv.h"
+#include "queue_local.h"
 #include "obj.h"
 #include "glbl.h"
 #include "netstrms.h"
@@ -500,6 +503,7 @@ static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstn
         added = 1;
     } else {
         LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", cnf_params->pszPort);
+        iRet = RS_RET_INVALID_PORT;
     }
 
 finalize_it:
@@ -713,7 +717,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
         pEntry = pEntry->pNext;
     }
 
-    if (pThis->failOnBindError && firstFailure != RS_RET_OK) ABORT_FINALIZE(firstFailure);
+    if (runConf->globals.bRequireAllInputs && firstFailure != RS_RET_OK) ABORT_FINALIZE(firstFailure);
 
     /* OK, we had success. Now it is also time to
      * initialize our connections
@@ -1232,12 +1236,19 @@ static rsRetVal ATTR_NONNULL(1)
     processWorksetItem(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATTR_UNUSED) {
     DEFiRet;
 
+    /* pszOrigin is set by the input module, independently of configurable
+     * inputname. Provenance follows the actual imtcp execution thread; session
+     * and listener identity never identify an FE producer. */
+    const int localOrigin = qqueueLocalEnabled() && pioDescr->pSrv->pszOrigin != NULL &&
+                            !strcmp((const char *)pioDescr->pSrv->pszOrigin, "imtcp");
+    if (localOrigin) qqueueLocalProducerEnter();
     DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
     if (pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
         iRet = doAccept(pioDescr, wrkrData);
     } else {
         iRet = doReceive(pioDescr, wrkrData);
     }
+    if (localOrigin) qqueueLocalProducerLeave();
 
     RETiRet;
 }
@@ -1446,7 +1457,7 @@ static void ATTR_NONNULL() enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
 }
 
 /* Worker thread function */
-static void ATTR_NONNULL() * wrkr(void *arg) {
+static void ATTR_NONNULL() * wrkrRun(void *arg) {
     tcpsrv_t *const pThis = (tcpsrv_t *)arg;
     workQueue_t *const queue = &pThis->workQueue;
     tcpsrv_io_descr_t *pioDescr;
@@ -1543,6 +1554,11 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
          */
         processWorksetItem(pioDescr, wrkrData);
         STATSCOUNTER_ADD(wrkrData->ctrRuns, wrkrData->mutCtrRuns, 1);
+#ifdef ENABLE_TESTBENCH
+        /* A real thread departure exercises producer-exit cleanup and retained
+         * FE lifetime. It is never inferred from a socket disconnection. */
+        if (qqueueLocalTestProducerShouldExit()) break;
+#endif
     }
 
     /**** de-init ****/
@@ -1551,6 +1567,18 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
     }
 
     return NULL;
+}
+
+
+/* Input workers exit/join before logical queues are destroyed. The explicit
+ * cleanup marks producerless registrations on normal and cancellation paths;
+ * the later TLS destructor never dereferences queue storage. */
+static void ATTR_NONNULL() * wrkr(void *arg) {
+    void *result;
+    pthread_cleanup_push(qqueueLocalProducerExit, NULL);
+    result = wrkrRun(arg);
+    pthread_cleanup_pop(1);
+    return result;
 }
 
 
@@ -1597,6 +1625,11 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
     tcpsrv_io_descr_t workset[NSPOLL_MAX_EVENTS_PER_WAIT];
     const int sizeWorkset = sizeof(workset) / sizeof(tcpsrv_io_descr_t);
     rsRetVal localRet;
+    #ifdef ENABLE_TESTBENCH
+    const char *testShutdownMarker = pThis->pszOrigin != NULL && !strcmp((const char *)pThis->pszOrigin, "imtcp")
+                                         ? getenv("RSYSLOG_TEST_POLL_SHUTDOWN_MARKER")
+                                         : NULL;
+    #endif
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     DBGPRINTF("tcpsrv uses poll() [ex-select()] interface\n");
@@ -1642,8 +1675,46 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
         assert(pThis->evtdata.poll.maxfds != pThis->evtdata.poll.currfds);
         pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
         /* wait for io to become ready */
-        CHKiRet(poll_Poll(pThis, &nfds));
+    #ifdef ENABLE_TESTBENCH
+        /* A synthetic ready listener leaves no real readable descriptor behind.
+         * The barrier below then selects the inner FORCE_TERM branch exactly. */
+        if (testShutdownMarker != NULL) {
+            nfds = 1;
+        } else
+    #endif
+        {
+            CHKiRet(poll_Poll(pThis, &nfds));
+        }
         if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
+    #ifdef ENABLE_TESTBENCH
+        if (testShutdownMarker != NULL) {
+            sigset_t waitSet, savedSet;
+            int signalNumber;
+            sigemptyset(&waitSet);
+            sigaddset(&waitSet, SIGTTIN);
+            if (pthread_sigmask(SIG_BLOCK, &waitSet, &savedSet) != 0) return RS_RET_CONC_CTRL_ERR;
+            FILE *const marker = fopen(testShutdownMarker, "w");
+            if (marker == NULL) {
+                pthread_sigmask(SIG_SETMASK, &savedSet, NULL);
+                return RS_RET_IO_ERROR;
+            }
+            const int written = fputs("ready\n", marker);
+            const int closed = fclose(marker);
+            if (written == EOF || closed != 0) {
+                pthread_sigmask(SIG_SETMASK, &savedSet, NULL);
+                return RS_RET_IO_ERROR;
+            }
+            testShutdownMarker = NULL;
+            /* Consume the real input-stop signal so it cannot later wake an
+             * incorrectly retried poll and hide the lost FORCE_TERM result. */
+            int signalResult;
+            do {
+                signalResult = sigwait(&waitSet, &signalNumber);
+            } while (signalResult == 0 && glbl.GetGlobalInputTermState() == 0);
+            const int maskResult = pthread_sigmask(SIG_SETMASK, &savedSet, NULL);
+            if (signalResult != 0 || maskResult != 0) return RS_RET_CONC_CTRL_ERR;
+        }
+    #endif
 
         iWorkset = 0;
         for (i = 0; i < pThis->iLstnCurr && nfds; ++i) {
@@ -1706,6 +1777,13 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
                   * crashed, which made sense (the rest of the engine was not prepared for
                   * that) -- rgerhards, 2008-05-19
                   */
+        /* An inner workset shutdown check must not retry the blocking poll.
+         * Like the post-poll check, this is a successful input stop.
+         * RunInternal still performs the ordinary worker/event cleanup. */
+        if (iRet == RS_RET_FORCE_TERM) {
+            iRet = RS_RET_OK;
+            break;
+        }
         continue; /* keep compiler happy, block end after label is non-standard */
     }
 
@@ -1784,7 +1862,7 @@ finalize_it:
  * select() equivalent.
  * rgerhards, 2009-11-18
  */
-static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() RunInternal(tcpsrv_t *const pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -1824,10 +1902,20 @@ finalize_it:
 }
 
 
+/* Single-thread poll/epoll executes submissions on the input thread itself.
+ * Keep the same explicit producer-departure cleanup as pool workers. */
+static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
+    rsRetVal result;
+    pthread_cleanup_push(qqueueLocalProducerExit, NULL);
+    result = RunInternal(pThis);
+    pthread_cleanup_pop(1);
+    return result;
+}
+
+
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
     INIT_ATOMIC_HELPER_MUT(pThis->mut_sessions);
-    pThis->failOnBindError = 0;
     pThis->iSessMax = TCPSESS_MAX_DEFAULT;
     pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
     pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;

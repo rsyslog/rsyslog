@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=.}/diag.sh init
 
 # This checks that imbeats shutdown closes client sessions that are already

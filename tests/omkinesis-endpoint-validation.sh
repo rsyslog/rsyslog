@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Adiscon GmbH.
 # This file is part of the rsyslog project, released under ASL 2.0.
 # Validate the endpoint security boundary and action record-size range.

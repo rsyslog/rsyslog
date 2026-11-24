@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test verifies that array comparisons (both == and !=) work correctly
 # when the left-hand operand is a JSON-type property or local variable (e.g. $.testvar).
 # This acts as the regression test for issue #487.

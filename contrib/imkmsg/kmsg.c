@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imkmsg driver for Linux /dev/kmsg structured logging
  *
  * This contains Linux-specific functionality to read /dev/kmsg

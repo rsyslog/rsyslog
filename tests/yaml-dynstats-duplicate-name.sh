@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that duplicate YAML dyn_stats bucket names warn through the shared
 # dynstats backend while keeping the config valid. The oracle is successful
 # -N1 config validation plus the duplicate-name diagnostic; no runtime message

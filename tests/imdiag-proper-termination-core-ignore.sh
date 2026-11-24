@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify regular diag.sh-generated rsyslog tests get a proper termination
 # marker automatically. A clean shutdown with that marker must not fail because
 # a generic core.* file from another parallel test is present in the test dir.

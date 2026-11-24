@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that ommysql keeps multi-worker action queue delivery lossless across
 # worker idle timeout cycles.  The test injects three batches separated by
 # queue-empty waits and short sleeps so action workers can time out and be

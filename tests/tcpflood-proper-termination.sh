@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify the tcpflood wrapper records a proper-termination marker for normal
 # helper completion. The oracle is the marker itself: UDP transport avoids a
 # receiver dependency, and a marker write failure must make tcpflood fail.

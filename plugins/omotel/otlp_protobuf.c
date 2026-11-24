@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file otlp_protobuf.c
  * @brief OTLP protobuf payload builder implementation

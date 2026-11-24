@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-maxbytes:
 .. _omelasticsearch.parameter.module.maxbytes:
 
@@ -18,7 +20,7 @@ This parameter applies to :doc:`../../configuration/modules/omelasticsearch`.
 
 :Name: maxbytes
 :Scope: action
-:Type: word
+:Type: size
 :Default: action=100m
 :Required?: no
 :Introduced: 8.23.0

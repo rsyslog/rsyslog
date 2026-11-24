@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omsnmp-messageoid:
 .. _omsnmp.parameter.module.messageoid:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate compatibility.* global options from YAML configs.
 . ${srcdir:=.}/diag.sh init
 

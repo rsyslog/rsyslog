@@ -7,7 +7,7 @@ description: Governs the dual-frontend config architecture (RainerScript + YAML)
 
 rsyslog supports two configuration frontends that share a single backend:
 
-- **RainerScript** — parsed by `grammar/` (flex/bison), produces `cnfobj` + `nvlst` trees.
+- **RainerScript** — parsed by `grammar/` (flex `lexer.l` + bison `grammar.y`), produces `cnfobj` + `nvlst` trees.
 - **YAML** — parsed by `runtime/yamlconf.c` (libyaml), produces the same `cnfobj` + `nvlst` trees.
 
 Both call `cnfDoObj()` → module `setModCnf()` / `newActInst()` with identical data structures.
@@ -30,7 +30,7 @@ rsyslog.conf  ──► grammar/ (flex/bison) ──┐
 config.yaml   ──► runtime/yamlconf.c   ──┘
 ```
 
-The backend entry point is `cnfDoObj()` in `runtime/conf.c`.  Both frontends
+The backend entry point is `cnfDoObj()` in `runtime/rsconf.c`.  Both frontends
 must produce structurally identical `nvlst` parameter lists for a given object
 so the module receives the same data regardless of which format the operator
 chose.
@@ -39,7 +39,7 @@ chose.
 
 | Change | RainerScript | YAML | Test |
 |--------|-------------|------|------|
-| New global parameter | `grammar/rainerscript.y` | `parse_global()` in yamlconf.c | `yaml-global-*.sh` |
+| New global parameter | `cnfparamdescr[]` table in `runtime/glbl.c` (no grammar change) | no change needed — `global:` goes through `parse_singleton_obj()` in yamlconf.c | `yaml-<area>-*.sh` with a `global:` section |
 | New module parameter | module param table | no change needed — nvlst key matches param name | `yaml-<module>-*.sh` |
 | New statement type | grammar rule + action | `build_one_stmt_rs()` in yamlconf.c | `yaml-statements-*.sh` |
 | New block type (ruleset, etc.) | grammar rule | `parse_<type>_sequence()` in yamlconf.c | `yaml-<type>-*.sh` |
@@ -52,16 +52,17 @@ chose.
 |------|------|
 | `runtime/yamlconf.c` | YAML frontend — all YAML parsing lives here |
 | `runtime/yamlconf.h` | Public API: `yamlconf_load()` |
-| `grammar/rainerscript.y` | RainerScript grammar |
+| `grammar/grammar.y` | RainerScript grammar (bison) |
+| `grammar/lexer.l` | RainerScript lexer (flex) |
 | `grammar/rainerscript.h` | RainerScript AST types |
-| `runtime/conf.c` | Shared backend: `cnfDoObj()`, `cnfDoCfsysline()` |
-| `runtime/nvlst.c` | Parameter list nodes shared by both frontends |
+| `runtime/rsconf.c` | Shared backend: `cnfDoObj()`, `cnfDoCfsysline()` |
+| `grammar/rainerscript.c` | `nvlst` helpers (`nvlstNewArray()` etc.) shared by both frontends; `struct nvlst` is in `rainerscript.h` |
 | `doc/source/configuration/yaml_config.rst` | User-facing YAML reference |
 
 ### 4. Adding a new statement type
 
-**RainerScript** — add a grammar rule in `grammar/rainerscript.y` that calls the
-appropriate runtime function.
+**RainerScript** — add a grammar rule in `grammar/grammar.y` (and any new token
+in `grammar/lexer.l`) that calls the appropriate runtime function.
 
 **YAML** — add a branch in `build_one_stmt_rs()` in `runtime/yamlconf.c`:
 ```c
@@ -84,7 +85,7 @@ modifier or option, add the matching YAML key there and add a test case to
 ### 6. YAML test conventions
 
 - Name: `tests/yaml-<area>-<what>.sh` (e.g. `yaml-template-list.sh`,
-  `yaml-global-ratelimit.sh`).
+  `yaml-statements-basic.sh`).
 - Include `diag.sh` using the POSIX `.` command and use the standard helpers
   (`startup`, `injectmsg`, `wait_queueempty`, `shutdown_when_empty`,
   `wait_shutdown`).

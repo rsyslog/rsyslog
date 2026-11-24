@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for GitHub issue #5364. An omprog action with a pure disk
 # action queue receives a negative acknowledgement, then rsyslog is restarted
 # before the action can drain. The oracle is that the message is still retried

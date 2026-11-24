@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # rgerhards, 2015-05-27
 echo =====================================================================================
 echo \[execonlywhenprevsuspended-queue.sh\]: test execonly...suspended functionality with action on its own queue

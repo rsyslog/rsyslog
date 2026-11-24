@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-ratelimit-interval:
 .. _imptcp.parameter.input.ratelimit-interval:
 

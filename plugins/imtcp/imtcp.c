@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* imtcp.c
  * This is the implementation of the TCP input module.
  *
@@ -89,6 +91,7 @@ static tcpsrv_etry_t *tcpsrv_root = NULL;
 static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
+static rsRetVal legacyPermittedPeersResult = RS_RET_OK;
 
 /* default number of workers to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
@@ -164,6 +167,7 @@ struct instanceConf_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    rsRetVal permittedPeersResult; /* reject failed input peer-list construction at activation */
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
@@ -205,7 +209,6 @@ struct modConfData_s {
     sbool bDisableLFDelim; /* disable standard LF delimiter */
     sbool discardTruncatedMsg;
     sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
-    sbool bFailOnBindError;
     sbool bKeepAlive;
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
@@ -222,6 +225,7 @@ struct modConfData_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    rsRetVal permittedPeersResult;
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
@@ -241,7 +245,6 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current l
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
-                                           {"failonbinderror", eCmdHdlrBinary, 0},
                                            {"disablelfdelimiter", eCmdHdlrBinary, 0},
                                            {"discardtruncatedmsg", eCmdHdlrBinary, 0},
                                            {"octetcountedframing", eCmdHdlrBinary, 0},
@@ -558,7 +561,6 @@ static int isPermittedHost(struct sockaddr *addr,
 static rsRetVal doOpenLstnSocks(tcpsrv_t *pSrv) {
     ISOBJ_TYPE_assert(pSrv, tcpsrv);
     dbgprintf("in imtcp doOpenLstnSocks\n");
-    pSrv->failOnBindError = runModConf->bFailOnBindError;
     return tcpsrv.create_tcp_socket(pSrv);
 }
 
@@ -600,9 +602,9 @@ static rsRetVal onErrClose(tcps_sess_t *pSess) {
  */
 static rsRetVal setPermittedPeer(void __attribute__((unused)) * pVal, uchar *pszID) {
     DEFiRet;
-    CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
-    free(pszID); /* no longer needed, but we need to free as of interface def */
-finalize_it:
+    iRet = net.AddPermittedPeer(&pPermPeersRoot, pszID);
+    if (legacyPermittedPeersResult == RS_RET_OK) legacyPermittedPeersResult = iRet;
+    free(pszID); /* the handler owns this string, including construction failure */
     RETiRet;
 }
 
@@ -634,6 +636,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszStrmDrvrKeyFile = NULL;
     inst->pszStrmDrvrCertFile = NULL;
     inst->pPermPeersRoot = NULL;
+    inst->permittedPeersResult = RS_RET_OK;
     inst->gnutlsPriorityString = NULL;
     inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
     inst->bStrmDrvrModeSet = loadModConf->bStrmDrvrModeSet;
@@ -701,6 +704,11 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
 
     CHKiRet(createInstance(&inst));
 
+    /* Legacy listeners have no rate-limit parameters. Match the defaults
+     * applied by newInpInst before passing them to the unsigned TCP API. */
+    inst->ratelimitInterval = 0;
+    inst->ratelimitBurst = 10000;
+
     CHKmalloc(inst->cnf_params->pszPort = ustrdup((pNewVal == NULL || *pNewVal == '\0') ? (uchar *)"10514" : pNewVal));
     if ((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
         inst->pszBindRuleset = NULL;
@@ -763,6 +771,8 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     permittedPeers_t *peers;
 
     tcpsrv_t *pOurTcpsrv = NULL;
+    CHKiRet(modConf->permittedPeersResult);
+    CHKiRet(inst->permittedPeersResult);
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
     CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -851,6 +861,10 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
          inst->cnf_params->pszLstnPortFileName == NULL) ||
         ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
         uchar *newPort = NULL;
+        if (runConf->globals.bRequireAllInputs) {
+            LogError(0, RS_RET_INVALID_PORT, "imtcp: port 0 needs listenPortFileName in require-all mode");
+            ABORT_FINALIZE(RS_RET_INVALID_PORT);
+        }
         LogMsg(0, RS_RET_OK, LOG_WARNING, "imtcp: port 0 and no port file set -> using port 514 instead");
         CHKmalloc(newPort = (uchar *)strdup("514"));
         free((void *)inst->cnf_params->pszPort);
@@ -960,11 +974,17 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
             CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
+            /* An invalid override must never activate with inherited or partial peers. */
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                inst->permittedPeersResult = RS_RET_ERR;
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
                 free(peer);
+                inst->permittedPeersResult = iRet;
+                CHKiRet(iRet);
             }
+            inst->permittedPeersResult = RS_RET_OK;
         } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
                 LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
@@ -1146,8 +1166,6 @@ BEGINsetModCnf
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
             loadModConf->bUseFlowControl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "failonbinderror")) {
-            loadModConf->bFailOnBindError = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
             loadModConf->bDisableLFDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
@@ -1217,8 +1235,11 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer);
                 free(peer);
+                if (loadModConf->permittedPeersResult == RS_RET_OK) loadModConf->permittedPeersResult = iRet;
+                CHKiRet(iRet);
             }
         } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
@@ -1271,6 +1292,8 @@ ENDsetModCnf
 
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
+    if (pModConf->permittedPeersResult == RS_RET_OK) pModConf->permittedPeersResult = legacyPermittedPeersResult;
+    legacyPermittedPeersResult = RS_RET_OK;
     if (!loadModConf->configSetViaV2Method) {
         iRet = validateLegacySessionLimits();
         if (iRet != RS_RET_OK) {
@@ -1357,7 +1380,8 @@ BEGINactivateCnfPrePrivDrop
     CODESTARTactivateCnfPrePrivDrop;
     runModConf = pModConf;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        addListner(runModConf, inst);
+        const rsRetVal localRet = addListner(runModConf, inst);
+        if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
     if (tcpsrv_root == NULL) ABORT_FINALIZE(RS_RET_NO_RUN);
     tcpsrv_etry_t *etry = tcpsrv_root;

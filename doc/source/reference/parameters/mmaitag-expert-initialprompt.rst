@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmaitag-expert-initialprompt:
 .. _mmaitag.parameter.action.expert-initialprompt:
 

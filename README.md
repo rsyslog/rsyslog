@@ -176,7 +176,6 @@ All contributors are welcome — there is no formal membership beyond participat
 Rsyslog aims to remain accessible worldwide. Different regions sometimes face network or platform limits, so we provide mirrors to ensure that everyone can obtain the source code and contribute on equal terms.
 
 - **GitHub (canonical):** https://github.com/rsyslog/rsyslog
-- **European mirror (Germany, hosted on DigitalOcean):** https://github-mirror.rsyslog.com/rsyslog/rsyslog
 - **Community mirror (China, maintained by Gitee):** https://gitee.com/mirrors_rsyslog
 
 All pull requests ultimately flow through GitHub, where our CI and review infrastructure run.
@@ -204,17 +203,6 @@ The rsyslog project is proudly supported by organizations that help sustain its 
 **[Adiscon GmbH](https://www.adiscon.com/)**
 Adiscon employs core rsyslog developers including Rainer Gerhards and provides ongoing engineering, infrastructure, and CI resources.
 Through its commercial Windows log management products — such as [WinSyslog](https://www.winsyslog.com/) and [Rsyslog Windows Agent](https://www.winsyslog.com/rsyslog-windows-agent/) — Adiscon helps fund rsyslog’s continued open-source development and ecosystem growth.
-
-### Major Sponsor
-
-<p>
-  <a href="https://www.digitalocean.com/">
-    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px" alt="DigitalOcean Logo">
-  </a>
-</p>
-
-**[DigitalOcean](https://www.digitalocean.com/)** powers key parts of rsyslog’s CI pipeline, package distribution network, and AI infrastructure as part of their [#DOforOpenSource](https://www.digitalocean.com/open-source) initiative.
-Their support enables fast, globally available builds and the next generation of AI-assisted rsyslog documentation and tooling.
 
 ### Additional Acknowledgments
 

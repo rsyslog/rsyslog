@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _tut-03-default-config:
 
 Understanding the Default Configuration

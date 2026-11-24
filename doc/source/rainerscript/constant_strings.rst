@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: RainerScript string constants and escape sequences.
    :keywords: rsyslog, rainerscript, string constants, escapes, hex, octal

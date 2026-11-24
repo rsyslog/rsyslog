@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Overview of built-in RainerScript functions available by default.
    :keywords: rsyslog, rainerscript, built-in functions, functions

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the main rsyslogd file.
  * It contains code * that is known to be validly under ASL 2.0,
  * because it was either written from scratch by me (rgerhards) or
@@ -76,6 +78,8 @@
 #include "janitor.h"
 #include "parserif.h"
 #include "rswatch.h"
+#include "cfgfiles.h"
+#include "reload-preflight.h"
 
 /* some global vars we need to differentiate between environments,
  * for TZ-related things see
@@ -220,6 +224,12 @@ void rsyslogdDoDie(int sig);
 static volatile sig_atomic_t bChildDied = 0;
 static volatile sig_atomic_t bHadHUP = 0;
 static volatile sig_atomic_t bHUPInProgress = 0;
+/* number of HUPs whose processing has finished; written by the main thread only.
+ * The mutex orders the counter with the HUP work done before it is increased,
+ * so a reader that sees the new value also sees the HUP's effects.
+ */
+static int hup_completed_count = 0;
+static pthread_mutex_t mut_hup_completed_count = PTHREAD_MUTEX_INITIALIZER;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
 static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
@@ -272,6 +282,20 @@ int get_bHadHUP(void) {
     const int ret = PREFER_LOAD_INT(&bHadHUP) || PREFER_LOAD_INT(&bHUPInProgress);
     /* note: at this point ret can already be invalid */
     return ret;
+}
+
+/* helper for imdiag: number of HUPs that have been fully processed so far.
+ * The counter only grows, so a caller that reads it before sending SIGHUP can
+ * wait until it changes and then knows that a HUP started after its read has
+ * completed. Several SIGHUPs that arrive before processing starts are merged
+ * into one HUP run and increase the counter by one.
+ */
+int get_hup_completed_count(void) {
+    int count;
+    pthread_mutex_lock(&mut_hup_completed_count);
+    count = hup_completed_count;
+    pthread_mutex_unlock(&mut_hup_completed_count);
+    return count;
 }
 
 /* we need a pointer to the conf, because in early startup stage we
@@ -997,7 +1021,9 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 #undef setQPROPstr
     } else { /* use new style config! */
         qqueueSetDefaultsRulesetQueue(*ppQueue);
-        qqueueApplyCnfParam(*ppQueue, lst);
+        /* Preserve historical global parsing, but a failed local queue is fatal. */
+        const rsRetVal configRet = qqueueApplyCnfParam(*ppQueue, lst);
+        if (configRet == RS_RET_LOCAL_QUEUE_CONFIG) ABORT_FINALIZE(configRet);
     }
     qqueueCorrectParams(*ppQueue);
 
@@ -1011,10 +1037,22 @@ rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue) {
     CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
         /* no queue is fatal, we need to give up in that case... */
         LogError(0, iRet, "could not start (ruleset) main message queue");
-        if (runConf->globals.bAbortOnFailedQueueStartup) {
+        if (pQueue->local_graph_conf != NULL) {
+            /* A global boundary is required by the local graph too. Propagate
+             * its failure after qqueueStart has unwound; never fall back.
+             * Remove the early PID file before returning the error to initAll,
+             * which still emits the final startup diagnostic. */
             fprintf(stderr,
                     "rsyslogd: could not start (ruleset) main message queue, "
-                    "abortOnFailedQueueStartup is set, so we abort rsyslog now.\n");
+                    "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
+            fflush(stderr);
+            clearPidFile();
+            RETiRet;
+        }
+        if (pQueue->local_scope || pQueue->local_config_error || runConf->globals.bAbortOnFailedQueueStartup) {
+            fprintf(stderr,
+                    "rsyslogd: could not start (ruleset) main message queue, "
+                    "local queue safety or abortOnFailedQueueStartup requires aborting rsyslog now.\n");
             fflush(stderr);
             clearPidFile();
             exit(1); /* "good" exit, this is intended here */
@@ -1498,6 +1536,7 @@ static void initAll(int argc, char **argv) {
 #else
     while ((ch = getopt(argc, argv, "46ACDdf:F:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
 #endif
+        reloadPreflightNoteOpt(ch, optarg); /* options replayed by the config reload check */
         switch ((char)ch) {
             case '4':
             case '6':
@@ -1755,7 +1794,13 @@ static void initAll(int argc, char **argv) {
     }
 
     resetErrMsgsFlag();
+    reloadPreflightNoteCwd(); /* relative -f/-M paths are resolved against this */
     localRet = rsconf.Load(&ourConf, ConfFile);
+    cfgfilesSeal(); /* all config files are known now */
+    /* Never permit an unaudited local graph, including developer/partial-config
+     * modes or AbortOnUncleanConfig=off. Check before any activation side effects. */
+    if (localRet == RS_RET_LOCAL_QUEUE_CONFIG || (loadConf != NULL && loadConf->local_config_error))
+        ABORT_FINALIZE(RS_RET_LOCAL_QUEUE_CONFIG);
 
 #ifdef ENABLE_LIBCAPNG
     if (loadConf->globals.bCapabilityDropEnabled) {
@@ -1862,7 +1907,7 @@ static void initAll(int argc, char **argv) {
          * even on hard config errors. Note that this may lead to segfaults
          * or other malfunction further down the road.
          */
-        if ((loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
+        if (loadConf != NULL && (loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
             fprintf(stderr,
                     "rsyslogd: NOTE: developer-only option set to keep rsyslog "
                     "running where it should abort - this can lead to "
@@ -1873,6 +1918,12 @@ static void initAll(int argc, char **argv) {
     }
 
     glbl.GenerateLocalHostNameProperty();
+
+    /* Strict input policy must not continue with a partly loaded config.
+     * In particular, an early load error can leave the main queue unset. */
+    if (loadConf != NULL && loadConf->globals.bRequireAllInputs && localRet != RS_RET_OK &&
+        localRet != RS_RET_VALIDATION_RUN)
+        ABORT_FINALIZE(localRet);
 
     if (hadErrMsgs()) {
         if (loadConf->globals.bAbortOnUncleanConfig) {
@@ -1935,6 +1986,7 @@ static void initAll(int argc, char **argv) {
     }
 
     CHKiRet(rsconf.Activate(ourConf));
+    reloadPreflightInit();
 
     if (runConf->globals.bLogStatusMsgs) {
         char bufStartUpMsg[512];
@@ -2347,6 +2399,7 @@ static void reapChild(void) {
         int status;
         child = waitpid(-1, &status, WNOHANG);
         if (child != -1 && child != 0) {
+            if (reloadPreflightReapChild(child, status)) continue; /* config reload check child */
             glblReportChildProcessExit(runConf, NULL, child, status);
         }
     } while (child > 0);
@@ -2385,9 +2438,15 @@ static void mainloop(void) {
         }
 
         if (PREFER_LOAD_INT(&bHadHUP)) {
-            PREFER_STORE_INT(&bHadHUP, 0);
+            /* set "in progress" before clearing the request so that
+             * get_bHadHUP() never sees both flags clear while a HUP runs */
             PREFER_STORE_INT(&bHUPInProgress, 1);
+            PREFER_STORE_INT(&bHadHUP, 0);
             doHUP();
+            reloadPreflightOnHUP(); /* global(config.reloadOnHUP="report") only */
+            pthread_mutex_lock(&mut_hup_completed_count);
+            ++hup_completed_count;
+            pthread_mutex_unlock(&mut_hup_completed_count);
             PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 
@@ -2396,9 +2455,10 @@ static void mainloop(void) {
         if (bFinished) break; /* exit as quickly as possible */
 
         now_ms = mainloopMonotonicMs();
-        wait_timeout(&origmask, mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms));
+        wait_timeout(&origmask, reloadPreflightCapTimeoutMs(mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms)));
         pthread_sigmask(SIG_UNBLOCK, &sigblockset, NULL);
         now_ms = mainloopMonotonicMs();
+        reloadPreflightPoll(now_ms);
 
         /* File-watch I/O is handled before due dispatch so newly-read events can
          * arm or extend debounce deadlines within the same wake cycle.
@@ -2538,6 +2598,9 @@ static void deinitAll(void) {
     /* close the inputs */
     DBGPRINTF("Terminating input threads...\n");
     glbl.SetGlobalInputTermination();
+    /* Wake graph inputs already waiting on capacity before joining them.
+     * This does not close graph admission or begin its drain deadlines. */
+    ruleset_wake_local_graph_inputs(runConf);
 
     thrdTerminateAll();
 
@@ -2641,6 +2704,7 @@ int main(int argc, char **argv) {
 #endif
 
     mainthread = pthread_self();
+    reloadPreflightInitExe(argv[0]); /* before any chdir() */
     if ((int)getpid() == 1) {
         fprintf(stderr,
                 "rsyslogd %s: running as pid 1, enabling "
@@ -2689,8 +2753,13 @@ int main(int argc, char **argv) {
            "- begin actual processing");
 
     mainloop();
+    reloadPreflightShutdown(); /* kills and reaps a running config reload check */
     LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
     deinitAll();
     osf_close();
+    if (thrd_had_fatal_input_failure()) {
+        (void)rsyslogdWriteTerminationMarker("error", "input-failed", "main-return");
+        return 1;
+    }
     return rsyslogdWriteTerminationMarker("ok", "normal", "main-return");
 }

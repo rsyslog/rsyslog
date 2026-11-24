@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that an empty queue.spooldirectory is rejected during config validation.
 . ${srcdir:=.}/diag.sh init
 

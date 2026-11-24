@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2026-06-02 by OpenAI Codex
 # Regression test for issues #2524 and #2568.  An explicit "continue" inside
 # an if branch is a user-requested NOP, and the optimizer must not make a

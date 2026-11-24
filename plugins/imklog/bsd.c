@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* combined imklog driver for BSD and Linux
  *
  * This contains OS-specific functionality to read the BSD
@@ -28,6 +30,7 @@
 #ifdef HAVE_CONFIG_H
     #include "config.h"
 #endif
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -56,6 +59,14 @@ static int fklog = -1; /* kernel log fd */
 
 
 #ifdef OS_LINUX
+    /* Limits for a kernel timestamp "[secs.usecs]" that we accept as message
+     * time. Nine seconds digits (about 31 years of uptime) keep the value below
+     * LONG_MAX also where long has 32 bits. The slack covers the drift between
+     * the kernel log clock and CLOCK_MONOTONIC.
+     */
+    #define KERN_TS_MAX_SEC_DIGITS 9
+    #define KERN_TS_SLACK_SECS 60L
+
 /* submit a message to imklog Syslog() API. In this function, we check if
  * a kernel timestamp is present and, if so, extract and strip it.
  * Note that this is heavily Linux specific and thus is not compiled or
@@ -76,6 +87,8 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
     long usecOffs;
     unsigned i;
     unsigned bufsize;
+    unsigned nDigits;
+    int bPlausible = 1; /* kernel timestamp value can be used as message time */
     struct timespec monotonic, realtime;
     struct timeval tv;
     struct timeval *tp = NULL;
@@ -91,11 +104,21 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
      */
     i = endpri + 2; /* space or first digit after '[' */
     while (buf[i] && isspace(buf[i])) ++i; /* skip space */
+    /* The kernel prints "%5lu.%06lu". The text between the brackets can
+     * also come from a user process name when the kernel prints no
+     * timestamp, so the digit runs are not trusted: we stop accumulating
+     * once a value exceeds what a real timestamp can hold (no signed
+     * overflow) and only remember that the value is implausible. The
+     * syntax check below is unchanged, so stripping works as before.
+     */
     secs = 0;
+    nDigits = 0;
     while (buf[i] && isdigit(buf[i])) {
-        secs = secs * 10 + buf[i] - '0';
+        if (nDigits < KERN_TS_MAX_SEC_DIGITS) secs = secs * 10 + buf[i] - '0';
+        ++nDigits;
         ++i;
     }
+    if (nDigits > KERN_TS_MAX_SEC_DIGITS) bPlausible = 0;
     if (buf[i] != '.') {
         DBGPRINTF("no dot --> no kernel timestamp\n");
         goto done; /* no TS! */
@@ -103,10 +126,13 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
 
     ++i; /* skip dot */
     usecs = 0;
+    nDigits = 0;
     while (buf[i] && isdigit(buf[i])) {
-        usecs = usecs * 10 + buf[i] - '0';
+        if (nDigits < 6) usecs = usecs * 10 + buf[i] - '0';
+        ++nDigits;
         ++i;
     }
+    if (nDigits > 6) bPlausible = 0; /* kernel prints exactly 6 digits */
     if (buf[i] != ']') {
         DBGPRINTF("no trailing ']' --> no kernel timestamp\n");
         goto done; /* no TS! */
@@ -125,8 +151,24 @@ static void submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) 
         goto done;
     }
 
+    if (!bPlausible) {
+        DBGPRINTF("imklog/bsd: kernel timestamp out of range, using reception time\n");
+        goto done;
+    }
+
     clock_gettime(CLOCK_MONOTONIC, &monotonic);
     clock_gettime(CLOCK_REALTIME, &realtime);
+    /* The kernel timestamp is the time since boot, so it cannot be later
+     * than the current monotonic clock (plus slack). Anything beyond
+     * that is not a timestamp of this boot (e.g. a user process name on a
+     * kernel without printk timestamps, or a LogPath replay from another
+     * system) and would produce a bogus message time.
+     */
+    if (secs > monotonic.tv_sec + KERN_TS_SLACK_SECS) {
+        DBGPRINTF("imklog/bsd: kernel timestamp %ld is later than uptime %ld, using reception time\n", secs,
+                  (long)monotonic.tv_sec);
+        goto done;
+    }
     secOffs = realtime.tv_sec - monotonic.tv_sec;
     usecOffs = (realtime.tv_nsec - monotonic.tv_nsec) / 1000;
     if (usecOffs < 0) {
@@ -158,6 +200,25 @@ static uchar *GetPath(modConfData_t *pModConf) {
     return pModConf->pszPath ? pModConf->pszPath : (uchar *)_PATH_KLOG;
 }
 
+#ifdef OS_LINUX
+static int origConsoleLogLevel = -1; /* console log level before we changed it, -1 if unknown */
+
+/* obtain the current console log level, which is the first field of
+ * /proc/sys/kernel/printk (there is no klogctl() action to query it).
+ * Returns -1 if it cannot be determined.
+ */
+static int getConsoleLogLevel(void) {
+    FILE *fp;
+    int level = -1;
+
+    if ((fp = fopen("/proc/sys/kernel/printk", "r")) != NULL) {
+        if (fscanf(fp, "%d", &level) != 1) level = -1;
+        fclose(fp);
+    }
+    return level;
+}
+#endif /* #ifdef OS_LINUX */
+
 /* open the kernel log - will be called inside the willRun() imklog
  * entry point. -- rgerhards, 2008-04-09
  */
@@ -175,12 +236,26 @@ rsRetVal klogWillRunPrePrivDrop(modConfData_t *pModConf) {
 #ifdef OS_LINUX
     /* Set level of kernel console messaging.. */
     if (pModConf->console_log_level != -1) {
-        int r = klogctl(8, NULL, pModConf->console_log_level);
+        int r;
+        /* remember the current level so that klogAfterRun() can restore it */
+        origConsoleLogLevel = getConsoleLogLevel();
+        r = klogctl(8, NULL, pModConf->console_log_level);
         if (r != 0) {
             imklogLogIntMsg(LOG_WARNING, "imklog: cannot set console log level: %s",
                             rs_strerror_r(errno, errmsg, sizeof(errmsg)));
             /* make sure we do not try to re-set! */
             pModConf->console_log_level = -1;
+        } else if (origConsoleLogLevel == -1) {
+            imklogLogIntMsg(LOG_WARNING,
+                            "imklog: cannot determine previous console log level, "
+                            "it will not be restored on shutdown");
+        } else if (origConsoleLogLevel < 1 || origConsoleLogLevel > 8) {
+            /* klogctl() only accepts levels 1..8 */
+            imklogLogIntMsg(LOG_WARNING,
+                            "imklog: previous console log level %d is outside the settable "
+                            "range 1..8, it will not be restored on shutdown",
+                            origConsoleLogLevel);
+            origConsoleLogLevel = -1;
         }
     }
 #endif /* #ifdef OS_LINUX */
@@ -202,6 +277,7 @@ rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf) {
     if (r < 0 && errno != EINVAL) {
         imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.", GetPath(pModConf),
                         rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+        close(fklog);
         fklog = -1;
         ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
     }
@@ -212,14 +288,17 @@ finalize_it:
 
 
 /* Read kernel log while data are available, split into lines.
+ * Returns RS_RET_EOF if read() reported end of file and RS_RET_READ_ERR
+ * if a read error occurred. In the latter case, the kernel log is closed.
  */
-static void readklog(modConfData_t *pModConf) {
+static rsRetVal readklog(modConfData_t *pModConf) {
     char *p, *q;
     int len, i;
     int iMaxLine;
     uchar bufRcv[128 * 1024 + 1];
     char errmsg[2048];
     uchar *pRcv = NULL; /* receive buffer */
+    DEFiRet;
 
     iMaxLine = klog_getMaxLine();
 
@@ -245,10 +324,14 @@ static void readklog(modConfData_t *pModConf) {
         if (i > 0) {
             pRcv[i + len] = '\0';
         } else {
-            if (i < 0 && errno != EINTR && errno != EAGAIN) {
+            if (i == 0) {
+                iRet = RS_RET_EOF;
+            } else if (errno != EINTR && errno != EAGAIN) {
                 imklogLogIntMsg(LOG_ERR, "imklog: error reading kernel log - shutting down: %s",
                                 rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+                close(fklog);
                 fklog = -1;
+                iRet = RS_RET_READ_ERR;
             }
             break;
         }
@@ -267,6 +350,7 @@ static void readklog(modConfData_t *pModConf) {
     if (len > 0) submitSyslog(pModConf, LOG_INFO, pRcv);
 
     if (pRcv != bufRcv) free(pRcv);
+    RETiRet;
 }
 
 
@@ -277,8 +361,16 @@ rsRetVal ATTR_NONNULL() klogAfterRun(modConfData_t *const pModConf __attribute__
     DEFiRet;
     if (fklog != -1) close(fklog);
 #ifdef OS_LINUX
-    /* Turn on logging of messages to console, but only if a log level was speficied */
-    if (pModConf->console_log_level != -1) klogctl(7, NULL, 0);
+    /* Restore the console log level we changed at startup. This needs the
+     * privilege to change it (CAP_SYSLOG), which may have been dropped.
+     */
+    if (pModConf->console_log_level != -1 && origConsoleLogLevel != -1) {
+        if (klogctl(8, NULL, origConsoleLogLevel) != 0) {
+            char errmsg[2048];
+            imklogLogIntMsg(LOG_WARNING, "imklog: cannot restore console log level to %d: %s", origConsoleLogLevel,
+                            rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+        }
+    }
 #endif
     RETiRet;
 }
@@ -289,15 +381,37 @@ rsRetVal ATTR_NONNULL() klogAfterRun(modConfData_t *const pModConf __attribute__
  * rgerhards, 2008-04-09
  */
 rsRetVal klogLogKMsg(modConfData_t *pModConf) {
+    static int bEOFReported = 0; /* EOF on the kernel log was already reported */
     DEFiRet;
-    readklog(pModConf);
+    iRet = readklog(pModConf);
+    if (iRet == RS_RET_EOF) {
+        /* The kernel log devices block instead of returning EOF. EOF only
+         * happens if LogPath is e.g. a regular file or a FIFO without a
+         * writer. Retrying immediately would spin, so wait a bit before
+         * checking for new data.
+         */
+        if (!bEOFReported) {
+            imklogLogIntMsg(LOG_WARNING,
+                            "imklog: end of file reached on kernel log (%s), "
+                            "checking for new data once per second",
+                            GetPath(pModConf));
+            bEOFReported = 1;
+        }
+        srSleep(1, 0);
+        iRet = RS_RET_OK;
+    }
     RETiRet;
 }
 
 
-/* provide the (system-specific) default facility for internal messages
+/* provide the (system-specific) default facility for internal messages.
+ * Linux has historically used "kern", other platforms use "syslog".
  * rgerhards, 2008-04-14
  */
 int klogFacilIntMsg(void) {
+#ifdef OS_LINUX
+    return LOG_KERN;
+#else
     return LOG_SYSLOG;
+#endif
 }

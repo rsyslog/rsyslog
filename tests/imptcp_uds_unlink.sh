@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 . ${srcdir:=.}/diag.sh init
 # First make sure we don't unlink if not asked to
 rm -f "$RSYSLOG_DYNNAME-testbench_socket"

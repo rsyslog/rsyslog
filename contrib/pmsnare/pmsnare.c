@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmsnare.c
  *
  * this detects logs sent by Snare and cleans them up so that they can be processed by the normal parser

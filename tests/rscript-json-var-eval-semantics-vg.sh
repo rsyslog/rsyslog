@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Run the JSON-variable expression semantics regression under Valgrind.
 # This file is part of the rsyslog project, released under ASL 2.0.
 export USE_VALGRIND="YES"

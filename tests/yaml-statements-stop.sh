@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML-native statements: block — stop: in an else: branch and
 # if:/then: with multiple actions.
 # Sends 10 messages starting at seq 1; message 00000001 is dropped by the

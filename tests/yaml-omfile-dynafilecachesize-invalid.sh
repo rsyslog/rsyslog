@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Ensure YAML omfile actions normalize invalid dynaFileCacheSize values during
 # startup while still allowing dynafile writes.
 . ${srcdir:=.}/diag.sh init

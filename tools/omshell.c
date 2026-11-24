@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omshell.c
  * This is the implementation of the build-in shell output module.
  *

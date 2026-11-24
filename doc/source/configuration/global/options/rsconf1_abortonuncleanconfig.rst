@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 :doc:`rsyslog.conf configuration parameter </configuration/global/index>`
 
 $AbortOnUncleanConfig

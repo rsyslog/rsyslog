@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-22 by Codex, released under ASL 2.0
 # Verifies that imtcp applies the expansion-ratio guard to the cumulative
 # compressed stream, not each fragmented TCP receive. The oracle is that a

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test creates multiple symlinks (all watched by rsyslog via wildcard)
 # chained to target files via additional symlinks and checks that all files
 # are recorded with correct corresponding metadata (name of symlink

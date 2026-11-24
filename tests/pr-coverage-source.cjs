@@ -1,0 +1,195 @@
+// SPDX-License-Identifier: Apache-2.0
+// Contract regressions for the trusted consumer. Fixtures represent the API
+// boundary: rejected input must never produce an upload target. Stale heads
+// are a normal no-upload result, while inconsistent provenance is an error.
+// Only public fork targets may omit upload credentials; same-repo/private
+// targets retain token authentication, and the workflow must honor that choice.
+const assert = require('node:assert/strict');
+const resolve = require('../devtools/pr-coverage-source.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
+
+function fixture(sameRepo = false, docs = false) {
+  const base = {id: 1, private: false, full_name: 'rsyslog/rsyslog', owner: {login: 'rsyslog'}};
+  const fork = sameRepo ? base : {id: 2, full_name: 'alice/rsyslog', owner: {login: 'alice'}};
+  const run = {id: 41, workflow_id: 12, repository: base, event: 'pull_request', status: 'completed',
+    run_attempt: 2, head_sha: 'a'.repeat(40), head_branch: 'fix/topic', head_repository: fork,
+    html_url: 'https://github.com/rsyslog/rsyslog/actions/runs/41', conclusion: 'failure'};
+  return {event: JSON.parse(JSON.stringify(run)), run,
+    workflow: {path: docs ? '.github/workflows/doc_build.yml' : '.github/workflows/run_checks.yml',
+      name: docs ? 'documentation build' : 'check'},
+    prs: [{number: 72, state: 'open', base: {repo: base, ref: 'main'},
+      head: {repo: JSON.parse(JSON.stringify(fork)), ref: run.head_branch, sha: run.head_sha}}],
+    jobs: [{name: docs ? 'build_docs' : 'CI (ubuntu_24)', conclusion: 'success',
+      steps: (docs ? ['Validate documentation config samples', 'Generate documentation sample coverage',
+        'Preserve documentation sample coverage for the trusted uploader'] :
+        ['Capture representative PR coverage', 'Preserve coverage for the trusted uploader'])
+        .map(name => ({name, conclusion: 'success'}))}],
+    artifacts: [{id: 81, name: docs ? 'coverage-docs-samples-pr-41-2' : 'coverage-ubuntu-24-pr-41-2', expired: false, size_in_bytes: 200,
+      workflow_run: {id: 41, head_sha: run.head_sha}}]};
+}
+
+async function evaluate(data) {
+  const outputs = {};
+  const actions = {
+    getWorkflowRun: async args => { assert.equal(args.run_id, 41); return {data: data.run}; },
+    getWorkflow: async args => { assert.equal(args.workflow_id, 12); return {data: data.workflow}; },
+    listJobsForWorkflowRunAttempt: 'jobs', listWorkflowRunArtifacts: 'artifacts'
+  };
+  const github = {rest: {actions, pulls: {list: 'prs'}}, paginate: async (kind, args) => {
+    assert.equal(args.owner, 'rsyslog');
+    assert.equal(args.repo, 'rsyslog');
+    if (kind === 'jobs') { assert.equal(args.attempt_number, 2); assert.equal(args.run_id, 41); }
+    if (kind === 'artifacts') assert.equal(args.run_id, 41);
+    if (kind === 'prs') assert.equal(args.state, 'open');
+    return data[kind];
+  }};
+  await resolve({github, context: {repo: {owner: 'rsyslog', repo: 'rsyslog'},
+    payload: {workflow_run: data.event}}, core: {notice() {}, setOutput(key, value) { outputs[key] = value; }}});
+  return outputs;
+}
+
+(async () => {
+  // Fork branch attribution and PR head SHA must not inherit the consumer's
+  // default-branch context. Other matrix failures must not suppress this lane.
+  for (const docs of [false, true]) {
+    for (const sameRepo of [false, true]) {
+      const output = await evaluate(fixture(sameRepo, docs));
+      assert.equal(output.sha, 'a'.repeat(40));
+      assert.equal(output.pr, 72);
+      assert.equal(output.artifact, 81);
+      assert.equal(output.branch, sameRepo ? 'fix/topic' : 'alice:fix/topic');
+      assert.equal(output.tokenless, sameRepo ? 'false' : 'true');
+      assert.equal(output.flag, docs ? 'docs-samples' : 'pr-ubuntu-24');
+      assert.equal(output.kind, docs ? 'docs' : 'runtime');
+    }
+  }
+  // Unknown visibility must fail closed to credentials, just like private
+  // repositories; only an explicit public base and a distinct fork qualify.
+  for (const visibility of [true, undefined]) {
+    const data = fixture();
+    data.prs[0].base.repo.private = visibility;
+    assert.equal((await evaluate(data)).tokenless, 'false');
+  }
+  const consumerPath = path.join(__dirname, '../.github/workflows/pr_coverage_upload.yml');
+  if (fs.existsSync(consumerPath)) {
+    const consumer = fs.readFileSync(consumerPath, 'utf8');
+    const upload = consumer.split('- name: Upload coverage')[1].split('\n      - name:')[0];
+    assert.ok(upload.includes("token: ${{ steps.source.outputs.tokenless != 'true' && secrets.CODECOV_TOKEN || '' }}"));
+    assert.ok(upload.includes('fail_ci_if_error: true'));
+    // Upload problems are reported, but must never fail the consumer job.
+    assert.ok(upload.includes('continue-on-error: true'));
+    // Credentialed targets never fall back to a tokenless upload.
+    assert.ok(upload.includes("steps.auth.outputs.ready == 'true'"));
+    const auth = consumer.split('- name: Check upload credentials')[1].split('\n      - name:')[0];
+    assert.ok(auth.includes('[ "$TOKENLESS" != "true" ] && [ -z "$CODECOV_TOKEN" ]'));
+    assert.ok(auth.includes('ready=false'));
+    assert.ok(upload.includes('override_branch: ${{ steps.source.outputs.branch }}'));
+    assert.ok(!consumer.includes('id-token: write'));
+  }
+  // Both supported targets and arbitrary legal ref characters retain exact
+  // API identity matching. Branch text stays data, including shell punctuation.
+  for (const base of ['main', 'v8-stable']) {
+    for (const branch of ['fix#123', 'feature/é', 'fix(topic)', 'fix/$topic']) {
+      for (const docs of [false, true]) {
+        const data = fixture(false, docs);
+        data.prs[0].base.ref = base;
+        data.run.head_branch = data.event.head_branch = data.prs[0].head.ref = branch;
+        assert.equal((await evaluate(data)).branch, `alice:${branch}`);
+      }
+    }
+  }
+  // Contract-only edits must pass both scheduling gates before the pinned
+  // host checks can execute; exact path membership is the scheduling oracle.
+  const workflowPath = path.join(__dirname, '../.github/workflows/run_checks.yml');
+  // Release tarballs omit GitHub workflows; their resolver contracts still run.
+  if (fs.existsSync(workflowPath)) {
+    const workflow = fs.readFileSync(workflowPath, 'utf8');
+    for (const name of ['Check broad code changes', 'Check for code changes']) {
+      const scope = name === 'Check for code changes' ? workflow.split('\n  CI:')[1] : workflow;
+      const step = scope.split(`- name: ${name}\n`)[1].split('\n      - name:')[0];
+      for (const file of ['devtools/pr-coverage-source.cjs', 'devtools/validate-pr-coverage.py',
+        'tests/pr-coverage-source.cjs', 'tests/pr-coverage-artifact.py']) {
+        assert.ok(step.includes(`            ${file}\n`), `${name} must schedule ${file}`);
+      }
+    }
+  }
+  const rejected = {
+    'wrong repository': d => { d.run.repository.full_name = 'mallory/rsyslog'; },
+    'wrong workflow path': d => { d.workflow.path = '.github/workflows/other.yml'; },
+    'wrong workflow name': d => { d.workflow.name = 'other'; },
+    'wrong event': d => { d.run.event = 'push'; },
+    'wrong run': d => { d.run.id = 42; },
+    'wrong attempt': d => { d.run.run_attempt = 3; },
+    'wrong SHA': d => { d.run.head_sha = 'b'.repeat(40); },
+    'wrong branch': d => { d.run.head_branch = 'other'; },
+    'wrong head repository': d => { d.event.head_repository.id = 8; },
+    'unsafe branch': d => { d.run.head_branch = d.event.head_branch = 'fix\nINJECT=x'; },
+    'missing artifact': d => { d.artifacts = []; },
+    'duplicate artifact': d => { d.artifacts.push({...d.artifacts[0], id: 82}); },
+    'future artifact attempt': d => { d.artifacts[0].name = d.artifacts[0].name.replace(/-2$/, '-3'); },
+    'expired artifact': d => { d.artifacts[0].expired = true; },
+    'oversized artifact': d => { d.artifacts[0].size_in_bytes = 10485761; },
+    'foreign artifact run': d => { d.artifacts[0].workflow_run.id = 42; },
+    'foreign artifact SHA': d => { d.artifacts[0].workflow_run.head_sha = 'b'.repeat(40); }
+  };
+  for (const docs of [false, true]) {
+    for (const [name, change] of Object.entries(rejected)) {
+      const data = fixture(false, docs); change(data);
+      await assert.rejects(evaluate(data), undefined, name);
+    }
+  }
+  // A partial re-run carries the coverage job over: its artifact keeps the
+  // earlier attempt number and must still be uploaded. When several attempts
+  // produced coverage, the newest one not beyond the run's attempt wins.
+  for (const docs of [false, true]) {
+    const carried = fixture(false, docs);
+    carried.artifacts[0].name = carried.artifacts[0].name.replace(/-2$/, '-1');
+    assert.equal((await evaluate(carried)).artifact, 81, 'carried-over artifact');
+    const both = fixture(false, docs);
+    both.artifacts.unshift({...both.artifacts[0], id: 80, name: both.artifacts[0].name.replace(/-2$/, '-1')});
+    assert.equal((await evaluate(both)).artifact, 81, 'newest attempt wins');
+  }
+  const skipped = {
+    'stale PR head': d => { d.prs[0].head.sha = 'b'.repeat(40); },
+    'closed PR': d => { d.prs[0].state = 'closed'; },
+    'other PR repo': d => { d.prs[0].head.repo.id = 9; },
+    'unsupported PR base': d => { d.prs[0].base.ref = 'unsupported'; },
+    'ambiguous PR': d => { d.prs.push(d.prs[0]); },
+    'failed runtime lane': d => { d.jobs[0].conclusion = 'failure'; },
+    'missing coverage job': d => { d.jobs = []; },
+    'generation skipped (docs_changed false)': d => {
+      d.jobs[0].steps[1].conclusion = 'skipped'; d.artifacts = [];
+    },
+    'missing generation step': d => { d.jobs[0].steps = []; },
+    'wrong generation step': d => { d.jobs[0].steps[1].name = 'Unrelated successful step'; }
+  };
+  for (const docs of [false, true]) {
+    for (const [name, change] of Object.entries(skipped)) {
+      const data = fixture(false, docs); change(data);
+      assert.deepEqual(await evaluate(data), {}, name);
+    }
+  }
+  // A producer cannot select a different route/flag via artifact metadata.
+  for (const docs of [false, true]) {
+    const forged = fixture(false, docs);
+    forged.artifacts[0].flag = docs ? 'pr-ubuntu-24' : 'docs-samples';
+    assert.equal((await evaluate(forged)).flag, docs ? 'docs-samples' : 'pr-ubuntu-24');
+    forged.artifacts[0].name = docs ? 'coverage-ubuntu-24-pr-41-2' : 'coverage-docs-samples-pr-41-2';
+    await assert.rejects(evaluate(forged));
+    const wrongWorkflow = fixture(false, docs);
+    wrongWorkflow.workflow.name = docs ? 'check' : 'documentation build';
+    await assert.rejects(evaluate(wrongWorkflow));
+  }
+  // Coverage must not publish any status or check on the PR head: a
+  // Codecov failure would otherwise show red on the PR (or attach to an
+  // unrelated Actions suite such as Code Style Check).
+  assert.equal(resolve.reportStatus, undefined);
+  if (fs.existsSync(consumerPath)) {
+    const reportingWorkflow = fs.readFileSync(consumerPath, 'utf8');
+    for (const forbidden of ['statuses: write', 'checks: write', 'github.rest.checks.', 'createCommitStatus']) {
+      assert.ok(!reportingWorkflow.includes(forbidden), forbidden);
+    }
+  }
+  console.log('PASS: PR runtime/docs coverage identity and stale/provenance refusal contracts');
+})().catch(error => { console.error(error); process.exitCode = 1; });

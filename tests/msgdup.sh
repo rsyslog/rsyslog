@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests the border case that a message is exactly as large as the default
 # buffer size (101 chars) and is reduced in size afterwards. This has been seen
 # in practice.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that mmaitag's configurable provider budgets remain bounded and
 # internally consistent. The oracle is rsyslogd -N1 rejecting both an
 # excessive response allowance and a connect timeout longer than the total

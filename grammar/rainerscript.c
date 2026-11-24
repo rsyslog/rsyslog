@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* rainerscript.c - routines to support RainerScript config language
  *
  * Module begun 2011-07-01 by Rainer Gerhards
@@ -29,6 +30,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <limits.h>
+#include <fnmatch.h>
 #include <glob.h>
 #include <errno.h>
 #include <pwd.h>
@@ -61,6 +63,8 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "cfgfiles.h"
+#include "atomic.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -205,6 +209,9 @@ static const char *tokenToString(const int token) {
             break;
         case CMP_ENDSWITH:
             tokstr = "CMP_ENDSWITH";
+            break;
+        case CMP_FNMATCH:
+            tokstr = "CMP_FNMATCH";
             break;
         case UMINUS:
             tokstr = "UMINUS";
@@ -933,7 +940,7 @@ static int doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param, st
 }
 
 
-/* A file create-mode must be a four-digit octal number
+/* A file create-mode must be a four- or five-digit octal number
  * starting with '0'.
  */
 static int doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param, struct cnfparamvals *val) {
@@ -942,7 +949,7 @@ static int doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *para
     uchar *c;
     const int len_val = es_strlen(valnode->val.d.estr);
 
-    if (len_val >= 4) {
+    if (len_val == 4 || len_val == 5) {
         c = es_getBufAddr(valnode->val.d.estr);
         if ((c[0] == '0') && (c[1] >= '0' && c[1] <= '7') && (c[2] >= '0' && c[2] <= '7') &&
             (c[3] >= '0' && c[3] <= '7')) {
@@ -1404,6 +1411,17 @@ void cnfobjDestruct(struct cnfobj *o) {
     }
 }
 
+/* destruct an object including a ruleset script, which cnfobjDestruct()
+ * leaves alone because the ruleset normally takes ownership of it. Used when
+ * the parser discards a not yet submitted object.
+ */
+void cnfobjDestructAll(struct cnfobj *const o) {
+    if (o == NULL) return;
+    cnfstmtDestructLst(o->script);
+    o->script = NULL;
+    cnfobjDestruct(o);
+}
+
 void cnfobjPrint(struct cnfobj *o) {
     dbgprintf("obj: '%s'\n", cnfobjType2str(o->objType));
     nvlstPrint(o->nvlst);
@@ -1680,7 +1698,7 @@ finalize_it:
 
 static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrptr, wti_t *const pWti) {
     size_t submatchnbr;
-    short matchnbr;
+    long long matchnbr;
     regmatch_t pmatch[50];
     int bMustFree;
     es_str_t *estr = NULL; /* init just to keep compiler happy */
@@ -1688,7 +1706,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
     struct svar r[CNFFUNC_MAX_ARGS];
     int iLenBuf;
     unsigned iOffs;
-    short iTry = 0;
+    long long iTry = 0;
     uchar bFound = 0;
     iOffs = 0;
     sbool bHadNoMatch = 0;
@@ -1700,7 +1718,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
     cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
     cnfexprEval(func->expr[3], &r[3], usrptr, pWti);
     str = (char *)var2CString(&r[0], &bMustFree);
-    matchnbr = (short)var2Number(&r[2], NULL);
+    matchnbr = var2Number(&r[2], NULL);
     submatchnbr = (size_t)var2Number(&r[3], NULL);
     if (submatchnbr >= sizeof(pmatch) / sizeof(regmatch_t)) {
         DBGPRINTF("re_extract() submatch %zd is too large\n", submatchnbr);
@@ -1723,7 +1741,7 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
             if (iTry == matchnbr) {
                 bFound = 1;
             } else {
-                DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %d\n", iOffs,
+                DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %lld\n", iOffs,
                           (int)(iOffs + pmatch[0].rm_eo), iTry);
                 if (pmatch[0].rm_eo == 0) {
                     if (str[iOffs] == '\0') {
@@ -1802,6 +1820,23 @@ static void doFunc_exec_template(struct cnffunc *__restrict__ const func,
     return;
 }
 
+static int resultSizeWarningSent;
+#ifndef HAVE_ATOMIC_BUILTINS
+static DEF_ATOMIC_HELPER_MUT(resultSizeWarningMut) = PTHREAD_MUTEX_INITIALIZER;
+    #define RESULT_SIZE_WARNING_MUT &resultSizeWarningMut
+#else
+    #define RESULT_SIZE_WARNING_MUT NULL
+#endif
+
+static void warnResultSizeLimit(const int limit) {
+    if (ATOMIC_CAS(&resultSizeWarningSent, 0, 1, RESULT_SIZE_WARNING_MUT)) {
+        LogMsg(0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING,
+               "RainerScript replace()/wrap() result exceeds maxMessageSize (%d bytes); returning an empty string "
+               "(further warnings suppressed)",
+               limit);
+    }
+}
+
 static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
                                struct svar *__restrict__ const findVal,
                                struct svar *__restrict__ const replaceWithVal) {
@@ -1814,11 +1849,17 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
     uint lfind = es_strlen(findStr);
     uint lReplaceWith = es_strlen(replaceWithStr);
     uint lSrc = es_strlen(str);
-    uint lDst = 0;
+    size_t lDst = 0;
+    const size_t maxResult = (size_t)glblGetMaxLine(runConf);
+    es_str_t *res;
     uchar *src_buff = es_getBufAddr(str);
     uint i, j;
+    /* A shorter replacement can bring an oversized source below the limit. */
     for (i = j = 0; i <= lSrc; i++, lDst++) {
+        if (lReplaceWith >= lfind && lDst > maxResult) goto oversize;
         if (j == lfind) {
+            if (lReplaceWith > lfind && (lDst - lfind > maxResult || lReplaceWith > maxResult - (lDst - lfind)))
+                goto oversize;
             lDst = lDst - lfind + lReplaceWith;
             j = 0;
             if (lfind == 0) break;
@@ -1832,7 +1873,9 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
             j = 0;
         }
     }
-    es_str_t *res = es_newStr(lDst);
+    if (lDst > maxResult) goto oversize;
+    res = es_newStr((es_size_t)lDst);
+    if (res == NULL) goto done;
     unsigned char *dest = es_getBufAddr(res);
     uint k, s;
     for (i = j = s = 0; i <= lSrc; i++, s++) {
@@ -1857,7 +1900,14 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
     if (j > 0) {
         for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
     }
-    res->lenStr = lDst;
+    res->lenStr = (es_size_t)lDst;
+    goto done;
+
+oversize:
+    warnResultSizeLimit((int)maxResult);
+    res = NULL;
+
+done:
     if (freeOperand) es_deleteStr(str);
     if (freeFind) es_deleteStr(findStr);
     if (freeReplacement) es_deleteStr(replaceWithStr);
@@ -1884,13 +1934,23 @@ static void ATTR_NONNULL() doFunc_parse_json(struct cnffunc *__restrict__ const 
     assert(container != NULL);
     assert(pMsg != NULL);
 
+    const size_t jsontextlen = strlen(jsontext);
+    /* The tokener's int length must also include the terminating NUL. */
+    if (jsontextlen >= INT_MAX) {
+        retVal = RS_SCRIPT_EINVAL;
+        wtiSetScriptErrno(pWti, retVal);
+        goto finalize_it;
+    }
+
     struct json_tokener *const tokener = json_tokener_new();
     if (tokener == NULL) {
         retVal = 1;
         goto finalize_it;
     }
-    json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
-    if (json == NULL) {
+    /* Include the terminator so a scalar at end of input is complete.
+     * JSON null is represented by NULL even when parsing succeeds. */
+    json = json_tokener_parse_ex(tokener, jsontext, (int)(jsontextlen + 1));
+    if (fjson_tokener_get_error(tokener) != fjson_tokener_success) {
         retVal = RS_SCRIPT_EINVAL;
     } else {
         /* Check for trailing garbage */
@@ -2091,6 +2151,7 @@ static void ATTR_NONNULL() doFunct_RandomGen(struct cnffunc *__restrict__ const 
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                  "rainerscript: desired random-number range [0 - %lld] is wider than supported limit of [0 - %d)", max,
                  MAX_RANDOM_NUMBER);
+        max = MAX_RANDOM_NUMBER;
     }
 
     retVal = (x % max);
@@ -2403,6 +2464,10 @@ static void ATTR_NONNULL() doFunct_Ipv42num(struct cnffunc *__restrict__ const f
                 prevdot = 0;
                 startblank = 0;
                 DBGPRINTF("rainerscript: (ipv42num) cycle: %d\n", cyc);
+                if (num[cyc] > 25 || (num[cyc] == 25 && str[i] > '5')) {
+                    DBGPRINTF("rainerscript: (ipv42num) error: octet exceeds 255\n");
+                    goto done;
+                }
                 num[cyc] = num[cyc] * 10 + (str[i] - '0');
                 break;
             case ' ':
@@ -2491,6 +2556,7 @@ static void ATTR_NONNULL() doFunct_Replace(struct cnffunc *__restrict__ const fu
     cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
     cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
     ret->d.estr = doFuncReplace(&srcVal[0], &srcVal[1], &srcVal[2]);
+    if (ret->d.estr == NULL) ret->d.estr = es_newStr(0);
     ret->datatype = 'S';
     varFreeMembers(&srcVal[0]);
     varFreeMembers(&srcVal[1]);
@@ -2504,8 +2570,10 @@ static void ATTR_NONNULL() doFunct_Wrap(struct cnffunc *__restrict__ const func,
     struct svar sourceVal;
     struct svar wrapperVal;
     struct svar escaperVal;
-    int freeSource, freeWrapper;
+    int freeSource, freeWrapper = 0;
     es_str_t *sourceStr;
+    es_str_t *wrapperStr = NULL;
+    es_str_t *res;
 
     cnfexprEval(func->expr[0], &sourceVal, usrptr, pWti);
     cnfexprEval(func->expr[1], &wrapperVal, usrptr, pWti);
@@ -2513,26 +2581,39 @@ static void ATTR_NONNULL() doFunct_Wrap(struct cnffunc *__restrict__ const func,
         cnfexprEval(func->expr[2], &escaperVal, usrptr, pWti);
         sourceStr = doFuncReplace(&sourceVal, &wrapperVal, &escaperVal);
         freeSource = 1;
+        if (sourceStr == NULL) {
+            res = es_newStr(0);
+            goto done;
+        }
 
     } else {
         sourceStr = var2String(&sourceVal, &freeSource);
     }
-    es_str_t *wrapperStr = var2String(&wrapperVal, &freeWrapper);
+    wrapperStr = var2String(&wrapperVal, &freeWrapper);
     uchar *src = es_getBufAddr(sourceStr);
     uchar *wrapper = es_getBufAddr(wrapperStr);
     uint lWrapper = es_strlen(wrapperStr);
     uint lSrc = es_strlen(sourceStr);
-    uint totalLen = lSrc + 2 * lWrapper;
-    es_str_t *res = es_newStr(totalLen);
-    uchar *resBuf = es_getBufAddr(res);
-    memcpy(resBuf, wrapper, lWrapper);
-    memcpy(resBuf + lWrapper, src, lSrc);
-    memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
-    res->lenStr = totalLen;
-    if (freeSource) {
+    const uint maxResult = (uint)glblGetMaxLine(runConf);
+    if (lWrapper > maxResult / 2 || lSrc > maxResult - 2 * lWrapper) {
+        warnResultSizeLimit((int)maxResult);
+        res = es_newStr(0);
+    } else {
+        const uint totalLen = lSrc + 2 * lWrapper;
+        res = es_newStr(totalLen);
+        if (res == NULL) goto done;
+        uchar *resBuf = es_getBufAddr(res);
+        memcpy(resBuf, wrapper, lWrapper);
+        memcpy(resBuf + lWrapper, src, lSrc);
+        memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
+        res->lenStr = totalLen;
+    }
+done:
+    if (res == NULL) res = es_newStr(0);
+    if (freeSource && sourceStr != NULL) {
         es_deleteStr(sourceStr);
     }
-    if (freeWrapper) {
+    if (freeWrapper && wrapperStr != NULL) {
         es_deleteStr(wrapperStr);
     }
 
@@ -2836,12 +2917,15 @@ static void ATTR_NONNULL() doFunct_ParseTime(struct cnffunc *__restrict__ const 
         int len = strlen(str);
         uchar *pszTS = (uchar *)str;
         memset(&s, 0, sizeof(struct syslogTime));
-        // Attempt to parse the date/time string
-        if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
+        /* Shared parsers accept message prefixes; script values must be fully consumed. */
+        const rsRetVal parseRet = datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len);
+        if (parseRet == RS_RET_OK && len == 0) {
             ret->d.n = datetime.syslogTime2time_t(&s);
             DBGPRINTF("parse_time: RFC3339 format found\n");
-        } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
-                                               NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+        } else if (parseRet != RS_RET_OK &&
+                   datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
+                                               NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK &&
+                   len == 0) {
             time_t t = time(NULL);
             struct tm tm;
             gmtime_r(&t, &tm);  // Get the current UTC date
@@ -2880,12 +2964,15 @@ static void ATTR_NONNULL() doFunct_ParseTimeLocalTz(struct cnffunc *__restrict__
             int len = strlen(str);
             uchar *pszTS = (uchar *)str;
             memset(&s, 0, sizeof(struct syslogTime));
-            // Attempt to parse the date/time string
-            if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
+            /* Shared parsers accept message prefixes; script values must be fully consumed. */
+            const rsRetVal parseRet = datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len);
+            if (parseRet == RS_RET_OK && len == 0) {
                 ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
                 DBGPRINTF("parse_time: RFC3339 format found\n");
-            } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
-                                                   NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+            } else if (parseRet != RS_RET_OK &&
+                       datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
+                                                   NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK &&
+                       len == 0) {
                 time_t t = time(NULL);
                 struct tm tm;
                 gmtime_r(&t, &tm);  // Get the current UTC date
@@ -2945,17 +3032,22 @@ static int ATTR_NONNULL(1, 3, 4) doFunc_is_time(const char *__restrict__ const s
             if (f == DATE_RFC3339) {
                 if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
                     DBGPRINTF("is_time: RFC3339 format found.\n");
-                    ret = 1;
+                    ret = (len == 0);
                     break;
                 }
             } else if (f == DATE_RFC3164) {
                 if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
                                                 NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
                     DBGPRINTF("is_time: RFC3164 format found.\n");
-                    ret = 1;
+                    ret = (len == 0);
                     break;
                 }
             } else if (f == DATE_UNIX) {
+                /* Generic numeric coercion maps an empty string or sign
+                 * alone to zero; a UNIX timestamp needs a digit. */
+                if (*str == '\0' || (str[0] == '-' && str[1] == '\0')) {
+                    continue;
+                }
                 int result;
                 var2Number(r, &result);
 
@@ -3792,6 +3884,23 @@ static void evalVar(struct cnfvar *__restrict__ const var,
     copyCachedVar(&entry->value, ret);
 }
 
+/* POSIX fnmatch() consumes C strings. Preserve embedded NULs as the same
+ * visible "#000" escape used by var2CString() instead of silently dropping
+ * them at this API boundary. */
+static int evalStrFnmatch(es_str_t *const subject, es_str_t *const pattern) {
+    char *const c_subject = es_str2cstr(subject, "#000");
+    if (c_subject == NULL) return 0;
+    char *const c_pattern = es_str2cstr(pattern, "#000");
+    if (c_pattern == NULL) {
+        free(c_subject);
+        return 0;
+    }
+    const int matched = fnmatch(c_pattern, c_subject, 0) == 0;
+    free(c_pattern);
+    free(c_subject);
+    return matched;
+}
+
 /* perform a string comparision operation against a while array. Semantic is
  * that one one comparison is true, the whole construct is true.
  * TODO: we can obviously optimize this process. One idea is to
@@ -3824,6 +3933,9 @@ static int evalStrArrayCmp(es_str_t *const estr_l, const struct cnfarray *__rest
                     r = len_l >= len_suffix && (memcmp(es_getBufAddr(estr_l) + len_l - len_suffix,
                                                        es_getBufAddr(ar->arr[i]), len_suffix) == 0);
                 } break;
+                case CMP_FNMATCH:
+                    r = evalStrFnmatch(estr_l, ar->arr[i]);
+                    break;
                 case CMP_CONTAINS:
                     r = es_strContains(estr_l, ar->arr[i]) != -1;
                     break;
@@ -3903,7 +4015,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
         n_r = var2Number(&r, &convok_r);
     }
     if (convok_l && convok_r) {
-        ret = n_l - n_r;
+        ret = (n_l > n_r) - (n_l < n_r);
     } else {
         estr_l = var2String(&l, &bMustFree);
         estr_r = var2String(&r, &bMustFree2);
@@ -4110,6 +4222,17 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                 ret->d.n =
                     estr_l->lenStr >= estr_r->lenStr && (memcmp(es_getBufAddr(estr_l) + estr_l->lenStr - estr_r->lenStr,
                                                                 es_getBufAddr(estr_r), estr_r->lenStr) == 0);
+            }
+            FREE_TWO_STRINGS;
+            break;
+        case CMP_FNMATCH:
+            PREP_TWO_STRINGS;
+            ret->datatype = 'N';
+            if (expr->r->nodetype == 'A') {
+                ret->d.n = evalStrArrayCmp(estr_l, (struct cnfarray *)expr->r, CMP_FNMATCH);
+                bMustFree = 0;
+            } else {
+                ret->d.n = evalStrFnmatch(estr_l, estr_r);
             }
             FREE_TWO_STRINGS;
             break;
@@ -4514,6 +4637,91 @@ struct modListNode {
 static struct modListNode *modListRoot = NULL;
 static struct modListNode *modListLast = NULL;
 
+/* Cold-path S2 whitelist. Restrict paths to literal nonempty components so
+ * encoded separators, indirect names and global variables cannot slip through
+ * the ordinary prefix-based property classification. */
+int cnfvarIsLocalQueueSafe(const uchar *name) {
+    propid_t id;
+    if (name == NULL || propNameToID((uchar *)name, &id) != RS_RET_OK || (id != PROP_CEE && id != PROP_LOCAL_VAR))
+        return 0;
+    const uchar *p = name + (name[0] == '$');
+    if (*p != '!' && *p != '.') return 0;
+    ++p;
+    int haveComponent = 0;
+    for (; *p != '\0'; ++p) {
+        if (*p == '!') {
+            if (!haveComponent) return 0;
+            haveComponent = 0;
+        } else if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_') {
+            haveComponent = 1;
+        } else {
+            return 0;
+        }
+    }
+    return haveComponent;
+}
+
+static int cnfexprLocalQueueSafeDepth(const struct cnfexpr *const expr, const unsigned depth) {
+    if (expr == NULL || depth > 256) return 0;
+    switch (expr->nodetype) {
+        case 'N':
+        case 'S':
+            return 1;
+        case 'V':
+            return ((const struct cnfvar *)expr)->prop.id != PROP_GLOBAL_VAR;
+        case CMP_NE:
+        case CMP_EQ:
+        case CMP_LE:
+        case CMP_GE:
+        case CMP_LT:
+        case CMP_GT:
+        case CMP_STARTSWITH:
+        case CMP_ENDSWITH:
+        case CMP_FNMATCH:
+        case CMP_STARTSWITHI:
+        case CMP_CONTAINS:
+        case CMP_CONTAINSI:
+        case OR:
+        case AND:
+        case '&':
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        case '%':
+            return cnfexprLocalQueueSafeDepth(expr->l, depth + 1) && cnfexprLocalQueueSafeDepth(expr->r, depth + 1);
+        case NOT:
+        case 'M':
+            return cnfexprLocalQueueSafeDepth(expr->r, depth + 1);
+        case 'F': {
+            const struct cnffunc *const f = (const struct cnffunc *)expr;
+            if (f->fPtr != doFunc_parse_json || f->nParams != 2 || f->expr[0]->nodetype != 'S' ||
+                f->expr[1]->nodetype != 'S')
+                return 0;
+            es_str_t *const dest = ((const struct cnfstringval *)f->expr[1])->estr;
+            es_str_t *const json = ((const struct cnfstringval *)f->expr[0])->estr;
+            /* es strings can contain embedded NUL; runtime conversion must not
+             * make the audited value differ from the value actually evaluated. */
+            const size_t len = es_strlen(dest);
+            const uchar *const bytes = es_getBufAddr(dest);
+            if (len < 3 || bytes[0] != '$' || bytes[1] != '!' || memchr(bytes, 0, len) != NULL ||
+                memchr(es_getBufAddr(json), 0, es_strlen(json)) != NULL)
+                return 0;
+            char *const name = es_str2cstr(dest, NULL);
+            if (name == NULL) return 0;
+            const int safe = cnfvarIsLocalQueueSafe((uchar *)name);
+            free(name);
+            return safe;
+        }
+        default:
+            return 0;
+    }
+}
+
+int cnfexprIsLocalQueueSafe(const struct cnfexpr *const expr) {
+    return cnfexprLocalQueueSafeDepth(expr, 0);
+}
+
 static struct scriptFunct functions[] = {
     {"strlen", 1, 1, doFunct_StrLen, NULL, NULL},
     {"getenv", 1, 1, doFunct_Getenv, NULL, NULL},
@@ -4652,6 +4860,7 @@ void cnfexprDestruct(struct cnfexpr *__restrict__ const expr) {
         case CMP_GT:
         case CMP_STARTSWITH:
         case CMP_ENDSWITH:
+        case CMP_FNMATCH:
         case CMP_STARTSWITHI:
         case CMP_CONTAINS:
         case CMP_CONTAINSI:
@@ -4819,6 +5028,12 @@ void cnfexprPrint(struct cnfexpr *expr, int indent) {
             cnfexprPrint(expr->l, indent + 1);
             doIndent(indent);
             dbgprintf("ENDSWITH\n");
+            cnfexprPrint(expr->r, indent + 1);
+            break;
+        case CMP_FNMATCH:
+            cnfexprPrint(expr->l, indent + 1);
+            doIndent(indent);
+            dbgprintf("FNMATCH\n");
             cnfexprPrint(expr->r, indent + 1);
             break;
         case CMP_STARTSWITHI:
@@ -5131,8 +5346,6 @@ static void cnfstmtDisable(struct cnfstmt *cnfstmt) {
     cnfstmt->nodetype = S_NOP;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr);
-
 /* delete a single stmt */
 static void cnfstmtDestruct(struct cnfstmt *stmt) {
     switch (stmt->nodetype) {
@@ -5213,10 +5426,26 @@ struct cnfitr *cnfNewIterator(char *var, struct cnfexpr *collection) {
     return itr;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr) {
+void cnfIteratorDestruct(struct cnfitr *itr) {
+    if (itr == NULL) return;
     free(itr->var);
     if (itr->collection != NULL) cnfexprDestruct(itr->collection);
     free(itr);
+}
+
+void cnfarrayDestruct(struct cnfarray *const ar) {
+    if (ar == NULL) return;
+    cnfarrayContentDestruct(ar);
+    free(ar);
+}
+
+void cnffparamlstDestruct(struct cnffparamlst *params) {
+    while (params != NULL) {
+        struct cnffparamlst *const next = params->next;
+        cnfexprDestruct(params->expr);
+        free(params);
+        params = next;
+    }
 }
 
 struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset) {
@@ -5402,6 +5631,7 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         cnfstmtDisable(cnfstmt);
         goto done;
     }
+    qqueue_note_local_config_intent(lst);
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
         parser_errmsg("warnings occurred in file '%s' around line %d", cnfcurrfn, yylineno);
@@ -5426,6 +5656,7 @@ done:
 
 struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
     struct cnfstmt *cnfstmt;
+    char *const ownedActline = actline; /* cflineDoAction() advances actline */
     rsRetVal localRet;
     if ((cnfstmt = cnfstmtNew(S_ACT)) == NULL) goto done;
     cnfstmt->printable = (uchar *)strdup((char *)actline);
@@ -5439,6 +5670,7 @@ struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
         }
     }
 done:
+    free(ownedActline); /* heap copy handed over by the lexer */
     return cnfstmt;
 }
 
@@ -5609,32 +5841,32 @@ static struct cnfexpr *cnfexprOptimize_CMP_severity_facility(struct cnfexpr *exp
 
     if (!strcmp("syslogseverity", ((struct cnfvar *)expr->l)->name)) {
         if (expr->r->nodetype == 'N') {
-            int sev = (int)((struct cnfnumval *)expr->r)->val;
+            const long long sev = ((struct cnfnumval *)expr->r)->val;
             if (sev >= 0 && sev <= 7) {
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-                prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+                prifiltSetSeverity(func->funcdata, (int)sev, expr->nodetype);
                 cnfexprDestruct(expr);
                 expr = (struct cnfexpr *)func;
             } else {
                 parser_errmsg(
-                    "invalid syslogseverity %d, expression will always "
+                    "invalid syslogseverity %lld, expression will always "
                     "evaluate to FALSE",
                     sev);
             }
         }
     } else if (!strcmp("syslogfacility", ((struct cnfvar *)expr->l)->name)) {
         if (expr->r->nodetype == 'N') {
-            int fac = (int)((struct cnfnumval *)expr->r)->val;
+            const long long fac = ((struct cnfnumval *)expr->r)->val;
             if (fac >= 0 && fac <= 24) {
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-                prifiltSetFacility(func->funcdata, fac, expr->nodetype);
+                prifiltSetFacility(func->funcdata, (int)fac, expr->nodetype);
                 cnfexprDestruct(expr);
                 expr = (struct cnfexpr *)func;
             } else {
                 parser_errmsg(
-                    "invalid syslogfacility %d, expression will always "
+                    "invalid syslogfacility %lld, expression will always "
                     "evaluate to FALSE",
                     fac);
             }
@@ -5832,6 +6064,7 @@ struct cnfexpr *cnfexprOptimize(struct cnfexpr *expr) {
         case CMP_CONTAINSI:
         case CMP_STARTSWITH:
         case CMP_ENDSWITH:
+        case CMP_FNMATCH:
         case CMP_STARTSWITHI:
             expr->l = cnfexprOptimize(expr->l);
             expr->r = cnfexprOptimize(expr->r);
@@ -6364,8 +6597,9 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
         }
     }
 
-/* Use GLOB_MARK to append a trailing slash for directories. */
-/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
+    /* Use GLOB_MARK to append a trailing slash for directories. */
+    /* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
+    cfgfilesRecordGlob(finalName); /* change detection, see cfgfiles.h */
 #ifdef HAVE_GLOB_NOMAGIC
     result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH) {
@@ -6832,6 +7066,8 @@ const char *tokenval2str(const int tok) {
             return "CMP_STARTSWITHI";
         case CMP_ENDSWITH:
             return "CMP_ENDSWITH";
+        case CMP_FNMATCH:
+            return "CMP_FNMATCH";
         case UMINUS:
             return "UMINUS";
         default:

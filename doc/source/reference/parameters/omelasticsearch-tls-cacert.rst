@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omelasticsearch-tls-cacert:
 .. _omelasticsearch.parameter.module.tls-cacert:
 .. _omelasticsearch.parameter.module.tls.cacert:

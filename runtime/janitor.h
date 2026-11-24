@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* rsyslog's janitor
  *
  * Copyright (C) 2014 by Rainer Gerhards and Adiscon GmbH.

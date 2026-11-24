@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate that list-template regex.match and regex.submatch values outside the
 # fixed regexec pmatch[] range are rejected during RainerScript config parsing.
 # Oracle: rsyslogd -N1 must fail for both configs and emit the specific range

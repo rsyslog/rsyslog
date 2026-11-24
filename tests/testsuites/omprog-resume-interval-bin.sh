@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 
 outfile="$RSYSLOG_OUT_LOG"
 statefile=${RSYSLOG_DYNNAME:-$outfile}.state

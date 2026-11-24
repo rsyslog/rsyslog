@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that omsendertrack recovers from missing, empty, and syntactically or
 # semantically corrupt state files without blocking logging. The oracle is a
 # clean daemon shutdown, a valid replacement state file, byte-for-byte

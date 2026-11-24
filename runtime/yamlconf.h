@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* yamlconf.h - YAML configuration file loader for rsyslog
  *
  * Provides yamlconf_load(), which parses a .yaml/.yml config file and

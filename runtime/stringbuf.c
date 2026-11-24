@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the byte-counted string class for rsyslog.
  * This object has a lot of legacy. Among others, it was started to
  * support embedded \0 bytes, which looked like they were needed to

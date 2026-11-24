@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. index:: ! imjournal; RateLimit.Name
 
 .. _param-imjournal-ratelimit-name:

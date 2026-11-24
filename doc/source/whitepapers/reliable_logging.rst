@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 How reliable should reliable logging be?
 ========================================
 With any logging, you need to decide what you want to do if the log cannot

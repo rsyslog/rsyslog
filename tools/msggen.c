@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* msggen - a small diagnostic utility that does very quick
  * syslog() calls.
  *

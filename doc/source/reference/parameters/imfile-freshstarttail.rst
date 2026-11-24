@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-freshstarttail:
 .. _imfile.parameter.input.freshstarttail:
 .. _imfile.parameter.freshstarttail:

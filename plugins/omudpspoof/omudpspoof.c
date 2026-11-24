@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* omudpspoof.c
  *
  * This is a udp-based output module that support spoofing.
@@ -703,8 +704,7 @@ BEGINparseSelectorAct
     pData->sourcePortEnd = cs.iSourcePortEnd;
 
     /* process template */
-    CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-                                    (cs.tplName == NULL) ? (uchar *)"RSYSLOG_TraditionalForwardFormat" : cs.tplName));
+    CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

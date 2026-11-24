@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /** @file translate.h
  * @brief Interfaces for canonical config translation.
  *

@@ -27,7 +27,39 @@ heartbeat() {
 }
 heartbeat &
 HEARTBEAT_PID=$!
-trap "kill $HEARTBEAT_PID 2>/dev/null || true" EXIT
+
+# Diagnostics for intermittent "Curl error (7): Could not connect to server"
+# failures against the Adiscon repositories inside mock. Prints name
+# resolution plus IPv4/IPv6 connect timing for each repository host so a
+# failing run shows whether the host was unreachable, refused, or resolved
+# to an address family the runner cannot route. Never fails the build.
+NETPROBE_HOSTS="download.adiscon.com rpms.adiscon.com"
+NETPROBE_URLS="https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon https://rpms.adiscon.com/v8-stable/"
+netprobe() {
+  local host url fam
+  echo "=== netprobe ($1) $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+  for host in $NETPROBE_HOSTS; do
+    echo "--- getent ahosts $host"
+    getent ahosts "$host" | awk '{print $1}' | sort -u | grep . || echo "(resolution failed)"
+  done
+  for url in $NETPROBE_URLS; do
+    for fam in -4 -6; do
+      echo "--- curl $fam $url"
+      curl "$fam" -sS -o /dev/null --max-time 20 \
+        -w 'http=%{http_code} ip=%{remote_ip} connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s\n' \
+        "$url" 2>&1 || true
+    done
+  done
+  echo "=== end netprobe ==="
+}
+on_exit() {
+  rc=$?
+  kill $HEARTBEAT_PID 2>/dev/null || true
+  if [ "$rc" -ne 0 ]; then
+    netprobe "after failure, exit $rc"
+  fi
+}
+trap on_exit EXIT
 
 echo "== Step 1: autoreconf, configure, make dist =="
 autoreconf -fvi
@@ -61,14 +93,17 @@ sed -i -r \
     -e "s/^(Source0:\s*).*/\1%{name}-%{version}.tar.gz/" \
     "$CI_SPEC"
 
+netprobe "before mock"
+
 echo "== Step 4: mock --buildsrpm =="
 if ! mock -r "$MOCK_CONFIG" --verbose --buildsrpm \
   --spec "$CI_SPEC" \
   --sources "$RPM_SOURCES" \
   --resultdir "$BUILD_RESULT/srpm"; then
   echo "=== mock --buildsrpm FAILED, logs ==="
-  tail -300 "$BUILD_RESULT/srpm/"*.log 2>/dev/null || true
-  find /var/lib/mock -name "*.log" -exec tail -200 {} \; 2>/dev/null || true
+  # Use explicit -n: the legacy form fails when the glob matches multiple logs.
+  tail -n 300 "$BUILD_RESULT/srpm/"*.log 2>/dev/null || true
+  find /var/lib/mock -name "*.log" -exec tail -n 200 {} \; 2>/dev/null || true
   exit 1
 fi
 
@@ -84,8 +119,9 @@ fi
 SRPM="${SRPMS[0]}"
 if ! mock -r "$MOCK_CONFIG" --verbose "$SRPM" --resultdir "$BUILD_RESULT/rpms"; then
   echo "=== mock build FAILED, logs ==="
-  tail -300 "$BUILD_RESULT/rpms/"*.log 2>/dev/null || true
-  find /var/lib/mock -name "*.log" -exec tail -200 {} \; 2>/dev/null || true
+  # Use explicit -n: the legacy form fails when the glob matches multiple logs.
+  tail -n 300 "$BUILD_RESULT/rpms/"*.log 2>/dev/null || true
+  find /var/lib/mock -name "*.log" -exec tail -n 200 {} \; 2>/dev/null || true
   exit 1
 fi
 

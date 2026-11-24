@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* msg.c
  * The msg object. Implementation of all msg-related functions
  *
@@ -30,15 +31,44 @@
 
 /* Concurrency & Locking
  *
- * A message's mut mutex protects its mutable JSON trees and turbo snapshot
- * slots.  MsgDup() holds the source mutex while it takes a coherent copy of
- * JSON state and establishes shared snapshot ownership.  Lazy snapshot
- * materialization also runs under that mutex.
+ * Two $! representations can live on one message:
  *
- * Turbo snapshots are immutable after publication.  Separate MsgDup() copies
- * may therefore read one snapshot concurrently; turbo_result_refs tracks
- * their shared ownership with atomic increments and decrements.  Each message
- * releases its reference exactly once through MsgReleaseTurboResult().
+ *   Turbo  : turbo_result snapshot, immutable bytes after attach, read
+ *            through write-once callbacks. Attach, overwrite and release
+ *            run under pMsg->mut (mmnormalize, MsgReleaseTurboResult).
+ *   Legacy : pMsg->json / localvars. Always mutated under pMsg->mut.
+ *
+ * Every read of the snapshot slots or of pMsg->json takes pMsg->mut,
+ * including on a sole holder. Action queues share the same smsg_t
+ * through MsgAddRef(); a later turbo mmnormalize overwrites the
+ * snapshot under that mutex. An atomic load of iRefCount is not a
+ * happens-before with that write, so a refcount-gated lock-free
+ * getter races it. mmnormalize-turbo-shared-getter-tsan.sh covers
+ * that topology. RainerScript expressions use msgGetJSONPropSVar(),
+ * which takes the same mutex around its own snapshot read and does not
+ * call msgTurboGetStr(). The mutex is not recursive: a caller that
+ * already holds it must not call msgTurboGetStr() (today's callers do
+ * not).
+ *
+ * Materialize is the one-way turbo -> legacy projection. It runs under
+ * pMsg->mut, is idempotent (turbo_json_ready), and does not clear the
+ * turbo callbacks. A snapshot attached after the tree was materialized
+ * is merged into it with msgAddJSON() semantics on the next access.
+ * Disk serialize is the other materialize caller: a snapshot pointer
+ * cannot cross a queue file. unset $! releases the snapshot with the
+ * tree; a leaf unset materializes first.
+ *
+ * MsgDup() holds the source mutex for three reasons that cannot be
+ * split: (1) first publication of turbo_result_refs, (2) a coherent
+ * copy of the turbo slots against a concurrent mmnormalize overwrite,
+ * (3) jsonDeepCopy of the mutable legacy tree. The never-duped path
+ * does not enter MsgDup and pays no malloc or atomic.
+ *
+ * turbo_result_refs is NULL until the first MsgDup (sole owner, no
+ * allocation). The last MsgReleaseTurboResult() owner frees both the
+ * snapshot and the counter. Increments and decrements of a published
+ * counter are atomic because a copy can destruct without the source
+ * mutex.
  */
 #include "config.h"
 #include <stdio.h>
@@ -737,6 +767,7 @@ static rsRetVal msgBaseConstruct(smsg_t **ppThis) {
     pM->turbo_result_to_json = NULL;
     pM->turbo_result_get_str = NULL;
     pM->turbo_result_refs = NULL;
+    pM->turbo_json_ready = 0;
 #endif
     pM->dfltTZ[0] = '\0';
     memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
@@ -834,7 +865,8 @@ static inline void freeHOSTNAME(smsg_t *pThis) {
 /* Release one reference on the turbo parse snapshot and clear this message's
  * slot.  refs == NULL means sole ownership (the message was never duplicated):
  * free directly, no atomics.  Otherwise the counter is shared across MsgDup()
- * copies and the last owner out frees both the snapshot and the counter. */
+ * copies and the last owner out frees both the snapshot and the counter.
+ * turbo_json_ready is per-message legacy state and is cleared with the slot. */
 void MsgReleaseTurboResult(smsg_t *const pMsg) {
     if (pMsg->turbo_result != NULL && pMsg->turbo_result_free != NULL) {
         if (pMsg->turbo_result_refs == NULL) {
@@ -849,6 +881,7 @@ void MsgReleaseTurboResult(smsg_t *const pMsg) {
     pMsg->turbo_result_to_json = NULL;
     pMsg->turbo_result_get_str = NULL;
     pMsg->turbo_result_refs = NULL;
+    pMsg->turbo_json_ready = 0;
 }
 #endif
 
@@ -953,9 +986,11 @@ ENDobjDestruct
  * if the old value is NULL, we do not need to do anything because we
  * initialized the new value to NULL via calloc().
  */
+/* used inside MsgDup() while pOld is locked */
 #define tmpCOPYCSTR(name)                                                                \
     if (pOld->pCS##name != NULL) {                                                       \
         if (rsCStrConstructFromCStr(&(pNew->pCS##name), pOld->pCS##name) != RS_RET_OK) { \
+            MsgUnlock(pOld);                                                             \
             msgDestruct(&pNew);                                                          \
             return NULL;                                                                 \
         }                                                                                \
@@ -964,8 +999,8 @@ ENDobjDestruct
 
     /* Constructs a message object by duplicating another one.
      * Returns NULL if duplication failed. Most message fields are immutable
-     * after construction. The JSON and turbo snapshot fields are mutable, so
-     * they are copied coherently under the source message lock below.
+     * after construction. JSON trees and turbo snapshot slots are not: they
+     * are copied coherently under the source message lock below.
      */
     smsg_t *MsgDup(smsg_t *pOld) {
     smsg_t *pNew;
@@ -1050,48 +1085,53 @@ ENDobjDestruct
         pNew->lenStrucData = pOld->lenStrucData;
     }
 
+    MsgLock(pOld);
+
+    /* APPNAME, PROCID and MSGID are created lazily by their getters under
+     * the message mutex, so they are copied under it as well. */
     tmpCOPYCSTR(APPNAME);
     tmpCOPYCSTR(PROCID);
     tmpCOPYCSTR(MSGID);
 
-    MsgLock(pOld);
-
 #ifdef HAVE_LOGNORM_TURBO
-    /* Share the turbo parse snapshot with the duplicate.  The snapshot is
-     * immutable after parsing, so copies may read it concurrently; ownership
-     * is tracked by a lazily-allocated shared counter (see msg.h).  The source
-     * message lock serializes first-counter publication and makes the JSON and
-     * lazy-callback snapshot coherent.  On counter allocation failure,
-     * materialize the source while locked so the duplicate still receives the
-     * normalized fields through its deep-copied $! tree. */
+    /* Share the turbo snapshot. The source lock serializes first-counter
+     * publication against a concurrent overwrite (release + re-attach) and
+     * makes the turbo slots and JSON tree one consistent view. Counter
+     * allocation failure is treated like every other MsgDup OOM: fail the
+     * duplicate. Do not materialize as a fallback; that would put the
+     * turbo-to-JSON cost on a path whose point is to stay lazy. */
     if (pOld->turbo_result != NULL) {
         if (pOld->turbo_result_refs == NULL) {
             unsigned *refs = malloc(sizeof(*refs));
-            if (refs != NULL) {
-                *refs = 2; /* pOld + pNew */
-                pOld->turbo_result_refs = refs;
-            } else if (!msgMaterializeTurboJSON(pOld)) {
-                /* A second allocation failure means neither shared snapshot
-                 * ownership nor a complete JSON copy can be established. */
+            if (refs == NULL) {
                 MsgUnlock(pOld);
                 msgDestruct(&pNew);
                 return NULL;
             }
+            *refs = 2; /* pOld + pNew */
+            pOld->turbo_result_refs = refs;
         } else {
             __atomic_add_fetch(pOld->turbo_result_refs, 1, __ATOMIC_RELAXED);
         }
-        if (pOld->turbo_result_refs != NULL) {
-            pNew->turbo_result = pOld->turbo_result;
-            pNew->turbo_result_free = pOld->turbo_result_free;
-            pNew->turbo_result_to_json = pOld->turbo_result_to_json;
-            pNew->turbo_result_get_str = pOld->turbo_result_get_str;
-            pNew->turbo_result_refs = pOld->turbo_result_refs;
-        }
+        pNew->turbo_result = pOld->turbo_result;
+        pNew->turbo_result_free = pOld->turbo_result_free;
+        pNew->turbo_result_to_json = pOld->turbo_result_to_json;
+        pNew->turbo_result_get_str = pOld->turbo_result_get_str;
+        pNew->turbo_result_refs = pOld->turbo_result_refs;
     }
 #endif
 
     if (pOld->json != NULL) pNew->json = jsonDeepCopy(pOld->json);
     if (pOld->localvars != NULL) pNew->localvars = jsonDeepCopy(pOld->localvars);
+    /* a duplicate without the $! or $. it was made from is not a copy */
+    if ((pOld->json != NULL && pNew->json == NULL) || (pOld->localvars != NULL && pNew->localvars == NULL)) {
+        MsgUnlock(pOld);
+        msgDestruct(&pNew);
+        return NULL;
+    }
+#ifdef HAVE_LOGNORM_TURBO
+    pNew->turbo_json_ready = pOld->turbo_json_ready;
+#endif
     MsgUnlock(pOld);
 
     /* we do not copy all other cache properties, as we do not even know
@@ -1129,6 +1169,34 @@ static const char *jsonToString(struct json_object *const json) {
     return json_object_to_json_string_ext(json, glblJsonFormatOpt);
 }
 
+/* Serialize one JSON root of a message. Another holder may mutate or free
+ * the tree, and jsonToString() returns a buffer owned by it, so the text is
+ * copied under the message mutex and written after it is released. */
+static rsRetVal msgSerializeJSONRoot(smsg_t *const pThis,
+                                     strm_t *const pStrm,
+                                     struct json_object **const root,
+                                     uchar *const name) {
+    uchar *copy = NULL;
+    sbool present;
+    DEFiRet;
+
+    MsgLock(pThis);
+    present = *root != NULL;
+    if (present) {
+        const char *const text = jsonToString(*root);
+        if (text != NULL) copy = (uchar *)strdup(text);
+    }
+    MsgUnlock(pThis);
+    if (!present) FINALIZE;
+    CHKmalloc(copy);
+    CHKiRet(obj.SerializeProp(pStrm, name, PROPTYPE_PSZ, (void *)copy));
+
+finalize_it:
+    free(copy);
+    RETiRet;
+}
+
+
 /* This method serializes a message object. That means the whole
  * object is modified into text form. That text form is suitable for
  * later reconstruction of the object by calling MsgDeSerialize().
@@ -1151,10 +1219,7 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm) {
 
 #ifdef HAVE_LOGNORM_TURBO
     /* Disk queues persist JSON, not the opaque module-owned snapshot. */
-    MsgLock(pThis);
-    const int materialized = msgMaterializeTurboJSON(pThis);
-    MsgUnlock(pThis);
-    if (!materialized) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKiRet(MsgTurboMaterialize(pThis));
 #endif
 
     /* then serialize elements */
@@ -1180,18 +1245,8 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm) {
     CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void *)psz));
     psz = pThis->pszStrucData;
     CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void *)psz));
-    if (pThis->json != NULL) {
-        MsgLock(pThis);
-        psz = (uchar *)jsonToString(pThis->json);
-        MsgUnlock(pThis);
-        CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void *)psz));
-    }
-    if (pThis->localvars != NULL) {
-        MsgLock(pThis);
-        psz = (uchar *)jsonToString(pThis->localvars);
-        MsgUnlock(pThis);
-        CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void *)psz));
-    }
+    CHKiRet(msgSerializeJSONRoot(pThis, pStrm, &pThis->json, UCHAR_CONSTANT("json")));
+    CHKiRet(msgSerializeJSONRoot(pThis, pStrm, &pThis->localvars, UCHAR_CONSTANT("localvars")));
 
     objSerializePTR(pStrm, pCSAPPNAME, CSTR);
     objSerializePTR(pStrm, pCSPROCID, CSTR);
@@ -1392,6 +1447,10 @@ finalize_it:
  * It is recommended that it is called as follows:
  *
  * pSecondMsgPointer = MsgAddRef(pOrgMsgPointer);
+ *
+ * The caller must already hold a reference to pM (iRefCount >= 1). A
+ * thread must never access a message through a pointer it did not obtain
+ * with MsgAddRef(), MsgDup() or construction.
  */
 smsg_t *MsgAddRef(smsg_t *const pM) {
     assert(pM != NULL);
@@ -1619,13 +1678,18 @@ void getRawMsgAfterPRI(smsg_t *const pM, uchar **pBuf, int *piLen) {
              * covers some of that. As a work-around, we caluculate
              * the value ourselfes here. -- rgerhards, 2015-10-09
              */
-            size_t offAfterPRI = 0;
-            if (pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
-                if (pM->pszRawMsg[2] == '>')
+            /* Only probe bytes inside the raw message: short messages live in
+             * the non-zeroed szRawMsg buffer, so bytes past the terminating
+             * NUL are stale and may hold '>', which made *piLen negative.
+             */
+            const int lenRaw = pM->iLenRawMsg;
+            int offAfterPRI = 0;
+            if (lenRaw > 0 && pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
+                if (lenRaw > 2 && pM->pszRawMsg[2] == '>')
                     offAfterPRI = 3;
-                else if (pM->pszRawMsg[3] == '>')
+                else if (lenRaw > 3 && pM->pszRawMsg[3] == '>')
                     offAfterPRI = 4;
-                else if (pM->pszRawMsg[4] == '>')
+                else if (lenRaw > 4 && pM->pszRawMsg[4] == '>')
                     offAfterPRI = 5;
             }
             *pBuf = pM->pszRawMsg + offAfterPRI;
@@ -2249,7 +2313,7 @@ void MsgSetParseSuccess(smsg_t *const pMsg, int bSuccess) {
 }
 
 
-/* return full message as a json string */
+/* return full message as a json string, caller frees; NULL when out of memory */
 const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     struct json_object *json;
     struct json_object *jval;
@@ -2257,6 +2321,7 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     rs_size_t bufLen = -1; /* length of string or -1, if not known */
 
     json = json_object_new_object();
+    if (json == NULL) return NULL;
 
     jval = json_object_new_string((char *)getMSG(pMsg));
     json_object_object_add(json, "msg", jval);
@@ -2331,10 +2396,22 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     json_object_object_add(json, "uuid", jval);
 #endif
 
+    /* $! borrows the live tree only for the duration of the serialization
+     * and only under the message mutex: another holder may materialize or
+     * mutate the tree at any time. A message whose normalized fields cannot
+     * be materialized fails instead of serializing without them. */
+    MsgLock(pMsg);
+#ifdef HAVE_LOGNORM_TURBO
+    if (!msgMaterializeTurboJSON(pMsg)) {
+        MsgUnlock(pMsg);
+        json_object_put(json);
+        return NULL;
+    }
+#endif
     json_object_object_add(json, "$!", json_object_get(pMsg->json));
-
     pRes = (uchar *)strdup(jsonToString(json));
     json_object_put(json);
+    MsgUnlock(pMsg);
     return pRes;
 }
 
@@ -2950,14 +3027,17 @@ void MsgSetRawMsgWOSize(smsg_t *const pMsg, char *pszRawMsg) {
  * at least 20 characters.
  */
 static uchar *textpri(const smsg_t *const __restrict__ pMsg) {
-    int lenfac = len_syslog_fac_names[pMsg->iFacility];
-    int lensev = len_syslog_severity_names[pMsg->iSeverity];
+    /* An unparsed message can retain the LOG_INVLD sentinel (192). */
+    const unsigned int fac = pMsg->iFacility < LOG_NFACILITIES ? pMsg->iFacility : LOG_FAC_INVLD;
+    const unsigned int sev = pMsg->iSeverity <= LOG_DEBUG ? pMsg->iSeverity : LOG_DEBUG;
+    int lenfac = len_syslog_fac_names[fac];
+    int lensev = len_syslog_severity_names[sev];
     int totlen = lenfac + 1 + lensev + 1;
     char *pRes = malloc(totlen);
     if (pRes != NULL) {
-        memcpy(pRes, syslog_fac_names[pMsg->iFacility], lenfac);
+        memcpy(pRes, syslog_fac_names[fac], lenfac);
         pRes[lenfac] = '.';
-        memcpy(pRes + lenfac + 1, syslog_severity_names[pMsg->iSeverity], lensev + 1 /* for \0! */);
+        memcpy(pRes + lenfac + 1, syslog_severity_names[sev], lensev + 1 /* for \0! */);
     }
     return (uchar *)pRes;
 }
@@ -3046,9 +3126,10 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC) {
 #ifdef HAVE_LOGNORM_TURBO
 /* Lazy materialization of turbo result into json_object* tree.
  * Called when template/property access needs pMsg->json but mmnormalize
- * stored a turbo snapshot instead.  One-shot: turbo_result_to_json is
- * NULLed after successful materialization so we never double-materialize,
- * while turbo_result stays valid for the get_str fast-path.
+ * stored a turbo snapshot instead. Idempotent: turbo_json_ready is set
+ * after a successful projection so we never double-merge. The turbo
+ * callbacks stay live, but once pMsg->json is set it serves all reads;
+ * get_str is only consulted while pMsg->json is NULL.
  * When pMsg->json is already non-NULL (imfile metadata, enrichment, ...),
  * snapshot fields are merged in using msgAddJSON() semantics: later
  * normalization fields replace colliding top-level keys.
@@ -3057,17 +3138,26 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC) {
 static int msgMaterializeTurboJSON(smsg_t *pMsg) {
     struct json_object *snap_json = NULL;
 
+    if (pMsg->turbo_json_ready) return 1;
     if (pMsg->turbo_result == NULL || pMsg->turbo_result_to_json == NULL) return 1;
 
     pMsg->turbo_result_to_json(pMsg->turbo_result, &snap_json);
 
-    /* Keep the callback live after allocation failure so a later access may
-     * retry instead of permanently losing the normalized fields. */
-    if (snap_json == NULL) return 0;
-
-    pMsg->turbo_result_to_json = NULL; /* materialized successfully */
+    /* Leave turbo_json_ready unset on allocation failure so a later
+     * access may retry instead of permanently losing the fields. The
+     * callers report RS_RET_OUT_OF_MEMORY; nothing is logged here because
+     * the message mutex is held. */
+    if (snap_json == NULL) {
+        DBGPRINTF("msgMaterializeTurboJSON: projection failed, out of memory\n");
+        return 0;
+    }
 
     if (pMsg->json == NULL) {
+        pMsg->json = snap_json;
+    } else if (json_object_get_type(pMsg->json) != json_type_object) {
+        /* set $! = <string, number or array> left no keys to merge into; the
+         * normalization result is the later full-tree write and replaces it */
+        json_object_put(pMsg->json);
         pMsg->json = snap_json;
     } else {
         /* Keep msgAddJSON() full-tree merge semantics: the normalization
@@ -3076,12 +3166,35 @@ static int msgMaterializeTurboJSON(smsg_t *pMsg) {
         struct json_object_iterator itEnd = json_object_iter_end(snap_json);
         while (!json_object_iter_equal(&it, &itEnd)) {
             const char *key = json_object_iter_peek_name(&it);
-            json_object_object_add(pMsg->json, key, json_object_get(json_object_iter_peek_value(&it)));
+            struct json_object *const val = json_object_iter_peek_value(&it);
+            /* libfastjson reports a failed insert only through the member
+             * count. Merging again on the next access is harmless: every
+             * key replaces its previous value. */
+            const int expected =
+                json_object_object_length(pMsg->json) + (json_object_object_get_ex(pMsg->json, key, NULL) ? 0 : 1);
+            json_object_object_add(pMsg->json, key, json_object_get(val));
+            if (json_object_object_length(pMsg->json) != expected) {
+                json_object_put(val);
+                json_object_put(snap_json);
+                return 0;
+            }
             json_object_iter_next(&it);
         }
         json_object_put(snap_json);
     }
+    pMsg->turbo_json_ready = 1;
     return 1;
+}
+
+/* Project the turbo snapshot into pMsg->json, for callers outside msg.c that
+ * persist the JSON tree (queue codecs). Takes the message mutex itself; the
+ * mutex is not recursive, so the caller must not already hold it. */
+rsRetVal MsgTurboMaterialize(smsg_t *const pMsg) {
+    int ok;
+    MsgLock(pMsg);
+    ok = msgMaterializeTurboJSON(pMsg);
+    MsgUnlock(pMsg);
+    return ok ? RS_RET_OK : RS_RET_OUT_OF_MEMORY;
 }
 #endif
 
@@ -3162,6 +3275,52 @@ finalize_it:
 }
 
 
+#ifdef HAVE_LOGNORM_TURBO
+/* Serve a parse-origin string field straight from the turbo snapshot,
+ * avoiding json-c tree materialization, navigation and strdup. Returns 1
+ * with a heap copy in *pRes when the snapshot holds the field, 0 when the
+ * caller must take the JSON path (no snapshot, field not in the snapshot,
+ * a JSON tree already exists, or allocation failure).
+ *
+ * The snapshot is authoritative only while pMsg->json is NULL: once
+ * anything wrote the tree (materialize, set statements, enrichment, imfile
+ * metadata) the JSON path honours later-writer-wins. Writers of those
+ * slots hold pMsg->mut (mmnormalize attach/overwrite, MsgReleaseTurboResult,
+ * materialize). The getter takes the same mutex for the json == NULL
+ * guard, the slot loads, the get_str callback, and the copy out of the
+ * snapshot. A concurrent overwrite may free the snapshot, so the pointer
+ * the callback returns is only valid inside this locked region. With pRes
+ * NULL the function only probes for the field (exists()). */
+static int msgTurboGetStr(smsg_t *const pMsg,
+                          const msgPropDescr_t *const pProp,
+                          uchar **const pRes,
+                          rs_size_t *const plen) {
+    const uchar *val;
+    rs_size_t vlen;
+    int hit = 0;
+
+    if (pProp->id != PROP_CEE) return 0;
+    MsgLock(pMsg);
+    if (pMsg->json == NULL && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL &&
+        pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
+        if (pRes == NULL) {
+            hit = 1;
+        } else {
+            *pRes = (uchar *)malloc(vlen + 1);
+            if (*pRes != NULL) {
+                memcpy(*pRes, val, vlen);
+                (*pRes)[vlen] = '\0';
+                *plen = vlen;
+                hit = 1;
+            }
+        }
+    }
+    MsgUnlock(pMsg);
+    return hit;
+}
+#endif
+
+
 /* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
 rsRetVal getJSONPropVal(
     smsg_t *const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed) {
@@ -3175,51 +3334,16 @@ rsRetVal getJSONPropVal(
     *pRes = NULL;
 
 #ifdef HAVE_LOGNORM_TURBO
-    /* Turbo fast-path: serve parse-origin fields directly from snapshot.
-     * Avoids json-c tree materialization + navigation + strdup entirely.
-     *
-     * Guarded on pMsg->json == NULL: once anything has written to the
-     * json-c tree (imfile metadata, msgMaterializeTurboJSON, `set`
-     * statements, downstream enrichment), the turbo snapshot is no
-     * longer authoritative — the slow path below honours the
-     * later-writer-wins merge semantics of msgMaterializeTurboJSON.
-     * Returning snapshot values in that state would bypass a more
-     * recent write.  The fast path is therefore only valid while the
-     * message has no json tree yet, which is the common case for
-     * pure-normalize pipelines with no post-parse mutation.
-     *
-     * Lock-free by design: pMsg->json, turbo_result and
-     * turbo_result_get_str are all pointer-sized atomic reads.
-     * Parser writes happen-before queue enqueue (full barrier); later
-     * mutations to pMsg->json go through pMsg->mut.  A reader racing
-     * a concurrent json creation can observe the pre-write NULL
-     * exactly once — an existing minor exposure, dramatically
-     * narrower than the always-fires-even-after-mutation bug this
-     * guard closes.  Taking pMsg->mut here would defeat the very
-     * reason this fast-path exists (scaling property access without
-     * lock contention).
-     */
-    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
-        pMsg->turbo_result_get_str != NULL) {
-        const uchar *val;
-        rs_size_t vlen;
-        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
-            *pRes = (uchar *)malloc(vlen + 1);
-            if (*pRes != NULL) {
-                memcpy(*pRes, val, vlen);
-                (*pRes)[vlen] = '\0';
-                *buflen = vlen;
-                *pbMustBeFreed = 1;
-                return RS_RET_OK;
-            }
-        }
+    if (msgTurboGetStr(pMsg, pProp, pRes, buflen)) {
+        *pbMustBeFreed = 1;
+        return RS_RET_OK;
     }
 #endif
 
     CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
     pthread_mutex_lock(mut);
 #ifdef HAVE_LOGNORM_TURBO
-    msgMaterializeTurboJSON(pMsg);
+    if (pProp->id == PROP_CEE && !msgMaterializeTurboJSON(pMsg)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 #endif
 
     if (*jroot == NULL) FINALIZE;
@@ -3272,23 +3396,10 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
     *pjson = NULL, *pcstr = NULL;
 
 #ifdef HAVE_LOGNORM_TURBO
-    /* Turbo fast-path: serve parse-origin strings directly from snapshot.
-     * See getJSONPropVal() above for the full rationale — guarded on
-     * pMsg->json == NULL so post-parse mutations (set, enrichment,
-     * materialize) fall through to the merge-aware slow path.
-     */
-    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
-        pMsg->turbo_result_get_str != NULL) {
-        const uchar *val;
-        rs_size_t vlen;
-        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
-            *pcstr = (uchar *)malloc(vlen + 1);
-            if (*pcstr != NULL) {
-                memcpy(*pcstr, val, vlen);
-                (*pcstr)[vlen] = '\0';
-                *pjson = NULL;
-                return RS_RET_OK;
-            }
+    {
+        rs_size_t turboLen;
+        if (msgTurboGetStr(pMsg, pProp, pcstr, &turboLen)) {
+            return RS_RET_OK;
         }
     }
 #endif
@@ -3296,7 +3407,7 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
     CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
     pthread_mutex_lock(mut);
 #ifdef HAVE_LOGNORM_TURBO
-    msgMaterializeTurboJSON(pMsg);
+    if (pProp->id == PROP_CEE && !msgMaterializeTurboJSON(pMsg)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 #endif
     if (!strcmp((char *)pProp->name, "!")) {
         *pjson = *jroot;
@@ -3322,7 +3433,10 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
 
 finalize_it:
     /* we need a deep copy, as another thread may modify the object */
-    if (*pjson != NULL) *pjson = jsonDeepCopy(*pjson);
+    if (*pjson != NULL) {
+        *pjson = jsonDeepCopy(*pjson);
+        if (*pjson == NULL) iRet = RS_RET_OUT_OF_MEMORY;
+    }
     if (mut != NULL) pthread_mutex_unlock(mut);
     RETiRet;
 }
@@ -3336,6 +3450,11 @@ finalize_it:
  * JSON strings at their first embedded NUL, so retain that behavior here.
  * Non-string values remain deep-copied JSON objects because message mutation
  * may otherwise invalidate them after the lock is released.
+ *
+ * The turbo fast path does the same under pMsg->mut. get_str's pointer is
+ * only valid until a concurrent overwrite frees the snapshot, so the
+ * es_str_t copy finishes before MsgUnlock. This does not call
+ * msgTurboGetStr(): that helper locks the same non-recursive mutex.
  */
 rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct svar *out) {
     struct json_object **jroot;
@@ -3348,18 +3467,24 @@ rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct sv
     out->d.estr = NULL;
 
 #ifdef HAVE_LOGNORM_TURBO
-    /* Keep the existing snapshot precedence guard: once $! was mutated, the
-     * merge-aware path below must materialize and read the message JSON. */
-    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
-        pMsg->turbo_result_get_str != NULL) {
+    /* Once $! was mutated, json != NULL and the path below materializes.
+     * Read that flag under the mutex: the old unlocked check raced the
+     * writer that publishes and frees the snapshot. */
+    if (pProp->id == PROP_CEE) {
         const uchar *val;
         rs_size_t vlen;
-        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
+        int hit = 0;
+
+        MsgLock(pMsg);
+        if (pMsg->json == NULL && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL &&
+            pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
             const size_t len = strnlen((const char *)val, vlen);
             out->d.estr = es_newStrFromCStr((const char *)val, len);
-            if (out->d.estr != NULL) {
-                return RS_RET_OK;
-            }
+            hit = out->d.estr != NULL;
+        }
+        MsgUnlock(pMsg);
+        if (hit) {
+            return RS_RET_OK;
         }
     }
 #endif
@@ -3367,7 +3492,8 @@ rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct sv
     CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
     pthread_mutex_lock(mut);
 #ifdef HAVE_LOGNORM_TURBO
-    msgMaterializeTurboJSON(pMsg);
+    /* only $! carries the snapshot; for $/ mut is not the message mutex */
+    if (pProp->id == PROP_CEE && !msgMaterializeTurboJSON(pMsg)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 #endif
     if (!strcmp((char *)pProp->name, "!")) {
         out->d.json = *jroot;
@@ -3401,6 +3527,7 @@ finalize_it:
         if (out->d.json == NULL) {
             out->datatype = 'S';
             out->d.estr = NULL;
+            iRet = RS_RET_OUT_OF_MEMORY;
         }
     }
     if (mut != NULL) pthread_mutex_unlock(mut);
@@ -3421,12 +3548,15 @@ rsRetVal msgGetJSONPropJSON(smsg_t *const pMsg, msgPropDescr_t *pProp, struct js
     CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
     pthread_mutex_lock(mut);
 #ifdef HAVE_LOGNORM_TURBO
-    msgMaterializeTurboJSON(pMsg);
+    if (pProp->id == PROP_CEE && !msgMaterializeTurboJSON(pMsg)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 #endif
 
-    if (!strcmp((char *)pProp->name, "!")) {
+    if (pProp->name[1] == '\0') { /* the root itself (msgPropDescrFill rewrites every root char to '!') */
         *pjson = *jroot;
         FINALIZE;
+    }
+    if (*jroot == NULL) {
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
     }
     leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
     CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 0));
@@ -3436,7 +3566,10 @@ rsRetVal msgGetJSONPropJSON(smsg_t *const pMsg, msgPropDescr_t *pProp, struct js
 
 finalize_it:
     /* we need a deep copy, as another thread may modify the object */
-    if (*pjson != NULL) *pjson = jsonDeepCopy(*pjson);
+    if (*pjson != NULL) {
+        *pjson = jsonDeepCopy(*pjson);
+        if (*pjson == NULL) iRet = RS_RET_OUT_OF_MEMORY;
+    }
     if (mut != NULL) pthread_mutex_unlock(mut);
     RETiRet;
 }
@@ -3716,7 +3849,13 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
                     break;
                 }
             }
-            if (!is_numeric) {
+            if (is_numeric) {
+                /* JSON numbers cannot have leading zeros. Keep one for zero. */
+                while (buflen > 1 && *pSrc == '0') {
+                    ++pSrc;
+                    --buflen;
+                }
+            } else {
                 es_addChar(&dst, '"');
             }
             CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
@@ -3734,7 +3873,7 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
                 CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
             }
         } else if (pTpe->data.field.options.dataType == TPE_DATATYPE_BOOL) {
-            if (buflen == 1 && *pSrc == '0') {
+            if (buflen == 0 || (buflen == 1 && *pSrc == '0')) {
                 es_addBufConstcstr(&dst, "false");
             } else {
                 es_addBufConstcstr(&dst, "true");
@@ -3851,7 +3990,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
     uchar *pBufStart;
     uchar *pBuf;
     int iLen;
-    short iOffs;
+    int iOffs; /* must hold any offset into a maxMessageSize string; short wrapped at 32K */
     enum tplFormatTypes datefmt;
     int bDateInUTC;
 
@@ -3968,6 +4107,9 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             break;
         case PROP_JSONMESG:
             pRes = (uchar *)msgGetJSONMESG(pMsg);
+            if (pRes == NULL) {
+                RET_OUT_OF_MEMORY;
+            }
             *pbMustBeFreed = 1;
             break;
 #ifdef USE_LIBUUID
@@ -4139,7 +4281,10 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         case PROP_CEE_ALL_JSON_PLAIN:
             MsgLock(pMsg);
 #ifdef HAVE_LOGNORM_TURBO
-            msgMaterializeTurboJSON(pMsg);
+            if (!msgMaterializeTurboJSON(pMsg)) {
+                MsgUnlock(pMsg);
+                RET_OUT_OF_MEMORY;
+            }
 #endif
             if (pMsg->json == NULL) {
                 MsgUnlock(pMsg);
@@ -4170,7 +4315,9 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         case PROP_CEE:
         case PROP_LOCAL_VAR:
         case PROP_GLOBAL_VAR:
-            getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
+            if (getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed) == RS_RET_OUT_OF_MEMORY) {
+                RET_OUT_OF_MEMORY;
+            }
             break;
         case PROP_SYS_BOM:
             pRes = (uchar *)"\xEF\xBB\xBF";
@@ -4387,21 +4534,22 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                                 pRes = UCHAR_CONSTANT("");
                             }
                         }
-                    }
-                    /* OK, we have a usable match - we now need to malloc pB */
-                    int iLenBuf;
+                    } else {
+                        /* OK, we have a usable match - we now need to malloc pB */
+                        int iLenBuf;
 
-                    iLenBuf =
-                        pmatch[pTpe->data.field.iSubMatchToUse].rm_eo - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
+                        iLenBuf = pmatch[pTpe->data.field.iSubMatchToUse].rm_eo -
+                                  pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
 
-                    if (msgPropStrGen(&pRes, pbMustBeFreed, &bufLen,
-                                      pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
-                                      iLenBuf) != RS_RET_OK) {
-                        if (*pbMustBeFreed == 1) {
-                            free(pRes);
-                            *pbMustBeFreed = 0;
+                        if (msgPropStrGen(&pRes, pbMustBeFreed, &bufLen,
+                                          pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
+                                          iLenBuf) != RS_RET_OK) {
+                            if (*pbMustBeFreed == 1) {
+                                free(pRes);
+                                *pbMustBeFreed = 0;
+                            }
+                            RET_OUT_OF_MEMORY;
                         }
-                        RET_OUT_OF_MEMORY;
                     }
                 }
             } else {
@@ -4446,7 +4594,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
             }
         }
-        if (iFrom >= bufLen) {
+        if (iFrom >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
             DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n", iFrom, bufLen);
             if (*pbMustBeFreed == 1) free(pRes);
             pRes = (uchar *)"";
@@ -5202,6 +5350,9 @@ rsRetVal jsonFind(smsg_t *const pMsg, msgPropDescr_t *pProp, struct json_object 
 
     CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
     pthread_mutex_lock(mut);
+#ifdef HAVE_LOGNORM_TURBO
+    if (pProp->id == PROP_CEE && !msgMaterializeTurboJSON(pMsg)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+#endif
 
     if (*jroot == NULL) {
         field = NULL;
@@ -5229,6 +5380,11 @@ rsRetVal ATTR_NONNULL() msgCheckVarExists(smsg_t *const pMsg, msgPropDescr_t *pP
     struct json_object *jsonres = NULL;
     DEFiRet;
 
+#ifdef HAVE_LOGNORM_TURBO
+    /* A field the snapshot serves exists without building the tree; only a
+     * miss needs the JSON path (the snapshot does not expose containers). */
+    if (msgTurboGetStr(pMsg, pProp, NULL, NULL)) FINALIZE;
+#endif
     CHKiRet(jsonFind(pMsg, pProp, &jsonres));
     if (jsonres == NULL) {
         iRet = RS_RET_NOT_FOUND;
@@ -5250,7 +5406,11 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
     CHKiRet(getJSONRootAndMutexByVarChar(pM, name[0], &jroot, &mut));
     pthread_mutex_lock(mut);
 #ifdef HAVE_LOGNORM_TURBO
-    msgMaterializeTurboJSON(pM);
+    /* only $! carries the snapshot; for $/ mut is not the message mutex */
+    if (name[0] == '!' && !msgMaterializeTurboJSON(pM)) {
+        json_object_put(json); /* ownership of json is ours once the root lookup succeeded */
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 #endif
 
     if (name[0] == '/') { /* globl var special handling */
@@ -5262,10 +5422,20 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
     }
 
     if (name[1] == '\0') { /* full tree? */
-        if (*jroot == NULL)
+        if (*jroot == NULL) {
             *jroot = json;
-        else
+        } else if (json_object_get_type(*jroot) != json_type_object) {
+            /* nothing to merge into: a non-object root is replaced */
+            json_object_put(*jroot);
+            *jroot = json;
+        } else if (json_object_get_type(json) == json_type_object) {
             CHKiRet(jsonMerge(*jroot, json));
+        } else {
+            /* same rule as for a leaf: a container is not overwritten by a value */
+            DBGPRINTF("msgAddJSON: trying to update the root container with a leaf, name is %s - forbidden\n", name);
+            json_object_put(json);
+            ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+        }
     } else {
         if (*jroot == NULL) {
             /* now we need a root obj */
@@ -5335,6 +5505,18 @@ rsRetVal msgDelJSON(smsg_t *const pM, uchar *name) {
 
     CHKiRet(getJSONRootAndMutexByVarChar(pM, name[0], &jroot, &mut));
     pthread_mutex_lock(mut);
+#ifdef HAVE_LOGNORM_TURBO
+    if (name[0] == '!') {
+        /* The turbo snapshot is part of $!. A root unset drops it together
+         * with the tree so the field getters cannot keep serving the removed
+         * fields; a leaf unset needs the tree materialized to operate on. */
+        if (name[1] == '\0') {
+            MsgReleaseTurboResult(pM);
+        } else if (!msgMaterializeTurboJSON(pM)) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    }
+#endif
 
     if (*jroot == NULL) {
         DBGPRINTF("msgDelJSONVar; jroot empty in unset for property %s\n", name);
@@ -5413,8 +5595,13 @@ finalize_it:
     RETiRet;
 }
 
+/* Returns NULL for a NULL (JSON null) source and on allocation failure, so
+ * a NULL result for a non-NULL source always means out of memory. Every
+ * failure libfastjson reports turns the whole copy into NULL; a failed key
+ * strdup inside fjson_object_object_add() is not reported by the library.
+ * Strings keep their full length, embedded NUL bytes included. */
 struct json_object *jsonDeepCopy(struct json_object *src) {
-    struct json_object *dst = NULL, *json;
+    struct json_object *dst = NULL, *json, *srcChild;
     int arrayLen, i;
 
     if (src == NULL) goto done;
@@ -5430,25 +5617,46 @@ struct json_object *jsonDeepCopy(struct json_object *src) {
             dst = json_object_new_int64(json_object_get_int64(src));
             break;
         case json_type_string:
-            dst = json_object_new_string(jsonToString(src));
+            dst = json_object_new_string_len(json_object_get_string(src), json_object_get_string_len(src));
             break;
         case json_type_object:
             dst = json_object_new_object();
+            if (dst == NULL) break;
             struct json_object_iterator it = json_object_iter_begin(src);
             struct json_object_iterator itEnd = json_object_iter_end(src);
             while (!json_object_iter_equal(&it, &itEnd)) {
-                json = jsonDeepCopy(json_object_iter_peek_value(&it));
-                json_object_object_add(dst, json_object_iter_peek_name(&it), json);
+                srcChild = json_object_iter_peek_value(&it);
+                json = jsonDeepCopy(srcChild);
+                /* the member count is the only failure signal of the add. A
+                 * source may hold a key twice (the liblognorm walker inserts
+                 * with KEY_IS_NEW); the copy keeps the last value, which does
+                 * not grow dst */
+                const char *const key = json_object_iter_peek_name(&it);
+                const int expected =
+                    json_object_object_length(dst) + (json_object_object_get_ex(dst, key, NULL) ? 0 : 1);
+                if (json != NULL || srcChild == NULL) json_object_object_add(dst, key, json);
+                if (json_object_object_length(dst) != expected) {
+                    json_object_put(json);
+                    json_object_put(dst);
+                    dst = NULL;
+                    break;
+                }
                 json_object_iter_next(&it);
             }
             break;
         case json_type_array:
             arrayLen = json_object_array_length(src);
             dst = json_object_new_array();
+            if (dst == NULL) break;
             for (i = 0; i < arrayLen; ++i) {
-                json = json_object_array_get_idx(src, i);
-                json = jsonDeepCopy(json);
-                json_object_array_add(dst, json);
+                srcChild = json_object_array_get_idx(src, i);
+                json = jsonDeepCopy(srcChild);
+                if ((json == NULL && srcChild != NULL) || json_object_array_add(dst, json) != 0) {
+                    json_object_put(json);
+                    json_object_put(dst);
+                    dst = NULL;
+                    break;
+                }
             }
             break;
         case json_type_null:

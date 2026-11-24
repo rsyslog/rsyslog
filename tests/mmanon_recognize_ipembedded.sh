@@ -1,5 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2016-11-22 by Jan Gerhards, released under ASL 2.0
+# Verify valid embedded IPv4 anonymization and reject overlong hex groups without crashing.
+# Clean shutdown plus cmp_exact prove the malformed token stays unchanged and the valid control is anonymized.
 
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -17,6 +20,7 @@ ruleset(name="testing") {
 
 startup
 tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
+<129>Mar 10 01:00:00 172.20.245.8 tag: fffff:fffff:fffff:fffff:fffff:fffff:255.255.255.255
 <129>Mar 10 01:00:00 172.20.245.8 tag: FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:255.255.255.255
 <129>Mar 10 01:00:00 172.20.245.8 tag: 61:34:ad::7:F aa:ff43::756:172.2.3.4
 <129>Mar 10 01:00:00 172.20.245.8 tag: ::
@@ -40,6 +44,7 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
 shutdown_when_empty
 wait_shutdown
 export EXPECTED=' asdfghjk
+ fffff:fffff:fffff:fffff:fffff:fffff:255.255.255.255
  0:0:0:0:0:0:0.0.0.0
  61:34:ad::7:F 0:0:0:0:0:0:0.0.0.0
  ::

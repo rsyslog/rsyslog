@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # CREATE KEY
 #	openssl genpkey -algorithm RSA -out client-revoked-key.pem
 # CREATE REQEST

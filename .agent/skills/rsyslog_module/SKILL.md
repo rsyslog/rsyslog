@@ -23,6 +23,11 @@ Rsyslog v8 has a high-concurrency worker model.
   [doc/ai/rejected_engineering_paths.md](../../../doc/ai/rejected_engineering_paths.md).
 - **Shared State (`pData`)**: Mutable state shared across workers MUST be protected by a mutex in `pData`.
 - **Per-Worker State (`WID`)**: Never share `wrkrInstanceData_t`.
+- **Atomics**: Use the `runtime/atomic.h` helpers. Raw `__atomic_*` /
+  `__sync_*` builtins are allowed only inside an `HAVE_ATOMIC_BUILTINS`
+  (or `HAVE_ATOMIC_BUILTINS64`) branch, because builds without them
+  (e.g. Solaris Studio) must still compile. `devtools/check-raw-atomics.py`
+  enforces this locally and in the Code Style Check workflow.
 - **Belt and Suspenders**:
   ```c
   assert(pData != NULL);
@@ -43,7 +48,10 @@ Every module must implement and register standard entry points:
 - **Synchronization**: Keep `doc/ai/module_map.yaml` in sync with locking and concurrency changes.
 
 ### 4. Build Configuration
-- Update `plugins/Makefile.am` and `configure.ac` when adding new modules.
+- When adding a new module, create `plugins/<module>/Makefile.am`, add the
+  enable option and `plugins/<module>/Makefile` (`AC_CONFIG_FILES`) to
+  `configure.ac`, and add a conditional `SUBDIRS +=` entry to the top-level
+  `Makefile.am`. There is no `plugins/Makefile.am`.
 - **Test Registration**: Follow the "Define at Top, Distribute Unconditionally, Register Conditionally" pattern in `tests/Makefile.am`. See the `rsyslog_test` skill for details. This is critical for `make distcheck` validity.
 - Use `MODULE_TYPE(eMOD_OUT)` and other macros from `runtime/module-template.h`.
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test injects a message and checks if it is received by
 # imjournal. We use a special test string which we do not expect
 # to be present in the regular log stream. So we do not expect that

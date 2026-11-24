@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmrm1stspace.c
  * removes leading space inside the syslog message part
  *

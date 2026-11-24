@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imrelp-keepalive-time:
 .. _imrelp.parameter.input.keepalive-time:
 

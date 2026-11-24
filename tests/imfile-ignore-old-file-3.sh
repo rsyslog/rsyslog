@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Multiple files with different timestamp, ignore those files with old timestamp
 echo [imfile-ignore-old-file-3.sh]
 . ${srcdir:=.}/diag.sh init

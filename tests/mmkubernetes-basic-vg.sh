@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2018-04-06 by richm, released under ASL 2.0
 #
 # Note: on buildbot VMs (where there is no environment cleanup), the

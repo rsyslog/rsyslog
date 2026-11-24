@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* parser.h
  *
  * This file contains the prototypes of all the parsers available within impcap.

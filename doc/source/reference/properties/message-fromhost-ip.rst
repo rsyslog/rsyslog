@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-fromhost-ip:
 .. _properties.message.fromhost-ip:
 

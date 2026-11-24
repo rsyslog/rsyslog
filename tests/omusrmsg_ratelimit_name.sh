@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for omusrmsg ratelimit.name support (config-validation test).
 # added 2025-07-10 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: >-
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   build_docs:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     outputs:
       docs_changed: ${{steps.doc_changes.outputs.any_changed}}
     steps:
@@ -34,7 +35,9 @@ jobs:
         id: doc_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          use_rest_api: ${{ github.event_name == 'pull_request' && github.event.repository.private }}
           files: |
+            .github/workflows/doc_build.yml
             doc/**/*.rst
             doc/source/conf.py
             doc/tools/check-html-links.py
@@ -115,7 +118,7 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.x'
 
@@ -158,12 +161,25 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
+        env:
+          # The oracle runs in the unpacked tree; the upload action runs at root.
+          RSYSLOG_FLAKE_EVIDENCE_ROOT: ${{ github.workspace }}/.ci/flake-evidence
         run: |
           cd doc-builder
-          python3 doc/tools/validate-doc-samples.py \
-            --source-dir doc/source \
-            --build-dir . \
-            --work-dir doc/build/doc-sample-validation
+          ../devtools/ci-flake-phase.sh run doc-samples custom -- \
+            python3 doc/tools/validate-doc-samples.py \
+              --source-dir doc/source \
+              --build-dir . \
+              --work-dir doc/build/doc-sample-validation
+
+      - name: Upload documentation sample failure evidence
+        if: >-
+          ${{ failure() &&
+          (github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true') }}
+        uses: $/.github/actions/upload-flake-evidence
+        with:
+          job-name: documentation samples
 
       - name: Generate documentation sample coverage
         if: >-
@@ -173,7 +189,7 @@ jobs:
           cd doc-builder
           lcov --capture --directory . \
                --rc geninfo_unexecuted_blocks=1 \
-               --ignore-errors mismatch \
+               --ignore-errors mismatch,inconsistent \
                --output-file coverage.raw.info
           lcov --remove coverage.raw.info '/usr/*' '*/tests/*' '*/doc/tools/*' \
                --ignore-errors unused,unused \
@@ -181,30 +197,33 @@ jobs:
           rm -f coverage.raw.info
           lcov --list coverage.info | sed -n '1,60p' || true
           [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+          test "$(wc -c < coverage.info)" -le 33554432
 
-      - name: Upload documentation sample coverage to Codecov
+      # All PR reports cross the same unprivileged-artifact/trusted-upload
+      # boundary. Main/push coverage retains its existing authenticated route.
+      - name: Preserve documentation sample coverage for the trusted uploader
         if: >-
-          ${{ (github.event_name != 'pull_request' ||
-          steps.doc_changes.outputs.any_changed == 'true') &&
-          (github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository) }}
+          ${{ !github.event.repository.private &&
+          github.event_name == 'pull_request' &&
+          steps.doc_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-docs-samples-pr-${{ github.run_id }}-${{ github.run_attempt }}
+          path: doc-builder/coverage.info
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload upstream documentation sample coverage to Codecov
+        if: >-
+          ${{ !github.event.repository.private &&
+          github.event_name != 'pull_request' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: doc-builder/coverage.info
           flags: docs-samples
-          fail_ci_if_error: true
-
-      - name: Upload fork documentation sample coverage to Codecov
-        if: >-
-          ${{ github.event_name == 'pull_request' &&
-          steps.doc_changes.outputs.any_changed == 'true' &&
-          github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          files: doc-builder/coverage.info
-          flags: docs-samples
-          fail_ci_if_error: true
+          # Coverage is informational; Codecov problems must not fail CI.
+          fail_ci_if_error: false
 
       - name: Validate generated HTML links
         if: >-
@@ -233,7 +252,7 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-html
           path: doc-builder/doc/build
@@ -242,7 +261,7 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rag-knowledge-base
           path: doc-builder/doc/build/rag/rsyslog_rag_db.json
@@ -252,12 +271,13 @@ jobs:
   publish_pr_preview:
     name: Publish PR preview comment
     needs: build_docs
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
     if: >-
       ${{ github.event_name=='pull_request'&&
       github.event.action!='closed'&&
       needs.build_docs.outputs.docs_changed=='true'&&
       github.event.pull_request.head.repo.full_name==github.repository&&
+      !github.event.repository.private&&
       !startsWith(github.event.pull_request.head.ref, 'ai-findings-autofix/')}}
     permissions:
       contents: read

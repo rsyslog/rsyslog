@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # same as omusrmsg-noabort, but with legacy syntax.
 # addd 2018-08-05 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

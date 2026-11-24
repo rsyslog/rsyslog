@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omrelp-tls-permanentfailuredisablesaction:
 .. _omrelp.parameter.action.tls-permanentfailuredisablesaction:
 

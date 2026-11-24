@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check that info-severity messages are actually emitted; we use
 # lookup table as a simple sample to get such a message.
 # addd 2019-05-07 by RGerhards, released under ASL 2.0

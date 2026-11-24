@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Legacy Global Configuration Statements
 ======================================
 Global configuration statements, as their name implies, usually affect

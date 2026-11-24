@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* strms_sess.c
  *
  * This implements a session of the strmsrv object. For general

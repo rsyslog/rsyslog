@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test watched ratelimit reload failure keeps the previous active policy.
 
 . ${srcdir:=.}/diag.sh init

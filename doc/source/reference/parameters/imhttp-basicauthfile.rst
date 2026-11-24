@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Configure imhttp to protect an input with HTTP Basic Authentication.
    :keywords: rsyslog, imhttp, basicauthfile, http basic authentication

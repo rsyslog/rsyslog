@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmanon-ipv6-maxretryhandling:
 .. _mmanon.parameter.input.ipv6-maxretryhandling:
 

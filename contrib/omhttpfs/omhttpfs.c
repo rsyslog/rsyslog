@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omhttpfs.c
  * Send all output to HDFS via httpfs
  *

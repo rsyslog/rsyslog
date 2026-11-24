@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Exercise the real imtcp session framing and decompression engine with
  * arbitrary byte streams and deterministic receive chunk boundaries.
  *

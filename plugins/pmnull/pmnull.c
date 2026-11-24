@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmnull.c
  * This is a parser module for CISCO IOS "syslog" format.
  *
@@ -102,6 +104,7 @@ BEGINnewParserInst
 
     inst = NULL;
     CHKiRet(createInstance(&inst));
+    inst->pri = syslogfacility * 8 + syslogseverity;
 
     if (lst == NULL) FINALIZE; /* just set defaults, no param block! */
 

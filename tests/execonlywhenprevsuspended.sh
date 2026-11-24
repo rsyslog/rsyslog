@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # we test the execonly if previous is suspended directive. This is the
 # most basic test which solely tests a single case but no dependencies within
 # the ruleset.

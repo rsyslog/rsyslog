@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* omdiscard.h
  * These are the definitions for the built-in discard output module.
  *

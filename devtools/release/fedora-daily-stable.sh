@@ -11,6 +11,7 @@ Commands:
   build-package <prepared-dir> <artifact-dir> <build-log> <expected-evr> <arch>
   sign-rpms <artifact-dir> <fingerprint>
   generate-repo <artifact-dir> <repo-dir> <arch> <fingerprint> <passphrase-file>
+  fetch-verified-metadata <public-url> <repo-dir> <expected-fingerprint> <repo-subdir>...
   verify-repo <repo-url> <arch> <expected-evr> <expected-fingerprint>
   manifest <artifact-dir> <expected-evr> <arch> <channel> <distro> <distro-version>
 EOF
@@ -106,6 +107,8 @@ cmd_prepare_sources() {
 		"rsyslog-$version"
 
 	python3 "$(dirname "$0")/validate-rpm-baseline-patches.py" \
+		"$spec_file" "$policy_file" "Fedora 44"
+	python3 "$(dirname "$0")/rpm-disable-optional-modules.py" \
 		"$spec_file" "$policy_file" "Fedora 44"
 
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
@@ -291,7 +294,7 @@ case "$command" in
 		shift
 		cmd_build_package "$@"
 		;;
-	sign-rpms | generate-repo | verify-repo | manifest)
+	sign-rpms | generate-repo | fetch-verified-metadata | verify-repo | manifest)
 		exec "$(dirname "$0")/rpm-daily-stable.sh" "$@"
 		;;
 	*)

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* Definition of the internal messages input module.
  *
  * Note: we currently do not have an input module spec, but

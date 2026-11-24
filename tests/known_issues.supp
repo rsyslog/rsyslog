@@ -89,10 +89,11 @@
    fun:main
 }
 {
-   <Helgrind does not recognize __atomic global input termination load>
+   <Helgrind does not recognize __atomic global input termination load; RunInternal supports local-queue cleanup>
    Helgrind:Race
    fun:GetGlobalInputTermState
    fun:RunEpoll
+   fun:RunInternal
    fun:Run
    ...
 }

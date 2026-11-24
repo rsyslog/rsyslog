@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Defines for a rsyslog standard testbench application.
  *
  * Work begun 2008-06-13 by Rainer Gerhards (written from scratch)

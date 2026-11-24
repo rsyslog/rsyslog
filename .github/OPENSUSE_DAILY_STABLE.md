@@ -17,6 +17,11 @@ installs four conditional native BuildRequires (`libnet-devel`,
 `zypper source-install` does not resolve, so the native feature set is not
 silently reduced.
 
+The overlay explicitly disables the new optional `omkinesis` module, which
+current upstream auto-enables when libcurl supports it. The native Leap spec
+has no package for it; keeping it disabled preserves the native feature set
+and prevents unowned module and debug files from failing the RPM build.
+
 Leap packages documentation separately. Each run therefore builds the current
 main-branch HTML and source documentation and replaces the native documentation
 source tarball, preserving the `rsyslog-doc` package without shipping stale
@@ -60,9 +65,11 @@ snapshots/YYYY-MM-DD/EVR/aarch64/
 Each binary package is built and installed on a native runner of the matching
 architecture.
 
-RPMs and snapshots are immutable and retained for at least five years. Each
+RPMs and snapshots are immutable and retained for the retention period (see the retention rule in
+DAILY_STABLE_PACKAGE_ARCHIVE.md). Each
 new repository generation merges prior signed metadata so old daily versions
-remain installable. The EVR contains the UTC date, GitHub run and attempt,
+remain installable until
+pruned. The EVR contains the UTC date, GitHub run and attempt,
 and source commit. Only repository metadata, the public key, and the consumer
 `.repo` file are mutable.
 

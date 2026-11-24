@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* This is a quick and dirty "tail implementation", one which always
  * skips the first line, but nothing else. I have done this to prevent
  * the various incompatible options of tail come into my way. One could

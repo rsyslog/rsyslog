@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate mmjsontransform restructures dotted JSON keys into nested containers.
 . ${srcdir:=.}/diag.sh init
 

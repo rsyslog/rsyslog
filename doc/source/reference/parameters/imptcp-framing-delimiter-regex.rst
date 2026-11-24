@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-framing-delimiter-regex:
 .. _imptcp.parameter.input.framing-delimiter-regex:
 

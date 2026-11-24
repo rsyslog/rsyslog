@@ -1204,6 +1204,10 @@ def export_records(args):
     else:
         output_path = os.path.abspath(output_path)
         parent = os.path.dirname(output_path) or "."
+        queue_path = os.path.realpath(report["queue_directory"])
+        output_entry = os.path.join(os.path.realpath(parent), os.path.basename(output_path))
+        if os.path.commonpath((queue_path, output_entry)) == queue_path:
+            raise QueueToolError("export output must be outside the source queue directory")
         descriptor, temporary = tempfile.mkstemp(prefix=".rsyslog-segqueue-export-", dir=parent, text=True)
         stream = os.fdopen(descriptor, "w", encoding="utf-8", newline="\n")
     count = 0

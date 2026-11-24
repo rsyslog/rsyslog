@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verifies imfile reopenOnTruncate with logrotate copytruncate. The oracle is
 # the exact sequence 0..19999: rsyslog must read the pre-rotate file, finish
 # that batch before the destructive copytruncate, notice the truncation, resume

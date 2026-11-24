@@ -4,6 +4,11 @@
 # less likely in a local environment, we strongly limit the amount of data
 # we send in the hope to not lose any messages. However, failure of this
 # test does not necessarily mean that the code is wrong (but it is very likely!)
+# Standard destination/source port 514 is intentional deployment coverage;
+# do not replace it with a dynamic port. Run isolated from other port-514 users.
+# Success requires the complete 1..50 delivery sequence. The root check below
+# does not probe container capabilities: raw-socket and bind permission must
+# also be available, and a prerequisite skip is not successful coverage.
 # added 2009-11-11 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================

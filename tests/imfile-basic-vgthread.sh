@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD" "This test currently does not work on FreeBSD."

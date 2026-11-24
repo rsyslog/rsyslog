@@ -19,7 +19,7 @@
 # trees and exact result logs provide deterministic oracles; no daemon/network.
 # The original broad failure remains in the audit even after accepted reruns.
 set -eu
-command -v python3 >/dev/null 2>&1 || exit 77
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1 || exit 77
 command -v git >/dev/null 2>&1 || exit 77
 test_srcdir="${srcdir:-$(dirname "$0")}"
 python3 - "$test_srcdir/../devtools/record-container-validation.py" <<'PY'
@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix='rsyslog-validation-recorder-') as tempo
         args = [sys.executable, str(recorder), '--target', str(target), '--evidence', str(manifest)]
         if accepted:
             args += ['--accept-flakes', 'Maintainer accepts the isolated successful retry for this campaign']
-        result = subprocess.run(args, text=True, capture_output=True)
+        result = subprocess.run(args, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         assert (result.returncode == 0) == expected, result.stdout + result.stderr
         if not expected:
             assert 'Validation not recorded:' in result.stderr and 'Traceback' not in result.stderr

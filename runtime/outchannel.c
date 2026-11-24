@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This is the output channel processing code of rsyslog.
  * Output channels - in the long term - will define how
  * messages will be sent to whatever file or other medium.
@@ -240,10 +242,10 @@ struct outchannel *ochFind(char *pName, int iLenName) {
  * at program end. Everything is deleted.
  * rgerhards 2005-02-22
  */
-void ochDeleteAll(void) {
+void ochDeleteAll(rsconf_t *const cnf) {
     struct outchannel *pOch, *pOchDel;
 
-    pOch = runConf->och.ochRoot;
+    pOch = cnf->och.ochRoot;
     while (pOch != NULL) {
         dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL ? "NULL" : pOch->pszName);
         pOchDel = pOch;

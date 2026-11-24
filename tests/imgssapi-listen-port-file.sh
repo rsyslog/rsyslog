@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that imgssapi forwards listenPortFileName to tcpsrv and can accept
 # plain TCP when explicitly permitted.
 . ${srcdir:=.}/diag.sh init

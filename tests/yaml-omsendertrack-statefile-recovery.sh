@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify YAML parity for omsendertrack IgnoreInvalidStatefile. A zero-byte
 # state file is accepted by the default but rejected when the action opts into
 # strict recovery; a clean startup and the strict -N1 diagnostic are the oracle.

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* This file is an aid to support non-modular object accesses
  * while we do not have fully modularized everything. Once this is
  * done, this file can (and should) be deleted. Presence of it
@@ -45,6 +47,7 @@ rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(const uchar *hname,
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst);
 rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *pQueue);
 int get_bHadHUP(void);
+int get_hup_completed_count(void);
 
 extern int MarkInterval;
 #define CONF_VERIFY_PARTIAL_CONF 0x02 /* bit: partial configuration to be checked */

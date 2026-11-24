@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 Installing rsyslog from Package
 ===============================
 Installing from package is usually the most convenient way to install

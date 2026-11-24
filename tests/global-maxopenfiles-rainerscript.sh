@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate the modern global(maxOpenFiles=...) setting.  The test starts
 # rsyslogd so it exercises both the RainerScript global-parameter backend and
 # the activation-time setrlimit path.  The oracle is a clean startup/shutdown

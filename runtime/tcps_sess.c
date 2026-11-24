@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* tcps_sess.c
  *
  * This implements a session of the tcpsrv object. For general
@@ -515,10 +517,11 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
 
     if (c == '\n') {
         pThis->iCurrLine = pThis->iMsg;
-    } else {
+    } else if (pThis->iCurrLine > 0) {
+        /* A new frame can only start after a line boundary. */
         const int isMatch =
             !regexp.regexec(&pThis->pLstnInfo->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
-        if (pThis->iCurrLine > 0 && isMatch) {
+        if (isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
             const size_t len_save = pThis->iMsg - pThis->iCurrLine;
             memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, len_save);
@@ -609,6 +612,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
         if (c >= '0' && c <= '9' && pThis->bSuppOctetFram) {
             pThis->inputState = eInOctetCnt;
             pThis->bFrameOversize = 0;
+            pThis->bFrameOversizeReported = 0;
             pThis->iOctetsRemain = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
         } else if (c == ' ' && pThis->bSPFramingFix) {
@@ -621,6 +625,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
         } else {
             pThis->inputState = eInMsg;
             pThis->bFrameOversize = 0;
+            pThis->bFrameOversizeReported = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
         }
     }
@@ -666,6 +671,15 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 DBGPRINTF("error: message received is larger than max msg size, we %s it - c=%x\n",
                           pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split", c);
+                if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING && !pThis->bFrameOversizeReported) {
+                    pThis->bFrameOversizeReported = 1;
+                    if (glblReportOversizeMessage(runConf)) {
+                        LogError(0, RS_RET_OVERSIZE_MSG,
+                                 "imtcp %s: received oversize delimiter-framed message; max msg size is %d bytes, %s",
+                                 cnf_params->pszInputName, pThis->iMaxLine,
+                                 pThis->pSrv->discardTruncatedMsg == 1 ? "truncating" : "splitting");
+                    }
+                }
                 pThis->bFrameOversize = 1;
                 defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
                 ++(*pnMsgs);

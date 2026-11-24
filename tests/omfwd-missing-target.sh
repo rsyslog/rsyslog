@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for issue #5057: omfwd actions without target or targetSrv
 # must fail during config validation instead of reaching runtime connection
 # setup. The oracle is rsyslogd -N1 exiting with failure and emitting the

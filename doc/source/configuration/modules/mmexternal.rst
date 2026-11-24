@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 ********************************************************************
 mmexternal: Support module for external message modification plugins
 ********************************************************************

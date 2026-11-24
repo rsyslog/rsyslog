@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Backend-neutral pure-disk queue scope driver. Thin wrappers select the Disk
 # or segmentedDisk backend and main, ruleset, or action placement. The exact
 # sequence and empty spool directory are the shared deterministic oracles.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for discard functionality
 # This test checks if discard works. It is not a perfect test but
 # will find at least segfaults and obviously not discarded messages.

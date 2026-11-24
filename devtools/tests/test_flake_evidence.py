@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright 2026 Rainer Gerhards and Others
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import importlib.util
 import io
 import json
@@ -20,6 +23,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -135,6 +139,49 @@ class FlakeEvidenceTests(unittest.TestCase):
             self.assertEqual("failure", manifest["entries"][0]["phases"][0]["status"])
             self.assertIn("eligible=true", completed.stdout)
 
+    def test_real_automake_results_are_classified(self):
+        """Actual driver statuses distinguish test failures from build-only failure.
+
+        Each failed distcheck marker is paired with real driver output, so quiet
+        statuses must not make the evidence collector mistake setup for a test
+        failure. XPASS is a failure even though its test command exits zero.
+        """
+        driver = os.environ.get("AUTOMAKE_TEST_DRIVER")
+        if not driver:
+            driver = str(ROOT / "test-driver")
+        if not Path(driver).is_file() and not os.environ.get("AUTOMAKE_TEST_DRIVER"):
+            libdir = subprocess.check_output(["automake", "--print-libdir"], text=True).strip()
+            driver = str(Path(libdir) / "test-driver")
+        self.assertTrue(Path(driver).is_file(), "a real Automake test-driver is required")
+        collector = load_collector()
+        cases = [("FAIL", 1, "no", True), ("ERROR", 99, "no", True),
+                 ("XPASS", 0, "yes", True), ("PASS", 0, "no", False),
+                 ("SKIP", 77, "no", False), ("XFAIL", 1, "yes", False)]
+        for status, exit_code, expect_failure, eligible in cases:
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                (root / "tests").mkdir()
+                driven = subprocess.run(
+                    ["sh", driver, "--test-name", "oracle.sh", "--log-file", "tests/oracle.log",
+                     "--trs-file", "tests/oracle.trs", "--expect-failure", expect_failure,
+                     "--color-tests", "no", "--", "sh", "-c", "echo real-driver-detail; exit " + str(exit_code)],
+                    cwd=temp, text=True, capture_output=True,
+                )
+                self.assertIn(":test-result: " + status + "\n", (root / "tests/oracle.trs").read_text())
+                self.assertIn(status + ": oracle.sh", driven.stdout)
+                env = os.environ | self.github_env() | {"RSYSLOG_FLAKE_EVIDENCE_ROOT": str(root / "evidence")}
+                subprocess.run([str(PHASE), "begin", "distcheck", "distcheck"], cwd=temp, env=env, check=True)
+                # The phase runner captures actual driver console output with tee.
+                (root / "evidence/logs/distcheck.log").write_text(driven.stdout)
+                subprocess.run([str(PHASE), "end", "distcheck", "distcheck", "2"], cwd=temp, env=env, check=True)
+                prepared = subprocess.run([str(PREPARE)], cwd=temp, env=env, text=True, capture_output=True)
+                self.assertEqual(0, prepared.returncode, prepared.stderr)
+                with self.subTest(collector="in-job"):
+                    self.assertIn("eligible=" + str(eligible).lower(), prepared.stdout)
+                    self.assertEqual(eligible, (root / "flake-evidence/flake-evidence.json").is_file())
+                with self.subTest(collector="legacy-fallback"):
+                    self.assertEqual(eligible, bool(collector.phases_from_log(driven.stdout, "legacy-job")))
+
     def test_prepare_rejects_distcheck_build_failure(self):
         with tempfile.TemporaryDirectory() as temp:
             env = os.environ | self.github_env()
@@ -192,6 +239,32 @@ class FlakeEvidenceTests(unittest.TestCase):
                 "pipelines.actions.githubusercontent.com.attacker.example"
             )
         )
+
+    def test_coverage_checker_requires_documentation_oracle_evidence(self):
+        # Doc samples execute the built daemon's configuration validator. A
+        # workflow with that oracle must fail the audit without evidence and
+        # harvester registration; mere successful YAML parsing is insufficient.
+        checker = load_coverage_checker()
+        with tempfile.TemporaryDirectory() as temp:
+            workflows = Path(temp)
+            harvester = workflows / "collect_flake_evidence.yml"
+            harvester.write_text("name: collect\n    workflows:\n      - unrelated tests\n")
+            (workflows / "doc_build.yml").write_text(
+                "name: documentation build\njobs:\n  build_docs:\n    steps:\n"
+                "      - name: Validate documentation config samples\n"
+                "        run: |\n"
+                "          cd doc-builder\n"
+                "          python3 doc/tools/validate-doc-samples.py \\\n"
+                "            --source-dir doc/source --build-dir .\n"
+            )
+            errors = io.StringIO()
+            with mock.patch.multiple(checker, WORKFLOWS=workflows,
+                                     HARVESTER=harvester, EXPECTED_UPLOADS={}):
+                with contextlib.redirect_stderr(errors):
+                    result = checker.main()
+            self.assertEqual(1, result, errors.getvalue())
+            self.assertIn("without an evidence upload", errors.getvalue())
+            self.assertIn("missing from the harvester", errors.getvalue())
 
     def test_coverage_checker_ignores_commented_uploads(self):
         checker = load_coverage_checker()

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify a compressed frame cannot expand into more events than its advertised
 # window and that impstats records the rejection.
 . ${srcdir:=.}/diag.sh init

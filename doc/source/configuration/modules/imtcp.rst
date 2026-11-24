@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 ******************************
 imtcp: TCP Syslog Input Module
 ******************************
@@ -238,10 +240,6 @@ Module Parameters
      - .. include:: ../../reference/parameters/imtcp-flowcontrol.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-imtcp-failonbinderror`
-     - .. include:: ../../reference/parameters/imtcp-failonbinderror.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-imtcp-maxlisteners`
      - .. include:: ../../reference/parameters/imtcp-maxlisteners.rst
         :start-after: .. summary-start
@@ -328,7 +326,6 @@ Module Parameters
    ../../reference/parameters/imtcp-keepalive-time
    ../../reference/parameters/imtcp-keepalive-interval
    ../../reference/parameters/imtcp-flowcontrol
-   ../../reference/parameters/imtcp-failonbinderror
    ../../reference/parameters/imtcp-maxlisteners
    ../../reference/parameters/imtcp-maxsessions
    ../../reference/parameters/imtcp-streamdriver-name

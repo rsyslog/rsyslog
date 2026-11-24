@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /**
  * @file mmaitag.c
  * @brief AI-based message classification plugin.

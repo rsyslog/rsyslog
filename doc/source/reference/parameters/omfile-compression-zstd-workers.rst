@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-compression-zstd-workers:
 .. _omfile.parameter.module.compression-zstd-workers:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate YAML parity for global(systemd.notifyReadyDelay=...). The oracle is
 # config validation accepting both binary values through the YAML global
 # singleton object, independent of whether the test host runs under systemd.

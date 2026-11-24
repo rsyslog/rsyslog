@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-impstats-facility:
 .. _impstats.parameter.module.facility:
 

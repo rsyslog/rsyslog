@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* ompipe.c
  * This is the implementation of the build-in pipe output module.
  * Note that this module stems back to the "old" (4.4.2 and below)
@@ -358,7 +360,7 @@ BEGINnewActInst
     }
 
     CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-                         (uchar *)strdup((pData->tplName == NULL) ? "RSYSLOG_FileFormat" : (char *)pData->tplName),
+                         (uchar *)strdup((pData->tplName == NULL) ? (char *)getDfltTpl() : (char *)pData->tplName),
                          OMSR_NO_RQD_TPL_OPTS));
     CODE_STD_FINALIZERnewActInst;
     cnfparamvalsDestruct(pvals, &actpblk);

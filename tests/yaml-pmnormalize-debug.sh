@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that YAML passes pmnormalize's debug parameters and directs liblognorm
 # trace output to its configured file. A non-empty trace file is the oracle.
 . ${srcdir:=.}/diag.sh init

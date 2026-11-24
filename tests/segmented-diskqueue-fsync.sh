@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Exercise segmentedDisk with syncQueueFiles enabled. Exact sequence delivery
 # plus forced-state-write statistics prove the synchronous durability path is
 # active without relying on timing.

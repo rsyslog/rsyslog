@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2017-10-30 by PascalWithopf, released under ASL 2.0
 #tests for Segmentation Fault
 . ${srcdir:=.}/diag.sh init

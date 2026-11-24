@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # add 2020-02-11 by alorbach, released under ASL 2.0
 TEST_BYTES_EXPECTED=262152
 

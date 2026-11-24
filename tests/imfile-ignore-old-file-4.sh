@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # set ignoreolderthan to zero
 echo [imfile-ignore-old-file-4.sh]
 . $srcdir/diag.sh check-inotify

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _faq-tls-anon-auth-mitm:
 .. _faq.tls.anon.auth.mitm:
 

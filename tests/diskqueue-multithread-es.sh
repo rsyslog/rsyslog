@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test stresses the DA queue disk subsystem with multiple threads.
 # To do so, the in-memory queues are deliberately sized very small.
 # NOTE: depending on circumstances, this test frequently starts the

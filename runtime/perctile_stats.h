@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * This file is part of the rsyslog runtime library.
  *
@@ -81,7 +83,7 @@ typedef struct perctile_stat_s perctile_stat_t;
 typedef struct perctile_bucket_s perctile_bucket_t;
 
 rsRetVal perctileClassInit(void);
-void perctileBucketsDestruct(void);
+void perctileBucketsDestruct(rsconf_t *cnf);
 rsRetVal perctile_initCnf(perctile_buckets_t *b);
 perctile_bucket_t *perctile_findBucket(const uchar *name);
 rsRetVal perctile_processCnf(struct cnfobj *cnf);

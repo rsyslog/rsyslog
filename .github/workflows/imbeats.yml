@@ -36,8 +36,15 @@ env:
 
 jobs:
   imbeats_CI:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    runs-on: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    timeout-minutes: >-
+      ${{ github.event.repository.private &&
+      ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') ||
+       github.event.pull_request.head.repo.full_name == github.repository) && 180 || 25 }}
     name: imbeats-tests
     env:
       RSYSLOG_TESTBENCH_EXTERNAL_ES_URL: http://127.0.0.1:19200

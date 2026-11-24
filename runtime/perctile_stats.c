@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * This file is part of the rsyslog runtime library.
  *
@@ -155,8 +157,8 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
     }
 }
 
-void perctileBucketsDestruct(void) {
-    perctile_buckets_t *bkts = &runConf->perctile_buckets;
+void perctileBucketsDestruct(rsconf_t *const cnf) {
+    perctile_buckets_t *bkts = &cnf->perctile_buckets;
 
     if (bkts->initialized) {
         /* Global counters point into bucket storage, so detach the object

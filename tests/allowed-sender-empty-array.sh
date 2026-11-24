@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that modern YAML allowedSender arrays cannot be empty. An empty ACL is
 # a security-sensitive typo: treating it as a configured-but-NULL list would
 # allow every sender. RainerScript rejects literal [] as syntax before module

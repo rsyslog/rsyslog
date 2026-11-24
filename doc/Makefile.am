@@ -61,6 +61,7 @@ EXTRA_DIST = \
     ai/drift_monitoring.md \
     ai/mermaid_rules.md \
     ai/module_map.yaml \
+    ai/designs/local-queue-target-measurement-method.md \
     ai/security_triage_rubric.md \
     ai/structure_and_paths.md \
     ai/templates/template-concept.rst \
@@ -358,6 +359,7 @@ EXTRA_DIST = \
     source/development/coding_practices/error_logging_with_errno.rst \
     source/development/coding_practices/externalized_helper_contracts.rst \
     source/development/config_data_model.rst \
+    source/development/config_reload.rst \
     source/development/debugging.rst \
     source/development/design_decisions.rst \
     source/development/dev_action_threads.rst \
@@ -643,6 +645,7 @@ EXTRA_DIST = \
     source/reference/parameters/imklog-ratelimitburst.rst \
     source/reference/parameters/imklog-ratelimitinterval.rst \
     source/reference/parameters/imklog-ratelimit-name.rst \
+    source/reference/parameters/imklog-ruleset.rst \
     source/reference/parameters/immark-interval.rst \
     source/reference/parameters/immark-markmessagetext.rst \
     source/reference/parameters/immark-ruleset.rst \
@@ -673,6 +676,8 @@ EXTRA_DIST = \
     source/reference/parameters/impstats-severity.rst \
     source/reference/parameters/imptcp-address.rst \
     source/reference/parameters/imptcp-addtlframedelimiter.rst \
+    source/reference/parameters/imptcp-compression-maxdecompressedbytesperreceive.rst \
+    source/reference/parameters/imptcp-compression-maxexpansionratio.rst \
     source/reference/parameters/imptcp-compression-mode.rst \
     source/reference/parameters/imptcp-defaulttz.rst \
     source/reference/parameters/imptcp-discardtruncatedmsg.rst \
@@ -743,7 +748,6 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-disablelfdelimiter.rst \
     source/reference/parameters/imtcp-discardtruncatedmsg.rst \
     source/reference/parameters/imtcp-flowcontrol.rst \
-    source/reference/parameters/imtcp-failonbinderror.rst \
     source/reference/parameters/imtcp-gnutlsprioritystring.rst \
     source/reference/parameters/imtcp-keepalive-interval.rst \
     source/reference/parameters/imtcp-keepalive-probes.rst \
@@ -849,6 +853,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmanon-embeddedipv4-anonmode.rst \
     source/reference/parameters/mmanon-embeddedipv4-bits.rst \
     source/reference/parameters/mmanon-embeddedipv4-enable.rst \
+    source/reference/parameters/mmanon-excludesubnets.rst \
     source/reference/parameters/mmanon-embeddedipv4-limituniquemaxretries.rst \
     source/reference/parameters/mmanon-embeddedipv4-maxretryhandling.rst \
     source/reference/parameters/mmanon-embeddedipv4-uniqueretrycount.rst \
@@ -867,6 +872,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmanon-ipv6-uniqueretrycount.rst \
     source/reference/parameters/mmcount-appname.rst \
     source/reference/parameters/mmcount-key.rst \
+    source/reference/parameters/mmcount-maxcardinality.rst \
     source/reference/parameters/mmcount-value.rst \
     source/reference/parameters/mmdarwin-container.rst \
     source/reference/parameters/mmdarwin-fields.rst \
@@ -985,14 +991,19 @@ EXTRA_DIST = \
     source/reference/parameters/omkinesis-timeout.rst \
     source/reference/parameters/omkinesis-max_record_size.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
+    source/reference/parameters/omclickhouse-asyncinsert.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
+    source/reference/parameters/omclickhouse-compression.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \
+    source/reference/parameters/omclickhouse-format.rst \
     source/reference/parameters/omclickhouse-healthchecktimeout.rst \
     source/reference/parameters/omclickhouse-maxbytes.rst \
+    source/reference/parameters/omclickhouse-maxconsecutiverejects.rst \
     source/reference/parameters/omclickhouse-port.rst \
     source/reference/parameters/omclickhouse-pwd.rst \
     source/reference/parameters/omclickhouse-server.rst \
     source/reference/parameters/omclickhouse-skipverifyhost.rst \
+    source/reference/parameters/omclickhouse-table.rst \
     source/reference/parameters/omclickhouse-template.rst \
     source/reference/parameters/omclickhouse-timeout.rst \
     source/reference/parameters/omclickhouse-usehttps.rst \
@@ -1407,3 +1418,13 @@ EXTRA_DIST = \
     tools/pages-root-index.html \
     tools/pages-robots.txt \
     tools/release_build.sh
+
+# Local queue design references must also resolve in release archives.
+EXTRA_DIST += \
+    ai/designs/local-queue-execution-ledger.md \
+    ai/designs/local-queue-frontends.md \
+    ai/designs/local-queue-implementation-plan.md \
+    ai/designs/local-queue-related-work.md \
+    ai/designs/local-queue-s0-contracts.md \
+    ai/designs/local-queue-s0-ownership.md \
+    ai/designs/local-queue-s2-integration-notes.md

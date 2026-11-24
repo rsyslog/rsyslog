@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # make sure we do not abort on invalid parameter (we 
 # once had this problem)
 # addd 2016-03-03 by RGerhards, released under ASL 2.0

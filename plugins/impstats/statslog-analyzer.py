@@ -379,7 +379,7 @@ else:
                               str(aProblem['startdate']) + "' Enddate: '" +
                               str(aProblem['enddate']) + "') ")
                     elif aProblem['type'].find("omfile") != -1:
-                        nEvictedInPercent = aProblem['evicted'] / (aProblem['requests']/100)
+                        nEvictedInPercent = aProblem['evicted'] / (float(aProblem['requests']) / 100)
                         print(" - " + str(nEvictedInPercent) +
                               "% File Requests were evicted ('" + str(aProblem['requests']) +
                               "' requests, '" + str(aProblem['evicted']) +

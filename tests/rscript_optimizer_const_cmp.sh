@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that the RainerScript optimizer folds constant comparisons.
 # The oracle intentionally checks the internal debug log because this test is
 # about a config-optimizer transformation, not a message-processing diagnostic.

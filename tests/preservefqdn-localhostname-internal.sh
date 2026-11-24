@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify localHostname is applied to internal rsyslogd messages (hostname property).
 . ${srcdir:=.}/diag.sh init
 

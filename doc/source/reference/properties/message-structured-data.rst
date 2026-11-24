@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-structured-data:
 .. _properties.message.structured-data:
 

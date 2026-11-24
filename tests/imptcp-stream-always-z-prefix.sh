@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression test for imptcp stream decompression with a decompressed payload
 # that begins with the literal byte "z". Legacy single-message compression also
 # uses a leading "z" in the built-in transport frame handling, but stream:always

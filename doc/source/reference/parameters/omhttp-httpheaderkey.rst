@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omhttp-httpheaderkey:
 .. _omhttp.parameter.input.httpheaderkey:
 

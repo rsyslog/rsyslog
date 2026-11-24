@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omfile-rotation-sizelimitcommandpassfilename:
 .. _omfile.parameter.module.rotation-sizelimitcommandpassfilename:
 

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _rosi-collector-grafana-dashboards:
 
 Grafana Dashboards

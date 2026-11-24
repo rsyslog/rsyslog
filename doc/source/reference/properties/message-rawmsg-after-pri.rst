@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-rawmsg-after-pri:
 .. _properties.message.rawmsg-after-pri:
 

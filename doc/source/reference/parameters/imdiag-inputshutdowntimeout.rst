@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdiag-inputshutdowntimeout:
 .. _imdiag.parameter.module.inputshutdowntimeout:
 

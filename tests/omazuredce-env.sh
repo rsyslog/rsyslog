@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 
 omazuredce_require_env() {
 	if [[ -z "${AZURE_DCE_CLIENT_ID}" ]]; then

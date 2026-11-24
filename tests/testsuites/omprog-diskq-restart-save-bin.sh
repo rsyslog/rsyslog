@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 
 printf '<= OK\n' >> "$RSYSLOG_OMPROG_RESTART_OUT"
 printf 'OK\n'

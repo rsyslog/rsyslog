@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Regression coverage for issue #4803. A slow omhttp action with a
 # disk-assisted action queue is terminated while work is still in flight. The
 # oracle is process-level shutdown without an assertion/core; the test

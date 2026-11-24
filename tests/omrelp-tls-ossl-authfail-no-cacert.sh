@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-04-30 to guard issue #6612, released under ASL 2.0
 #
 # This test verifies that an omrelp sender without tls.caCert fails OpenSSL

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 #check if rsyslog instance exists and, if so, kill it
 if [ -e "rsyslog.pid" ]
 then

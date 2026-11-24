@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmanon.c
  * anonymize IP addresses inside the syslog message part
  *
@@ -31,6 +33,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -81,6 +84,14 @@ struct ipv6_int {
     unsigned long long high;
     unsigned long long low;
 };
+
+/* One parsed address/prefix pair from the opt-in exclusion list. Address
+ * bytes stay in network order so matching is independent of host byte order. */
+struct excludeSubnet {
+    int family;
+    uint8_t prefixLen;
+    uint8_t address[16];
+};
 /* define operation modes we have */
 #define SIMPLE_MODE 0  // just overwrite
 #define REWRITE_MODE 1  // rewrite IP address, canonicalized
@@ -94,6 +105,8 @@ typedef struct _instanceData {
      */
     pthread_mutex_t ipv4Mutex;
     pthread_mutex_t ipv6Mutex;
+    struct excludeSubnet *excludeSubnets;
+    size_t nExcludeSubnets;
     struct {
         sbool enable;
         int8_t bits;
@@ -153,6 +166,7 @@ static int key_equals_u32(void *key1, void *key2);
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {{"ipv4.enable", eCmdHdlrBinary, 0},
+                                           {"excludesubnets", eCmdHdlrArray, 0},
                                            {"ipv4.mode", eCmdHdlrGetWord, 0},
                                            {"mode", eCmdHdlrGetWord, 0},
                                            {"ipv4.bits", eCmdHdlrPositiveInt, 0},
@@ -241,6 +255,7 @@ static void delTree(union node *node, const int layer) {
 
 BEGINfreeInstance
     CODESTARTfreeInstance;
+    free(pData->excludeSubnets);
     delTree(pData->ipv4.Root, 0);
     if (pData->ipv4.randConsisUniqueGeneratedIPs != NULL) {
         hashtable_destroy(pData->ipv4.randConsisUniqueGeneratedIPs, 0);
@@ -276,6 +291,8 @@ ENDfreeWrkrInstance
  * \param pData instance data to populate.
  */
 static inline void setInstParamDefaults(instanceData *pData) {
+    pData->excludeSubnets = NULL;
+    pData->nExcludeSubnets = 0;
     pData->ipv4.enable = 1;
     pData->ipv4.bits = 16;
     pData->ipv4.Root = NULL;
@@ -311,6 +328,60 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->embeddedIPv4.randConsisIPs = NULL;
 }
 
+/**
+ * Parse one strict IPv4 or IPv6 CIDR into network-order address bytes.
+ * A slash and an explicit decimal prefix are required so a malformed entry
+ * cannot silently turn into a broader or narrower exclusion.
+ */
+static int parseExcludeSubnet(const char *cidr, struct excludeSubnet *subnet) {
+    char address[INET6_ADDRSTRLEN];
+    const char *slash = strchr(cidr, '/');
+    if (slash == NULL || slash == cidr || strchr(slash + 1, '/') != NULL || slash[1] == '\0') {
+        return 0;
+    }
+
+    const size_t addressLen = (size_t)(slash - cidr);
+    if (addressLen >= sizeof(address)) {
+        return 0;
+    }
+    memcpy(address, cidr, addressLen);
+    address[addressLen] = '\0';
+
+    for (const char *digit = slash + 1; *digit != '\0'; ++digit) {
+        if (!isdigit((unsigned char)*digit)) {
+            return 0;
+        }
+    }
+    errno = 0;
+    char *end = NULL;
+    const unsigned long prefixLen = strtoul(slash + 1, &end, 10);
+    if (errno == ERANGE || end == slash + 1 || *end != '\0') {
+        return 0;
+    }
+
+    struct in_addr address4;
+    struct in6_addr address6;
+    if (inet_pton(AF_INET, address, &address4) == 1) {
+        if (prefixLen > 32) {
+            return 0;
+        }
+        subnet->family = AF_INET;
+        subnet->prefixLen = (uint8_t)prefixLen;
+        memcpy(subnet->address, &address4, sizeof(address4));
+        return 1;
+    }
+    if (inet_pton(AF_INET6, address, &address6) == 1) {
+        if (prefixLen > 128) {
+            return 0;
+        }
+        subnet->family = AF_INET6;
+        subnet->prefixLen = (uint8_t)prefixLen;
+        memcpy(subnet->address, &address6, sizeof(address6));
+        return 1;
+    }
+    return 0;
+}
+
 BEGINnewActInst
     struct cnfparamvals *pvals;
     int i;
@@ -327,7 +398,26 @@ BEGINnewActInst
 
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
-        if (!strcmp(actpblk.descr[i].name, "ipv4.mode") || !strcmp(actpblk.descr[i].name, "mode")) {
+        if (!strcmp(actpblk.descr[i].name, "excludesubnets")) {
+            struct cnfarray *const subnets = pvals[i].val.d.ar;
+            if (subnets == NULL || subnets->nmemb == 0) {
+                continue;
+            }
+            CHKmalloc(pData->excludeSubnets = calloc((size_t)subnets->nmemb, sizeof(struct excludeSubnet)));
+            pData->nExcludeSubnets = (size_t)subnets->nmemb;
+            for (int j = 0; j < subnets->nmemb; ++j) {
+                char *cidr = (char *)es_str2cstr(subnets->arr[j], NULL);
+                if (cidr == NULL) {
+                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                }
+                if (!parseExcludeSubnet(cidr, &pData->excludeSubnets[j])) {
+                    parser_errmsg("mmanon: excludeSubnets entry '%s' is not a valid IPv4 or IPv6 CIDR", cidr);
+                    free(cidr);
+                    ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+                }
+                free(cidr);
+            }
+        } else if (!strcmp(actpblk.descr[i].name, "ipv4.mode") || !strcmp(actpblk.descr[i].name, "mode")) {
             if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"zero", sizeof("zero") - 1)) {
                 pData->ipv4.mode = ZERO;
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"random", sizeof("random") - 1)) {
@@ -942,7 +1032,7 @@ static int num2ipv4(unsigned num, char *str) {
  * \param end length to copy.
  * \param address destination buffer terminated with NUL.
  */
-static void getip(uchar *start, size_t end, char *address) {
+static void getip(const uchar *start, size_t end, char *address) {
     size_t i;
 
     for (i = 0; i < end; i++) {
@@ -1754,7 +1844,7 @@ static int syntax_embedded(const uchar *const __restrict__ buf,
 
     while (*nprocessed < buflen) {
         numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 1);
-        if (numLen > 0) {  // found a valid num
+        if (numLen > 0 && numLen < 5) {  // found a valid IPv6 group
             if ((ipParts == 6 && hadAbbrev) || ipParts > 6) {  // is 6 since the first part of
                 // IPv4 will also result in a valid hexvalue
                 isIP = 0;
@@ -1927,7 +2017,9 @@ static void anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMs
 
     int syn = syntax_embedded(*msg + offset, *pLenMsg - offset, &iplen, &v4Start);
     if (syn) {
-        assert(iplen < sizeof(address));
+        if (iplen >= sizeof(address)) {
+            return;
+        }
         getip(*msg + offset, iplen, address);
         offset += iplen;
         process_embedded(address, pWrkrData, v4Start);
@@ -1952,6 +2044,107 @@ static void anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMs
     }
 }
 
+/* Return whether one parsed address is inside a same-family excluded prefix. */
+static int matchesExcludedSubnet(const instanceData *pData, const int family, const uint8_t *address) {
+    for (size_t i = 0; i < pData->nExcludeSubnets; ++i) {
+        const struct excludeSubnet *const subnet = &pData->excludeSubnets[i];
+        if (subnet->family != family) {
+            continue;
+        }
+
+        const size_t fullBytes = subnet->prefixLen / 8;
+        const unsigned int remainingBits = subnet->prefixLen % 8;
+        if (memcmp(address, subnet->address, fullBytes) != 0) {
+            continue;
+        }
+        if (remainingBits != 0) {
+            const uint8_t mask = (uint8_t)(0xffu << (8 - remainingBits));
+            if ((address[fullBytes] & mask) != (subnet->address[fullBytes] & mask)) {
+                continue;
+            }
+        }
+        return 1;
+    }
+    return 0;
+}
+
+static int matchesExcludedIPv6(const instanceData *pData, const char *address) {
+    struct in6_addr parsed;
+    return inet_pton(AF_INET6, address, &parsed) == 1 && matchesExcludedSubnet(pData, AF_INET6, parsed.s6_addr);
+}
+
+static void ipv4IntegerToBytes(const unsigned int ip, uint8_t address[16]) {
+    address[0] = (uint8_t)(ip >> 24);
+    address[1] = (uint8_t)(ip >> 16);
+    address[2] = (uint8_t)(ip >> 8);
+    address[3] = (uint8_t)ip;
+}
+
+/*
+ * Check a complete address before any anonymization scanner gets it. This
+ * keeps an excluded literal intact even when a later family scanner would
+ * otherwise recognize part of it (notably an embedded dotted IPv4 tail).
+ */
+static int shouldSkipExcludedLiteral(const instanceData *pData,
+                                     const uchar *msg,
+                                     const int remainingLen,
+                                     size_t *literalLen) {
+    size_t iplen = 0;
+    size_t v4Start = 0;
+    char address[INET6_ADDRSTRLEN];
+
+    if (pData->nExcludeSubnets == 0 || remainingLen <= 0) {
+        return 0;
+    }
+
+    if (syntax_embedded(msg, (size_t)remainingLen, &iplen, &v4Start)) {
+        if (iplen >= sizeof(address)) {
+            return 0;
+        }
+        getip(msg, iplen, address);
+        const unsigned int embeddedIPv4 = ipv42num(address + v4Start);
+        uint8_t embeddedIPv4Bytes[16] = {0};
+        ipv4IntegerToBytes(embeddedIPv4, embeddedIPv4Bytes);
+
+        /* Normalize the decimal tail, including leading zeroes, for inet_pton(). */
+        const size_t tailCapacity = sizeof(address) - v4Start;
+        const int tailLen =
+            snprintf(address + v4Start, tailCapacity, "%x:%x", embeddedIPv4 >> 16, embeddedIPv4 & 0xffffu);
+        if (matchesExcludedSubnet(pData, AF_INET, embeddedIPv4Bytes) ||
+            (tailLen > 0 && (size_t)tailLen < tailCapacity && matchesExcludedIPv6(pData, address))) {
+            *literalLen = iplen;
+            return 1;
+        }
+        /* A complete mixed literal owns the exclusion decision. */
+        return 0;
+    }
+
+    iplen = 0;
+    if (syntax_ipv4(msg, (size_t)remainingLen, &iplen)) {
+        assert(iplen < sizeof(address));
+        getip(msg, iplen, address);
+        uint8_t address4Bytes[16] = {0};
+        ipv4IntegerToBytes(ipv42num(address), address4Bytes);
+        if (matchesExcludedSubnet(pData, AF_INET, address4Bytes)) {
+            *literalLen = iplen;
+            return 1;
+        }
+    }
+
+    iplen = 0;
+    if (syntax_ipv6(msg, (size_t)remainingLen, &iplen)) {
+        if (iplen >= sizeof(address)) {
+            return 0;
+        }
+        getip(msg, iplen, address);
+        if (matchesExcludedIPv6(pData, address)) {
+            *literalLen = iplen;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
     smsg_t *pMsg = ppMsg[0];
@@ -1964,6 +2157,12 @@ BEGINdoAction_NoStrings
     msg = (uchar *)strdup((char *)getMSG(pMsg));
 
     for (i = 0; i <= lenMsg - 2; i++) {
+        size_t excludedLen = 0;
+        if (shouldSkipExcludedLiteral(pWrkrData->pData, msg + i, lenMsg - i, &excludedLen)) {
+            /* The loop increment advances past the byte after the full literal. */
+            i += (int)excludedLen - 1;
+            continue;
+        }
         if (pWrkrData->pData->embeddedIPv4.enable) {
             anonEmbedded(pWrkrData, &msg, &lenMsg, &i, &hasChanged);
         }

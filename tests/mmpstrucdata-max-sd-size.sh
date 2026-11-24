@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify mmpstrucdata's maxStructuredDataSize guard skips oversized structured
 # data. The oracle uses configured omfile output after shutdown for the accepted
 # message; stderr/stdout are not used as proof.

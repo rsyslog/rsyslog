@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The systemd journal import module
  *
  * To test under Linux:
@@ -72,6 +74,31 @@ MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imjournal")
 
+/* =============================================================================
+ * Concurrency & Locking
+ * =============================================================================
+ * - The framework input thread (runInput) processes the head of journal_root:
+ *   the first input with main="on", or else the default input. Every further
+ *   list entry runs in its own worker thread (startSrvWrkr/RunServerThread).
+ * - Each journal_etry_t owns one journalContext (sd_journal handle, cursor)
+ *   and its state file; only the thread running that entry uses them while
+ *   the input runs. willRun opens all contexts before the threads start,
+ *   afterRun persists state, closes and frees them.
+ * - runInput stops (SIGTTIN) and joins every started worker before it
+ *   returns, also when the head input fails, so afterRun never frees a
+ *   context that a worker still uses. If the head input fails before
+ *   shutdown, runInput waits until shutdown or until worker_count (atomic
+ *   helper, workers that have not yet left doRun()) drops to 0.
+ * - A failed pthread_create() for a worker and a failing head input are
+ *   reported with thrd_report_fatal_input_failure(), which shuts rsyslogd
+ *   down only with inputStartupPolicy="require-all". A failing worker
+ *   only logs an error.
+ * - Module-global objects shared by these threads: the settings in cs,
+ *   pInputName, pLocalHostIP, statsCounter (updated via STATSCOUNTER_INC
+ *   and atomic helpers), the ratelimiter, and pidFieldName, bPidFallBack
+ *   and cs.dfltTag, which doRun() assigns at the start of every input.
+ * ============================================================================= */
+
 /* Module static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop) DEFobjCurrIf(net)
@@ -80,6 +107,7 @@ DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop
     /* Module static data */
     typedef struct journal_etry_s {
     pthread_t tid; /* the worker's thread ID */
+    sbool thread_started; /* 1 if tid refers to a worker thread not yet joined */
     ruleset_t *pBindRuleset;
     char *stateFile;
     struct journalContext_s *journalContext;
@@ -87,6 +115,8 @@ DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(prop
 } journal_etry_t;
 static journal_etry_t *journal_root = NULL;
 static int n_journal = 0;
+static int worker_count = 0; /* worker threads that have not yet left doRun() */
+DEF_ATOMIC_HELPER_MUT(mut_worker_count);
 
 struct modConfData_s {
     rsconf_t *pConf;
@@ -185,12 +215,13 @@ struct journalContext_s { /* structure encapsulating all the journald_API-relate
     sbool warnedFutureJournalTime; /* warning already emitted for journal entries ahead of current system time */
     uint64_t nextFutureJournalProbeUsec; /* next permitted future-time diagnostic probe */
     char *cursor; /* should point to last valid journald entry we processed */
+    sbool persistSkipped; /* state file path is not a regular file, persisting is paused */
 };
 
 #define MAX_JOURNAL 8
 static struct journalContext_s journalContextArray[MAX_JOURNAL] = {
-    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
-    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
+    {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0},
+    {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0}, {NULL, 0, 1, 0, 0, NULL, 0},
 };
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process */
@@ -553,7 +584,15 @@ static rsRetVal enqMsg(uchar *msg,
         CHKiRet(iRet);
     }
 
-    CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
+    /* ratelimitAddMsg() takes over pMsg: it submits it, keeps it for
+     * repeated-message reduction or frees it, also on error returns.
+     * Its only exit that does not is the parse-failure discard for
+     * messages flagged NEEDS_PARSING, which imjournal never sets. So
+     * pMsg must not be used or freed here afterwards.
+     */
+    iRet = ratelimitAddMsg(ratelimiter, NULL, pMsg);
+    pMsg = NULL;
+    CHKiRet(iRet);
     STATSCOUNTER_INC(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
 
 finalize_it:
@@ -579,6 +618,7 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     DEFiRet;
 
     struct timeval tv;
+    struct timeval *tp = NULL; /* NULL: use current time */
     uint64_t timestamp;
 
     struct fjson_object *json = NULL;
@@ -657,10 +697,16 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     if (journalGetData(journalContext, "SYSLOG_FACILITY", &get, &length) >= 0) {
         // Note: the journal frequently contains invalid facilities!
         if (length == 17 || length == 18) {
-            facility = ((char *)get)[16] - '0';
-            if (length == 18) {
-                facility *= 10;
-                facility += ((char *)get)[17] - '0';
+            const char *const fac_str = (const char *)get + 16;
+            if (!isdigit((unsigned char)fac_str[0]) || (length == 18 && !isdigit((unsigned char)fac_str[1]))) {
+                DBGPRINTF("The value of the 'FACILITY' field is not numeric, resetting\n");
+                facility = cs.iDfltFacility;
+            } else {
+                facility = fac_str[0] - '0';
+                if (length == 18) {
+                    facility *= 10;
+                    facility += fac_str[1] - '0';
+                }
             }
             if (facility < 0 || 23 < facility) {
                 DBGPRINTF(
@@ -727,15 +773,19 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     CHKiRet(readJSONfromJournalMsg(journalContext, &json));
 
     /* calculate timestamp */
-    if (sd_journal_get_realtime_usec(journalContext->j, &timestamp) >= 0) {
+    r = sd_journal_get_realtime_usec(journalContext->j, &timestamp);
+    if (r >= 0) {
         tv.tv_sec = timestamp / 1000000;
         tv.tv_usec = timestamp % 1000000;
+        tp = &tv;
+    } else {
+        DBGPRINTF("imjournal: sd_journal_get_realtime_usec() failed: %d, using current time\n", r);
     }
 
     CHKiRet(updateJournalCursor(journalContext));
 
     /* submit message */
-    iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
+    iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, tp, json, 0, pBindRuleset);
     json = NULL;
     if (iRet == RS_RET_DISCARDMSG) {
         iRet = RS_RET_OK;
@@ -763,6 +813,7 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
     int fd = -1;
     size_t len;
     ssize_t wr_ret;
+    struct stat st;
 
     DBGPRINTF("Persisting journal position, cursor: %s, at head? %d\n", journalContext->cursor, journalContext->atHead);
 
@@ -770,6 +821,32 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
     if (!journalContext->cursor) {
         DBGPRINTF("Journal cursor is not valid, ok...\n");
         ABORT_FINALIZE(RS_RET_OK);
+    }
+
+    /* Do not replace a state file path that exists but is not a regular
+     * file (e.g. a FIFO, a device or a directory). loadJournalState()
+     * ignores such a path if IgnoreNonValidStatefile is on, and rename()
+     * below would silently replace a FIFO or device with a regular file.
+     * A symlink is still replaced as before: rename() replaces the link
+     * itself, never its target. This only guards against misconfiguration;
+     * the path can change between this check and rename(), so it is not
+     * an atomic guarantee. Log once per journal context, and once more if
+     * the path becomes usable again.
+     */
+    if (lstat(stateFile, &st) == 0 && !S_ISREG(st.st_mode) && !S_ISLNK(st.st_mode)) {
+        if (!journalContext->persistSkipped) {
+            LogError(0, RS_RET_IO_ERROR,
+                     "imjournal: state file `%s' exists and is not a regular file, "
+                     "journal position is not saved while it is there",
+                     stateFile);
+            journalContext->persistSkipped = 1;
+        }
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (journalContext->persistSkipped) {
+        LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: state file `%s' can be written again, saving journal position",
+               stateFile);
+        journalContext->persistSkipped = 0;
     }
 
     CHKiRet(openStateFileTemp(stateFile, &tmp_sf, &fd));
@@ -842,12 +919,27 @@ static rsRetVal restoreJournalPosition(struct journalContext_s *journalContext, 
         FINALIZE;
     }
 
-    if ((r = sd_journal_seek_cursor(journalContext->j, journalContext->cursor)) != 0) {
+    r = sd_journal_seek_cursor(journalContext->j, journalContext->cursor);
+    if (r != 0 && r != -EINVAL) {
+        /* sd_journal_seek_cursor() only parses the cursor string and records
+         * the seek target; it does no journal I/O and cannot tell whether the
+         * entry still exists (a vanished entry is resolved by the following
+         * sd_journal_next()). Any error other than -EINVAL (e.g. -ENOMEM)
+         * therefore says nothing about the cursor itself. Keep the cursor and
+         * let tryRecover() retry instead of replaying the journal from head.
+         * See https://github.com/rsyslog/rsyslog/issues/7886 */
+        LogError(-r, RS_RET_ERR,
+                 "imjournal: "
+                 "couldn't seek to cursor `%s', keeping it and retrying\n",
+                 journalContext->cursor);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (r != 0) {
         LogError(-r, RS_RET_ERR,
                  "imjournal: "
                  "couldn't seek to cursor `%s'\n",
                  journalContext->cursor);
-        LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: saved cursor is unavailable, seeking to the head of journal\n");
+        LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: saved cursor is invalid, seeking to the head of journal\n");
         if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
             LogError(-r, RS_RET_ERR,
                      "imjournal: "
@@ -1019,7 +1111,11 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n", journalContext->atHead,
               journalContext->reloaded);
 
-    fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW);
+    /* O_NONBLOCK: a FIFO without a writer must not block the open; such a
+     * path is then rejected as not a regular file below. The flag has no
+     * effect on reading a regular file.
+     */
+    fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW | O_NONBLOCK);
     if (fd == -1 && errno == ENOENT) {
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
@@ -1042,18 +1138,33 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     if (fstat(fd, &st) != 0) {
         LogError(errno, RS_RET_IO_ERROR, "imjournal: fstat on state file `%s' failed\n", stateFile);
         iRet = RS_RET_IO_ERROR;
-        FINALIZE;
-    }
-    if (!S_ISREG(st.st_mode)) {
+    } else if (!S_ISREG(st.st_mode)) {
         LogError(0, RS_RET_IO_ERROR, "imjournal: state file `%s' is not a regular file\n", stateFile);
         iRet = RS_RET_IO_ERROR;
+    }
+    if (iRet != RS_RET_OK) {
+        /* An unusable state file path (e.g. a directory left over from
+         * a former multi-input configuration) is handled like any other
+         * invalid state file, so the input keeps reading the journal.
+         */
+        if (cs.bIgnoreNonValidStatefile) {
+            iRet = RS_RET_OK;
+            LogError(0, NO_ERRCODE, "imjournal: ignoring invalid state file %s", stateFile);
+            if (cs.bIgnorePrevious) {
+                skipOldMessages(journalContext);
+            }
+        }
         FINALIZE;
     }
 
     if ((r_sf = fdopen(fd, "rb")) != NULL) {
         fd = -1;
-        char readCursor[128 + 1];
-        if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
+        /* journal cursors can exceed 128 characters (about 142 have been
+         * seen); read up to 511 so such cursors are not cut short on
+         * reload. A longer cursor is still truncated.
+         */
+        char readCursor[511 + 1];
+        if (fscanf(r_sf, "%511s\n", readCursor) != EOF) {
             if (sd_journal_seek_cursor(journalContext->j, readCursor) != 0) {
                 LogError(0, RS_RET_ERR,
                          "imjournal: "
@@ -1257,7 +1368,10 @@ static rsRetVal doRun(journal_etry_t const *etry) {
             count++;
             etry->journalContext->atHead = 0;
             etry->journalContext->warnedFutureJournalTime = 0;
-            if (stateFile) {
+            /* PersistStateInterval <= 0 disables periodic persisting; the
+             * state is then only written in afterRun().
+             */
+            if (stateFile && cs.iPersistStateInterval > 0) {
                 /* TODO: This could use some finer metric. */
                 if ((count % cs.iPersistStateInterval) == 0) {
                     persistJournalState(etry->journalContext, stateFile);
@@ -1297,6 +1411,7 @@ static void *RunServerThread(void *myself) {
                  "imjournal: error while stopping journal processing; "
                  "rsyslog may hang on shutdown");
     }
+    ATOMIC_DEC(&worker_count, &mut_worker_count);
     return NULL;
 }
 
@@ -1321,10 +1436,15 @@ static void startSrvWrkr(journal_etry_t *const etry) {
 
     pthread_attr_init(&sessThrdAttr);
     pthread_attr_setstacksize(&sessThrdAttr, 4096 * 1024);
+    /* count the worker before it can run, it decrements when leaving doRun() */
+    ATOMIC_INC(&worker_count, &mut_worker_count);
     r = pthread_create(&etry->tid, &sessThrdAttr, RunServerThread, etry);
     if (r != 0) {
+        ATOMIC_DEC(&worker_count, &mut_worker_count);
         LogError(r, NO_ERRCODE, "imjournal: error creating imjournal thread");
         /* we do NOT abort, as other servers may run - after all, we logged an error */
+    } else {
+        etry->thread_started = 1;
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
@@ -1333,9 +1453,13 @@ static void startSrvWrkr(journal_etry_t *const etry) {
 /* stop server worker thread
  */
 static void stopSrvWrkr(journal_etry_t *const etry) {
+    if (!etry->thread_started) {
+        return; /* thread creation failed, nothing to stop */
+    }
     DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
     pthread_kill(etry->tid, SIGTTIN);
     pthread_join(etry->tid, NULL);
+    etry->thread_started = 0;
     DBGPRINTF("input %p terminated\n", etry);
 }
 
@@ -1350,6 +1474,12 @@ BEGINrunInput
         ratelimitSetLinuxLike(ratelimiter, (unsigned)cs.ratelimitInterval, (unsigned)cs.ratelimitBurst);
     }
     ratelimitSetNoTimeCache(ratelimiter);
+    /* All journal readers share this ratelimiter. Each input() statement
+     * adds a reader thread next to the main reader, so ratelimitAddMsg()
+     * may be called concurrently. Single-reader setups only pay for an
+     * uncontended mutex.
+     */
+    ratelimitSetThreadSafe(ratelimiter);
 
     /* handling old "usepidfromsystem" option */
     if (cs.bUseJnlPID != -1) {
@@ -1358,13 +1488,39 @@ BEGINrunInput
         LogError(0, RS_RET_DEPRECATED, "\"usepidfromsystem\" is deprecated, use \"usepid\" instead");
     }
 
+    int create_failed = 0;
     journal_etry_t *etry = journal_root->next;
     while (etry != NULL) {
         startSrvWrkr(etry);
+        if (!etry->thread_started) {
+            create_failed = 1;
+        }
         etry = etry->next;
     }
+    if (create_failed) {
+        /* reported once; triggers shutdown if all inputs are required */
+        thrd_report_fatal_input_failure();
+    }
 
-    CHKiRet(doRun(journal_root));
+    /* The worker threads use journal contexts that afterRun closes and
+     * frees, so they must be joined before runInput returns, even if the
+     * first input fails. The workers normally only stop on shutdown, so if
+     * the first input fails early, we wait until shutdown or until no
+     * worker is running any longer.
+     */
+    iRet = doRun(journal_root);
+    if (iRet != RS_RET_OK && ATOMIC_LOAD_32BIT(&worker_count, &mut_worker_count) > 0 &&
+        glbl.GetGlobalInputTermState() == 0 && !thrdGetShallStop(pThrd)) {
+        LogError(0, iRet,
+                 "imjournal: first journal input failed, "
+                 "remaining imjournal inputs continue to run");
+        /* triggers shutdown if all inputs are required */
+        thrd_report_fatal_input_failure();
+        while (ATOMIC_LOAD_32BIT(&worker_count, &mut_worker_count) > 0 && glbl.GetGlobalInputTermState() == 0 &&
+               !thrdGetShallStop(pThrd)) {
+            srSleep(0, 100000);
+        }
+    }
 
     etry = journal_root->next;
     while (etry != NULL) {
@@ -1606,6 +1762,7 @@ ENDafterRun
 
 BEGINmodExit
     CODESTARTmodExit;
+    DESTROY_ATOMIC_HELPER_MUT(mut_worker_count);
     if (pInputName != NULL) prop.Destruct(&pInputName);
     if (pLocalHostIP != NULL) prop.Destruct(&pLocalHostIP);
 
@@ -1794,6 +1951,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(datetime, CORE_COMPONENT));
+    INIT_ATOMIC_HELPER_MUT(mut_worker_count);
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(parser, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));

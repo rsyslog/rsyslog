@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # we test the execonly if previous is suspended directive. For this,
 # we have an action that is suspended for all messages but the second.
 # we write two files: one only if the output is suspended and the other one

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify a valid zlib-compressed Lumberjack window is decoded, submitted, and
 # acknowledged with the final sequence number.
 . ${srcdir:=.}/diag.sh init

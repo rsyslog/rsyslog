@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the property-filter (":"-prefixed) form of the YAML filter: shortcut.
 # A property filter matching on $msg routes messages that contain "msgnum:"
 # to the output file via the actions: shortcut.

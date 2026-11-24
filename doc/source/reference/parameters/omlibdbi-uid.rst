@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omlibdbi-uid:
 .. _omlibdbi.parameter.input.uid:
 

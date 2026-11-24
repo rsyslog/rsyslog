@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-timeoutgranularity:
 .. _imfile.parameter.module.timeoutgranularity:
 .. _imfile.parameter.timeoutgranularity:

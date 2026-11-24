@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that strict pkcs11: builtin:omfwd module defaults are not inherited by
 # a gtls omfwd action. The action relies on valid global file-backed TLS
 # defaults, while the module deliberately supplies incompatible pkcs11: URIs.

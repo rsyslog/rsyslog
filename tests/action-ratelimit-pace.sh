@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify generic action-level output rate limiting in pace mode.
 # The linked-list action queue is required so pacing sleeps only the action
 # worker. Four messages with burst two must all be delivered, and elapsed time

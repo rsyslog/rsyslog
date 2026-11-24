@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Regression test for sharded per-source ratelimit state eviction.
 ## The policy sets maxStates=1, which becomes an approximate shard-local cap.
 ## Sending many one-shot source keys forces shard-local LRU eviction. The

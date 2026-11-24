@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* wti.c
  *
  * This file implements the worker thread instance (wti) class.
@@ -49,6 +51,7 @@
 #include "action.h"
 #include "atomic.h"
 #include "rsconf.h"
+#include "queue_local.h"
 
 /* static data */
 DEFobjStaticHelpers;
@@ -293,6 +296,10 @@ BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! 
     INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
     pthread_cond_init(&pThis->pcondBusy, NULL);
     pThis->bExiting = 0;
+    pThis->bRestartRequested = 0;
+    pThis->callback_outcome = WTI_CALLBACK_UNKNOWN;
+    pThis->source_queue = NULL;
+    pThis->logical_owner = NULL;
 ENDobjConstruct(wti)
 
 
@@ -313,6 +320,7 @@ rsRetVal wtiConstructFinalize(wti_t *pThis) {
 
     /* must use calloc as we need zero-init */
     CHKmalloc(pThis->actWrkrInfo = calloc(runConf->actions.iActionNbr, sizeof(actWrkrInfo_t)));
+    pThis->n_act_wrkr_info = runConf->actions.iActionNbr;
 
     if (pThis->pWtp == NULL) {
         dbgprintf("wtiConstructFinalize: pWtp not set, this may be intentional\n");
@@ -329,6 +337,42 @@ finalize_it:
     RETiRet;
 }
 
+
+/* Worker-private state disposal runs outside the source mutex and with
+ * cancellation disabled. Clearing table entries makes this safe for the
+ * local cancellation path as well as ordinary exit. */
+static void wtiDisposeActionState(wti_t *const pThis) {
+    action_t *pAction;
+    actWrkrInfo_t *wrkrInfo;
+    int i, j, k;
+    DBGPRINTF("DDDD: wti %p: worker cleanup action instances\n", pThis);
+    /* Use the size the table was built with, not the current config's
+     * action count: the two only match while the config never changes. */
+    for (i = 0; i < pThis->n_act_wrkr_info; ++i) {
+        wrkrInfo = &(pThis->actWrkrInfo[i]);
+        dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
+        if (wrkrInfo->actWrkrData != NULL) {
+            pAction = wrkrInfo->pAction;
+            actionRemoveWorker(pAction, wrkrInfo->actWrkrData);
+            pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
+            if (pAction->isTransactional) {
+                /* free iparam "cache" - we need to go through to max! */
+                for (j = 0; j < wrkrInfo->p.tx.maxIParams; ++j) {
+                    for (k = 0; k < pAction->iNumTpls; ++k) {
+                        free(actParam(wrkrInfo->p.tx.iparams, pAction->iNumTpls, j, k).param);
+                    }
+                }
+                free(wrkrInfo->p.tx.iparams);
+                wrkrInfo->p.tx.iparams = NULL;
+                wrkrInfo->p.tx.currIParam = 0;
+                wrkrInfo->p.tx.maxIParams = 0;
+            } else {
+                releaseDoActionParams(pAction, pThis, 1);
+            }
+            wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
+        }
+    }
+}
 
 /* cancellation cleanup handler for queueWorker ()
  * Most importantly, it must bring back the batch into a consistent state.
@@ -353,10 +397,25 @@ static void wtiWorkerCancelCleanup(void *arg) {
      * batch: an enqueue during batch cleanup must wake or replace another
      * consumer instead of counting this cancelling worker.
      */
-    d_pthread_mutex_lock(pWtp->pmutUsr);
+    if (d_pthread_mutex_lock(pWtp->pmutUsr) == 0) d_tsan_acquire_mutex(pWtp->pmutUsr);
     wtiMarkExiting(pThis);
+    if (qqueueLocalWorker(pThis)) {
+        /* A cancellation after successful return (for example slowdown)
+         * preserves COMM; an interrupted callback remains replayable. */
+        qqueueLocalRetainAmbiguous(pThis);
+        /* Cancelled callbacks can still have parameter caches referring to
+         * their messages. Dispose those caches before source completion can
+         * release terminal references. The retained lease stays in this wti
+         * until joined-worker maintenance reconciles it. */
+        d_tsan_release_mutex(pWtp->pmutUsr);
+        d_pthread_mutex_unlock(pWtp->pmutUsr);
+        wtiDisposeActionState(pThis);
+        if (d_pthread_mutex_lock(pWtp->pmutUsr) == 0) d_tsan_acquire_mutex(pWtp->pmutUsr);
+    }
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+    d_tsan_release_mutex(pWtp->pmutUsr);
     d_pthread_mutex_unlock(pWtp->pmutUsr);
+    qqueueLocalProducerExit(NULL);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 
@@ -437,12 +496,9 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
 PRAGMA_DIAGNOSTIC_PUSH
 PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
     wtp_t *__restrict__ const pWtp = pThis->pWtp; /* our worker thread pool -- shortcut */
-    action_t *__restrict__ pAction;
     rsRetVal localRet;
     rsRetVal terminateRet;
-    actWrkrInfo_t *__restrict__ wrkrInfo;
     int iCancelStateSave;
-    int i, j, k;
     DEFiRet;
 
     dbgSetThrdName(pThis->pszDbgHdr);
@@ -454,7 +510,7 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
      * - critical cleanup/state transitions run with cancellation disabled
      */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DBGPRINTF("wti %p: worker starting\n", pThis);
+    DBGPRINTF("%s: wti %p: worker starting\n", wtiGetDbgHdr(pThis), pThis);
     /* now we have our identity, on to real processing */
 
     /* note: in this loop, the mutex is "never" unlocked. Of course,
@@ -479,7 +535,11 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
         if (terminateRet == RS_RET_TERMINATE_NOW) {
         terminate_now:
-            /* we now need to free the old batch */
+            /* Terminal batch disposal may release pmutUsr to destroy deferred
+             * messages. Publish retirement first, as cancellation cleanup does:
+             * a producer entering that window must hand start advice to this
+             * exiting slot instead of counting it as consuming queue work. */
+            wtiMarkExiting(pThis);
             localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
             DBGOPRINT((obj_t *)pThis,
                       "terminating worker because of "
@@ -489,7 +549,15 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         }
 
         /* try to execute and process whatever we have */
+        const int graph_producer = ((qqueue_t *)pWtp->pUsr)->local_graph_conf != NULL;
+        /* These callbacks own accepted source leases. Inputs also qualify for
+         * FE publication, so FE trust alone cannot exempt them from FORCE_TERM.
+         * Direct actions and synchronous rulesets inherit this worker role;
+         * a Direct main input's dummy WTI has no queued lease and keeps its
+         * input role at downstream capacity waits. */
+        if (graph_producer) qqueueLocalWorkerEnter();
         localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
+        if (graph_producer) qqueueLocalWorkerLeave();
 
         if (localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
             break; /* end of loop */
@@ -526,31 +594,8 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
     wtiMarkExiting(pThis);
     d_pthread_mutex_unlock(pWtp->pmutUsr);
 
-    DBGPRINTF("DDDD: wti %p: worker cleanup action instances\n", pThis);
-    for (i = 0; i < runConf->actions.iActionNbr; ++i) {
-        wrkrInfo = &(pThis->actWrkrInfo[i]);
-        dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
-        if (wrkrInfo->actWrkrData != NULL) {
-            pAction = wrkrInfo->pAction;
-            actionRemoveWorker(pAction, wrkrInfo->actWrkrData);
-            pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
-            if (pAction->isTransactional) {
-                /* free iparam "cache" - we need to go through to max! */
-                for (j = 0; j < wrkrInfo->p.tx.maxIParams; ++j) {
-                    for (k = 0; k < pAction->iNumTpls; ++k) {
-                        free(actParam(wrkrInfo->p.tx.iparams, pAction->iNumTpls, j, k).param);
-                    }
-                }
-                free(wrkrInfo->p.tx.iparams);
-                wrkrInfo->p.tx.iparams = NULL;
-                wrkrInfo->p.tx.currIParam = 0;
-                wrkrInfo->p.tx.maxIParams = 0;
-            } else {
-                releaseDoActionParams(pAction, pThis, 1);
-            }
-            wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
-        }
-    }
+    wtiDisposeActionState(pThis);
+    qqueueLocalProducerExit(NULL);
 
     /* indicate termination */
     pthread_cleanup_pop(0); /* remove cleanup handler */

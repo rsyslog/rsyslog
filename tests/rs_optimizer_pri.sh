@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for the RainerScript optimizer, folding of
 # syslogfacility/priority-text to prifilt. Unfortunately, we cannot yet
 # automatically detect if the optimizer does not correctly fold, but we

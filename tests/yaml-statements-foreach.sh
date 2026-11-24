@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Tests the YAML-native statements: foreach: construct.
 # Sends a message containing a JSON array, parses it with mmjsonparse, then
 # uses foreach: to iterate and write each element to the output log.

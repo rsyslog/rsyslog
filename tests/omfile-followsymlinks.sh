@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate omfile final-component symlink policy. The test covers the default
 # strict/warn compatibility modes plus an explicit action override. The oracle
 # is the symlink target content after synchronized shutdown, with warning text

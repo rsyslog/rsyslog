@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify corrupting both fixed-size state slots fails the queue immediately.
 # A backlog is created first; the oracle is prompt startup failure with the
 # offline-recovery diagnostic, never a synchronous segment scan.

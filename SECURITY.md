@@ -58,6 +58,21 @@ handling, and we aim to acknowledge reports within 7 days where possible.
 Final fixes and coordinated disclosure timelines are handled separately, as
 described below.
 
+## Fix Review and Downstream Patches
+
+For a nonpublic vulnerability, maintainers first prepare and validate the fix
+in a private pull request. That PR should include the source change, meaningful
+regression tests, relevant documentation, and CI evidence. A public pull request
+is opened only when the maintainer explicitly decides to move the fix into the
+public disclosure workflow.
+
+When a coordinated downstream notification needs a patch, maintainers prepare
+a separate minimal source-only patch for the stated vulnerability. The patch
+must be derived from the reviewed candidate, checked against the recipient's
+target base or version, and traceable to the full PR. Tests and documentation
+remain in the review PR; they are not included in the patch sent with the
+notification.
+
 ## Requirements for a Valid Report
 
 To allow efficient triage and remediation, reports should include:
@@ -73,11 +88,26 @@ To allow efficient triage and remediation, reports should include:
 - the conditions required to trigger the vulnerability
 - relevant configuration, platform, build options, logs, stack traces, or
   sanitizer output when available
+- disclosure of whether AI assistants, LLMs, or autonomous agents were used
+  to find, verify, or write the report, naming the tools or agents, the
+  model and version, and which parts they performed (discovery,
+  reproduction, write-up)
 
 Reports that do not meet these requirements may be deprioritized or returned
 for clarification. Reports generated solely by automated scanners without
 manual verification or an accompanying proof of concept may also be
 deprioritized or returned for clarification.
+
+AI-assisted reports are welcome and are judged on technical merit, like any
+other report. The disclosure is used as context during triage, for example to
+understand how claims were verified. Any statement that a step was verified
+manually must be accurate. Reports that omit this information may be returned
+for clarification or deprioritized.
+
+We ask for the tool and model name for these reasons: it credits the tool
+and model provider, it lets maintainers run further checks with the same
+tool, it helps identify tools with known weaknesses or false-positive
+patterns, and it supports later retrospective analysis of reports.
 
 ## Initial Triage
 

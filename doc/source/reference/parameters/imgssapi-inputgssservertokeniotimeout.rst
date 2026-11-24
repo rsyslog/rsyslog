@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imgssapi-inputgssservertokeniotimeout:
 .. _imgssapi.parameter.input.inputgssservertokeniotimeout:
 

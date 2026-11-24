@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Verifies that imtcp inflates a zstd stream:always TCP byte stream produced by
 # omfwd; the oracle is a complete, ordered sequence at the receiver.

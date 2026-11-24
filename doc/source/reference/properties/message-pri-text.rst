@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _prop-message-pri-text:
 .. _properties.message.pri-text:
 

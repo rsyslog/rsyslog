@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmlastmsg.c
  * This is a parser module specifically for those horrible
  * "<PRI>last message repeated n times" messages notoriously generated

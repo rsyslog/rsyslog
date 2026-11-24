@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 *******************************************************
 omruleset: ruleset output/including module (DEPRECATED)
 *******************************************************

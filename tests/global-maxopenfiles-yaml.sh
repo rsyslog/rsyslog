@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate YAML parity for the modern global maxOpenFiles setting.  The config
 # check includes a YAML singleton global section and verifies that the shared
 # global-parameter backend accepts the value without activating setrlimit.

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* imuxsock.c
  * This is the implementation of the Unix sockets input module.
  *
@@ -157,6 +158,7 @@ typedef struct lstn_s {
     sbool bDiscardOwnMsgs; /* discard messages that originated from ourselves */
     sbool bUseSysTimeStamp; /* use timestamp from system (instead of from message) */
     sbool bUnlink; /* unlink&re-create socket at start and end of processing */
+    sbool created_here; /* pathname bound during this activation */
     sbool bUseSpecialParser; /* use "canned" log socket parser instead of parser chain? */
     ruleset_t *pRuleset;
 } lstn_t;
@@ -487,6 +489,33 @@ static rsRetVal discardLogSockets(void) {
 }
 
 
+/* Remove an existing filesystem entry at a listener socket path.
+ * Only sockets and symbolic links (e.g. a /dev/log link) are removed. Any other
+ * file type is left in place, so that a mistyped Socket= path cannot delete a
+ * regular file. Socket creation then fails with "address in use".
+ *
+ * Note: lstat() and unlink() are not atomic, so the entry could be swapped
+ * in between. This is accepted: POSIX has no "unlink only if same inode",
+ * unlink() never follows links, and anyone able to swap the entry already
+ * has write access to its directory and could remove it directly. The check
+ * guards against misconfiguration, not against a concurrent local attacker.
+ */
+static void unlinkSocketPath(const uchar *const path) {
+    struct stat st;
+
+    if (lstat((const char *)path, &st) != 0) {
+        return; /* nothing to remove */
+    }
+    if (!S_ISSOCK(st.st_mode) && !S_ISLNK(st.st_mode)) {
+        LogError(0, RS_RET_ERR_CRE_AFUX, "imuxsock: not removing '%s': path exists and is not a socket", path);
+        return;
+    }
+    if (unlink((const char *)path) != 0 && errno != ENOENT) {
+        LogError(errno, RS_RET_ERR_CRE_AFUX, "imuxsock: cannot remove '%s'", path);
+    }
+}
+
+
 /* used to create a log socket if NOT passed in via systemd.
  */
 /* note: the linux SUN_LEN macro uses a sizeof based on a NULL pointer. This
@@ -505,7 +534,14 @@ static rsRetVal
     struct sockaddr_un sunx;
     DEFiRet;
 
-    if (pLstn->bUnlink) unlink((char *)pLstn->sockName);
+    if (ustrlen(pLstn->sockName) >= sizeof(sunx.sun_path)) {
+        /* bind() would silently use a truncated name, while chmod() and
+         * unlink() would operate on the full one - refuse instead.
+         */
+        errno = ENAMETOOLONG;
+        ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+    }
+    if (pLstn->bUnlink) unlinkSocketPath(pLstn->sockName);
     memset(&sunx, 0, sizeof(sunx));
     sunx.sun_family = AF_UNIX;
     if (pLstn->bCreatePath) {
@@ -519,6 +555,7 @@ static rsRetVal
     if (bind(pLstn->fd, (struct sockaddr *)&sunx, SUN_LEN(&sunx)) < 0) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
     }
+    pLstn->created_here = 1;
     if (chmod((char *)pLstn->sockName, 0666) < 0) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
     }
@@ -539,6 +576,10 @@ finalize_it:
             close(pLstn->fd);
             pLstn->fd = -1;
         }
+        if (pLstn->created_here) {
+            unlinkSocketPath(pLstn->sockName);
+            pLstn->created_here = 0;
+        }
     }
     RETiRet;
 }
@@ -550,6 +591,7 @@ static rsRetVal openLogSocket(lstn_t *pLstn) {
     int one;
 #endif /* HAVE_SCM_CREDENTIALS */
 
+    pLstn->created_here = 0;
     if (pLstn->sockName[0] == '\0') return -1;
 
     pLstn->fd = -1;
@@ -774,10 +816,13 @@ static void fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred) {
 
     lenPID = snprintf(bufPID, sizeof(bufPID), "[%lu]:", (unsigned long)cred->pid);
 
-    for (i = *lenTag; i >= 0 && bufTAG[i] != '['; --i) /*JUST SKIP*/
+    for (i = *lenTag - 1; i >= 0 && bufTAG[i] != '['; --i) /*JUST SKIP*/
         ;
 
-    if (i < 0) i = *lenTag - 1; /* go right at end of TAG, pid was not present (-1 for ':') */
+    if (i < 0) {
+        i = *lenTag;
+        if (i > 0 && bufTAG[i - 1] == ':') --i;
+    }
 
     if (i + lenPID > CONF_TAG_MAXSIZE) return; /* do not touch, as things would break */
 
@@ -858,29 +903,40 @@ finalize_it:
  * It is assumed the output buffer is large enough. Returns the number of
  * characters added.
  */
-static int copyescaped(uchar *dstbuf, uchar *inbuf, int inlen) {
+static size_t copyescaped(uchar *dstbuf, const uchar *inbuf, const int inlen) {
+    static const uchar hex[] = "0123456789abcdef";
     int iDst, iSrc;
 
     *dstbuf = '"';
-    for (iDst = 1, iSrc = 0; iSrc < inlen; ++iDst, ++iSrc) {
+    for (iDst = 1, iSrc = 0; iSrc < inlen; ++iSrc) {
         if (inbuf[iSrc] == '"' || inbuf[iSrc] == '\\') {
             dstbuf[iDst++] = '\\';
+            dstbuf[iDst++] = inbuf[iSrc];
+        } else if (iscntrl((unsigned char)inbuf[iSrc])) {
+            dstbuf[iDst++] = '\\';
+            dstbuf[iDst++] = 'x';
+            dstbuf[iDst++] = hex[inbuf[iSrc] >> 4];
+            dstbuf[iDst++] = hex[inbuf[iSrc] & 0x0f];
+        } else {
+            dstbuf[iDst++] = inbuf[iSrc];
         }
-        dstbuf[iDst] = inbuf[iSrc];
     }
     dstbuf[iDst++] = '"';
-    return iDst;
+    return (size_t)iDst;
 }
 
 
-static size_t escapedLen(uchar *inbuf, int inlen) {
+static size_t escapedLen(const uchar *inbuf, const int inlen) {
     size_t len = 2; /* surrounding quotes */
 
     for (int i = 0; i < inlen; ++i) {
         if (inbuf[i] == '"' || inbuf[i] == '\\') {
+            len += 2;
+        } else if (iscntrl((unsigned char)inbuf[i])) {
+            len += 4; /* \xNN */
+        } else {
             ++len;
         }
-        ++len;
     }
     return len;
 }
@@ -895,6 +951,68 @@ static rsRetVal appendTrustedProp(
     }
     memcpy(dst + *offs, src, len);
     *offs += len;
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal ensureTrustedPropSpace(
+    uchar **const dst, size_t *const dstLen, uchar *const stackDst, const size_t used, const size_t extra) {
+    uchar *newDst;
+    size_t needed;
+    size_t newLen;
+    DEFiRet;
+
+    if (extra > (size_t)-1 - used) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    needed = used + extra;
+    if (needed <= *dstLen) {
+        FINALIZE;
+    }
+
+    newLen = *dstLen;
+    while (newLen < needed) {
+        if (newLen > (size_t)-1 / 2) {
+            newLen = needed;
+        } else {
+            newLen *= 2;
+        }
+    }
+
+    if (*dst == stackDst) {
+        CHKmalloc(newDst = malloc(newLen));
+        memcpy(newDst, *dst, used);
+    } else {
+        CHKmalloc(newDst = realloc(*dst, newLen));
+    }
+    *dst = newDst;
+    *dstLen = newLen;
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal appendEscapedTrustedProp(uchar **const dst,
+                                         size_t *const dstLen,
+                                         uchar *const stackDst,
+                                         size_t *const offs,
+                                         const uchar *const name,
+                                         const size_t nameLen,
+                                         const uchar *const value,
+                                         const int valueLen) {
+    size_t escaped;
+    DEFiRet;
+
+    escaped = escapedLen(value, valueLen);
+    if (nameLen > (size_t)-1 - escaped || nameLen + escaped > (size_t)-1 - 2) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKiRet(ensureTrustedPropSpace(dst, dstLen, stackDst, *offs, nameLen + escaped + 2));
+    CHKiRet(appendTrustedProp(*dst, *dstLen, offs, name, nameLen));
+    *offs += copyescaped(*dst + *offs, value, valueLen);
 
 finalize_it:
     RETiRet;
@@ -938,7 +1056,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
     pri = 0;
     priDigitCount = 0;
     while (offs < lenMsg && isdigit(*parse)) {
-        pri = pri * 10 + *parse - '0';
+        if (priDigitCount < 3) pri = pri * 10 + *parse - '0';
         ++parse;
         ++offs;
         ++priDigitCount;
@@ -1013,22 +1131,17 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         } else {
             uchar msgbuf[8192];
             uchar *pmsgbuf = msgbuf;
-            const size_t trustedPropBufLen = sizeof(propBuf) - 1;
-            const size_t trustedPropMaxExtra = 3 + /* " @[" */
-                                               96 + /* _PID/_UID/_GID tags plus maximum decimal values */
-                                               7 + trustedPropBufLen + /* _COMM= */
-                                               6 + trustedPropBufLen + /* _EXE= */
-                                               10 + 2 + 2 * trustedPropBufLen + /* _CMDLINE= plus escaped value */
-                                               2; /* closing bracket and NUL */
+            const size_t trustedPropFixedExtra = 3 + /* " @[" */
+                                                 96 + /* _PID/_UID/_GID tags plus maximum decimal values */
+                                                 2; /* closing bracket and NUL */
             size_t msgbuf_size = sizeof(msgbuf);
             size_t toffs; /* offset for trusted properties */
-            size_t escaped;
 
-            if ((size_t)lenRcv > (size_t)-1 - trustedPropMaxExtra) {
+            if ((size_t)lenRcv > (size_t)-1 - trustedPropFixedExtra) {
                 ABORT_FINALIZE(RS_RET_ERR);
             }
-            if ((size_t)lenRcv + trustedPropMaxExtra > sizeof(msgbuf)) {
-                msgbuf_size = (size_t)lenRcv + trustedPropMaxExtra;
+            if ((size_t)lenRcv + trustedPropFixedExtra > sizeof(msgbuf)) {
+                msgbuf_size = (size_t)lenRcv + trustedPropFixedExtra;
                 CHKmalloc(pmsgbuf = malloc(msgbuf_size));
             }
 
@@ -1048,30 +1161,25 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
             }
 
             if (getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _COMM=", 7)) != RS_RET_OK ||
-                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                if ((iRet = appendEscapedTrustedProp(&pmsgbuf, &msgbuf_size, msgbuf, &toffs, (uchar *)" _COMM=", 7,
+                                                     propBuf, lenProp)) != RS_RET_OK) {
                     if (pmsgbuf != msgbuf) free(pmsgbuf);
                     FINALIZE;
                 }
             }
             if (getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _EXE=", 6)) != RS_RET_OK ||
-                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                if ((iRet = appendEscapedTrustedProp(&pmsgbuf, &msgbuf_size, msgbuf, &toffs, (uchar *)" _EXE=", 6,
+                                                     propBuf, lenProp)) != RS_RET_OK) {
                     if (pmsgbuf != msgbuf) free(pmsgbuf);
                     FINALIZE;
                 }
             }
             if (getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _CMDLINE=", 10)) != RS_RET_OK) {
+                if ((iRet = appendEscapedTrustedProp(&pmsgbuf, &msgbuf_size, msgbuf, &toffs, (uchar *)" _CMDLINE=", 10,
+                                                     propBuf, lenProp)) != RS_RET_OK) {
                     if (pmsgbuf != msgbuf) free(pmsgbuf);
                     FINALIZE;
                 }
-                escaped = escapedLen(propBuf, lenProp);
-                if (escaped > msgbuf_size || toffs > msgbuf_size - escaped) {
-                    if (pmsgbuf != msgbuf) free(pmsgbuf);
-                    ABORT_FINALIZE(RS_RET_ERR);
-                }
-                toffs += (size_t)copyescaped(pmsgbuf + toffs, propBuf, lenProp);
             }
 
             /* finalize string */
@@ -1105,8 +1213,14 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
          * seems to be different in practice, and this is why we now have choices...
          * rgerhards, 2015-03-03
          */
-        parser.SanitizeMsg(pMsg);
-        lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
+        CHKiRet(parser.SanitizeMsg(pMsg));
+        /* Sanitizing may shorten the raw message. Never reuse a PRI cursor
+         * outside the current representation. */
+        if (offs >= pMsg->iLenRawMsg) {
+            pMsg->msgFlags |= NEEDS_PARSING;
+            goto submit;
+        }
+        lenMsg = pMsg->iLenRawMsg - offs;
         parse = pMsg->pszRawMsg + offs;
         msgSetPRI(pMsg, pri);
         MsgSetAfterPRIOffs(pMsg, priValid ? offs + 1 : 0);
@@ -1130,16 +1244,20 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
                 }
             }
         } else { /* if we pulled the time from the system, we need to update the message text */
-            uchar *tmpParse = parse; /* just to check correctness of TS */
-            if (datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
-                datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING,
+            uchar *tmpParse = parse;
+            int remaining = lenMsg;
+            if (datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &remaining) == RS_RET_OK ||
+                datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &remaining, NO_PARSE3164_TZSTRING,
                                             NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-                /* We modify the message only if it contained a valid timestamp,
-                otherwise we do not touch it at all. */
-                datetime.formatTimestamp3164(&st, (char *)parse, 0);
-                parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
-                /* update "counters" to reflect processed timestamp */
-                parse += 16;
+                /* The permissive parsers accept timestamps shorter than the fixed
+                 * replacement. Only overwrite bytes belonging to the timestamp,
+                 * and keep the parser's cursor paired with its remaining length. */
+                if (tmpParse - parse == 16) {
+                    datetime.formatTimestamp3164(&st, (char *)parse, 0);
+                    parse[15] = ' '; /* replace the formatter's terminating NUL */
+                }
+                parse = tmpParse;
+                lenMsg = remaining;
             }
         }
 
@@ -1158,6 +1276,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         pMsg->msgFlags |= NEEDS_PARSING;
     }
 
+submit:
     MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
     MsgSetRuleset(pMsg, pLstn->pRuleset);
@@ -1274,6 +1393,7 @@ finalize_it:
 /* activate current listeners */
 static rsRetVal activateListeners(void) {
     int actSocks;
+    int failedSocks;
     int i;
     DEFiRet;
 
@@ -1293,7 +1413,8 @@ static rsRetVal activateListeners(void) {
         }
 #endif
         if (runModConf->ratelimitIntervalSysSock > 0) {
-            if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+            if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+                                                    (void (*)(void *))ratelimitDestruct)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
                          "imuxsock: turning off rate limiting because "
@@ -1347,12 +1468,17 @@ static rsRetVal activateListeners(void) {
 
     /* initialize and return if will run or not */
     actSocks = 0;
+    failedSocks = 0;
     for (i = startIndexUxLocalSockets; i < nfd; i++) {
         if (openLogSocket(&(listeners[i])) == RS_RET_OK) {
             ++actSocks;
             DBGPRINTF("imuxsock: Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
+        } else {
+            ++failedSocks;
         }
     }
+
+    if (failedSocks != 0 && runConf->globals.bRequireAllInputs) ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 
     if (actSocks == 0) {
         LogError(0, RS_RET_ERR,
@@ -1362,6 +1488,17 @@ static rsRetVal activateListeners(void) {
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK && runConf->globals.bRequireAllInputs && listeners != NULL) {
+        for (i = startIndexUxLocalSockets; i < nfd; ++i) {
+            if (listeners[i].fd == -1) continue;
+            if (listeners[i].created_here && listeners[i].sockName != NULL) {
+                unlinkSocketPath(listeners[i].sockName);
+                listeners[i].created_here = 0;
+            }
+            close(listeners[i].fd);
+            listeners[i].fd = -1;
+        }
+    }
     RETiRet;
 }
 
@@ -1658,7 +1795,8 @@ BEGINactivateCnfPrePrivDrop
             listeners[i].fd = -1;
         }
         for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-            addListner(inst);
+            const rsRetVal localRet = addListner(inst);
+            if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
         }
         CHKiRet(activateListeners());
     }
@@ -1729,9 +1867,20 @@ BEGINrunInput
 
         for (i = startIndexUxLocalSockets; i < nfd && nfds > 0; i++) {
             if (glbl.GetGlobalInputTermState() == 1) ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
-            if (pollfds[i].revents & POLLIN) {
+            if (pollfds[i].revents & (POLLIN | POLLERR)) {
+                /* on POLLERR, recvmsg() reports and clears the pending error */
                 readSocket(&(listeners[i]));
                 --nfds; /* indicate we have processed one */
+            } else if (pollfds[i].revents & (POLLHUP | POLLNVAL)) {
+                /* such a socket would make poll() return immediately forever */
+                LogError(0, RS_RET_POLL_ERR, "imuxsock: socket '%s' is no longer usable, stop listening on it",
+                         listeners[i].sockName);
+                if (pollfds[i].revents & POLLNVAL) {
+                    /* the fd is no longer ours; afterRun must not close it */
+                    listeners[i].fd = -1;
+                }
+                pollfds[i].fd = -1; /* poll() ignores negative fds */
+                --nfds;
             }
         }
     }
@@ -1775,7 +1924,7 @@ BEGINafterRun
 
             if (listeners[i].bUnlink) {
                 DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
-                unlink((char *)listeners[i].sockName);
+                unlinkSocketPath(listeners[i].sockName);
             }
         }
 

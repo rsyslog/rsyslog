@@ -38,6 +38,10 @@ This skill standardizes the final step of the development workflow: committing a
   do not block unrelated build or test validation. On Debian/Ubuntu,
   `checkbashisms` is provided by `devscripts`. Do not run `cppcheck` routinely
   unless requested; it is too noisy for the rsyslog tree.
+- **Security Review**: Security review belongs in the PR through the available
+  hosted and maintainer review process. Local AI review is optional; no local
+  reviewer model, security receipt, or pass status is a commit/push prerequisite.
+  Address actionable PR findings and report the actual review status.
 - **Validation**: Ensure the relevant build/test path passed. For PR-ready
   implementation work, prefer the local container-testing skill's change-gated
   validation over unconditional full-suite local runs.

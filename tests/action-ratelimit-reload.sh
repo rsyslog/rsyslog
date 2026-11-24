@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify reload behavior for output-scoped rate limit policies.
 # A HUP with an invalid scope change must keep the previous policy active; a
 # later valid HUP lowers burst to zero, proving output policy reload applies

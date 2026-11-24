@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # tests 'config.enabled="on"' -- default value is implicitly check
 # in all testbench tests and does not need its individual test
 # (actually it is here tested via template() and action() as well...

@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-framingfix-cisco-asa:
 .. _imptcp.parameter.input.framingfix-cisco-asa:
 

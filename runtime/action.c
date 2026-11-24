@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file action.c
  * @brief Implementation of the action object.
@@ -60,6 +61,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <assert.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +84,7 @@
 #include "errmsg.h"
 #include "batch.h"
 #include "wti.h"
+#include "queue_local.h"
 #include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
@@ -113,6 +116,78 @@ static rsRetVal doSubmitToActionQComplex(action_t *const pAction, wti_t *const p
 static rsRetVal doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *const pWti, smsg_t *);
 static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWti);
 static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti);
+
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
+/* Cold-selected, one-shot dispatch stimulus for the local ownership test.
+ * The real module is bypassed exactly once with SUSPENDED. This is not a
+ * claim that omfile itself returns FORCE_TERM: the ordinary actionCommit
+ * retry loop must observe source shutdown and produce that result. All
+ * settings are initialized before input startup and freed after workers.
+ * Local queues need atomic builtins, so the fixture is compiled out without
+ * them (e.g. Solaris Studio builds). */
+static struct {
+    action_t *action;
+    char *entry;
+    int releaseFd;
+    int fired;
+} localTestCommit = {.releaseFd = -1};
+
+static rsRetVal localTestCommitPrepare(action_t *const action) {
+    const char *const name = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ACTION");
+    if (name == NULL || action->pszName == NULL || strcmp(name, (const char *)action->pszName)) return RS_RET_OK;
+    const char *const entry = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_ENTRY");
+    const char *const release = getenv("RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_RELEASE");
+    struct stat st;
+    if (!runConf->local_config_requested || !action->isTransactional || action->pQueue->qType != QUEUETYPE_DIRECT ||
+        action->pMod->cnfName == NULL || strcmp((const char *)action->pMod->cnfName, "omfile") || entry == NULL ||
+        entry[0] != '/' || release == NULL || release[0] != '/' || localTestCommit.action != NULL)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    /* O_RDWR avoids a startup rendezvous with the test's later writer. */
+    const int fd = open(release, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) return RS_RET_LOCAL_QUEUE_CONFIG;
+    if (fstat(fd, &st) != 0 || !S_ISFIFO(st.st_mode) || fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK) < 0) {
+        close(fd);
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    }
+    localTestCommit.entry = strdup(entry);
+    if (localTestCommit.entry == NULL) {
+        close(fd);
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    localTestCommit.releaseFd = fd;
+    localTestCommit.action = action;
+    return RS_RET_OK;
+}
+
+static void localTestCommitCleanup(void *const context) {
+    int *const fds = context;
+    if (fds[0] >= 0) close(fds[0]);
+    if (fds[1] >= 0) close(fds[1]);
+}
+
+static void localTestCommitWait(void) {
+    int fds[2] = {localTestCommit.releaseFd, -1};
+    int oldCancelState;
+    char release;
+    ssize_t n;
+    /* Only the elected invocation consumes this fd; action destruction is
+     * after worker joins. No source or module mutex is held at dispatch. */
+    localTestCommit.releaseFd = -1;
+    pthread_cleanup_push(localTestCommitCleanup, fds);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
+    fds[1] = open(localTestCommit.entry, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NONBLOCK, 0600);
+    pthread_setcancelstate(oldCancelState, NULL);
+    if (fds[1] >= 0) {
+        const char marker[] = "transaction-dispatch=1 injected=SUSPENDED\n";
+        if (write(fds[1], marker, sizeof(marker) - 1) != sizeof(marker) - 1)
+            DBGPRINTF("local queue test: cannot publish transaction entry marker\n");
+    }
+    do {
+        n = read(fds[0], &release, 1);
+    } while (n < 0 && errno == EINTR);
+    pthread_cleanup_pop(1);
+}
+#endif
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj) DEFobjCurrIf(datetime) DEFobjCurrIf(module) DEFobjCurrIf(statsobj) DEFobjCurrIf(ruleset)
@@ -313,6 +388,14 @@ rsRetVal actionDestruct(action_t *const pThis) {
     if (pThis->pQueue != NULL) {
         qqueueDestruct(&pThis->pQueue);
     }
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
+    if (localTestCommit.action == pThis) {
+        if (localTestCommit.releaseFd >= 0) close(localTestCommit.releaseFd);
+        free(localTestCommit.entry);
+        localTestCommit.entry = NULL;
+        localTestCommit.action = NULL;
+    }
+#endif
 
     /* destroy stats object, if we have one (may not always be
      * be the case, e.g. if turned off)
@@ -876,6 +959,12 @@ static void actionSetResumeRetryTime(action_t *const pThis, const time_t ttResum
     PREFER_STORE_time_t(&pThis->ttResumeRtry, ttResumeRtry);
 }
 
+/* A failed clock read expires the deadline, so an action remains retryable. */
+static time_t actionGetMonotonicSeconds(void) {
+    struct timespec now;
+    return clock_gettime(CLOCK_MONOTONIC, &now) == 0 ? now.tv_sec : (time_t)-1;
+}
+
 
 /* Suspend action, this involves changing the action state as well
  * as setting the next retry time.
@@ -894,15 +983,13 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
     DBGPRINTF("actionSuspend: enter\n");
     setSuspendMessageConfVars(pThis);
 
-    /* note: we can NOT use a cached timestamp, as time may have evolved
-     * since caching, and this would break logic (and it actually did so!)
-     */
-    datetime.GetTime(&ttNow);
+    /* The retry deadline must use the same monotonic clock as its check. */
+    ttNow = actionGetMonotonicSeconds();
     suspendDuration = pThis->iResumeInterval * (getActionNbrResRtry(pWti, pThis) / 10 + 1);
     if (pThis->iResumeIntervalMax > 0 && suspendDuration > pThis->iResumeIntervalMax) {
         suspendDuration = pThis->iResumeIntervalMax;
     }
-    ttResumeRtry = ttNow + suspendDuration;
+    ttResumeRtry = ttNow == (time_t)-1 ? 0 : ttNow + suspendDuration;
     actionSetResumeRetryTime(pThis, ttResumeRtry);
     actionSetState(pThis, __func__, pWti, ACT_STATE_SUSP);
     STATSCOUNTER_ADD(pThis->ctrSuspendDuration, pThis->mutCtrSuspendDuration, suspendDuration);
@@ -911,7 +998,10 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
     }
 
     if (pThis->bReportSuspensionCont || (pThis->bReportSuspension && getActionNbrResRtry(pWti, pThis) == 0)) {
-        ctime_r(&ttResumeRtry, timebuf);
+        time_t wallRetry;
+        datetime.GetTime(&wallRetry);
+        wallRetry += suspendDuration;
+        ctime_r(&wallRetry, timebuf);
         timebuf[strlen(timebuf) - 1] = '\0'; /* strip LF */
         LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                "action '%s' suspended (module '%s'), next retry is %s, retry nbr %d. "
@@ -919,7 +1009,7 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
                pThis->pszName, pThis->pMod->pszName, timebuf, getActionNbrResRtry(pWti, pThis));
     }
     DBGPRINTF(
-        "action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
+        "action '%s' suspended, monotonic retry=%lld (now %lld), iNbrResRtry %d, "
         "duration %d\n",
         pThis->pszName, (long long)ttResumeRtry, (long long)ttNow, getActionNbrResRtry(pWti, pThis), suspendDuration);
 }
@@ -1000,10 +1090,10 @@ static rsRetVal actionDoRetryInternal(
                     FINALIZE;
                 }
                 ++iRetries;
-                datetime.GetTime(&ttTemp);
+                ttTemp = actionGetMonotonicSeconds();
                 DBGPRINTF(
                     "actionDoRetry: %s, controlled by resumeInterval, may miss the next try."
-                    "Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
+                    "Will sleep %d seconds. monotonic ResumeRtry=%lld (now %lld), iRetries %d\n",
                     pThis->pszName, pThis->iResumeInterval, (long long)actionGetResumeRetryTime(pThis),
                     (long long)ttTemp, iRetries);
                 if (slept != NULL) {
@@ -1182,15 +1272,10 @@ static rsRetVal actionTryResumeInternal(action_t *const pThis,
     }
 
     if (getActionState(pWti, pThis) == ACT_STATE_SUSP) {
-        /* if we are suspended, we need to check if the timeout expired.
-         * for this handling, we must always obtain a fresh timestamp. We used
-         * to use the action timestamp, but in this case we will never reach a
-         * point where a resumption is actually tried, because the action timestamp
-         * is always in the past. So we can not avoid doing a fresh time() call
-         * here. -- rgerhards, 2009-03-18
-         */
-        datetime.GetTime(&ttNow); /* cache "now" */
-        if (ttNow >= actionGetResumeRetryTime(pThis)) {
+        /* A fresh monotonic reading keeps wall-clock corrections from
+         * extending or shortening the configured suspension interval. */
+        ttNow = actionGetMonotonicSeconds();
+        if (ttNow == (time_t)-1 || ttNow >= actionGetResumeRetryTime(pThis)) {
             actionSetState(pThis, __func__, pWti, ACT_STATE_RTRY); /* back to retries */
         }
     }
@@ -1202,9 +1287,10 @@ static rsRetVal actionTryResumeInternal(action_t *const pThis,
 
     if (Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY || getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
         if (ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
-            datetime.GetTime(&ttNow);
-        dbgprintf("actionTryResume: action[%s] state: %s, next retry (if applicable): %u [now %u]\n", pThis->pszName,
-                  getActStateName(pThis, pWti), (unsigned)actionGetResumeRetryTime(pThis), (unsigned)ttNow);
+            ttNow = actionGetMonotonicSeconds();
+        dbgprintf("actionTryResume: action[%s] state: %s, monotonic next retry (if applicable): %lld [now %lld]\n",
+                  pThis->pszName, getActStateName(pThis, pWti), (long long)actionGetResumeRetryTime(pThis),
+                  (long long)ttNow);
     }
 
 finalize_it:
@@ -1468,7 +1554,17 @@ static rsRetVal ATTR_NONNULL() actionCallCommitTransaction(action_t *const pThis
     DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n", pThis->pszName,
               getActStateName(pThis, pWti), nparams);
 
-    iRet = pThis->pMod->mod.om.commitTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, iparams, nparams);
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
+    if (localTestCommit.action == pThis && qqueueLocalWorker(pWti) &&
+        !__atomic_exchange_n(&localTestCommit.fired, 1, __ATOMIC_RELAXED)) {
+        localTestCommitWait();
+        iRet = RS_RET_SUSPENDED;
+    } else
+#endif
+    {
+        iRet =
+            pThis->pMod->mod.om.commitTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, iparams, nparams);
+    }
     DBGPRINTF(
         "actionCallCommitTransaction[%s] state: %s "
         "mod commitTransaction returned %d\n",
@@ -1945,6 +2041,10 @@ finalize_it:
         free(iparams);
     }
     wrkrInfo->p.tx.currIParam = 0; /* reset to beginning */
+#ifdef ENABLE_TESTBENCH
+    if (iRet == RS_RET_FORCE_TERM && pThis->isTransactional)
+        qqueueLocalTestNoteForceTerm(pWti, wrkrInfo->p.tx.currIParam);
+#endif
     RETiRet;
 }
 
@@ -1953,14 +2053,20 @@ void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
     int i;
     action_t *pAction;
 
-    for (i = 0; i < runConf->actions.iActionNbr; ++i) {
+    for (i = 0; i < pWti->n_act_wrkr_info; ++i) {
         pAction = pWti->actWrkrInfo[i].pAction;
         if (pAction == NULL) continue;
         DBGPRINTF(
             "actionCommitAllDirect: action %d, state %u, nbr to commit %d "
             "isTransactional %d\n",
             i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam, pAction->isTransactional);
-        if (pAction->pQueue->qType == QUEUETYPE_DIRECT && !actionIsDisabled(pAction)) actionCommit(pAction, pWti);
+        if (pAction->pQueue->qType == QUEUETYPE_DIRECT && !actionIsDisabled(pAction)) {
+            const rsRetVal ret = actionCommit(pAction, pWti);
+            /* Ruleset COMM is tentative until every Direct commit returns.
+             * Keep the existing commit order/error policy, but do not let an
+             * OK outer callback hide an interrupted or failed transaction. */
+            if (ret != RS_RET_OK && qqueueLocalWorker(pWti)) pWti->callback_outcome = WTI_CALLBACK_FAILED;
+        }
     }
 }
 
@@ -2215,7 +2321,15 @@ static rsRetVal ATTR_NONNULL() doSubmitToActionQ(action_t *const pAction, wti_t 
     } else { /* in this case, we do single submits to the queue.
               * TODO: optimize this, we may do at least a multi-submit!
               */
-        iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
+        smsg_t *const pEnq = pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg);
+        if (pEnq == NULL) {
+            /* MsgDup() could not allocate the copy. A NULL message must not
+             * reach the queue; count the loss so impstats shows it. */
+            STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
+            iRet = RS_RET_OUT_OF_MEMORY;
+        } else {
+            iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, pEnq);
+        }
     }
     pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 
@@ -2341,9 +2455,39 @@ PRAGMA_DIAGNOSTIC_POP
 DEFFUNC_llExecFunc(doActivateActions) {
     rsRetVal localRet;
     action_t *const pThis = (action_t *)pData;
+    rsRetVal *const preparationResult = pParam;
+    if (*preparationResult != RS_RET_OK) return *preparationResult;
+#if defined(ENABLE_TESTBENCH) && defined(HAVE_ATOMIC_BUILTINS)
+    localRet = localTestCommitPrepare(pThis);
+    if (localRet != RS_RET_OK) {
+        *preparationResult = localRet;
+        LogError(0, localRet, "local queue test: cannot prepare named transactional dispatch hook");
+        return localRet;
+    }
+#endif
+    if (runConf->local_config_requested && pThis->pMod->cnfName != NULL &&
+        !strcmp((const char *)pThis->pMod->cnfName, "omfile")) {
+        rsRetVal (*prepare)(void *) = NULL;
+        localRet = pThis->pMod->modQueryEtryPt((uchar *)"localQueuePrepareAction", (rsRetVal(**)()) & prepare);
+        if (localRet == RS_RET_OK && prepare != NULL) localRet = prepare(pThis->pModData);
+        if (localRet != RS_RET_OK || prepare == NULL) {
+            *preparationResult = localRet == RS_RET_OK ? RS_RET_LOCAL_QUEUE_CONFIG : localRet;
+            LogError(0, localRet, "local queue: cannot prepare qualified omfile action '%s' before input startup",
+                     pThis->pszName);
+            return *preparationResult;
+        }
+    }
     setSuspendMessageConfVars(pThis);
     localRet = qqueueStart(runConf, pThis->pQueue);
     if (localRet != RS_RET_OK) {
+        if (pThis->pQueue->local_graph_conf != NULL) {
+            /* Every graph destination is required. The iterator ignores our
+             * return, so preserve failure before inputs can be released. */
+            *preparationResult = localRet;
+            LogError(0, localRet, "local queue graph: cannot start action queue '%s' before input startup",
+                     pThis->pszName);
+            return localRet;
+        }
         if (runConf->globals.bAbortOnFailedQueueStartup) {
             fprintf(stderr,
                     "rsyslogd: error %d starting up action queue, "
@@ -2371,7 +2515,12 @@ DEFFUNC_llExecFunc(doActivateActions) {
  */
 rsRetVal activateActions(void) {
     DEFiRet;
-    iRet = ruleset.IterateAllActions(runConf, doActivateActions, NULL);
+    /* The script action iterator intentionally ignores callback returns.
+     * Preserve the first local preparation failure in an explicit context so
+     * rsconf activation aborts before main/ruleset queues and inputs run. */
+    rsRetVal preparationResult = RS_RET_OK;
+    iRet = ruleset.IterateAllActions(runConf, doActivateActions, &preparationResult);
+    if (iRet == RS_RET_OK) iRet = preparationResult;
     RETiRet;
 }
 
@@ -2427,6 +2576,10 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
 
     for (i = 0; i < pblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
+        /* Record for later local-graph qualification even if this action was
+         * declared before scope=local. Preserve existing global conversions. */
+        if (pvals[i].val.datatype == 'N' && (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX))
+            pAction->local_queue_numeric_error = 1;
         if (!strcmp(pblk.descr[i].name, "name")) {
             pAction->pszName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(pblk.descr[i].name, "type")) {
@@ -2557,6 +2710,20 @@ rsRetVal addAction(action_t **ppAction,
                          "Action disabled."
                          " To use this action, you have to specify "
                          "the SQL or stdSQL option in your template!\n");
+                ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+            }
+            if ((iTplOpts & OMSR_RQD_TPL_OPT_SQL_BACKSLASH) && (pAction->ppTpl[i]->optFormatEscape != SQL_ESCAPE)) {
+                errno = 0;
+                LogError(0, RS_RET_RQD_TPLOPT_MISSING,
+                         "Action disabled. To use this action, you have to specify "
+                         "the SQL option (option.sql=\"on\") in your template!\n");
+                ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+            }
+            if ((iTplOpts & OMSR_RQD_TPL_OPT_SQL_BACKSLASH) &&
+                (pAction->ppTpl[i]->pStrgen != NULL || pAction->ppTpl[i]->bHaveSubtree)) {
+                errno = 0;
+                LogError(0, RS_RET_RQD_TPLOPT_MISSING,
+                         "Action disabled. Backslash-aware SQL escaping requires a string or list template!\n");
                 ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
             }
             tplNoteUse(pAction->ppTpl[i], iTplOpts & OMSR_TPL_AS_DYNAFILE);

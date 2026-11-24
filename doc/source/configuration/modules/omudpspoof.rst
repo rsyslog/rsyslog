@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 **************************************
 omudpspoof: UDP spoofing output module
 **************************************

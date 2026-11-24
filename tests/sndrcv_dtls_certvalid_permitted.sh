@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This file is part of the rsyslog project, released under ASL 2.0
 # Verify successful cert-valid DTLS transfer when the peer name is explicitly
 # permitted. The receiver must record the exact injected message sequence.

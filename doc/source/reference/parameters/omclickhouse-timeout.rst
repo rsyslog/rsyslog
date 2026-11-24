@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omclickhouse-timeout:
 .. _omclickhouse.parameter.input.timeout:
 

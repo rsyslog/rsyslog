@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imfile-endmsg-regex:
 .. _imfile.parameter.input.endmsg-regex:
 .. _imfile.parameter.endmsg-regex:

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * This is a function module providing ability to unflatten a JSON tree.
  *

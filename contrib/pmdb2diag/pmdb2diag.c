@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* pmdb2diag.c
  *
  * This is a parser module specifically for DB2diag log file.

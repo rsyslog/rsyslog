@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmtaghostname.c
  * This is a message modification module.
  *

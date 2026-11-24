@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify that imczmq rejects configured topics that exceed the supported limit.
 . ${srcdir:=.}/diag.sh init
 

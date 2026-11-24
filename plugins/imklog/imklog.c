@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The kernel log module.
  *
  * This is an abstracted module. As Linux and BSD kernel log is conceptually the
@@ -220,19 +222,23 @@ finalize_it:
 }
 
 
-/* log an imklog-internal message
+/* log an imklog-internal message. priority is the severity; the facility
+ * is the configured InternalMsgFacility.
  * rgerhards, 2008-04-14
  */
 rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) {
     DEFiRet;
     va_list ap;
     uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
+    int facility;
 
     va_start(ap, fmt);
     vsnprintf((char *)msgBuf, sizeof(msgBuf), fmt, ap);
     va_end(ap);
 
-    logmsgInternal(NO_ERRCODE, priority, msgBuf, 0);
+    facility = (runModConf != NULL) ? runModConf->iFacilIntMsg : klogFacilIntMsg();
+    if (facility < 0 || facility > LOG_LOCAL7) facility = klogFacilIntMsg(); /* invalid setting */
+    logmsgInternal(NO_ERRCODE, (syslog_pri_t)((pri2fac((syslog_pri_t)facility) << 3) | pri2sev(priority)), msgBuf, 0);
 
     RETiRet;
 }
@@ -444,6 +450,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
     CODESTARTfreeCnf;
+    free(pModConf->pszPath);
     free(pModConf->pszBindRuleset);
     free(pModConf->pszRatelimitName);
 ENDfreeCnf

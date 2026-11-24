@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* The serial stream class.
  *
  * A serial stream provides serial data access. In theory, serial streams
@@ -84,6 +85,7 @@ DEFobjCurrIf(zlibw) DEFobjCurrIf(zstdw)
 static rsRetVal strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, const size_t lenBuf);
 static rsRetVal strmOpenFile(strm_t *pThis);
 static rsRetVal strmCloseFile(strm_t *pThis);
+static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter);
 static void *asyncWriterThread(void *pPtr);
 static rsRetVal doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush);
 static rsRetVal doZipFinish(strm_t *pThis);
@@ -223,7 +225,13 @@ static rsRetVal doSizeLimitProcessing(strm_t *pThis) {
          * need to preserve it.
          */
         CHKmalloc(pszCurrFName = ustrdup(pThis->pszCurrFName));
-        CHKiRet(strmCloseFile(pThis));
+        /* the stream is written to again after the rotation, so the async
+         * writer thread must survive it. stopping it here leaves the buffer
+         * queue without a consumer and the producer blocks on notFull forever.
+         * keeping it also preserves the caller's mutex, which stopWriter()
+         * would release.
+         */
+        CHKiRet(strmCloseFileInternal(pThis, 0));
         CHKiRet(resolveFileSizeLimit(pThis, pszCurrFName));
     }
 
@@ -284,6 +292,9 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
         iFlags |= O_NOFOLLOW;
     }
 #endif
+
+    /* Preparation verifies the resulting descriptor, including replacement races. */
+    if (pThis->localOutput) iFlags |= O_NONBLOCK;
 
     /* Keep lock held through open + init to avoid async close/open races. */
     if (bDoLock) d_pthread_mutex_lock(&pThis->mut);
@@ -439,6 +450,31 @@ finalize_it:
 }
 
 
+/* Only called before worker startup or by the main-thread HUP owner while the
+ * instance mutex is held. O_NONBLOCK prevents accidentally waiting on a FIFO;
+ * fstat qualifies the actual open descriptor instead of a racy pathname check. */
+rsRetVal strmPrepareLocalOutput(strm_t *const pThis) {
+    struct stat st;
+    DEFiRet;
+    assert(!pThis->bAsyncWrite && !pThis->iZipLevel && !pThis->bSync && !pThis->cryprov);
+    assert(pThis->sType == STREAMTYPE_FILE_SINGLE && pThis->iSizeLimit == 0);
+    pThis->localOutput = 1;
+    CHKiRet(strmOpenFile(pThis));
+    if (fstat(pThis->fd, &st) != 0 || !S_ISREG(st.st_mode)) ABORT_FINALIZE(RS_RET_IO_ERROR);
+finalize_it:
+    RETiRet;
+}
+
+/* Cancellation cannot establish how much of a write reached the destination.
+ * Forget pending bytes without flushing or closing. The queue retains the
+ * unresolved source lease; a retry can duplicate external bytes. iCurrOffs is
+ * not authoritative after cancellation and this plain append mode never uses
+ * it for positioning, rotation or delivery accounting. */
+void strmDiscardLocalOutput(strm_t *const pThis) {
+    assert(pThis->localOutput && !pThis->bAsyncWrite && !pThis->iZipLevel && !pThis->cryprov);
+    pThis->iBufPtr = 0;
+}
+
 /* wait for the output writer thread to be done. This must be called before actions
  * that require data to be persisted. May be called in non-async mode and is a null
  * operation than. Must be called with the mutex locked.
@@ -473,6 +509,22 @@ static void stopWriter(strm_t *const pThis) {
  * close it again (this is done via strmFlushInternal and friends).
  */
 static rsRetVal strmCloseFile(strm_t *pThis) {
+    return strmCloseFileInternal(pThis, 1);
+}
+
+
+/**
+ * @brief workhorse for strmCloseFile().
+ *
+ * @param bStopAsyncWriter if set, terminates the async writer thread, which
+ * also unlocks pThis->mut as a side effect (see stopWriter()). that is what
+ * callers who are done with the stream want. if cleared, the writer keeps
+ * running and the caller's mutex stays locked; pending buffers drain via
+ * strmWaitAsyncWriterDone() instead, so the data is on disk before the fd is
+ * closed. callers that keep using the stream afterwards, such as size-limit
+ * rotation, must use this mode.
+ */
+static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter) {
     off64_t currOffs;
     DEFiRet;
 
@@ -489,7 +541,11 @@ static rsRetVal strmCloseFile(strm_t *pThis) {
             doZipFinish(pThis);
         }
         if (pThis->bAsyncWrite) {
-            stopWriter(pThis);
+            if (bStopAsyncWriter) {
+                stopWriter(pThis);
+            } else {
+                strmWaitAsyncWriterDone(pThis);
+            }
         }
     }
 
@@ -642,10 +698,12 @@ finalize_it:
  * to begin of file. To detect truncation, we try to re-read the last block.
  * If that does not succeed or different data than from the original read is
  * returned, truncation is assumed.
- * NOTE: this function must be called only if truncation is enabled AND
- * when the previous read buffer still is valid (aka "before the next read").
- * It is ok to call with a 0-size buffer, which we than assume as begin of
- * reading. In that case, no truncation will be detected.
+ * NOTE: call this only when truncation is enabled, before the next read.
+ * A previous buffer is re-read and compared. A 0-size buffer means this
+ * stream has not completed a read yet, including one whose offset was
+ * restored from the state file. The file size is then compared with the
+ * current offset. A smaller file restarts reading at byte 0. An equal or
+ * larger size is left untouched.
  * rgerhards, 2018-09-20
  */
 static rsRetVal ATTR_NONNULL() checkTruncation(strm_t *const pThis) {
@@ -656,6 +714,13 @@ static rsRetVal ATTR_NONNULL() checkTruncation(strm_t *const pThis) {
 
     DBGPRINTF("checkTruncation, file %s, iBufPtrMax %zd\n", pThis->pszCurrFName, pThis->iBufPtrMax);
     if (pThis->iBufPtrMax == 0) {
+        struct stat statBuf;
+        if (fstat(pThis->fd, &statBuf) == -1) {
+            LogError(errno, RS_RET_IO_ERROR, "file '%s': cannot fstat() for truncation check, ignored",
+                     pThis->pszCurrFName);
+        } else if ((long long)statBuf.st_size < (long long)pThis->iCurrOffs) {
+            iRet = rereadTruncated(pThis, 0, "file size smaller than current offset", (long long)statBuf.st_size);
+        }
         FINALIZE;
     }
 
@@ -1413,6 +1478,9 @@ static rsRetVal ATTR_NONNULL(1, 2, 3) doWriteCall(strm_t *pThis, uchar *pBuf, si
         if (iWritten < 0) {
             const int err = errno;
             iWritten = 0; /* we have written NO bytes! */
+            /* The local omfile cancellation boundary keeps descriptor ownership
+             * stable throughout worker callbacks. Recovery requires main-thread HUP. */
+            if (pThis->localOutput && err != EINTR) ABORT_FINALIZE(RS_RET_IO_ERROR);
             if (err == EBADF) {
                 DBGPRINTF(
                     "file %s: errno %d, fd %d no longer valid, recovery by "
@@ -1627,6 +1695,8 @@ static void *asyncWriterThread(void *pPtr) {
         doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf, bFlush);
         // TODO: error check????? 2009-07-06
         d_pthread_mutex_lock(&pThis->mut);
+        if (pThis->iSizeLimit != 0 && pThis->fd != -1 && pThis->iCurrOffs >= pThis->iSizeLimit)
+            pThis->bSizeLimitReached = 1;
 
         --pThis->iCnt;
         if (pThis->iCnt < STREAM_ASYNC_NUMBUFS) {
@@ -1691,7 +1761,10 @@ static rsRetVal strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf) {
     ISOBJ_TYPE_assert(pThis, strm);
 
     DBGPRINTF("strmPhysWrite, stream %p, len %u\n", pThis, (unsigned)lenBuf);
-    if (pThis->fd == -1) CHKiRet(strmOpenFile(pThis));
+    if (pThis->fd == -1) {
+        if (pThis->localOutput) ABORT_FINALIZE(RS_RET_IO_ERROR);
+        CHKiRet(strmOpenFile(pThis));
+    }
 
     /* here we place our crypto interface */
     if (pThis->cryprov != NULL) {
@@ -2006,8 +2079,19 @@ static rsRetVal ATTR_NONNULL(1, 2)
     if (pThis->iBufPtr == pThis->sIOBufSize) {
         CHKiRet(strmFlushInternal(pThis, 0)); /* get a new buffer for rest of data */
     }
-    if (pThis->fd != -1 && pThis->iSizeLimit != 0) { /* Only check if fd already set */
-        CHKiRet(doSizeLimitProcessing(pThis));
+    if (pThis->iSizeLimit != 0) {
+        if (pThis->bAsyncWrite) {
+            /* fd and iCurrOffs belong to the writer thread while it writes;
+             * it flags the limit under mut, and we drain it before rotating.
+             */
+            if (pThis->bSizeLimitReached) {
+                pThis->bSizeLimitReached = 0;
+                strmWaitAsyncWriterDone(pThis);
+                if (pThis->fd != -1) CHKiRet(doSizeLimitProcessing(pThis));
+            }
+        } else if (pThis->fd != -1) { /* Only check if fd already set */
+            CHKiRet(doSizeLimitProcessing(pThis));
+        }
     }
 
 

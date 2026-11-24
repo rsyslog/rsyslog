@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-pmrfc3164-force-tagendingbycolon:
 .. _pmrfc3164.parameter.module.force-tagendingbycolon:
 .. _pmrfc3164.parameter.module.force.tagEndingByColon:

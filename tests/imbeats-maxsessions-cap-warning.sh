@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Validate that an excessively large imbeats maxSessions value is not rejected
 # during config load. The oracle is rsyslogd -N1 succeeding while emitting the
 # explicit cap warning, so the test avoids opening listeners or sending traffic.

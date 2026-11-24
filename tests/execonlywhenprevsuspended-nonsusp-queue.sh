@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check if execonly...suspended works when the first action is *not*
 # suspended --> file1 must be created, file 2 not
 # rgerhards, 2015-05-27

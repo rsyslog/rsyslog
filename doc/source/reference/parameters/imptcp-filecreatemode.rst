@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imptcp-filecreatemode:
 .. _imptcp.parameter.input.filecreatemode:
 

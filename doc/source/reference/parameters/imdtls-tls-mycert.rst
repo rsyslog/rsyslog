@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imdtls-tls-mycert:
 .. _imdtls.parameter.input.tls-mycert:
 

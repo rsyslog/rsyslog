@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-omprog-template:
 .. _omprog.parameter.action.template:
 

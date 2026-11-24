@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 ## Validate ${VAR} expansion in backticks with static text.
 . ${srcdir:=.}/diag.sh init
 generate_conf

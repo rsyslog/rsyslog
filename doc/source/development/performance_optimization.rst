@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. meta::
    :description: Reproducible procedure for safe, evidence-based rsyslog performance optimization.
    :keywords: rsyslog, development, performance, benchmark, profiling, optimization

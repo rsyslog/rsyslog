@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+global:
+  processInternalMessages: "on"
+
+modules:
+  - load: "../plugins/imtcp/.libs/imtcp"
+
+inputs:
+  - type: imtcp
+    address: "127.0.0.1"
+    port: "0"
+    listenPortFileName: "@DYNNAME@.tcpflood_port"
+    ruleset: limited
+    ratelimit.interval: 600
+    ratelimit.burst: 1
+
+rulesets:
+  - name: limited
+    script: |
+      action(type="omfile" file="@OUT_LOG@" template="RSYSLOG_SyslogProtocol23Format")

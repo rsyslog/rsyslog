@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imrelp-tls-permittedpeer:
 .. _imrelp.parameter.input.tls-permittedpeer:
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # a very basic test for omjournal.
 # addd 2016-03-18 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init

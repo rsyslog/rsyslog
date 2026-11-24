@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imbeats-maxwindowsize:
 .. _imbeats.parameter.input.maxwindowsize:
 
@@ -23,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imbeats`.
 :Name: maxWindowSize
 :Scope: input
 :Type: positive integer
-:Default: input=1024
+:Default: input=2048
 :Required?: no
 :Introduced: 8.2604.0
 
@@ -32,6 +34,14 @@ Description
 Set the maximum Lumberjack v2 window size accepted by this imbeats listener.
 Connections that announce a larger window are rejected as protocol errors.
 
+The window size a Beats client announces is the number of events in its
+current batch, which can be as large as the client's ``bulk_max_size``. The
+default of that setting is 2048 for the Logstash output, which is why the
+default of this parameter is 2048. If you raise ``bulk_max_size`` on the
+senders, set ``maxWindowSize`` to at least the same value; otherwise senders
+with more queued events than ``maxWindowSize`` are rejected on every attempt
+and never get an acknowledgement.
+
 Input usage
 -----------
 .. _param-imbeats-input-maxwindowsize:
@@ -39,7 +49,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imbeats" port="5044" maxWindowSize="1024")
+   input(type="imbeats" port="5044" maxWindowSize="2048")
 
 See also
 --------

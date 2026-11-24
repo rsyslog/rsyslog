@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-imudp-threads:
 .. _imudp.parameter.module.threads:
 

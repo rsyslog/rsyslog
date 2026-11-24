@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # This is a simple shell script that carries out some checks against
 # configurations we expect from some provided config files. We use
 # rsyslogd's verification function. Note that modifications to the

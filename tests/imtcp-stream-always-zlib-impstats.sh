@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Verifies imtcp stream:always accounting for zlib traffic; compressed bytes
 # must be positive and decompressed bytes must exceed wire bytes.

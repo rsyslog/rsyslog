@@ -22,6 +22,21 @@
 | `module_map.yaml` | Module paths and locking hints |
 | `templates/` | RST templates for concept, tutorial, and module pages |
 
+## Local queue design and implementation records
+
+These documents record the design, implementation plan, and measurement method.
+Check the operator manual and current source for supported runtime behavior.
+
+- [Local queue front ends with shared overflow](designs/local-queue-frontends.md):
+  private SPSC fast paths, shared MPMC overflow, BE helping, and existing disk
+  assistance within one logical queue.
+- [Local queue implementation plan](designs/local-queue-implementation-plan.md):
+  staged MVP-to-full delivery, threading validation, and performance gates.
+- [Local queue related work and synthesis](designs/local-queue-related-work.md):
+  primary-source precedents, cautious novelty assessment, and implementation lessons.
+- [Local queue target measurement method](designs/local-queue-target-measurement-method.md):
+  target-environment evidence for persistent TCP inputs and Elasticsearch output.
+
 ## RAG Knowledge Base
 
 The documentation build generates a machine-readable RAG dataset at
@@ -37,4 +52,4 @@ See [chunking_and_embeddings.md](chunking_and_embeddings.md) for schema details.
 - **Log pipeline** (internally also called *message pipeline*).
 - Use `getting_started/beginner_tutorials/` (no `learning_path/`).
 
-_Last reviewed: 2025-12-23_
+_Last reviewed: 2026-10-14_

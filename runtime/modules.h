@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* modules.h
  *
  * Definition for build-in and plug-ins module handler. This file is the base

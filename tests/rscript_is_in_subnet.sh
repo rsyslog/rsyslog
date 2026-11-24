@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test is_in_subnet() with IPv4, IPv6, invalid text, and binary strings.
 # The nul_* cases use b64_decode() to create length-counted strings with
 # embedded NUL bytes and valid textual prefixes. The oracle is rejection: the

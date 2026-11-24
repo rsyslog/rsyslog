@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Verify TCP forwarding with an action-level template into a network namespace.
 # The oracle is the complete 0..9999 forwarded sequence received by the helper
 # listener inside the namespace. The ready file is written after listen()

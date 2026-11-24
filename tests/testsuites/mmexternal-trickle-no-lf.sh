@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # Helper for mmexternal responseTimeout tests.
 # It emits partial response bytes without LF long enough to prove the timeout
 # applies to the complete response frame rather than each individual read.

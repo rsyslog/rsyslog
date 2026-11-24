@@ -1,3 +1,5 @@
+.. SPDX-License-Identifier: Apache-2.0
+
 .. _param-mmaitag-request-lowspeedlimit:
 .. _mmaitag.parameter.action.request-lowspeedlimit:
 

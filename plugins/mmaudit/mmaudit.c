@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* mmaudit.c
  * This is a message modification module supporting Linux audit format
  * in various settings. The module tries to identify the provided
@@ -229,7 +231,7 @@ BEGINdoAction_NoStrings
         DBGPRINTF("mmaudit: audit( header not found: %s'\n", buf);
         FINALIZE;
     }
-    buf += sizeof(" audit(");
+    buf += sizeof(" audit(") - 1;
 
     for (i = 0; i < (int)(sizeof(auditID) - 2) && *buf && *buf != ')'; ++i) {
         auditID[i] = *buf++;

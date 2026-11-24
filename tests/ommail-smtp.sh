@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This test covers ommail's SMTP mode against a deterministic local SMTP
 # helper. The helper writes its port file only after listen() succeeds and
 # writes a done file after QUIT, so success is proven by synchronized shutdown
@@ -6,8 +7,8 @@
 
 . ${srcdir:=.}/diag.sh init
 
-if ! command -v python3 >/dev/null 2>&1; then
-	echo "python3 not available, skipping ommail SMTP helper test"
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+	echo "python3 >= 3.6 not available, skipping ommail SMTP helper test"
 	skip_test
 fi
 

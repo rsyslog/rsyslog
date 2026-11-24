@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* An implementation of the sigprov interface for KSI-LS12.
  *
  * Copyright 2013-2017 Adiscon GmbH and Guardtime, Inc.

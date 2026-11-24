@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # added 2026-05-19 by Codex, released under ASL 2.0
 # Opens and closes a zstd stream:always listener without sending bytes; the
 # oracle is the absence of a misleading truncated-stream diagnostic.

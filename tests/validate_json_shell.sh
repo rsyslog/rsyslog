@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # JSON equality validator using shell tools as fallback
 # This script provides a simpler validation when Python is not available
 

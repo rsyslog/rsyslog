@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /* The zstdw object. It encapsulates the zstd functionality. The primary
  * purpose of this wrapper class is to enable rsyslogd core to be build without
  * zstd libraries.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test that '$' in double-quoted string constants raise a meaningful
 # error message and do not cause rsyslog to segfault.
 # added 2019-12-30 by Rainer Gerhards

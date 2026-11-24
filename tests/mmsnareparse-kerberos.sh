@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Kerberos-focused test for mmsnareparse: validate client address/port and certificate info
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init

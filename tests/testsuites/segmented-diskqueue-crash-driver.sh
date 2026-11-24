@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Shared deterministic crash-point driver. Phase one acknowledges a known
 # multi-segment backlog while the first worker is delayed, arms one imdiag
 # point, and requires SIGKILL-style termination. Restart must recover the full
