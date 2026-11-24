@@ -608,6 +608,7 @@ static void ratelimitPolicyFileDestruct(ratelimit_policy_file_t *policy) {
     memset(policy, 0, sizeof(*policy));
 }
 
+#ifdef HAVE_LIBYAML
 static rsRetVal parseBoolValue(const char *value, sbool *out) {
     DEFiRet;
 
@@ -683,6 +684,7 @@ static rsRetVal parseSeverityValue(const char *value, int *out) {
 finalize_it:
     RETiRet;
 }
+#endif /* HAVE_LIBYAML */
 
 static rsRetVal parsePolicyFile(const char *policy_file, ratelimit_policy_file_t *policy) {
     DEFiRet;
@@ -957,6 +959,7 @@ finalize_it:
              "ratelimit: policy file '%s' specified but rsyslog "
              "was compiled without libyaml support. Policy settings ignored.",
              policy_file);
+    (void)policy;
     iRet = RS_RET_CONF_PARAM_INVLD;
 #endif
     RETiRet;
