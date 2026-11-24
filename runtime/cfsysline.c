@@ -305,19 +305,24 @@ finalize_it:
 
 
 static rsRetVal doGetPositiveInt(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *pVal) {
-    int val;
+    int64 val;
     DEFiRet;
 
-    CHKiRet(doGetInt(pp, NULL, &val));
+    CHKiRet(doGetSize(pp, NULL, &val));
+    if (loadConf != NULL && (val < INT_MIN || val > INT_MAX)) loadConf->local_legacy_numeric_error = 1;
     if (val < 1) {
-        LogError(0, RS_RET_INVALID_VALUE, "value %d must be greater than zero.", val);
+        LogError(0, RS_RET_INVALID_VALUE, "value %lld must be greater than zero.", val);
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    }
+    if (val > INT_MAX) {
+        LogError(0, RS_RET_INVALID_VALUE, "value %lld too large for integer argument.", val);
         ABORT_FINALIZE(RS_RET_INVALID_VALUE);
     }
 
     if (pSetHdlr == NULL) {
-        *((int *)pVal) = val;
+        *((int *)pVal) = (int)val;
     } else {
-        CHKiRet(pSetHdlr(pVal, val));
+        CHKiRet(pSetHdlr(pVal, (int)val));
     }
 
 finalize_it:
