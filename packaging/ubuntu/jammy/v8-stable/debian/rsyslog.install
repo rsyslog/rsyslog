@@ -2,6 +2,7 @@ debian/rsyslog.conf /etc/
 debian/50-default.conf /usr/share/rsyslog
 debian/tmp/usr/sbin/
 debian/tmp/usr/share/man/
+debian/tmp/usr/share/doc/rsyslog/COPYING.BSD-3-Clause
 debian/tmp/usr/lib/rsyslog/imfile.so
 debian/tmp/usr/lib/rsyslog/imklog.so
 debian/tmp/usr/lib/rsyslog/immark.so

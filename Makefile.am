@@ -2,6 +2,7 @@ sbin_PROGRAMS =
 pkglib_LTLIBRARIES =
 
 pkgconfigdir = $(libdir)/pkgconfig
+dist_doc_DATA = COPYING.BSD-3-Clause
 
 EXTRA_DIST = \
 	devtools/gather-check-logs.sh \

@@ -6,6 +6,9 @@
 # previous selectors in the same filter line. The oracle is omfile output after
 # synchronized shutdown: local4.notice/info are written by the standalone
 # selector, while a compound selector excludes both info and debug.
+# A classic wildcard selector must apply the threshold to every facility
+# before mail.none clears mail. A named facility list with exact priority
+# must select only info from each named facility.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -24,11 +27,20 @@ if prifilt("local4.!=debug") then {
 if prifilt("local4.!=info;local4.!=debug") then {
 	action(type="omfile" file="'$RSYSLOG_DYNNAME'.compound.out.log" template="outfmt")
 }
+
+*.info;mail.none action(type="omfile" file="'$RSYSLOG_DYNNAME'.wildcard.out.log" template="outfmt")
+
+if prifilt("mail,local5.=info") then {
+	action(type="omfile" file="'$RSYSLOG_DYNNAME'.named.out.log" template="outfmt")
+}
 '
 startup
 tcpflood -m1 -P 165 -i0
 tcpflood -m1 -P 166 -i1
 tcpflood -m1 -P 167 -i2
+tcpflood -m1 -P 22 -i3
+tcpflood -m1 -P 173 -i4
+tcpflood -m1 -P 174 -i5
 shutdown_when_empty
 wait_shutdown
 content_check "00000000"
@@ -38,4 +50,18 @@ export RSYSLOG_OUT_LOG="$RSYSLOG_DYNNAME.compound.out.log"
 content_check "00000000"
 check_not_present "00000001"
 check_not_present "00000002"
+export RSYSLOG_OUT_LOG="$RSYSLOG_DYNNAME.wildcard.out.log"
+content_check "00000000"
+content_check "00000001"
+content_check "00000004"
+content_check "00000005"
+check_not_present "00000002"
+check_not_present "00000003"
+export RSYSLOG_OUT_LOG="$RSYSLOG_DYNNAME.named.out.log"
+content_check "00000003"
+content_check "00000005"
+check_not_present "00000000"
+check_not_present "00000001"
+check_not_present "00000002"
+check_not_present "00000004"
 exit_test
