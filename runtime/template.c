@@ -1916,9 +1916,17 @@ static rsRetVal do_Parameter(uchar **pp, struct template *pTpl) {
     /* save field name - if none was given, use the property name instead */
     if (pStrField == NULL) {
         if (pTpe->data.field.msgProp.id == PROP_CEE || pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
-            /* in CEE case, we remove "$!"/"$." from the fieldname - it's just our indicator */
-            pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp) + 2);
-            pTpe->lenFieldName = cstrLen(pStrProp) - 2;
+            /* in CEE case, we remove the "$!"/"$." or short "!"/"." indicator from
+             * the fieldname. The short form has a one-byte prefix, and a name may
+             * consist of the indicator alone (e.g. "%!%"), so never skip past the
+             * end of the property name.
+             */
+            uchar *const propName = cstrGetSzStrNoNULL(pStrProp);
+            size_t prefixLen = (propName[0] == '$') ? 2 : 1;
+            const size_t propLen = cstrLen(pStrProp);
+            if (prefixLen > propLen) prefixLen = propLen;
+            pTpe->fieldName = ustrdup(propName + prefixLen);
+            pTpe->lenFieldName = (int)(propLen - prefixLen);
         } else {
             pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp));
             pTpe->lenFieldName = cstrLen(pStrProp);

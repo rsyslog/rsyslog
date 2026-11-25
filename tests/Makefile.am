@@ -602,6 +602,7 @@ TESTS_DEFAULT = \
 	template-json.sh \
 	$(TESTS_RSCRIPT_OBJECT_STRINGS) \
 	template-property-transformations.sh \
+	template-cee-short-name.sh \
 	$(TESTS_TEMPLATE_PARAMETER_ERRORS) \
         template-pure-json.sh \
 	template-jsonf-nested.sh \
