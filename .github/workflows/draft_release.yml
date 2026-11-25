@@ -268,9 +268,11 @@ jobs:
 
           sha256sum -c "${checksums[0]}"
 
-          printf 'tarball_path=%s\n' "release-assets/${tarballs[0]}" >> "$GITHUB_OUTPUT"
-          printf 'checksum_path=%s\n' "release-assets/${checksums[0]}" >> "$GITHUB_OUTPUT"
-          printf 'sbom_path=%s\n' "release-assets/${sboms[0]}" >> "$GITHUB_OUTPUT"
+          {
+            printf 'tarball_path=%s\n' "release-assets/${tarballs[0]}"
+            printf 'checksum_path=%s\n' "release-assets/${checksums[0]}"
+            printf 'sbom_path=%s\n' "release-assets/${sboms[0]}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create or update draft release
         env:
