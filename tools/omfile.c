@@ -173,7 +173,7 @@ typedef struct _instanceData {
     uchar *dynaFileBasePath; /**< normalized constant base path for dynafile templates */
     sbool bPermitDynaFilePathEscape; /**< permit dynafile paths outside the derived base */
     sbool bRestrictDynaFileTplType; /**< reject template types without an inspectable fixed prefix */
-    sbool bRelRootRejectLogged; /**< relative-name rejection already logged (guarded by mutWrite) */
+    sbool rel_root_reject_logged; /**< relative-name rejection already logged (guarded by mutWrite) */
     strm_t *pStrm; /**< our output stream */
     short nInactive; /**< number of minutes not writen (STATIC files only) */
     char bDynamicName; /**< 0 - static name, 1 - dynamic name (with properties) */
@@ -379,7 +379,7 @@ static int normalizedPathIsBelowBase(const uchar *const normPath, const uchar *c
  *
  * @return nonzero if the working directory is "/", 0 otherwise.
  */
-static int workDirIsFilesystemRoot(void) {
+static int work_dir_is_filesystem_root(void) {
     char cwd[2];
 
     return getcwd(cwd, sizeof(cwd)) != NULL && cwd[0] == '/' && cwd[1] == '\0';
@@ -419,11 +419,11 @@ static rsRetVal validateDynaFilePath(instanceData *const pData, const uchar *con
     } else if (normPath[0] == '/' || pathStartsWithParentRef(normPath)) {
         LogError(0, RS_RET_ERR, "omfile: dynafile path traversal blocked: '%s'", newFileName);
         ABORT_FINALIZE(RS_RET_DISCARDMSG);
-    } else if (workDirIsFilesystemRoot()) {
+    } else if (work_dir_is_filesystem_root()) {
         /* Logged once per action: every record of such a template is dropped,
          * and the error message itself may be routed back to this action. */
-        if (!pData->bRelRootRejectLogged) {
-            pData->bRelRootRejectLogged = 1;
+        if (!pData->rel_root_reject_logged) {
+            pData->rel_root_reject_logged = 1;
             LogError(0, RS_RET_ERR,
                      "omfile: dynafile path traversal blocked: relative path '%s' would resolve "
                      "against the filesystem root because dynafile template '%s' has no fixed "
@@ -1750,7 +1750,7 @@ static void setInstParamDefaults(instanceData *__restrict__ const pData) {
     pData->fname = NULL;
     pData->tplName = NULL;
     pData->dynaFileBasePath = NULL;
-    pData->bRelRootRejectLogged = 0;
+    pData->rel_root_reject_logged = 0;
     pData->bPermitDynaFilePathEscape = loadModConf->bPermitDynaFilePathEscape;
     pData->bRestrictDynaFileTplType = loadModConf->bRestrictDynaFileTplType;
     pData->fileUID = loadModConf->fileUID;
@@ -2139,7 +2139,7 @@ BEGINparseSelectorAct
     /* Legacy selector actions bypass newActInst(), so copy the dynafile
      * module defaults explicitly when a v6 module block was provided. */
     pData->dynaFileBasePath = NULL;
-    pData->bRelRootRejectLogged = 0;
+    pData->rel_root_reject_logged = 0;
     pData->bPermitDynaFilePathEscape = 0;
     pData->bRestrictDynaFileTplType = 0;
     if (loadModConf != NULL) {

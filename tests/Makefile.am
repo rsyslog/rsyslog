@@ -1107,6 +1107,7 @@ TESTS_LIBYAML = \
 	yaml-omfile-dynafilecachesize-invalid.sh \
 	yaml-filecreatemode-invalid-digits.sh \
 	yaml-omfile-dynafile-template-type-invalid.sh \
+	yaml-omfile-dynafile-relative-root.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
 	yaml-error.sh \
