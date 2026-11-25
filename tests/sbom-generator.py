@@ -19,6 +19,15 @@ What is tested and why:
   fields, scopes, version constraints, vendored file locations and the
   tarball hash; every dependency ref must point at a component; output
   must be byte-identical for the same input and SOURCE_DATE_EPOCH.
+- Configure options: each optional library must name the configure
+  options under which the build looks for it (shell if/elif, AS_IF,
+  AC_ARG_ENABLE actions, AC_DEFUN bodies via their call sites, and
+  plugins/<module>/Makefile.am via --enable-<module>).  Else branches must
+  not be attributed, quoted C code must not break m4 quote tracking, a
+  probe outside any option must be flagged, and required libraries carry
+  no options.  An unknown "configure_options" entry must fail --check.
+  Without this a distributor cannot tell which SBOM entries apply to a
+  given build configuration.
 - Real tree: --check on this source tree must pass, so a PR that adds a
   library without updating the manifest fails here and in CI.
 
@@ -352,6 +361,181 @@ class OutputTests(unittest.TestCase):
         self.assertIn("newlib", [c["name"] for c in json.loads(out)["components"]])
 
 
+OPTIONS_CONFIGURE_AC = textwrap.dedent("""\
+    AC_INIT([demo],[1.0.0],[demo@example.org])
+    AC_ARG_ENABLE(omdemo,
+            [AS_HELP_STRING([--enable-omdemo],[demo output])],
+            [enable_omdemo="${enableval}"],
+            [enable_omdemo=no])
+    AC_ARG_ENABLE(libcap-ng,
+            [AS_HELP_STRING([--enable-libcap-ng],[capabilities])],
+            [case "${enableval}" in
+             yes) enable_libcapng="yes" ;;
+             esac],
+            [enable_libcapng=no])
+    AC_ARG_ENABLE(imdemo, [AS_HELP_STRING([--enable-imdemo],[demo input])])
+    AC_ARG_ENABLE(direct, [AS_HELP_STRING([--enable-direct],[x])],
+            [PKG_CHECK_MODULES(DIRECT, directlib)])
+    AC_ARG_WITH(fancy_lib, [AS_HELP_STRING([--with-fancy-lib],[x])])
+    AC_DEFUN([DEMO_NEEDS_SSL], [
+            PKG_CHECK_MODULES(SSL, openssl)
+    ])
+    if test "x$enable_omdemo" = "xyes"; then
+            PKG_CHECK_MODULES(KAFKA, rdkafka >= 1.0)
+            DEMO_NEEDS_SSL
+            AC_TRY_LINK(
+              [#include <stdio.h>
+               #include <stdlib.h>],
+              [return 0;])
+    elif test "x$enable_imdemo" = "xyes"; then
+            PKG_CHECK_MODULES(KAFKA, rdkafka)
+    else
+            PKG_CHECK_MODULES(ELSEONLY, elseonly)
+    fi
+    if test "$enable_libcapng" = "yes"; then PKG_CHECK_MODULES(CAPNG, libcap-ng); fi
+    AS_IF([test "x${with_fancy_lib}" = "xyes"], [
+            PKG_CHECK_MODULES(FANCY, fancy)
+    ], [
+            PKG_CHECK_MODULES(NOTFANCY, notfancy)
+    ])
+    PKG_CHECK_MODULES(ESTR, libestr)
+    if test "x$enable_omdemo" = "xyes"; then
+            PKG_CHECK_MODULES(UUID, uuid)
+    fi
+    PKG_CHECK_MODULES(UUID, uuid)
+    AC_ARG_ENABLE(omtcl, [AS_HELP_STRING([--enable-omtcl],[tcl])])
+    """)
+
+OPTIONS_MANIFEST = textwrap.dedent("""\
+    [project]
+    name = "demo"
+    supplier = "Demo project"
+    website = "https://demo.example.org"
+    vcs = "https://github.com/demo/demo"
+    advisories = "https://github.com/demo/demo/security/advisories"
+    purl = "pkg:github/demo/demo"
+    license_expression = "Apache-2.0"
+
+    [[dependency]]
+    name = "librdkafka"
+    match = ["rdkafka"]
+
+    [[dependency]]
+    name = "openssl"
+    match = ["openssl"]
+
+    [[dependency]]
+    name = "libcap-ng"
+    match = ["libcap-ng"]
+
+    [[dependency]]
+    name = "direct"
+    match = ["directlib"]
+
+    [[dependency]]
+    name = "fancy"
+    match = ["fancy"]
+
+    [[dependency]]
+    name = "notfancy"
+    match = ["notfancy"]
+
+    [[dependency]]
+    name = "elseonly"
+    match = ["elseonly"]
+
+    [[dependency]]
+    name = "libestr"
+    match = ["libestr"]
+    required = true
+
+    [[dependency]]
+    name = "libuuid"
+    match = ["uuid"]
+
+    [[dependency]]
+    name = "libpcap"
+    match = ["pcap"]
+
+    [[dependency]]
+    name = "tcl"
+    match = []
+    declared = true
+    configure_options = ["--enable-omtcl"]
+    """)
+
+
+class OptionTests(unittest.TestCase):
+    def setUp(self):
+        self.tree = FixtureTree()
+        self.tree.write("configure.ac", OPTIONS_CONFIGURE_AC)
+        self.tree.write("plugins/demo/Makefile.am", "")
+        self.tree.write("plugins/imdemo/Makefile.am", "imdemo_la_LIBADD = -lpcap\n")
+        self.tree.write("sbom-components.toml", OPTIONS_MANIFEST)
+
+    def tearDown(self):
+        self.tree.cleanup()
+
+    def bom_options(self):
+        rc, out, err = run_cli("--srcdir", self.tree.root, "--manifest", self.tree.manifest,
+                               env_extra={"SOURCE_DATE_EPOCH": "1764000000"})
+        self.assertEqual(rc, 0, err)
+        result = {}
+        for c in json.loads(out)["components"]:
+            props = c.get("properties", [])
+            result[c["name"]] = (
+                [p["value"] for p in props if p["name"] == "rsyslog:sbom:configure-option"],
+                any(p["name"] == "rsyslog:sbom:probed-without-option" for p in props))
+        return result
+
+    def test_declared_options_include_assigned_variables(self):
+        options = gen.declared_options(OPTIONS_CONFIGURE_AC)
+        self.assertEqual(options["enable_omdemo"], "--enable-omdemo")
+        self.assertEqual(options["enable_libcap_ng"], "--enable-libcap-ng")
+        self.assertEqual(options["enable_libcapng"], "--enable-libcap-ng")
+        self.assertEqual(options["with_fancy_lib"], "--with-fancy-lib")
+
+    def test_options_per_library(self):
+        opts = self.bom_options()
+        # if and elif branches both pull in rdkafka.
+        self.assertEqual(opts["librdkafka"], (["--enable-imdemo", "--enable-omdemo"], False))
+        # AC_DEFUN body inherits the guard of its call site.
+        self.assertEqual(opts["openssl"], (["--enable-omdemo"], False))
+        # One-line if with a variable the option's action assigns.
+        self.assertEqual(opts["libcap-ng"], (["--enable-libcap-ng"], False))
+        # Probe inside the action-if-given of AC_ARG_ENABLE.
+        self.assertEqual(opts["direct"], (["--enable-direct"], False))
+        # AS_IF then-branch with ${with_...}.
+        self.assertEqual(opts["fancy"], (["--with-fancy-lib"], False))
+        # plugins/imdemo/Makefile.am maps to --enable-imdemo.
+        self.assertEqual(opts["libpcap"], (["--enable-imdemo"], False))
+        # Manifest-declared option for a library the scanner cannot see.
+        self.assertEqual(opts["tcl"], (["--enable-omtcl"], False))
+
+    def test_else_branches_and_required_are_not_attributed(self):
+        opts = self.bom_options()
+        self.assertEqual(opts["notfancy"], ([], False))
+        self.assertEqual(opts["elseonly"], ([], False))
+        self.assertEqual(opts["libestr"], ([], False))
+
+    def test_unconditional_probe_is_flagged(self):
+        self.assertEqual(self.bom_options()["libuuid"], (["--enable-omdemo"], True))
+
+    def test_quoted_c_code_keeps_quotes_balanced(self):
+        # ' #include <stdlib.h>],' looks like a shell comment; dropping its
+        # ']' would swallow the rest of the file into the AC_TRY_LINK call.
+        clean = gen.strip_comments(OPTIONS_CONFIGURE_AC)
+        start = clean.index("AC_TRY_LINK(")
+        args = gen.macro_args(clean, start + len("AC_TRY_LINK"))
+        self.assertEqual(args[1], "return 0;")
+
+    def test_unknown_configure_option_fails_check(self):
+        self.tree.replace("sbom-components.toml", '"--enable-omtcl"', '"--enable-nosuch"')
+        rc, _, err = run_cli("--srcdir", self.tree.root, "--manifest", self.tree.manifest, "--check")
+        self.assertEqual(rc, 1)
+        self.assertIn("configure option '--enable-nosuch'", err)
+
+
 class RealTreeTests(unittest.TestCase):
     def test_manifest_matches_this_source_tree(self):
         proc = subprocess.run([sys.executable, GENERATOR, "--srcdir", SRCDIR, "--check"],
@@ -365,6 +549,13 @@ class RealTreeTests(unittest.TestCase):
         comps = {c["name"]: c for c in json.loads(proc.stdout)["components"]}
         for name in ("libestr", "libfastjson", "zlib"):
             self.assertEqual(comps[name]["scope"], "required", name)
+
+        def options(name):
+            return {p["value"] for p in comps[name]["properties"]
+                    if p["name"] == "rsyslog:sbom:configure-option"}
+        self.assertTrue({"--enable-omkafka", "--enable-imkafka"} <= options("librdkafka"))
+        self.assertIn("--enable-mysql", options("mysqlclient"))
+        self.assertIn("--enable-omamqp1", options("openssl"))
 
 
 if __name__ == "__main__":

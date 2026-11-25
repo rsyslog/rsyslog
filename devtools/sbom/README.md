@@ -24,6 +24,19 @@ the manifest only so that `tests/sbom-generator.sh` also runs under
   required by `configure.ac` (`rsyslog:sbom:version-constraint`) and whether
   the library is always needed (`scope: required`) or only for optional
   modules (`scope: optional`).
+- **Configure options of optional libraries**: each optional library lists
+  the `configure` options under which the build looks for it
+  (`rsyslog:sbom:configure-option`, for example `--enable-omkafka` and
+  `--enable-imkafka` for librdkafka).  A build that uses none of these
+  options does not need the library, so a distributor can tell which
+  entries apply to its configuration.  The options are read from
+  `configure.ac` (shell `if`/`elif`, `AS_IF`, `AC_ARG_ENABLE` actions and
+  `AC_DEFUN` call sites) and from `plugins/<module>/Makefile.am`
+  (`--enable-<module>`); `configure_options` in the manifest adds them for
+  declared libraries.  `rsyslog:sbom:probed-without-option` marks a library
+  that `configure` also checks for without any option (for example for the
+  testbench or as a platform default).  `rsyslog:sbom:used-by-module` names
+  the `Makefile.am` directories that link the library directly.
 
 This is a source SBOM (`lifecycles: pre-build`).  Binary packages and
 container images need their own build SBOM with the exact linked versions.
@@ -31,8 +44,8 @@ container images need their own build SBOM with the exact linked versions.
 ## Tests
 
 `tests/sbom-generator.sh` (testbench, Python 3.11 or later) covers scanning,
-`--check` drift detection, the CycloneDX output and `--check` on this tree.
-Run it alone with `make check TESTS=sbom-generator.sh` or
+configure-option attribution, `--check` drift detection, the CycloneDX
+output and `--check` on this tree.  Run it alone with `make check TESTS=sbom-generator.sh` or
 `python3 tests/sbom-generator.py`.
 
 ## Keeping the manifest current

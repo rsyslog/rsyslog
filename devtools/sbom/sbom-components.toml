@@ -131,6 +131,8 @@ paths = [
 # "required = true" marks libraries without which rsyslog does not build;
 # everything else is needed only by optional modules or features.
 # "declared = true" adds a library that the scanner cannot detect.
+# The configure options that pull in an optional library are read from
+# configure.ac; "configure_options" adds them for declared libraries.
 # GNU ld "-l:<file>" entries are matched by the file name without the
 # "lib" prefix, the ".a"/".so" suffix and a "-static" suffix, e.g.
 # -l:librdkafka-static.a matches "rdkafka".
@@ -390,5 +392,6 @@ purl = "pkg:github/the-tcpdump-group/libpcap"
 name = "tcl"
 match = []
 declared = true
+configure_options = ["--enable-omtcl"]
 website = "https://www.tcl-lang.org"
 description = "Found through tclConfig.sh (SC_LOAD_TCLCONFIG) for omtcl."

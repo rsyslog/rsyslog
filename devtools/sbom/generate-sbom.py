@@ -48,6 +48,11 @@ PKGCONFIG_CALL_RE = re.compile(
     r"(?:\$PKG_CONFIG|\$\{PKG_CONFIG\}|pkg-config)\s+--(?:libs|cflags|exists)\s+([A-Za-z][\w.+-]*)")
 AC_INIT_RE = re.compile(r"AC_INIT\(\s*\[?([^\],]+)\]?\s*,\s*\[?([^\],]+)\]?")
 VERSION_OP_RE = re.compile(r"^(>=|<=|=|>|<)$")
+CPP_LINE_RE = re.compile(r"#\s*(include|define|undef|if|ifdef|ifndef|else|elif|endif|error|pragma)\b")
+OPTION_DECL_RE = re.compile(r"\bAC_ARG_(ENABLE|WITH)\s*\(\s*\[?([\w-]+)")
+OPTION_ASSIGN_RE = re.compile(r"(?<![\w$])((?:enable|with)_\w+)=")
+OPTION_VAR_RE = re.compile(r"\$\{?((?:enable|with)_\w+)")
+SHELL_KEYWORD_RE = re.compile(r"(?:^|[;[])\s*(if|elif|else|fi)\b")
 VENDOR_README_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([0-9][^|]*?)\s*\|")
 
 
@@ -69,45 +74,154 @@ def link_name(flag_value):
 
 
 def strip_comments(text):
-    """Blank out shell (#) and m4 (dnl) comment lines, keeping line numbers."""
+    """Blank out shell (#) and m4 (dnl) comment lines, keeping line numbers.
+
+    C preprocessor lines inside quoted test programs (#include ...) are not
+    comments and are kept.  Of other comment lines only the m4 quote
+    characters are kept, so that the quoting stays balanced.
+    """
     out = []
     for line in text.splitlines():
         s = line.lstrip()
-        out.append("" if s.startswith("#") or s.startswith("dnl") else line)
+        if CPP_LINE_RE.match(s):
+            pass
+        elif s.startswith("#") or s.startswith("dnl"):
+            line = "".join(c for c in line if c in "[]")
+        out.append(line)
     return "\n".join(out)
 
 
-def macro_args(text, open_paren):
+def macro_arg_spans(text, open_paren):
     """Split the arguments of an m4 macro call starting at '('.
 
-    m4 quotes ([ ]) protect commas and parentheses.  Returns the list of
-    top-level arguments with quotes and whitespace removed.
+    m4 quotes ([ ]) protect commas and parentheses.  Returns a list of
+    (start, end) offsets of the raw top-level arguments.
     """
     depth = 0
     quote = 0
-    args = []
-    cur = []
+    spans = []
+    start = open_paren + 1
     for i in range(open_paren, len(text)):
         c = text[i]
         if c == "[":
             quote += 1
         elif c == "]":
             quote -= 1
-        if quote == 0 and c == "(":
+        elif quote == 0 and c == "(":
             depth += 1
-            if depth == 1:
-                continue
         elif quote == 0 and c == ")":
             depth -= 1
             if depth == 0:
-                args.append("".join(cur))
+                spans.append((start, i))
                 break
-        if c == "," and depth == 1 and quote == 0:
-            args.append("".join(cur))
-            cur = []
-        else:
-            cur.append(c)
-    return [a.strip().strip("[]").strip() for a in args]
+        elif c == "," and depth == 1 and quote == 0:
+            spans.append((start, i))
+            start = i + 1
+    return spans
+
+
+def macro_args(text, open_paren):
+    """Arguments of an m4 macro call with quotes and whitespace removed."""
+    return [text[a:b].strip().strip("[]").strip() for a, b in macro_arg_spans(text, open_paren)]
+
+
+def declared_options(text):
+    """Map shell variables of AC_ARG_ENABLE/AC_ARG_WITH to their option names.
+
+    For example {"enable_omkafka": "--enable-omkafka"}.
+    Variables that the option's actions assign (for example enable_libcapng
+    for --enable-libcap-ng) map to the option as well.
+    """
+    options = {}
+    for m in OPTION_DECL_RE.finditer(text):
+        kind = m.group(1).lower()
+        name = m.group(2).strip()
+        option = f"--{kind}-{name.replace('_', '-')}"
+        options[f"{kind}_{name.replace('-', '_')}"] = option
+        for a, b in macro_arg_spans(text, text.index("(", m.start()))[2:]:
+            for var in OPTION_ASSIGN_RE.findall(text[a:b]):
+                options.setdefault(var, option)
+    return options
+
+
+def condition_options(condition, options):
+    """configure options referenced by a shell test expression, sorted."""
+    return sorted({options[v] for v in OPTION_VAR_RE.findall(condition) if v in options})
+
+
+def option_spans(text, options):
+    """Return (start, end, options) for code that runs only if options are set.
+
+    Covers the then-branch of shell 'if'/'elif' blocks and of AS_IF.  Else
+    branches are not attributed: they run when an option is *not* given.
+    """
+    spans = []
+    stack = []  # [start-of-branch, options-or-None]
+    pos = 0
+    for line in text.splitlines(keepends=True):
+        for m in SHELL_KEYWORD_RE.finditer(line):
+            kw = m.group(1)
+            at = pos + m.start(1)
+            if kw in ("elif", "else", "fi") and stack:
+                start, opts = stack[-1]
+                if opts:
+                    spans.append((start, at, opts))
+            if kw == "if":
+                stack.append([pos + m.end(1), condition_options(line[m.end(1):], options)])
+            elif kw == "elif" and stack:
+                stack[-1] = [pos + m.end(1), condition_options(line[m.end(1):], options)]
+            elif kw == "else" and stack:
+                stack[-1] = [at, None]
+            elif kw == "fi" and stack:
+                stack.pop()
+        pos += len(line)
+    for m in OPTION_DECL_RE.finditer(text):
+        # AC_ARG_ENABLE(name, help, action-if-given, action-if-not-given)
+        args = macro_arg_spans(text, text.index("(", m.start()))
+        if len(args) >= 3:
+            var = f"{m.group(1).lower()}_{m.group(2).strip().replace('-', '_')}"
+            spans.append((args[2][0], args[2][1], [options[var]]))
+    for m in re.finditer(r"\bAS_IF\s*\(", text):
+        args = macro_arg_spans(text, m.end() - 1)
+        if len(args) >= 2:
+            opts = condition_options(text[args[0][0]:args[0][1]], options)
+            if opts:
+                spans.append((args[1][0], args[1][1], opts))
+    return spans
+
+
+def guard_at(spans, offset):
+    """Options that guard the code at offset, as a sorted tuple."""
+    return tuple(sorted({o for a, b, opts in spans if a <= offset < b for o in opts}))
+
+
+def defun_bodies(text):
+    """Return {macro: (start, end)} for AC_DEFUN calls, name included."""
+    bodies = {}
+    for m in re.finditer(r"\bAC_DEFUN\s*\(", text):
+        args = macro_arg_spans(text, m.end() - 1)
+        if len(args) >= 2:
+            bodies[text[args[0][0]:args[0][1]].strip().strip("[]")] = (m.start(), args[1][1])
+    return bodies
+
+
+def guards_at(text, spans, bodies, offset, seen=()):
+    """Set of option guards for code at offset.
+
+    Code in an AC_DEFUN body runs where the macro is called, so it gets one
+    guard per call site.
+    """
+    local = guard_at(spans, offset)
+    for name, (a, b) in bodies.items():
+        if a <= offset < b and name not in seen:
+            result = set()
+            for m in re.finditer(r"\b" + re.escape(name) + r"\b", text):
+                if not a <= m.start() < b:
+                    for g in guards_at(text, spans, bodies, m.start(), seen + (name,)):
+                        result.add(tuple(sorted(set(local) | set(g))))
+            if result:
+                return result
+    return {local}
 
 
 def parse_module_list(spec):
@@ -131,16 +245,24 @@ def parse_module_list(spec):
 
 
 def scan_configure_ac(text, origin):
-    """Return {name: {"constraints": set, "sources": set}} found in configure.ac."""
-    found = {}
+    """Return the libraries probed or linked by configure.ac.
 
-    def add(name, origin_line, constraint=None):
-        entry = found.setdefault(name, {"constraints": set(), "sources": set()})
+    The result maps each name to {"constraints", "sources", "guards",
+    "modules"}.  A guard is the tuple of configure options that must all be
+    given for that probe to run; an empty tuple means it runs unconditionally.
+    """
+    found = {}
+    clean = strip_comments(text)
+    spans = option_spans(clean, declared_options(clean))
+    bodies = defun_bodies(clean)
+
+    def add(name, origin_line, offset, constraint=None):
+        entry = new_entry(found, name)
         entry["sources"].add(origin_line)
+        entry["guards"].update(guards_at(clean, spans, bodies, offset))
         if constraint:
             entry["constraints"].add(constraint)
 
-    clean = strip_comments(text)
     macro_re = re.compile(r"\b(" + "|".join(SCAN_MACROS) + r")\s*\(")
     for m in macro_re.finditer(clean):
         args = macro_args(clean, m.end() - 1)
@@ -149,23 +271,36 @@ def scan_configure_ac(text, origin):
         if m.group(1) == "PKG_CHECK_MODULES":
             if len(args) >= 2:
                 for name, constraint in parse_module_list(args[1]):
-                    add(name, where, constraint)
+                    add(name, where, m.start(), constraint)
         elif m.group(1) == "AC_CHECK_LIB":
             if args and args[0] and not args[0].startswith("$"):
-                add(args[0], where)
+                add(args[0], where, m.start())
         else:  # AC_SEARCH_LIBS(function, libs...)
             if len(args) >= 2:
                 for name in args[1].split():
                     if not name.startswith("$"):
-                        add(name, where)
-    for lineno, line in enumerate(clean.splitlines(), 1):
+                        add(name, where, m.start())
+    offset = 0
+    for lineno, line in enumerate(clean.splitlines(keepends=True), 1):
         where = f"{origin}:{lineno}"
         for m in PKGCONFIG_CALL_RE.finditer(line):
-            add(link_name(m.group(1)), where)
+            add(link_name(m.group(1)), where, offset + m.start())
         if LINK_LINE_RE.search(line):
             for m in LINK_FLAG_RE.finditer(line):
-                add(link_name(m.group(1)), where)
+                add(link_name(m.group(1)), where, offset + m.start())
+        offset += len(line)
     return found
+
+
+def new_entry(found, name):
+    return found.setdefault(name, {"constraints": set(), "sources": set(),
+                                   "guards": set(), "modules": set()})
+
+
+def module_of(makefile_am):
+    """Directory name of a non-root Makefile.am, e.g. 'omkafka'."""
+    directory = os.path.dirname(makefile_am)
+    return os.path.basename(directory) if directory else None
 
 
 def scan_makefile_am(text, origin, found):
@@ -173,8 +308,10 @@ def scan_makefile_am(text, origin, found):
     for lineno, line in enumerate(clean.splitlines(), 1):
         if LINK_LINE_RE.search(line):
             for m in LINK_FLAG_RE.finditer(line):
-                entry = found.setdefault(link_name(m.group(1)), {"constraints": set(), "sources": set()})
+                entry = new_entry(found, link_name(m.group(1)))
                 entry["sources"].add(f"{origin}:{lineno}")
+                if module_of(origin):
+                    entry["modules"].add(module_of(origin))
 
 
 def list_makefile_ams(srcdir):
@@ -199,6 +336,12 @@ def scan_tree(srcdir):
     for rel in list_makefile_ams(srcdir):
         with open(os.path.join(srcdir, rel), encoding="utf-8") as fh:
             scan_makefile_am(fh.read(), rel, found)
+    # A library linked by plugins/omfoo/Makefile.am belongs to --enable-omfoo.
+    options = set(declared_options(strip_comments(configure_ac)).values())
+    for entry in found.values():
+        for module in entry["modules"]:
+            if f"--enable-{module}" in options:
+                entry["guards"].add((f"--enable-{module}",))
     return configure_ac, found
 
 
@@ -212,8 +355,9 @@ def read_ac_init_version(configure_ac):
 def resolve(found, manifest):
     """Map scanned names to manifest dependencies.
 
-    Returns (resolved, unknown) where resolved is {dep_name: {"constraints"}}
-    and unknown is {scanned_name: sources}.
+    Returns (resolved, unknown) where resolved is
+    {dep_name: {"constraints", "guards", "modules"}} and unknown is
+    {scanned_name: sources}.
     """
     ignore = set(manifest.get("ignore", {}).get("names", []))
     by_match = {}
@@ -232,12 +376,26 @@ def resolve(found, manifest):
         if dep is None:
             unknown[name] = info["sources"]
             continue
-        entry = resolved.setdefault(dep["name"], {"constraints": set()})
-        entry["constraints"].update(info["constraints"])
+        entry = resolved.setdefault(dep["name"], empty_resolved())
+        for key in ("constraints", "guards", "modules"):
+            entry[key].update(info.get(key, ()))
     for dep in manifest.get("dependency", []):
         if dep.get("declared"):
-            resolved.setdefault(dep["name"], {"constraints": set()})
+            resolved.setdefault(dep["name"], empty_resolved())
     return resolved, unknown
+
+
+def empty_resolved():
+    return {"constraints": set(), "guards": set(), "modules": set()}
+
+
+def configure_options(guards):
+    """configure options under which the build system looks for a library.
+
+    A build that uses none of them does not need the library, unless the
+    library is also probed unconditionally (an empty guard).
+    """
+    return sorted({option for guard in guards for option in guard})
 
 
 def check_manifest(srcdir, manifest, found):
@@ -251,6 +409,15 @@ def check_manifest(srcdir, manifest, found):
     for dep in manifest.get("dependency", []):
         if not dep.get("declared") and not any(a in found for a in dep.get("match", [])):
             problems.append(f"dependency '{dep['name']}' is no longer used by the build system: remove it")
+    configure_ac = os.path.join(srcdir, "configure.ac")
+    if os.path.exists(configure_ac):
+        with open(configure_ac, encoding="utf-8") as fh:
+            known = set(declared_options(strip_comments(fh.read())).values())
+        for dep in manifest.get("dependency", []):
+            for option in dep.get("configure_options", []):
+                if option not in known:
+                    problems.append(f"dependency '{dep['name']}': configure option '{option}' "
+                                    "is not declared in configure.ac")
     for comp in manifest.get("vendored", []):
         for path in comp.get("paths", []):
             if not os.path.exists(os.path.join(srcdir, path)):
@@ -362,6 +529,14 @@ def build_bom(manifest, version, resolved, tarball=None, release_url=None):
             c["purl"] = dep["purl"]
         for constraint in sorted(resolved[name]["constraints"]):
             c["properties"].append(prop("version-constraint", constraint))
+        guards = resolved[name].get("guards", set()) | {tuple(dep.get("configure_options", []))}
+        if not dep.get("required"):
+            for option in configure_options(guards):
+                c["properties"].append(prop("configure-option", option))
+            if () in resolved[name].get("guards", set()) and configure_options(guards):
+                c["properties"].append(prop("probed-without-option", "true"))
+        for module in sorted(resolved[name].get("modules", set())):
+            c["properties"].append(prop("used-by-module", module))
         if ext_refs(dep):
             c["externalReferences"] = ext_refs(dep)
         components.append(c)
