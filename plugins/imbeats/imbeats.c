@@ -71,6 +71,10 @@ MODULE_CNFNAME("imbeats")
 #define IMBEATS_MAX_WORKER_THREADS 1024
 #define IMBEATS_DEFAULT_STARVATION_MAX_READS 500
 #define IMBEATS_ACCEPT_BATCH_LIMIT 64
+/* Delay before a listener disarmed by an accept(2) error is retried. Errors
+ * such as EMFILE, ENFILE or ENOMEM are usually transient; the delay prevents
+ * an epoll busy loop while the pending connection stays readable. */
+#define IMBEATS_ACCEPT_ERR_REARM_DELAY_MS 1000u
 
 #if defined(HAVE_SYS_EPOLL_H) && defined(HAVE_EPOLL_CREATE)
     #define IMBEATS_HAVE_EPOLL 1
@@ -243,6 +247,10 @@ struct imbeats_io_s {
     instanceConf_t *inst;
     session_t *sess;
     size_t listener_idx;
+    /* Listener-thread only: set when an accept(2) error left the listener
+     * disarmed; it is rearmed once rearm_due_ms has passed. */
+    int rearm_pending;
+    uint64_t rearm_due_ms;
 };
 
 static modConfData_t *loadModConf = NULL;
@@ -1887,6 +1895,23 @@ static rsRetVal rearmListener(instanceConf_t *const inst, const size_t idx) {
 finalize_it:
     RETiRet;
 }
+
+/* Rearm listeners that were left disarmed after an accept(2) error once their
+ * retry delay has passed. Without this, a transient resource shortage would
+ * stop the listener from accepting connections until restart.
+ */
+static void rearmDeferredListeners(instanceConf_t *const inst) {
+    const uint64_t now = monotonicMs();
+    size_t i;
+
+    for (i = 0; i < inst->listener_count && !instanceIsShuttingDown(inst); ++i) {
+        imbeats_io_t *const io = &inst->listener_descs[i];
+        if (io->rearm_pending && now >= io->rearm_due_ms) {
+            io->rearm_pending = 0;
+            (void)rearmListener(inst, i);
+        }
+    }
+}
 #endif
 
 static void report_listener_startup(instanceConf_t *const inst, const rsRetVal result) {
@@ -1948,11 +1973,15 @@ static void *listenerThread(void *arg) {
             if (io->type == IMBEATS_IO_LISTENER) {
                 const rsRetVal acceptRet = acceptReadyListener(inst, io->listener_idx);
                 /* An accept(2) error can leave the pending connection readable.
-                 * Keep the listener disarmed in that case to avoid an epoll busy
-                 * loop; connection-specific errors have already consumed their
-                 * connection and must not disable the listener.
+                 * Keep the listener disarmed for a short delay in that case to
+                 * avoid an epoll busy loop, then rearm it from
+                 * rearmDeferredListeners(); connection-specific errors have
+                 * already consumed their connection and rearm immediately.
                  */
-                if (acceptRet != RS_RET_ACCEPT_ERR && !instanceIsShuttingDown(inst)) {
+                if (acceptRet == RS_RET_ACCEPT_ERR) {
+                    io->rearm_pending = 1;
+                    io->rearm_due_ms = monotonicMs() + IMBEATS_ACCEPT_ERR_REARM_DELAY_MS;
+                } else if (!instanceIsShuttingDown(inst)) {
                     (void)rearmListener(inst, io->listener_idx);
                 }
             } else if (io->type == IMBEATS_IO_SESSION && io->sess != NULL) {
@@ -1965,6 +1994,7 @@ static void *listenerThread(void *arg) {
                 }
             }
         }
+        rearmDeferredListeners(inst);
         shutdownExpiredSessions(inst);
     }
     /* Workers may still process session events queued before shutdown and call

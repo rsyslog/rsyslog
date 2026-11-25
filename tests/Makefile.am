@@ -1798,6 +1798,7 @@ TESTS_IMHTTP_VALGRIND = \
 
 TESTS_IMBEATS = \
 	imbeats-bind-failure.sh \
+	imbeats-accept-error-rearm.sh \
 	imbeats-basic.sh \
 	imbeats-compressed.sh \
 	imbeats-seq-cumulative-two-windows.sh \
