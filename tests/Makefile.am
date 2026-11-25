@@ -2599,6 +2599,7 @@ TESTS_IMDTLS_VALGRIND = \
 
 TESTS_IMDTLS_OMDTLS = \
 	omdtls-server-identity.sh \
+	dtls-authmode-unsupported.sh \
 	sndrcv_dtls_certvalid.sh \
 	sndrcv_dtls_anon_ciphers.sh \
 	sndrcv_dtls_certvalid_ciphers.sh \

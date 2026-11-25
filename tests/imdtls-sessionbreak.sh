@@ -31,7 +31,7 @@ $AbortOnUncleanConfig on
 $PreserveFQDN on
 
 module(	load="../plugins/imdtls/.libs/imdtls" 
-	tls.AuthMode="x509/certvalid")
+	tls.AuthMode="anon")
 
 input(	type="imdtls"
 	port="'$PORT_RCVR'"
