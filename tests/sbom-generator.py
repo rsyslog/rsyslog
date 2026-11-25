@@ -553,7 +553,7 @@ class RealTreeTests(unittest.TestCase):
         def options(name):
             return {p["value"] for p in comps[name]["properties"]
                     if p["name"] == "rsyslog:sbom:configure-option"}
-        self.assertTrue({"--enable-omkafka", "--enable-imkafka"} <= options("librdkafka"))
+        self.assertLessEqual({"--enable-omkafka", "--enable-imkafka"}, options("librdkafka"))
         self.assertIn("--enable-mysql", options("mysqlclient"))
         self.assertIn("--enable-omamqp1", options("openssl"))
 
