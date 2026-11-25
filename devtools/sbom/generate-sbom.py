@@ -331,7 +331,8 @@ def build_bom(manifest, version, resolved, tarball=None, release_url=None):
             "name": comp["name"],
             "scope": "required",
             "description": comp.get("description", ""),
-            "licenses": [{"license": {"id": comp["license"]}}],
+            "licenses": [{"license": ({"id": comp["license"]} if comp.get("license")
+                                      else {"name": comp.get("license_name", "NOASSERTION")})}],
             "properties": [prop("origin", "vendored")],
             "evidence": {"occurrences": [{"location": p} for p in comp["paths"]]},
         }

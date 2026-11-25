@@ -33,7 +33,8 @@ names = [
 # ---------------------------------------------------------------------------
 # Code copied into the source tree.  It ships inside the tarball, so it is a
 # required component of every build that compiles the listed files.
-# "paths" must exist; --check verifies that.
+# "paths" must exist; --check verifies that.  "license" is an SPDX id; use
+# "license_name" instead for terms without one (e.g. public domain).
 # ---------------------------------------------------------------------------
 
 [[vendored]]
@@ -64,6 +65,21 @@ supplier = "Oracle and/or its affiliates"
 license = "CDDL-1.0"
 description = "getifaddrs() replacement for Solaris, built only there."
 paths = ["compat/getifaddrs.c", "compat/ifaddrs.h"]
+
+[[vendored]]
+name = "solaris-log-door"
+supplier = "Sun Microsystems, Inc."
+license = "CDDL-1.0"
+description = "Solaris log device and door handling used by imsolaris (Solaris only)."
+paths = ["plugins/imsolaris/sun_cddl.c"]
+
+[[vendored]]
+name = "wikibooks-base64-decode"
+supplier = "Wikibooks contributors"
+license_name = "Public Domain"
+website = "https://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64"
+description = "base64_decode() in grammar/rainerscript.c."
+paths = ["grammar/rainerscript.c"]
 
 [[vendored]]
 name = "bsd-syslogd-pri-filter"
