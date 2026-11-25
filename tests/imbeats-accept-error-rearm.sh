@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 #
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify that an imbeats listener recovers after a transient accept(2) error.
 # The listener keeps itself disarmed after an accept error (to avoid an epoll
 # busy loop on the still-pending connection); it used to stay disarmed
@@ -18,6 +20,8 @@
 # one second after the error.
 # Both output files are opened before the limit is lowered, so the error
 # message and the final event can be written while descriptors are scarce.
+# The ACK only means the event was enqueued; omfile opens its file lazily, so
+# the test waits for "before-emfile" in the output before lowering the limit.
 . ${srcdir:=.}/diag.sh init
 if ! command -v prlimit > /dev/null 2>&1 || [ ! -d /proc/self/fd ]; then
 	echo "SKIP: prlimit or /proc/self/fd not available"
@@ -50,7 +54,7 @@ RS_PID=$(getpid)
 # wait for the internal startup message so the second output file is open
 wait_file_lines "$RSYSLOG2_OUT_LOG" 1 50
 
-if ! $PYTHON - "$RS_PORT" "$RS_PID" "$RSYSLOG2_OUT_LOG" <<'PY'
+if ! $PYTHON - "$RS_PORT" "$RS_PID" "$RSYSLOG2_OUT_LOG" "$RSYSLOG_OUT_LOG" <<'PY'
 import json
 import os
 import socket
@@ -62,6 +66,7 @@ import time
 port = int(sys.argv[1])
 pid = sys.argv[2]
 errlog = sys.argv[3]
+outlog = sys.argv[4]
 
 
 def send_event(message, timeout):
@@ -81,8 +86,20 @@ def send_event(message, timeout):
             raise SystemExit(f"unexpected ack: {ack.hex()}")
 
 
-# Open the main output file before descriptors become scarce.
+# Open the main output file before descriptors become scarce. The ACK only
+# means the event was enqueued, so wait until omfile has actually written it.
 send_event("before-emfile", 10)
+deadline = time.time() + 10
+while True:
+    try:
+        with open(outlog, encoding="utf-8", errors="replace") as f:
+            if "before-emfile" in f.read():
+                break
+    except FileNotFoundError:
+        pass
+    if time.time() > deadline:
+        raise SystemExit("warm-up event did not reach the output file")
+    time.sleep(0.1)
 
 orig = subprocess.run(["prlimit", "--pid", pid, "--nofile", "--raw", "--noheadings", "--output", "SOFT,HARD"],
                       check=True, capture_output=True, text=True).stdout.split()
