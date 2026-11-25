@@ -173,6 +173,7 @@ typedef struct _instanceData {
     uchar *dynaFileBasePath; /**< normalized constant base path for dynafile templates */
     sbool bPermitDynaFilePathEscape; /**< permit dynafile paths outside the derived base */
     sbool bRestrictDynaFileTplType; /**< reject template types without an inspectable fixed prefix */
+    sbool bRelRootRejectLogged; /**< relative-name rejection already logged (guarded by mutWrite) */
     strm_t *pStrm; /**< our output stream */
     short nInactive; /**< number of minutes not writen (STATIC files only) */
     char bDynamicName; /**< 0 - static name, 1 - dynamic name (with properties) */
@@ -369,13 +370,33 @@ static int normalizedPathIsBelowBase(const uchar *const normPath, const uchar *c
 }
 
 /**
+ * @brief Check whether the process working directory is the filesystem root.
+ *
+ * A buffer of two bytes holds exactly "/". Any longer working directory makes
+ * getcwd(3) fail with ERANGE, so no full path needs to be retrieved. Other
+ * failures are treated as "not root"; the open then fails or succeeds exactly
+ * as it did before this check existed.
+ *
+ * @return nonzero if the working directory is "/", 0 otherwise.
+ */
+static int workDirIsFilesystemRoot(void) {
+    char cwd[2];
+
+    return getcwd(cwd, sizeof(cwd)) != NULL && cwd[0] == '/' && cwd[1] == '\0';
+}
+
+/**
  * @brief Validate a rendered dynamic file name before it can be opened.
  *
  * If the dynafile template had a meaningful static directory prefix, the
  * rendered path must normalize to that directory or a child of it. For templates
  * where no useful base can be derived, absolute paths and leading parent
- * traversal are rejected as a fallback. Installations that intentionally rely
- * on those legacy forms can opt in with dangerousPermitPathEscape.
+ * traversal are rejected as a fallback. Relative paths resolve against the
+ * process working directory. rsyslogd changes that to the filesystem root at
+ * startup unless -C is given; there, a relative name can select any location,
+ * just like an absolute one, so the fallback rejects it as well. Installations
+ * that intentionally rely on those legacy forms can opt in with
+ * dangerousPermitPathEscape.
  *
  * @param pData omfile action instance data.
  * @param newFileName Rendered dynafile path.
@@ -397,6 +418,19 @@ static rsRetVal validateDynaFilePath(instanceData *const pData, const uchar *con
         }
     } else if (normPath[0] == '/' || pathStartsWithParentRef(normPath)) {
         LogError(0, RS_RET_ERR, "omfile: dynafile path traversal blocked: '%s'", newFileName);
+        ABORT_FINALIZE(RS_RET_DISCARDMSG);
+    } else if (workDirIsFilesystemRoot()) {
+        /* Logged once per action: every record of such a template is dropped,
+         * and the error message itself may be routed back to this action. */
+        if (!pData->bRelRootRejectLogged) {
+            pData->bRelRootRejectLogged = 1;
+            LogError(0, RS_RET_ERR,
+                     "omfile: dynafile path traversal blocked: relative path '%s' would resolve "
+                     "against the filesystem root because dynafile template '%s' has no fixed "
+                     "leading directory; start the template with a directory such as /var/log/. "
+                     "Further rejections of relative paths for this action are not logged",
+                     newFileName, pData->fname);
+        }
         ABORT_FINALIZE(RS_RET_DISCARDMSG);
     }
 
@@ -1621,6 +1655,15 @@ BEGINsetActionInfo
             RETiRet;
         }
         iRet = deriveDynaFileBasePath(pData, pAction->ppTpl[1]);
+        if (iRet == RS_RET_OK && !pData->bPermitDynaFilePathEscape && !pathIsMeaningfulBase(pData->dynaFileBasePath)) {
+            LogMsg(0, RS_RET_OK, LOG_WARNING,
+                   "omfile: dynafile template '%s' has no fixed leading directory; "
+                   "absolute paths and leading '..' are rejected, and while rsyslogd "
+                   "runs from the filesystem root (the default without -C) relative "
+                   "paths are rejected as well. Start the template with a directory "
+                   "such as /var/log/",
+                   pData->fname);
+        }
     }
 ENDsetActionInfo
 
@@ -1707,6 +1750,7 @@ static void setInstParamDefaults(instanceData *__restrict__ const pData) {
     pData->fname = NULL;
     pData->tplName = NULL;
     pData->dynaFileBasePath = NULL;
+    pData->bRelRootRejectLogged = 0;
     pData->bPermitDynaFilePathEscape = loadModConf->bPermitDynaFilePathEscape;
     pData->bRestrictDynaFileTplType = loadModConf->bRestrictDynaFileTplType;
     pData->fileUID = loadModConf->fileUID;
@@ -2095,6 +2139,7 @@ BEGINparseSelectorAct
     /* Legacy selector actions bypass newActInst(), so copy the dynafile
      * module defaults explicitly when a v6 module block was provided. */
     pData->dynaFileBasePath = NULL;
+    pData->bRelRootRejectLogged = 0;
     pData->bPermitDynaFilePathEscape = 0;
     pData->bRestrictDynaFileTplType = 0;
     if (loadModConf != NULL) {

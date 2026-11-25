@@ -563,6 +563,7 @@ TESTS_DEFAULT = \
 	omusrmsg_ratelimit_name.sh \
 	omfile-module-params.sh \
 	omfile-dynafile-template-type-invalid.sh \
+	omfile-dynafile-relative-root.sh \
 	omfile-dynafile-template-type-list-default.sh \
 	omfile-dynafile-template-type-override.sh \
 	omfile-dynafilecachesize-invalid.sh \

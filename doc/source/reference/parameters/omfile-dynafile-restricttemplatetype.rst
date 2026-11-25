@@ -41,7 +41,9 @@ it.
 
 The default preserves plugin/string-generator and subtree dynafile templates.
 Those legacy forms use the fallback runtime guard: absolute paths and relative
-paths that lexically escape through ``..`` are rejected. Use
+paths that lexically escape through ``..`` are rejected. When the rsyslogd
+working directory is the filesystem root (the default unless ``-C`` is
+given), all relative paths are rejected as well. Use
 ``dynafile.dangerousPermitPathEscape="on"`` only when an affected legacy
 configuration must retain that behavior. Enable this option when an
 installation can use only string or list templates and wants that stricter
