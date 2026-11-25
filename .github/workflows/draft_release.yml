@@ -161,6 +161,15 @@ jobs:
       attestations: write
 
     steps:
+      - name: Require an official release tag
+        run: |
+          set -euo pipefail
+          # Same rule as update_draft_release: sign only tags it will release.
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v8\.[0-9]{4}\.[0-9]+$ ]]; then
+            echo "ERROR: tag '${GITHUB_REF_NAME}' is not an official release tag; not attesting" >&2
+            exit 1
+          fi
+
       - name: Download release artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -295,11 +304,20 @@ jobs:
           snapshots.
 
           The `.cdx.json` file is a CycloneDX SBOM of the source tarball.
-          Tagged releases carry signed build provenance and SBOM attestations;
+          EOF
+
+          # Attestations exist only for tag pushes (attest_release_artifacts).
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            cat >> release-notes.md <<'EOF'
+
+          The tarball carries signed build provenance and SBOM attestations;
           verify them with:
 
               gh attestation verify rsyslog-<version>.tar.gz -R rsyslog/rsyslog
+              gh attestation verify rsyslog-<version>.tar.gz -R rsyslog/rsyslog \
+                  --predicate-type https://cyclonedx.org/bom
           EOF
+          fi
 
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \

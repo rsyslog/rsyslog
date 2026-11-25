@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Rainer Gerhards and Others
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +43,7 @@ PROP_PREFIX = "rsyslog:sbom:"
 SCAN_MACROS = ("PKG_CHECK_MODULES", "AC_CHECK_LIB", "AC_SEARCH_LIBS")
 # -l<name> is only taken from lines that set linker flags.
 LINK_LINE_RE = re.compile(r"(LIBS|LIBADD|LDADD|LDFLAGS)\b")
-LINK_FLAG_RE = re.compile(r"(?<![\w$-])-l([A-Za-z][\w.+-]*)")
+LINK_FLAG_RE = re.compile(r"(?<![\w$-])-l(:?[A-Za-z][\w.+-]*)")
 PKGCONFIG_CALL_RE = re.compile(
     r"(?:\$PKG_CONFIG|\$\{PKG_CONFIG\}|pkg-config)\s+--(?:libs|cflags|exists)\s+([A-Za-z][\w.+-]*)")
 AC_INIT_RE = re.compile(r"AC_INIT\(\s*\[?([^\],]+)\]?\s*,\s*\[?([^\],]+)\]?")
@@ -52,6 +53,19 @@ VENDOR_README_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([0-9][^|]*?)\s*\|")
 
 class SbomError(Exception):
     pass
+
+
+def link_name(flag_value):
+    """Name for a -l argument; GNU ld -l:libfoo-static.a becomes 'foo'."""
+    if not flag_value.startswith(":"):
+        return flag_value
+    name = flag_value[1:]
+    name = re.sub(r"\.(a|so(\.[0-9.]+)?)$", "", name)
+    if name.startswith("lib"):
+        name = name[3:]
+    if name.endswith("-static"):
+        name = name[:-len("-static")]
+    return name
 
 
 def strip_comments(text):
@@ -147,10 +161,10 @@ def scan_configure_ac(text, origin):
     for lineno, line in enumerate(clean.splitlines(), 1):
         where = f"{origin}:{lineno}"
         for m in PKGCONFIG_CALL_RE.finditer(line):
-            add(m.group(1), where)
+            add(link_name(m.group(1)), where)
         if LINK_LINE_RE.search(line):
             for m in LINK_FLAG_RE.finditer(line):
-                add(m.group(1), where)
+                add(link_name(m.group(1)), where)
     return found
 
 
@@ -159,7 +173,7 @@ def scan_makefile_am(text, origin, found):
     for lineno, line in enumerate(clean.splitlines(), 1):
         if LINK_LINE_RE.search(line):
             for m in LINK_FLAG_RE.finditer(line):
-                entry = found.setdefault(m.group(1), {"constraints": set(), "sources": set()})
+                entry = found.setdefault(link_name(m.group(1)), {"constraints": set(), "sources": set()})
                 entry["sources"].add(f"{origin}:{lineno}")
 
 

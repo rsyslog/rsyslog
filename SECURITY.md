@@ -253,6 +253,8 @@ release page. Tagged releases also carry signed GitHub artifact attestations
 for the tarball and the SBOM:
 
     gh attestation verify rsyslog-<version>.tar.gz -R rsyslog/rsyslog
+    gh attestation verify rsyslog-<version>.tar.gz -R rsyslog/rsyslog \
+        --predicate-type https://cyclonedx.org/bom
 
 The SBOM lists rsyslog, the third-party code included in the source tree and
 the external libraries the build can link. See `devtools/sbom/README.md`.

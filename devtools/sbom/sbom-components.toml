@@ -115,6 +115,9 @@ paths = [
 # "required = true" marks libraries without which rsyslog does not build;
 # everything else is needed only by optional modules or features.
 # "declared = true" adds a library that the scanner cannot detect.
+# GNU ld "-l:<file>" entries are matched by the file name without the
+# "lib" prefix, the ".a"/".so" suffix and a "-static" suffix, e.g.
+# -l:librdkafka-static.a matches "rdkafka".
 # ---------------------------------------------------------------------------
 
 [[dependency]]
@@ -134,6 +137,7 @@ website = "https://github.com/rsyslog/libfastjson"
 [[dependency]]
 name = "zlib"
 match = ["zlib", "z"]
+required = true
 purl = "pkg:github/madler/zlib"
 website = "https://zlib.net"
 
@@ -307,7 +311,7 @@ purl = "pkg:github/cyrusimap/cyrus-sasl"
 
 [[dependency]]
 name = "qpid-proton"
-match = ["libqpid-proton", "libqpid-proton-proactor"]
+match = ["libqpid-proton", "libqpid-proton-proactor", "qpid-proton-proactor", "qpid-proton-core"]
 purl = "pkg:github/apache/qpid-proton"
 
 [[dependency]]

@@ -39,7 +39,13 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    # The configurable private runner is used only for same-repository PRs;
+    # fork PRs never run on it.
+    runs-on: >-
+      ${{ (github.event.repository.private &&
+      github.event.pull_request.head.repo.full_name == github.repository) &&
+      (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') ||
+      'ubuntu-latest' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
