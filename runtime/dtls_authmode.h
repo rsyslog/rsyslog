@@ -41,7 +41,7 @@
  * mode     - receives the resulting mode (unchanged on error)
  * returns RS_RET_OK or RS_RET_PARAM_ERROR (strict mode, unsupported value)
  */
-static inline rsRetVal dtlsParseAuthMode(const char *const modName, const char *const value, AuthMode *const mode) {
+static inline rsRetVal dtls_parse_auth_mode(const char *const modName, const char *const value, AuthMode *const mode) {
     if (!strcasecmp(value, "fingerprint")) {
         *mode = OSSL_AUTH_CERTFINGERPRINT;
     } else if (!strcasecmp(value, "name")) {
@@ -52,14 +52,14 @@ static inline rsRetVal dtlsParseAuthMode(const char *const modName, const char *
         *mode = OSSL_AUTH_CERTANON;
     } else if (loadConf != NULL && loadConf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
         LogError(0, RS_RET_PARAM_ERROR,
-                 "%s: unsupported tls.authmode \"%s\"; supported values are fingerprint, name, certvalid "
-                 "and anon; compatibility.defaults.secure=\"strict\" rejects this configuration",
+                 "%s: unsupported tls.authmode \"%s\"; supported values are fingerprint, name, certvalid, "
+                 "anon and certanon; compatibility.defaults.secure=\"strict\" rejects this configuration",
                  modName, value);
         return RS_RET_PARAM_ERROR;
     } else {
         LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
                "%s: unsupported tls.authmode \"%s\"; using anonymous mode WITHOUT peer verification for "
-               "compatibility; supported values are fingerprint, name, certvalid and anon; set "
+               "compatibility; supported values are fingerprint, name, certvalid, anon and certanon; set "
                "global(compatibility.defaults.secure=\"strict\") to reject this configuration",
                modName, value);
         *mode = OSSL_AUTH_CERTANON;

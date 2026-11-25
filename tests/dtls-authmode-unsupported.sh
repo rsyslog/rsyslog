@@ -1,5 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Validates handling of an unsupported tls.authmode value in omdtls (action)
 # and imdtls (input() and module()). Older versions silently fell back to
 # anonymous mode, so a typo such as "fingerprnt" disabled peer verification.
@@ -10,9 +13,14 @@
 #   says that anonymous mode without peer verification is used
 # - the explicit values "anon" and "certanon" stay valid without a warning.
 # Oracle: rsyslogd -N1 exit status and its diagnostics; no runtime traffic.
+# DTLS_AUTHMODE_YAML=YES writes the same configurations through the YAML
+# frontend (yaml-dtls-authmode-unsupported.sh); the oracle is unchanged.
 . ${srcdir:=.}/diag.sh init
 require_plugin imdtls
 require_plugin omdtls
+if [ "${DTLS_AUTHMODE_YAML:-}" = YES ]; then
+	require_yaml_support
+fi
 
 modpath="${RSYSLOG_MODDIR}"
 
@@ -28,7 +36,54 @@ run_check() {
 }
 
 # $1 = policy, $2 = where (omdtls|imdtls-input|imdtls-module), $3 = authmode
+write_yaml_config() {
+	local cfg="${RSYSLOG_DYNNAME}.$1.$2.$3.yaml"
+	{
+		echo 'version: 2'
+		echo 'global:'
+		echo "  compatibility.defaults.secure: \"$1\""
+		echo 'modules:'
+		case "$2" in
+		omdtls)
+			echo '  - load: "../plugins/omdtls/.libs/omdtls"'
+			;;
+		imdtls-input)
+			echo '  - load: "../plugins/imdtls/.libs/imdtls"'
+			echo 'inputs:'
+			echo '  - type: imdtls'
+			echo '    port: "0"'
+			echo "    tls.authmode: \"$3\""
+			echo '    ruleset: main'
+			;;
+		imdtls-module)
+			echo '  - load: "../plugins/imdtls/.libs/imdtls"'
+			echo "    tls.authmode: \"$3\""
+			echo 'inputs:'
+			echo '  - type: imdtls'
+			echo '    port: "0"'
+			echo '    ruleset: main'
+			;;
+		esac
+		echo 'rulesets:'
+		echo '  - name: main'
+		echo '    actions:'
+		if [ "$2" = omdtls ]; then
+			echo '      - type: omdtls'
+			echo '        target: "127.0.0.1"'
+			echo '        port: "4433"'
+			echo "        tls.authmode: \"$3\""
+		fi
+		echo '      - type: omfile'
+		echo '        file: "/dev/null"'
+	} >"${cfg}"
+	printf '%s' "${cfg}"
+}
+
 write_config() {
+	if [ "${DTLS_AUTHMODE_YAML:-}" = YES ]; then
+		write_yaml_config "$@"
+		return
+	fi
 	local cfg="${RSYSLOG_DYNNAME}.$1.$2.$3.conf"
 	{
 		echo "global(compatibility.defaults.secure=\"$1\")"

@@ -466,9 +466,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "tls.authmode")) {
             char *pszAuthMode;
             CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
-            const rsRetVal authRet = dtlsParseAuthMode("omdtls", pszAuthMode, &pData->pNetOssl->authMode);
+            const rsRetVal auth_ret = dtls_parse_auth_mode("omdtls", pszAuthMode, &pData->pNetOssl->authMode);
             free(pszAuthMode);
-            CHKiRet(authRet);
+            CHKiRet(auth_ret);
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
             CHKmalloc(pData->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->pNetOssl->pszCAFile, "r");

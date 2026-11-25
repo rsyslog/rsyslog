@@ -2609,6 +2609,7 @@ TESTS_IMDTLS_OMDTLS = \
 
 TESTS_IMDTLS_OMDTLS_YAML = omdtls-server-identity.py \
 	yaml-omdtls-server-identity.sh \
+	yaml-dtls-authmode-unsupported.sh \
 	testsuites/yaml-omdtls-server-identity.yaml
 
 TESTS_IMDTLS_OMDTLS_VALGRIND = \
@@ -4816,6 +4817,7 @@ if ENABLE_OMDTLS
 TESTS += $(TESTS_IMDTLS_OMDTLS)
 if HAVE_LIBYAML
 TESTS += yaml-omdtls-server-identity.sh
+TESTS += yaml-dtls-authmode-unsupported.sh
 endif # HAVE_LIBYAML
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMDTLS_OMDTLS_VALGRIND)

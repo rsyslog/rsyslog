@@ -1054,9 +1054,9 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "tls.authmode")) {
             char *pszAuthMode;
             CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
-            const rsRetVal authRet = dtlsParseAuthMode("imdtls", pszAuthMode, &inst->pNetOssl->authMode);
+            const rsRetVal auth_ret = dtls_parse_auth_mode("imdtls", pszAuthMode, &inst->pNetOssl->authMode);
             free(pszAuthMode);
-            CHKiRet(authRet);
+            CHKiRet(auth_ret);
         } else if (!strcmp(inppblk.descr[i].name, "tls.cacert")) {
             CHKmalloc(inst->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->pNetOssl->pszCAFile, "r");
@@ -1156,9 +1156,9 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "tls.authmode")) {
             char *pszAuthMode;
             CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
-            const rsRetVal authRet = dtlsParseAuthMode("imdtls", pszAuthMode, &loadModConf->drvrAuthMode);
+            const rsRetVal auth_ret = dtls_parse_auth_mode("imdtls", pszAuthMode, &loadModConf->drvrAuthMode);
             free(pszAuthMode);
-            CHKiRet(authRet);
+            CHKiRet(auth_ret);
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {

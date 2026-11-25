@@ -36,7 +36,8 @@ Supported values are:
 * **certvalid**: Requires a valid certificate for authentication.
 
 * **anon** or **certanon**: Anonymous authentication, which does not require
-  a client certificate. This is also used when the parameter is omitted.
+  a client certificate. If the parameter is omitted for an input, the
+  module-level ``tls.authmode`` value is used (anonymous by default).
 
 Any other value is a configuration error when
 ``global(compatibility.defaults.secure="strict")`` is set: the input (or, for
