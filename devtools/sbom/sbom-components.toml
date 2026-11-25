@@ -1,0 +1,374 @@
+# SBOM component manifest for the rsyslog source release.
+#
+# devtools/sbom/generate-sbom.py combines this file with the libraries it
+# finds in configure.ac and the non-test Makefile.am files and writes a
+# CycloneDX 1.6 SBOM for the release tarball.  See devtools/sbom/README.md.
+#
+# Keep this file in sync with the build system:
+#   python3 devtools/sbom/generate-sbom.py --check
+# fails when configure.ac or a Makefile.am names a library that is neither
+# mapped to a [[dependency]] below nor listed in [ignore].
+
+[project]
+name = "rsyslog"
+supplier = "The rsyslog project"
+website = "https://www.rsyslog.com"
+vcs = "https://github.com/rsyslog/rsyslog"
+advisories = "https://github.com/rsyslog/rsyslog/security/advisories"
+purl = "pkg:github/rsyslog/rsyslog"
+# Most files are Apache-2.0; parts are GPL-3.0-or-later or LGPL-3.0-or-later.
+# Per-file terms are in the SPDX headers and doc/source/licensing.rst.
+license_expression = "Apache-2.0 AND GPL-3.0-or-later AND LGPL-3.0-or-later"
+# Release tags are v<version>, e.g. v8.2612.0.
+tag_prefix = "v"
+
+# Names that are part of the C library or the operating system, not
+# separately versioned third-party components.
+[ignore]
+names = [
+    "anl", "dl", "door", "m", "nsl", "pthread", "resolv", "rt", "socket",
+    "src",  # AIX system resource controller (tools/Makefile.am, AIX only)
+]
+
+# ---------------------------------------------------------------------------
+# Code copied into the source tree.  It ships inside the tarball, so it is a
+# required component of every build that compiles the listed files.
+# "paths" must exist; --check verifies that.
+# ---------------------------------------------------------------------------
+
+[[vendored]]
+name = "hashtable"
+supplier = "Christopher Clark"
+license = "BSD-3-Clause"
+website = "http://www.cl.cam.ac.uk/~cwc22/hashtable/"
+description = "Generic hash table, copied into the runtime."
+paths = [
+    "runtime/hashtable.c",
+    "runtime/hashtable.h",
+    "runtime/hashtable_itr.c",
+    "runtime/hashtable_itr.h",
+    "runtime/hashtable_private.h",
+]
+
+[[vendored]]
+name = "siphash"
+supplier = "Jean-Philippe Aumasson, Daniel J. Bernstein"
+license = "CC0-1.0"
+website = "https://github.com/veorq/SipHash"
+description = "SipHash reference implementation used by imfile."
+paths = ["plugins/imfile/siphash.c"]
+
+[[vendored]]
+name = "getifaddrs-compat"
+supplier = "Oracle and/or its affiliates"
+license = "CDDL-1.0"
+description = "getifaddrs() replacement for Solaris, built only there."
+paths = ["compat/getifaddrs.c", "compat/ifaddrs.h"]
+
+[[vendored]]
+name = "bsd-syslogd-pri-filter"
+supplier = "The Regents of the University of California"
+license = "BSD-3-Clause"
+website = "https://github.com/troglobit/sysklogd"
+description = "PRI selector parser descended from Berkeley syslogd via sysklogd."
+paths = ["runtime/pri-filter.c"]
+
+# The three JavaScript files are only used by the HTML documentation build.
+# Keep versions equal to doc/source/_static/vendor/README.md (--check).
+[[vendored]]
+name = "d3"
+version = "7.9.0"
+license = "BSD-3-Clause"
+purl = "pkg:npm/d3@7.9.0"
+website = "https://d3js.org"
+description = "Documentation only (Mermaid diagrams)."
+paths = ["doc/source/_static/vendor/d3/d3.min.js"]
+
+[[vendored]]
+name = "mermaid"
+version = "11.2.0"
+license = "MIT"
+purl = "pkg:npm/mermaid@11.2.0"
+website = "https://mermaid.js.org"
+description = "Documentation only (Mermaid diagrams)."
+paths = [
+    "doc/source/_static/vendor/mermaid/mermaid.min.js",
+    "doc/source/_static/vendor/mermaid/mermaid.esm.min.mjs",
+]
+
+[[vendored]]
+name = "@mermaid-js/layout-elk"
+version = "0.1.4"
+license = "MIT"
+purl = "pkg:npm/%40mermaid-js/layout-elk@0.1.4"
+website = "https://github.com/mermaid-js/mermaid"
+description = "Documentation only (Mermaid diagrams)."
+paths = [
+    "doc/source/_static/vendor/mermaid/mermaid-layout-elk.min.js",
+    "doc/source/_static/vendor/mermaid/mermaid-layout-elk.esm.min.mjs",
+]
+
+# ---------------------------------------------------------------------------
+# External libraries.  They are not in the tarball; the builder links the
+# version installed on the build system.  "match" lists every pkg-config
+# module and linker name (-l<name>) the build system uses for the library.
+# "required = true" marks libraries without which rsyslog does not build;
+# everything else is needed only by optional modules or features.
+# "declared = true" adds a library that the scanner cannot detect.
+# ---------------------------------------------------------------------------
+
+[[dependency]]
+name = "libestr"
+match = ["libestr", "estr"]
+required = true
+purl = "pkg:github/rsyslog/libestr"
+website = "https://github.com/rsyslog/libestr"
+
+[[dependency]]
+name = "libfastjson"
+match = ["libfastjson"]
+required = true
+purl = "pkg:github/rsyslog/libfastjson"
+website = "https://github.com/rsyslog/libfastjson"
+
+[[dependency]]
+name = "zlib"
+match = ["zlib", "z"]
+purl = "pkg:github/madler/zlib"
+website = "https://zlib.net"
+
+[[dependency]]
+name = "zstd"
+match = ["zstd"]
+purl = "pkg:github/facebook/zstd"
+website = "https://facebook.github.io/zstd/"
+
+[[dependency]]
+name = "libyaml"
+match = ["yaml-0.1"]
+purl = "pkg:github/yaml/libyaml"
+website = "https://pyyaml.org/wiki/LibYAML"
+
+[[dependency]]
+name = "libcap-ng"
+match = ["libcap-ng"]
+purl = "pkg:github/stevegrubb/libcap-ng"
+
+[[dependency]]
+name = "xxhash"
+match = ["xxhash"]
+purl = "pkg:github/Cyan4973/xxHash"
+
+[[dependency]]
+name = "faup"
+match = ["faupl"]
+purl = "pkg:github/stricaud/faup"
+
+[[dependency]]
+name = "pcre"
+match = ["pcre"]
+website = "https://www.pcre.org"
+
+[[dependency]]
+name = "jemalloc"
+match = ["jemalloc"]
+purl = "pkg:github/jemalloc/jemalloc"
+
+[[dependency]]
+name = "systemd"
+match = ["libsystemd", "libsystemd-journal"]
+purl = "pkg:github/systemd/systemd"
+website = "https://systemd.io"
+
+[[dependency]]
+name = "mysqlclient"
+match = ["mysqlclient"]
+description = "MySQL or MariaDB client library."
+
+[[dependency]]
+name = "libpq"
+match = ["libpq", "pq"]
+website = "https://www.postgresql.org"
+
+[[dependency]]
+name = "libdbi"
+match = ["dbi"]
+website = "https://libdbi.sourceforge.net"
+
+[[dependency]]
+name = "net-snmp"
+match = ["netsnmp"]
+purl = "pkg:github/net-snmp/net-snmp"
+
+[[dependency]]
+name = "libuuid"
+match = ["uuid"]
+purl = "pkg:github/util-linux/util-linux"
+description = "libuuid from util-linux."
+
+[[dependency]]
+name = "curl"
+match = ["libcurl", "curl"]
+purl = "pkg:github/curl/curl"
+website = "https://curl.se"
+
+[[dependency]]
+name = "openssl"
+match = ["openssl", "crypto", "ssl"]
+purl = "pkg:github/openssl/openssl"
+website = "https://www.openssl.org"
+
+[[dependency]]
+name = "wolfssl"
+match = ["wolfssl"]
+purl = "pkg:github/wolfSSL/wolfssl"
+
+[[dependency]]
+name = "gnutls"
+match = ["gnutls"]
+website = "https://www.gnutls.org"
+
+[[dependency]]
+name = "mbedtls"
+match = ["mbedtls"]
+purl = "pkg:github/Mbed-TLS/mbedtls"
+
+[[dependency]]
+name = "libgcrypt"
+match = ["libgcrypt", "gcrypt"]
+website = "https://gnupg.org/software/libgcrypt/"
+
+[[dependency]]
+name = "libgpg-error"
+match = ["gpg-error"]
+website = "https://gnupg.org/software/libgpg-error/"
+
+[[dependency]]
+name = "liblognorm"
+match = ["lognorm"]
+purl = "pkg:github/rsyslog/liblognorm"
+website = "https://github.com/rsyslog/liblognorm"
+
+[[dependency]]
+name = "librelp"
+match = ["relp"]
+purl = "pkg:github/rsyslog/librelp"
+website = "https://github.com/rsyslog/librelp"
+
+[[dependency]]
+name = "liblogging"
+match = ["liblogging-stdlog", "liblogging-rfc3195"]
+purl = "pkg:github/rsyslog/liblogging"
+
+[[dependency]]
+name = "libksi"
+match = ["libksi"]
+purl = "pkg:github/guardtime/libksi"
+
+[[dependency]]
+name = "civetweb"
+match = ["civetweb"]
+purl = "pkg:github/civetweb/civetweb"
+
+[[dependency]]
+name = "apr-util"
+match = ["apr-util-1", "aprutil-1"]
+website = "https://apr.apache.org"
+
+[[dependency]]
+name = "libnet"
+match = ["net"]
+purl = "pkg:github/libnet/libnet"
+
+[[dependency]]
+name = "protobuf-c"
+match = ["libprotobuf-c"]
+purl = "pkg:github/protobuf-c/protobuf-c"
+
+[[dependency]]
+name = "snappy"
+match = ["snappy"]
+purl = "pkg:github/google/snappy"
+
+[[dependency]]
+name = "librdkafka"
+match = ["rdkafka", "librdkafka"]
+purl = "pkg:github/confluentinc/librdkafka"
+
+[[dependency]]
+name = "lz4"
+match = ["liblz4", "lz4"]
+purl = "pkg:github/lz4/lz4"
+
+[[dependency]]
+name = "cyrus-sasl"
+match = ["sasl2"]
+purl = "pkg:github/cyrusimap/cyrus-sasl"
+
+[[dependency]]
+name = "qpid-proton"
+match = ["libqpid-proton", "libqpid-proton-proactor"]
+purl = "pkg:github/apache/qpid-proton"
+
+[[dependency]]
+name = "mongo-c-driver"
+match = ["mongoc2", "libmongoc-1.0"]
+purl = "pkg:github/mongodb/mongo-c-driver"
+
+[[dependency]]
+name = "czmq"
+match = ["libczmq"]
+purl = "pkg:github/zeromq/czmq"
+
+[[dependency]]
+name = "rabbitmq-c"
+match = ["librabbitmq"]
+purl = "pkg:github/alanxz/rabbitmq-c"
+
+[[dependency]]
+name = "hiredis"
+match = ["hiredis", "hiredis_ssl"]
+purl = "pkg:github/redis/hiredis"
+
+[[dependency]]
+name = "libevent"
+match = ["libevent", "libevent_pthreads", "event", "event_pthreads"]
+purl = "pkg:github/libevent/libevent"
+
+[[dependency]]
+name = "krb5"
+match = ["krb5-gssapi"]
+website = "https://web.mit.edu/kerberos/"
+description = "GSSAPI Kerberos 5 library (gssapi_krb5, or gss on Solaris)."
+
+[[dependency]]
+name = "glib"
+match = ["glib-2.0"]
+website = "https://docs.gtk.org/glib/"
+
+[[dependency]]
+name = "grok"
+match = ["grok"]
+purl = "pkg:github/jordansissel/grok"
+
+[[dependency]]
+name = "libhdfs"
+match = ["hdfs"]
+website = "https://hadoop.apache.org"
+
+[[dependency]]
+name = "libmaxminddb"
+match = ["maxminddb"]
+purl = "pkg:github/maxmind/libmaxminddb"
+
+[[dependency]]
+name = "libpcap"
+match = ["pcap"]
+purl = "pkg:github/the-tcpdump-group/libpcap"
+
+[[dependency]]
+name = "tcl"
+match = []
+declared = true
+website = "https://www.tcl-lang.org"
+description = "Found through tclConfig.sh (SC_LOAD_TCLCONFIG) for omtcl."

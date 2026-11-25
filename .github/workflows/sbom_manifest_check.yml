@@ -1,0 +1,53 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Lint: keep devtools/sbom/sbom-components.toml in sync with the libraries
+# that configure.ac and the Makefile.am files link, so the release SBOM
+# (draft_release.yml) stays complete.
+---
+name: SBOM manifest check
+
+on:
+  pull_request:
+    paths:
+      - 'configure.ac'
+      - '**/Makefile.am'
+      - 'devtools/sbom/**'
+      - 'doc/source/_static/vendor/**'
+      - '.github/workflows/sbom_manifest_check.yml'
+      - '.github/workflows/draft_release.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ${{ github.event.repository.private && (vars.RSYSLOG_CI_LINUX_RUNNER || 'private-runner-unconfigured') || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check SBOM manifest against the build system
+        run: python3 devtools/sbom/generate-sbom.py --check
+
+      - name: Generate SBOM
+        run: python3 devtools/sbom/generate-sbom.py --output sbom.cdx.json
