@@ -8,7 +8,8 @@
 # rejected this complete match, while its final one-byte result must pass.
 # A separate multi-match case checks the exact shrinking output. Two
 # boundary cases check that a result of exactly maxMessageSize bytes is
-# returned and one byte more yields the empty result.
+# returned unchanged (exact content and length) and one byte more yields
+# the empty result.
 # The warning is asserted through configured output after synchronized
 # shutdown, which also rules out a crash.
 . ${srcdir:=.}/diag.sh init
@@ -21,7 +22,7 @@ if $syslogtag contains "rsyslogd" then {
     stop
 }
 template(name="outfmt" type="string"
-         string="normal=%$.normal%;replace=\"%$.large%\";wrap=\"%$.wrapped%\";wrap2=\"%$.wrapped2%\";shrink=\"%$.shrink%\";shrink_many=\"%$.shrink_many%\";source_len=%$.source_len%;exact=%$.exact%;over=%$.over%\n")
+         string="normal=%$.normal%;replace=\"%$.large%\";wrap=\"%$.wrapped%\";wrap2=\"%$.wrapped2%\";shrink=\"%$.shrink%\";shrink_many=\"%$.shrink_many%\";source_len=%$.source_len%;exact_len=%$.exact_len%;exact=\"%$.exact%\";over=\"%$.over%\"\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" ruleset="replace_limit"
@@ -37,8 +38,9 @@ ruleset(name="replace_limit") {
     set $.source_len = strlen($msg & $msg);
     # $msg is one space plus 150 "a": replacing the space with 106 bytes
     # yields exactly maxMessageSize (256), with 107 bytes one byte above it.
-    set $.exact = strlen(replace($msg, " ", "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"));
-    set $.over = strlen(replace($msg, " ", "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"));
+    set $.exact = replace($msg, " ", "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
+    set $.exact_len = strlen($.exact);
+    set $.over = replace($msg, " ", "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
     action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
@@ -54,6 +56,8 @@ content_check 'normal=cbc;replace="";wrap="";wrap2=""'
 content_check 'shrink="b"'
 b50=$(printf '%50s' '' | tr ' ' b)
 content_check "shrink_many=\" $b50 $b50\""
-content_check 'source_len=302;exact=256;over=0'
+c106=$(printf '%106s' '' | tr ' ' c)
+a150=$(printf '%150s' '' | tr ' ' a)
+content_check "source_len=302;exact_len=256;exact=\"${c106}${a150}\";over=\"\""
 content_count_check 'RainerScript replace()/wrap() result exceeds maxMessageSize' 1 "$RSYSLOG_DYNNAME.warnings"
 exit_test
