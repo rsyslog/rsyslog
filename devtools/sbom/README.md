@@ -7,7 +7,9 @@ release and uploads `rsyslog-<version>.tar.gz.cdx.json` next to the tarball.
 For tagged releases it also creates signed GitHub artifact attestations
 (Sigstore) for the tarball's build provenance and for the SBOM.
 
-These files are maintainer tooling and are not part of the release tarball.
+These files are maintainer tooling. The tarball carries the generator and
+the manifest only so that `tests/sbom-generator.sh` also runs under
+`make distcheck`.
 
 ## What the SBOM contains
 
@@ -25,6 +27,13 @@ These files are maintainer tooling and are not part of the release tarball.
 
 This is a source SBOM (`lifecycles: pre-build`).  Binary packages and
 container images need their own build SBOM with the exact linked versions.
+
+## Tests
+
+`tests/sbom-generator.sh` (testbench, Python 3.11 or later) covers scanning,
+`--check` drift detection, the CycloneDX output and `--check` on this tree.
+Run it alone with `make check TESTS=sbom-generator.sh` or
+`python3 tests/sbom-generator.py`.
 
 ## Keeping the manifest current
 
