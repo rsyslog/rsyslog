@@ -9,8 +9,9 @@ What is tested and why:
   (PKG_CHECK_MODULES incl. version constraints and multi-line calls,
   AC_CHECK_LIB, AC_SEARCH_LIBS, pkg-config calls, -l<name> and GNU ld
   -l:<file>) must be found, and comments, non-linker "-l" text and
-  tests/Makefile.am must not be.  A missed library would silently drop
-  out of the release SBOM.
+  tests/Makefile.am must not be; an extracted tarball inside a git
+  checkout (in-tree distcheck) must still be scanned.  A missed library
+  would silently drop out of the release SBOM.
 - Drift detection: --check must fail on an unknown library, an unused
   manifest entry, a missing vendored path and a vendored version that
   differs from doc/source/_static/vendor/README.md, and must exit 0 on a
@@ -41,6 +42,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -234,6 +236,19 @@ class ScanTests(unittest.TestCase):
     def test_comments_tests_and_non_link_text_ignored(self):
         for name in ("commented-out-lib", "dnl-lib", "testonlylib", "a", "notalinkline"):
             self.assertNotIn(name, self.found)
+
+    def test_untracked_tree_inside_git_checkout_is_walked(self):
+        # An in-tree make distcheck extracts the tarball below the checkout;
+        # git ls-files there returns nothing, which would drop every
+        # Makefile.am and make --check report used libraries as unused.
+        with tempfile.TemporaryDirectory() as outer:
+            try:
+                subprocess.run(["git", "init", "-q", outer], check=True, capture_output=True)
+            except (OSError, subprocess.CalledProcessError):
+                self.skipTest("git not available")
+            inner = os.path.join(outer, "demo-1.2.3")
+            shutil.copytree(self.tree.root, inner)
+            self.assertEqual(gen.list_makefile_ams(inner), ["plugins/demo/Makefile.am"])
 
     def test_link_name_normalizes_ld_file_form(self):
         self.assertEqual(gen.link_name(":librdkafka-static.a"), "rdkafka")

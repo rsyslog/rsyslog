@@ -315,13 +315,23 @@ def scan_makefile_am(text, origin, found):
 
 
 def list_makefile_ams(srcdir):
-    """Non-test Makefile.am files, from git when available."""
+    """Non-test Makefile.am files, from git when srcdir is a git checkout.
+
+    An extracted tarball below a checkout (as in an in-tree make distcheck)
+    is not tracked by the enclosing repository, so git is used only when
+    srcdir is the top of the work tree; otherwise the tree is walked.
+    """
+    files = []
     try:
-        out = subprocess.run(["git", "-C", srcdir, "ls-files", "*Makefile.am"],
-                             check=True, capture_output=True, text=True).stdout
-        files = [f for f in out.splitlines() if f]
+        top = subprocess.run(["git", "-C", srcdir, "rev-parse", "--show-toplevel"],
+                             check=True, capture_output=True, text=True).stdout.strip()
+        if os.path.realpath(top) == os.path.realpath(srcdir):
+            out = subprocess.run(["git", "-C", srcdir, "ls-files", "*Makefile.am"],
+                                 check=True, capture_output=True, text=True).stdout
+            files = [f for f in out.splitlines() if f]
     except (OSError, subprocess.CalledProcessError):
         files = []
+    if not files:
         for root, dirs, names in os.walk(srcdir):
             dirs[:] = [d for d in dirs if not d.startswith(".")]
             if "Makefile.am" in names:
