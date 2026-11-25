@@ -1907,8 +1907,13 @@ static void rearmDeferredListeners(instanceConf_t *const inst) {
     for (i = 0; i < inst->listener_count && !instanceIsShuttingDown(inst); ++i) {
         imbeats_io_t *const io = &inst->listener_descs[i];
         if (io->rearm_pending && now >= io->rearm_due_ms) {
-            io->rearm_pending = 0;
-            (void)rearmListener(inst, i);
+            if (rearmListener(inst, i) == RS_RET_OK) {
+                io->rearm_pending = 0;
+            } else {
+                /* keep the listener scheduled; a failed rearm must not
+                 * leave it disarmed until restart */
+                io->rearm_due_ms = now + IMBEATS_ACCEPT_ERR_REARM_DELAY_MS;
+            }
         }
     }
 }
@@ -1972,11 +1977,14 @@ static void *listenerThread(void *arg) {
             }
             if (io->type == IMBEATS_IO_LISTENER) {
                 const rsRetVal acceptRet = acceptReadyListener(inst, io->listener_idx);
-                /* An accept(2) error can leave the pending connection readable.
-                 * Keep the listener disarmed for a short delay in that case to
-                 * avoid an epoll busy loop, then rearm it from
-                 * rearmDeferredListeners(); connection-specific errors have
-                 * already consumed their connection and rearm immediately.
+                /* An accept(2) error can leave the pending connection readable
+                 * (for example EMFILE/ENFILE). Keep the listener disarmed for a
+                 * short delay to avoid an epoll busy loop, then rearm it from
+                 * rearmDeferredListeners(). RS_RET_ACCEPT_ERR does not tell
+                 * which errno occurred, so errors that already consumed their
+                 * connection (e.g. ECONNABORTED, EPROTO) take the same delay;
+                 * this only postpones new connections by up to that delay.
+                 * Other accept results rearm immediately.
                  */
                 if (acceptRet == RS_RET_ACCEPT_ERR) {
                     io->rearm_pending = 1;
