@@ -69,6 +69,10 @@ collection, and process orchestration).
 - Segmented-disk codec rejection and replay boundaries are covered by
   `tests/runtime_unit_segdisk_codec`: invalid severity, facility and offsets;
   the valid no-MSG boundary, legacy shifted facility and stale after-PRI offset.
+- `template.c` field names of short CEE/local-variable properties ("%!name%",
+  "%.name%") and the bare indicators ("%!%", "%.%") are covered by
+  `tests/template-cee-short-name.sh` (RainerScript) and
+  `tests/yaml-template-cee-short-name.sh` (YAML), checking the jsonf keys.
 - `datetime.c` weekday remainder bounds and template name/number formatting
   are covered by `tests/timereported-weekday-range.sh`.
 - Bounded negative UTC-epoch crossings in `datetime.c` are covered by
