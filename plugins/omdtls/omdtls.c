@@ -74,6 +74,7 @@
 #include "unicode-helper.h"
 #include "datetime.h"
 #include "net_ossl.h"
+#include "dtls_authmode.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -465,15 +466,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "tls.authmode")) {
             char *pszAuthMode;
             CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
-            if (!strcasecmp(pszAuthMode, "fingerprint"))
-                pData->pNetOssl->authMode = OSSL_AUTH_CERTFINGERPRINT;
-            else if (!strcasecmp(pszAuthMode, "name"))
-                pData->pNetOssl->authMode = OSSL_AUTH_CERTNAME;
-            else if (!strcasecmp(pszAuthMode, "certvalid"))
-                pData->pNetOssl->authMode = OSSL_AUTH_CERTVALID;
-            else
-                pData->pNetOssl->authMode = OSSL_AUTH_CERTANON;
+            const rsRetVal auth_ret = dtls_parse_auth_mode("omdtls", pszAuthMode, &pData->pNetOssl->authMode);
             free(pszAuthMode);
+            CHKiRet(auth_ret);
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
             CHKmalloc(pData->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->pNetOssl->pszCAFile, "r");

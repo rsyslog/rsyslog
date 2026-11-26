@@ -62,6 +62,7 @@
 #include "datetime.h"
 #include "net.h"
 #include "net_ossl.h"
+#include "dtls_authmode.h"
 #include "prop.h"
 #include "ruleset.h"
 #include "statsobj.h"
@@ -1051,16 +1052,11 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
             CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls.authmode")) {
-            char *pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (!strcasecmp(pszAuthMode, "fingerprint"))
-                inst->pNetOssl->authMode = OSSL_AUTH_CERTFINGERPRINT;
-            else if (!strcasecmp(pszAuthMode, "name"))
-                inst->pNetOssl->authMode = OSSL_AUTH_CERTNAME;
-            else if (!strcasecmp(pszAuthMode, "certvalid"))
-                inst->pNetOssl->authMode = OSSL_AUTH_CERTVALID;
-            else
-                inst->pNetOssl->authMode = OSSL_AUTH_CERTANON;
+            char *pszAuthMode;
+            CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
+            const rsRetVal auth_ret = dtls_parse_auth_mode("imdtls", pszAuthMode, &inst->pNetOssl->authMode);
             free(pszAuthMode);
+            CHKiRet(auth_ret);
         } else if (!strcmp(inppblk.descr[i].name, "tls.cacert")) {
             CHKmalloc(inst->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->pNetOssl->pszCAFile, "r");
@@ -1158,16 +1154,11 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "tls.authmode")) {
-            char *pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (!strcasecmp(pszAuthMode, "fingerprint"))
-                loadModConf->drvrAuthMode = OSSL_AUTH_CERTFINGERPRINT;
-            else if (!strcasecmp(pszAuthMode, "name"))
-                loadModConf->drvrAuthMode = OSSL_AUTH_CERTNAME;
-            else if (!strcasecmp(pszAuthMode, "certvalid"))
-                loadModConf->drvrAuthMode = OSSL_AUTH_CERTVALID;
-            else
-                loadModConf->drvrAuthMode = OSSL_AUTH_CERTANON;
+            char *pszAuthMode;
+            CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
+            const rsRetVal auth_ret = dtls_parse_auth_mode("imdtls", pszAuthMode, &loadModConf->drvrAuthMode);
             free(pszAuthMode);
+            CHKiRet(auth_ret);
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {

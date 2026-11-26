@@ -29,7 +29,8 @@ Description
 -----------
 Sets the mode of authentication to be used.
 
-Supported values are ``fingerprint``, ``name``, or ``certvalid``.
+Supported values are ``fingerprint``, ``name``, ``certvalid``, and the explicit
+anonymous modes ``anon`` and ``certanon``.
 
 * ``fingerprint``: The trusted server certificate must match the complete
   SHA-256 fingerprint in ``tls.permittedpeer``. The pin is required in this
@@ -46,9 +47,16 @@ chain validation alone is the intended policy. Existing ``name`` deployments
 that connect by IP to a DNS-named server should set ``tls.permittedpeer`` to
 that DNS name; ``fingerprint`` deployments must add an explicit SHA-256 pin.
 
-If this parameter is not set, or if an unsupported value is provided, the
-action falls back to anonymous authentication (no client certificate
-required).
+If this parameter is not set, or is set to ``anon`` or ``certanon``, the
+action uses anonymous authentication (no client certificate required, and the
+server is not verified).
+
+Any other value is a configuration error when
+``global(compatibility.defaults.secure="strict")`` is set, and the action is
+not created. With the ``warn`` (default) and ``backward-compatible``
+policies, rsyslog keeps the historical behavior for compatibility: it logs a
+warning and uses anonymous authentication, so the server is **not**
+verified. Check startup warnings for typos in this value.
 
 Input usage
 -----------
