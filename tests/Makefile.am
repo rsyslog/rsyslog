@@ -3246,7 +3246,7 @@ runtime_unit_iminternal_lock_LDADD = $(PTHREADS_LIBS)
 # Caller-level message ownership and cancellation coverage for the macOS lock.
 runtime_unit_iminternal_contention_SOURCES = unit/iminternal_contention_test.c
 runtime_unit_iminternal_contention_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
-runtime_unit_iminternal_contention_LDADD = $(RT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_iminternal_contention_LDADD = $(LIBESTR_LIBS) $(RT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 EXTRA_DIST += unit/iminternal_contention_test.c
 
 runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/perctile_ringbuf.c
