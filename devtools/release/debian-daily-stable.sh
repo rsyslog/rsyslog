@@ -783,7 +783,7 @@ cmd_self_test() (
   local test_suite test_version
   local cleanup_command
 
-  for tool in apt-ftparchive curl dpkg dpkg-deb gpg gpgv xz; do
+  for tool in apt-ftparchive curl dpkg dpkg-deb gpg gpgv python3 xz; do
     command -v "$tool" >/dev/null 2>&1 ||
       die "$tool is required for self-test"
   done
@@ -890,8 +890,43 @@ cmd_self_test() (
 
   # The publisher reads the current indexes back through the signed
   # InRelease; they must arrive unchanged.
-  cmd_fetch_verified_indexes "file://$repo_dir" "$tmp_dir/fetched" \
-    "$test_suite" main "$fingerprint" amd64 arm64
+  # Exercise the same HTTP status and signed-index path used by publishing.
+  # Keep the HTTP override inside this subshell; production remains HTTPS-only.
+  (
+    local server_pid=""
+    cleanup_self_test_server() {
+      if [ -n "$server_pid" ]; then
+        kill "$server_pid" 2>/dev/null || true
+        wait "$server_pid" 2>/dev/null || true
+      fi
+    }
+    trap cleanup_self_test_server EXIT
+    python3 -I - "$repo_dir" "$tmp_dir/http-port" <<'PY' >"$tmp_dir/http-server.log" 2>&1 &
+import http.server
+import os
+import socketserver
+import sys
+
+os.chdir(sys.argv[1])
+server = socketserver.TCPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
+with open(sys.argv[2] + ".tmp", "w") as port_file:
+    port_file.write(str(server.server_address[1]))
+os.rename(sys.argv[2] + ".tmp", sys.argv[2])
+server.serve_forever()
+PY
+    server_pid=$!
+    local deadline=$((SECONDS + 60))
+    while [ ! -s "$tmp_dir/http-port" ]; do
+      if ! kill -0 "$server_pid" 2>/dev/null || [ "$SECONDS" -ge "$deadline" ]; then
+        cat "$tmp_dir/http-server.log" >&2
+        die "self-test HTTP server did not become ready"
+      fi
+      sleep 0.1
+    done
+    ARCHIVE_FETCH_ALLOW_HTTP=true ARCHIVE_FETCH_RETRIES=0 \
+      cmd_fetch_verified_indexes "http://127.0.0.1:$(cat "$tmp_dir/http-port")" \
+        "$tmp_dir/fetched" "$test_suite" main "$fingerprint" amd64 arm64
+  )
   for rel in main/binary-amd64/Packages.xz main/binary-arm64/Packages.xz \
     main/source/Sources.xz; do
     cmp -s "$repo_dir/dists/$test_suite/$rel" \
