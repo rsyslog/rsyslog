@@ -37,7 +37,13 @@
       "reason": "Current upstream adds YAML configuration and native impstats push support whose build dependencies postdate Ubuntu 26.04's rsyslog source package."
     }
   ],
-  "install_manifest_additions": [],
+  "install_manifest_additions": [
+    {
+      "manifest": "rsyslog.install",
+      "path": "usr/share/doc/rsyslog/COPYING.BSD-3-Clause",
+      "reason": "Current upstream installs this license file; include it in the core package as in rsyslog-pkg-ubuntu PR 218."
+    }
+  ],
   "not_installed_paths": [
     {
       "path": "usr/lib/*/rsyslog/omkinesis.so",
