@@ -27,3 +27,7 @@ rejects the client certificate file that contains a chain ("certificate verify
 failed" in the server handshake), while the unchained imrelp TLS tests pass.
 They are skipped on SunOS. The root cause (librelp/OpenSSL version on the
 builder) has not been analysed; remove the skips once it is understood.
+
+The imklog module is not supported on Solaris; imsolaris provides Solaris
+kernel input. The imklog LogPath EOF tests, including their YAML wrapper, are
+skipped on SunOS because a built imklog module may not have a usable driver.

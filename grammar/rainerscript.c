@@ -6604,8 +6604,12 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH) {
 #else
-    result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
-    if (result == GLOB_NOMATCH && containsGlobWildcard((char *)finalName)) {
+    /* Emulate GLOB_NOMAGIC for literal paths on systems such as Solaris.
+     * GLOB_NOCHECK preserves a missing literal for the lstat error path,
+     * while unmatched wildcard patterns retain their existing behavior. */
+    const int globFlags = GLOB_MARK | (containsGlobWildcard((char *)finalName) ? 0 : GLOB_NOCHECK);
+    result = glob(finalName, globFlags, NULL, &cfgFiles);
+    if (result == GLOB_NOMATCH) {
 #endif /* HAVE_GLOB_NOMAGIC */
         goto done;
     }
