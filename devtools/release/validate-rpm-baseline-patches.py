@@ -63,6 +63,7 @@ def main():
         fail("integrated_baseline_patches must be a list")
 
     reviewed_hashes = {}
+    required_commits = {}
     for entry in reviewed:
         if not isinstance(entry, dict):
             fail("integrated baseline patch entry must be an object")
@@ -78,6 +79,13 @@ def main():
         if name in reviewed_hashes:
             fail(f"integrated baseline patch {name} is listed more than once")
         reviewed_hashes[name] = digest
+        commits = entry.get("required_upstream_commits", [])
+        if "upstream_commit" in entry:
+            commits = [entry["upstream_commit"], *commits] if isinstance(commits, list) else commits
+        if not isinstance(commits, list) or any(
+                not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha) for sha in commits):
+            fail(f"integrated baseline patch {name} has invalid required upstream commits")
+        required_commits[name] = commits
 
     declarations = re.findall(r"(?m)^Patch(\d*):\s*(\S+)\s*$", spec)
     numbers = [number for number, _ in declarations]
@@ -117,6 +125,12 @@ def main():
         patch_path = sources_dir / name
         if not patch_path.is_file():
             fail(f"baseline patch is missing: {name}")
+        if name in required_commits:
+            for sha in required_commits[name]:
+                if commit_index is None or sha not in commit_index[0]:
+                    fail(f"reviewed baseline patch {name} requires upstream commit {sha} in packaged history")
+                if upstream_patch_detect.is_reverted(commit_index[0][sha], commit_index[1]):
+                    fail(f"reviewed baseline patch {name} requires reverted upstream commit {sha}")
         if name in reviewed_hashes and \
                 hashlib.sha256(patch_path.read_bytes()).hexdigest() == reviewed_hashes[name]:
             continue

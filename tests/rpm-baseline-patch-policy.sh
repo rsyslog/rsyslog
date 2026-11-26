@@ -239,3 +239,44 @@ for header in \
 	cmp "$fixture/original.spec" "$fixture/SPECS/rsyslog.spec"
 	test -f "$fixture/SOURCES/local-fix.patch"
 done
+
+# A content-pinned security patch also requires every declared upstream fix.
+mkdir -p "$work_dir/required/SPECS" "$work_dir/required/SOURCES"
+printf '%s\n' 'Patch7: security.patch' '%prep' '%patch7 -p1' >"$work_dir/required/original.spec"
+printf '%s\n' 'security backport' >"$work_dir/required/original.patch"
+required_digest=$(digest "$work_dir/required/original.patch")
+cat >"$work_dir/required/policy.json" <<EOF2
+{
+  "integrated_baseline_patches": [{
+    "name": "security.patch",
+    "sha256": "$required_digest",
+    "upstream_commit": "$upstream_sha",
+    "required_upstream_commits": ["$other_sha"],
+    "reason": "fixture"
+  }]
+}
+EOF2
+printf '%s %s\n' "$upstream_sha" 'imptcp: guard regex framing match at line start' >"$work_dir/required/missing-index"
+printf '%s %s\n' "$upstream_sha" 'imptcp: guard regex framing match at line start' \
+  "$other_sha" 'omfwd: add proper variable sync' \
+  '3333333333333333333333333333333333333333' 'Revert "omfwd: add proper variable sync"' >"$work_dir/required/reverted-index"
+for index in no-index missing-index reverted-index; do
+  cp "$work_dir/required/original.spec" "$work_dir/required/SPECS/rsyslog.spec"
+  cp "$work_dir/required/original.patch" "$work_dir/required/SOURCES/security.patch"
+  if [ "$index" = no-index ]; then
+    result=$(python3 "$helper" "$work_dir/required/SPECS/rsyslog.spec" "$work_dir/required/policy.json" test 2>&1) && {
+      echo "accepted without commit index" >&2; exit 1;
+    }
+  else
+    result=$(RSYSLOG_UPSTREAM_COMMIT_INDEX="$work_dir/required/$index" python3 "$helper" \
+      "$work_dir/required/SPECS/rsyslog.spec" "$work_dir/required/policy.json" test 2>&1) && {
+      echo "accepted missing or reverted commit" >&2; exit 1;
+    }
+  fi
+  printf '%s\n' "$result" | grep -F 'requires' >/dev/null
+  cmp "$work_dir/required/original.spec" "$work_dir/required/SPECS/rsyslog.spec"
+  test -f "$work_dir/required/SOURCES/security.patch"
+done
+RSYSLOG_UPSTREAM_COMMIT_INDEX="$work_dir/upstream-commits.txt" python3 "$helper" \
+  "$work_dir/required/SPECS/rsyslog.spec" "$work_dir/required/policy.json" test
+test ! -e "$work_dir/required/SOURCES/security.patch"
