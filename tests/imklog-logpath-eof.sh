@@ -10,6 +10,8 @@
 # a busy loop uses close to 3 s of CPU in a 3 s window, while an idle reader
 # uses almost nothing. A 1 s limit leaves room for testbench activity.
 . ${srcdir:=.}/diag.sh init
+# imklog has no supported Solaris driver; use imsolaris for kernel input.
+skip_platform "SunOS" "imklog is not supported on Solaris"
 require_plugin imklog
 printf 'msgnum:1\nmsgnum:2\nmsgnum:3\n' > "$RSYSLOG_DYNNAME.kmsg"
 generate_conf
