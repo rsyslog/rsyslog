@@ -36,6 +36,11 @@
   "install_manifest_additions": [
     {
       "manifest": "rsyslog.install",
+      "path": "usr/share/doc/rsyslog/COPYING.BSD-3-Clause",
+      "reason": "Current upstream installs this license file, so ship it in the core Debian package."
+    },
+    {
+      "manifest": "rsyslog.install",
       "path": "usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/mmleefparse.so",
       "reason": "Current upstream adds mmleefparse after Debian 13's rsyslog install manifest; it belongs in the core package with the other message-modification modules."
     }
