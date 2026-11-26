@@ -4,6 +4,7 @@
       "name": "omclickhouse-backslash-sql-escaping.patch",
       "sha256": "61d248267c235add2b4927c729e7098c3dfbe2836f5a74bb760b74c53f62c823",
       "upstream_commit": "931078d16f978d6888b9d87d120df04475c7e135",
+      "required_upstream_commits": ["762b6b068137dc9265aec6331caf3e9c50273eff"],
       "reason": "CentOS Stream backports the CVE-2026-93404 fixes already present in upstream commits 762b6b068137dc9265aec6331caf3e9c50273eff and 931078d16f978d6888b9d87d120df04475c7e135; the latter includes the former in its history."
     },
     {
