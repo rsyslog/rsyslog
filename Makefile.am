@@ -15,6 +15,7 @@ EXTRA_DIST = \
 	platform/redhat/rsyslog.conf \
 	contrib/README \
 	CONTRIBUTING.md \
+	CONTRIBUTORS.md \
 	COPYING \
 	COPYING.LESSER \
 	COPYING.ASL20 \
