@@ -282,6 +282,12 @@ struct rsconf_s {
         sbool local_legacy_numeric_error; /* whole-config local qualification only */
         sbool local_custom_parser; /* explicit parser instances are outside S2 */
         struct local_queue_graph_s *local_queue_graph; /* immutable S4 queue dependency inventory */
+        /* Set by load-time code where the config itself asks to abort, e.g. an
+         * include() with mode="abort-if-missing" or a failed ID lookup with
+         * security.abortOnIDResolutionFail. The load then fails with
+         * RS_RET_CONF_LOAD_ABORTED instead of the process calling exit(); the
+         * startup caller keeps exiting with code 1. */
+        sbool load_abort_requested;
         cfgmodules_t modules;
         globals_t globals;
         defaults_t defaults;

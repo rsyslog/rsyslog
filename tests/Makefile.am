@@ -133,6 +133,8 @@ EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
 TESTS_JSONF_AUTO = jsonf-auto-leading-zero.sh
 TESTS_JSONF_AUTO_YAML = yaml-jsonf-auto-leading-zero.sh
+TESTS_CONFIG_LOAD_ABORT_YAML = yaml-config-load-abort.sh
+EXTRA_DIST += $(TESTS_CONFIG_LOAD_ABORT_YAML) config-load-abort-common.sh
 EXTRA_DIST += $(TESTS_JSONF_AUTO) $(TESTS_JSONF_AUTO_YAML)
 
 TESTS_TEMPLATE_REGEX_BOUNDS = template-regex-index-bounds.sh
@@ -586,6 +588,7 @@ TESTS_DEFAULT = \
 	reload-report-timeout.sh \
 	reload-report-on-unsupported.sh \
 	rscript-parse-error-noleak.sh \
+	config-load-abort.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \
 	rscript_privdropgroup.sh \
@@ -3660,6 +3663,7 @@ if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 TESTS += $(TESTS_JSONF_AUTO_YAML)
+TESTS += $(TESTS_CONFIG_LOAD_ABORT_YAML)
 endif
 if ENABLE_IMDIAG
 if HAVE_LIBYAML

@@ -1728,6 +1728,13 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
         if (r == 0) conf.GetNbrActActions(loadConf, &iNbrActions);
     }
 
+    /* The config asked to abort the load (the reason is already on stderr).
+     * Stop here, before the optimizer and checks add unrelated messages. */
+    if (loadConf->load_abort_requested) {
+        tellLexEndParsing();
+        ABORT_FINALIZE(RS_RET_CONF_LOAD_ABORTED);
+    }
+
     /* we run the optimizer even if we have an error, as it may spit out
      * additional error messages and we want to see these even if we abort.
      */
@@ -1777,7 +1784,8 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     rsconfDebugPrint(loadConf);
 
 finalize_it:
-    if (loadConf != NULL && (loadConf->local_config_requested || loadConf->local_config_error) &&
+    if (iRet != RS_RET_CONF_LOAD_ABORTED && loadConf != NULL &&
+        (loadConf->local_config_requested || loadConf->local_config_error) &&
         (loadConf->local_config_error || hadErrMsgs() || (iRet != RS_RET_OK && iRet != RS_RET_VALIDATION_RUN) ||
          delayed_iRet != RS_RET_OK)) {
         loadConf->local_config_error = 1;
