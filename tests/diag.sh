@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 #
 # this shell script provides commands to the common diag system. It enables
 # test scripts to wait for certain conditions and initiate certain actions.
@@ -6,7 +7,13 @@
 # NOTE: this file should be included with ". diag.sh", as it otherwise is
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
-# This file is part of the rsyslog project, released under GPLv3
+#
+# Copyright 2009-2026 by Rainer Gerhards and Adiscon GmbH.
+#
+# This file is part of the rsyslog project.
+#
+# Licensed under the Apache License, Version 2.0.
+# See COPYING.ASL20 for the license text.
 #
 # This file can be customized to environment specifics via environment
 # variables:
@@ -106,8 +113,8 @@ RSYSLOG_MODDIR=${RSYSLOG_MODDIR:-"../runtime/.libs:../.libs"}
 #                turns it off
 
 # diag system internal environment variables
-# these variables are for use by test scripts - they CANNOT be
-# overridden by the user
+# these variables are for use by test scripts - users can NOT
+# override them
 # TCPFLOOD_EXTRA_OPTS   enables to set extra options for tcpflood, usually
 #                       used in tests that have a common driver where it
 #                       is too hard to set these options otherwise
@@ -132,7 +139,7 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
-TB_TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-580} # maximum runtime in seconds for a test;
+TB_TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-580} # per-test runtime limit (seconds);
 # Check if valgrind is enabled, use longer timeout if so
 if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 	TB_STARTUP_MAX_RUNTIME=${STARTUP_MAX_RUNTIME:-240} # maximum runtime in seconds for rsyslog startup with valgrind;
@@ -151,7 +158,7 @@ if [ "$TESTTOOL_DIR" == "" ]; then
 	export TESTTOOL_DIR="${srcdir:-.}"
 fi
 
-# newer functionality is preferably introduced via bash functions
+# new helpers should be added as bash functions, not as case entries
 # rgerhards, 2018-07-03
 rsyslog_testbench_test_url_access() {
     local missing_requirements=
@@ -392,17 +399,19 @@ tb_timestamp() {
 	printf '%s[%s] ' "$(date +%H:%M:%S)" "$(( $(date +%s) - TB_STARTTEST ))"
 }
 
-# echoes wolfssl | openssl | gnutls | mbedtls | none
+# tls_backend: print the TLS library rsyslogd was built with, as one of
+# wolfssl, openssl, gnutls, mbedtls or none
 tls_backend() {
-	local line
-	line=$(../tools/rsyslogd -v 2>/dev/null | grep -i '^	TLS network stream driver:')
-	case "$line" in
-		*wolfSSL*)  echo wolfssl ;;
-		*OpenSSL*)  echo openssl ;;
-		*GnuTLS*)   echo gnutls ;;
-		*"Mbed TLS"*) echo mbedtls ;;
-		*)          echo none ;;
-	esac
+	local drivers entry
+	drivers=$(../tools/rsyslogd -v 2>/dev/null | awk 'tolower($0) ~ /^[[:space:]]*tls network stream driver:/')
+	# first match wins; wolfSSL goes first as its banner may also mention OpenSSL
+	for entry in wolfSSL:wolfssl OpenSSL:openssl GnuTLS:gnutls "Mbed TLS:mbedtls"; do
+		if [[ "$drivers" == *"${entry%%:*}"* ]]; then
+			printf '%s\n' "${entry##*:}"
+			return 0
+		fi
+	done
+	printf 'none\n'
 }
 
 # override the test timeout, but only if the new value is higher
@@ -439,7 +448,7 @@ test_status() {
 
 
 setvar_RS_HOSTNAME() {
-	printf '### Obtaining HOSTNAME (prerequisite, not actual test) ###\n'
+	printf '### determining HOSTNAME (test prerequisite) ###\n'
 	# This helper uses legacy RainerScript $template syntax to capture the
 	# hostname; always run it in RS mode regardless of RSYSLOG_YAML_ONLY.
 	local _saved_yaml_only="${RSYSLOG_YAML_ONLY}"
@@ -1117,7 +1126,7 @@ wait_file_exists_for_process() {
 # a generic check function and must only used with those kafka tests
 # that actually need it.
 kafka_wait_group_coordinator() {
-echo We are waiting for kafka/zookeeper being ready to deliver messages
+printf 'waiting until kafka/zookeeper deliver messages\n'
 wait_file_exists $RSYSLOG_OUT_LOG "
 
 Non-existence of $RSYSLOG_OUT_LOG can be caused
@@ -1914,7 +1923,7 @@ injectmsg() {
 injectmsg2() {
 	msgs=${2:-${NUMMESSAGES:-1}}
 	delay_ms=${IMDIAG_INJECTMSG_DELAY_MS:-0}
-	echo injecting $msgs messages into instance 2
+	printf 'injecting %s messages into instance 2\n' "$msgs"
 	if [ "$3" != "" ] || [ "$4" != "" ] ; then
 		printf 'warning: injectmsg2 ignores deprecated extra arguments: %s %s\n' "$3" "$4"
 	fi
@@ -2037,9 +2046,8 @@ content_count_check() {
 		grep_opt=-F
 	fi
 	file=${3:-$RSYSLOG_OUT_LOG}
-	count=$(grep -c $grep_opt -- "$1" <${file})
+	count=$(grep -c $grep_opt -e "$1" "$file")
 	if [ ${count:=0} -ne "$2" ]; then
-	    grep -c -F -- "$1" <${file}
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
 	    cat -n ${file}
@@ -2174,10 +2182,8 @@ check_spool_empty() {
 check_journal_testmsg_received() {
 	printf 'checking that journal indeed contains test message - may take a short while...\n'
 	# search reverse, gets us to our message (much) faster .... if it is there...
-	if ! journalctl -a -r | grep -qF "$TESTMSG"; then
-		print 'SKIP: cannot read journal - our testmessage not found via journalctl\n'
-		exit 77
-	fi
+	journalctl -a -r | grep -qF "$TESTMSG" ||
+		{ printf 'SKIP: test message not visible via journalctl, journal not readable\n'; exit 77; }
 	printf 'journal contains test message\n'
 
 	echo "INFO: $(wc -l < $RSYSLOG_OUT_LOG) lines in $RSYSLOG_OUT_LOG"
@@ -2191,7 +2197,7 @@ check_journal_testmsg_received() {
 	  echo "======="
 	  echo "NOTE: showing only last 200 lines, may be insufficient on busy systems!"
 	  echo "last entries from journal:"
-	  journalctl -an 200
+	  journalctl --no-pager -a -n 200
 	  echo "======="
 	  echo "NOTE: showing only last 200 lines, may be insufficient on busy systems!"
 	  echo "However, the test check all of the journal, we are just limiting the output"
@@ -2204,38 +2210,33 @@ check_journal_testmsg_received() {
 	fi;
 }
 
-# checks that among the open files found in /proc/<PID>/fd/*
-# there is or is not, depending on the calling mode,
-# a link with the specified suffix in the target name
+# check_fd_for_pid PID MODE SUFFIX
+# Inspect the open file descriptors of PID that belong to this test (their
+# target path contains $RSYSLOG_DYNNAME) and look for one whose target path
+# ends in SUFFIX. MODE selects the expected outcome:
+#   exists - such a descriptor must be open
+#   absent - no such descriptor may be open
+#   ignore - only report, never fail
+# Prints PASS or FAIL; returns non-zero on FAIL unless MODE is ignore.
 check_fd_for_pid() {
-  local pid="$1" mode="$2" suffix="$3" target seen i=0
-  seen="false"
-  for fd in $(echo /proc/$pid/fd/*); do
-    target="$(readlink -m "$fd")"
-    if [[ "$target" != *$RSYSLOG_DYNNAME* ]]; then
-      continue
-    fi
-    if ((i % 10 == 0)); then
-      echo "INFO: check target='$target'"
-    fi
-    ((i++))
-    if [[ "$target" == *$suffix ]]; then
-      seen="true"
-      if [[ "$mode" == "exists" ]]; then
-        echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
-        return 0
-      fi
-    fi
-  done
-  if [[ "$seen" == "false" ]] && [[ "$mode" == "absent" ]]; then
-    echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
-    return 0
-  fi
-  echo "FAIL: check fd for pid=$pid mode='$mode' suffix='$suffix'"
-  if [[ "$mode" != "ignore" ]]; then
-    return 1
-  fi
-  return 0
+	local pid="$1" mode="$2" suffix="$3"
+	local fd target found=no checked=0 verdict=FAIL
+	for fd in /proc/"$pid"/fd/*; do
+		target=$(readlink -m "$fd")
+		[[ "$target" == *"$RSYSLOG_DYNNAME"* ]] || continue
+		# keep the log short: show every 10th candidate only
+		(( checked % 10 )) || printf "INFO: check target='%s'\n" "$target"
+		checked=$((checked + 1))
+		if [[ "$target" == *"$suffix" ]]; then
+			found=yes
+			break
+		fi
+	done
+	case "$mode:$found" in
+	exists:yes|absent:no) verdict=PASS ;;
+	esac
+	printf "%s: check fd for pid=%s mode='%s' suffix='%s'\n" "$verdict" "$pid" "$mode" "$suffix"
+	[ "$verdict" = PASS ] || [ "$mode" = ignore ]
 }
 
 # wait for main message queue to be empty. $1 is the instance.
@@ -2374,7 +2375,7 @@ await_lookup_table_reload() {
 
 # $1 filename, default $RSYSLOG_OUT_LOG
 # $2 expected nbr of lines, default $NUMMESSAGES
-# $3 timeout in seconds
+# $3 timeout (seconds)
 # options (need to be specified in THIS ORDER if multiple given):
 # --delay ms              -- if given, delay to use between retries
 # --abort-on-oversize     -- error_exit if more lines than expected are present
@@ -2682,9 +2683,9 @@ do_cleanup() {
 # - System info (uname, memory): only shown if cores found or VERBOSE mode
 # - Disk space warning: only shown if usage >= 90% and no cores found
 #
-# NOTE: if a function test_error_exit_handler is defined, error_exit will
-#       call it immediately before termination. This may be used to cleanup
-#       some things or emit additional diagnostic information.
+# NOTE: a test may define a function test_error_exit_handler; error_exit
+#       runs it right before terminating, e.g. for test-specific cleanup or
+#       extra diagnostics.
 error_exit() {
 	local expected_core_pid
 	if [ $1 -eq $TB_ERR_TIMEOUT ]; then
@@ -2727,19 +2728,19 @@ error_exit() {
 		touch IN_AUTO_DEBUG
 		# OK, we have the testname and can re-run under valgrind
 		echo re-running under valgrind control
-		current_test="./$(basename $0)" # this path is probably wrong -- theinric
-		$current_test
+		local rerun_cmd="./${0##*/}"
+		"$rerun_cmd"
 		# wait a little bit so that valgrind can finish
 		$TESTTOOL_DIR/msleep 4000
 		# next let's try us to get a debug log
 		RSYSLOG_DEBUG_SAVE=$RSYSLOG_DEBUG
 		export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction"
-		$current_test
+		"$rerun_cmd"
 		$TESTTOOL_DIR/msleep 4000
 		RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 		rm IN_AUTO_DEBUG
 	fi
-	# output listening ports as a temporary debug measure (2018-09-08 rgerhards), now disables, but not yet removed (2018-10-22)
+	# disabled debug aid (rgerhards, 2018): list listening ports on error
 	#if [ $(uname) == "Linux" ]; then
 	#	netstat -tlp
 	#else
@@ -2814,10 +2815,7 @@ error_exit() {
 	# Extended Exit handling for OTEL Collector instance
 	otel_exit_handling "false"
 
-	# Ensure redis instance is stopped
-	if [ -n "$REDIS_DYN_DIR" ]; then
-		stop_redis
-	fi
+	stop_redis # does nothing unless the test started redis
 
 	error_stats $1 # Report error to rsyslog testbench stats
 	do_cleanup
@@ -3305,7 +3303,7 @@ error_stats() {
 }
 
 # do the usual sequence check to see if everything was properly received.
-# $4... are just to have the ability to pass in more options...
+# $4 and later: additional options, passed through to chkseq
 # add -v to chkseq if you need more verbose output
 # argument --check-only can be used to simply do a check without abort in fail case
 # env var SEQ_CHECK_FILE permits to override file name to check
@@ -3386,7 +3384,7 @@ seq_check() {
 # do the usual sequence check to see if everything was properly received. This is
 # a duplicateof seq-check, but we could not change its calling conventions without
 # breaking a lot of exitings test cases, so we preferred to duplicate the code here.
-# $4... are just to have the ability to pass in more options...
+# $4 and later: additional options, passed through to chkseq
 # add -v to chkseq if you need more verbose output
 seq_check2() {
 	if ! $RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7; then
@@ -3397,7 +3395,7 @@ seq_check2() {
 
 
 # do the usual sequence check, but for gzip files
-# $4... are just to have the ability to pass in more options...
+# $4 and later: additional options, passed through to chkseq
 gzip_seq_check() {
 	if [ "$1" == "" ]; then
 		if [ "$NUMMESSAGES" == "" ]; then
@@ -3645,10 +3643,10 @@ exit_test() {
 	# Extended Exit handling for OTEL Collector instance
 	otel_exit_handling "true"
 
-	# Ensure redis is stopped
-	stop_redis
+	stop_redis # does nothing unless the test started redis
 
-	printf '%s Test %s SUCCESSFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
+	local tb_test_secs=$(( $(date +%s) - TB_STARTTEST ))
+	printf '%s Test %s SUCCESSFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$tb_test_secs"
 	echo  -------------------------------------------------------------------------------
 	exit 0
 }
@@ -3676,12 +3674,12 @@ get_inode() {
 # check that logger supports -d option, if not skip test
 # right now this is a bit dirty, we check distros which do not support it
 check_logger_has_option_d() {
-	skip_platform "FreeBSD"  "We need logger -d option, which we do not have on FreeBSD"
-	skip_platform "SunOS"  "We need logger -d option, which we do not have on (all flavors of) Solaris"
-
-	# check also the case for busybox
+	local platform
+	for platform in FreeBSD SunOS; do
+		skip_platform "$platform" "this test needs logger -d, which $platform does not provide"
+	done
 	if logger --help 2>&1 | head -n1 | grep -q BusyBox; then
-		echo "We need logger -d option, which we do not have have on Busybox"
+		printf 'SKIP: this test needs logger -d, which BusyBox does not provide\n'
 		exit 77
 	fi
 }
@@ -3913,10 +3911,33 @@ require_elasticsearch_restart_capability() {
 
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
-# kafka (including Zookeeper)
-dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
-dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
-dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
+# Kafka and Zookeeper
+# tar --xform expressions: rename the archive's top-level directory
+dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#'
+dep_zk_dir_xform_pattern='s#^[^/]\+#zk#'
+dep_es_dir_xform_pattern='s#^[^/]\+#es#'
+
+# require_cached_dep FILE NAME EXITCODE: stop the test with EXITCODE unless
+# the dependency archive FILE (a NAME package) is in the dependency cache.
+require_cached_dep() {
+	if [ ! -f "$1" ]; then
+		printf '%s package %s missing in dependency cache - download dependencies first\n' "$2" "$1"
+		error_exit "$3"
+	fi
+}
+
+# make sure $dep_work_dir exists
+ensure_dep_work_dir() {
+	[ -d "$dep_work_dir" ] || { printf 'creating dependency work dir %s\n' "$dep_work_dir"; mkdir -p "$dep_work_dir"; }
+}
+
+# _kafka_require_topic_ctx TOPIC: abort unless kafka was set up in
+# $dep_work_dir and a topic name was passed
+_kafka_require_topic_ctx() {
+	[ -d "$dep_work_dir/kafka" ] ||
+		{ printf 'FAIL: no kafka work dir %s - was kafka started?\n' "$dep_work_dir/kafka"; exit 1; }
+	[ -n "$1" ] || { printf 'FAIL: kafka topic name missing\n'; exit 1; }
+}
 #dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
 
 #	TODO Make dynamic work dir for multiple instances
@@ -3964,40 +3985,38 @@ otel_exit_handling() {
 
 download_kafka() {
 	ensure_module_needs_testing kafka
-	if [ ! -d $dep_cache_dir ]; then
-		echo "Creating dependency cache dir $dep_cache_dir"
-		mkdir $dep_cache_dir
-	fi
-	if [ ! -f $dep_zk_cached_file ]; then
-		if [ -f /local_dep_cache/$RS_ZK_DOWNLOAD ]; then
-			printf 'Zookeeper: satisfying dependency %s from system cache.\n' "$RS_ZK_DOWNLOAD"
-			cp /local_dep_cache/$RS_ZK_DOWNLOAD $dep_zk_cached_file
-		else
-			echo "Downloading zookeeper from $dep_zk_url"
-			echo wget -q $dep_zk_url -O $dep_zk_cached_file
-			if ! wget -q $dep_zk_url -O $dep_zk_cached_file; then
-				echo error during wget, retry:
-				if ! wget $dep_zk_url -O $dep_zk_cached_file; then
-					rm -f -- "$dep_zk_cached_file" # wget may leave an empty or partial archive
-					echo "Skipping test - unable to download zookeeper"
-					error_exit 77
-				fi
+	[ -d "$dep_cache_dir" ] ||
+		{ echo "Creating dependency cache dir $dep_cache_dir"; mkdir -p "$dep_cache_dir"; }
+	if [ -f "$dep_zk_cached_file" ]; then
+		: # zookeeper archive already cached
+	elif [ -f /local_dep_cache/$RS_ZK_DOWNLOAD ]; then
+		printf 'Zookeeper: satisfying dependency %s from system cache.\n' "$RS_ZK_DOWNLOAD"
+		cp /local_dep_cache/$RS_ZK_DOWNLOAD $dep_zk_cached_file
+	else
+		echo "Downloading zookeeper from $dep_zk_url"
+		echo wget -q $dep_zk_url -O $dep_zk_cached_file
+		if ! wget -q $dep_zk_url -O $dep_zk_cached_file; then
+			echo error during wget, retry:
+			if ! wget $dep_zk_url -O $dep_zk_cached_file; then
+				rm -f -- "$dep_zk_cached_file" # wget may leave an empty or partial archive
+				echo "Skipping test - unable to download zookeeper"
+				error_exit 77
 			fi
 		fi
 	fi
-	if [ ! -f $dep_kafka_cached_file ]; then
-		if [ -f /local_dep_cache/$RS_KAFKA_DOWNLOAD ]; then
-			printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
-			cp /local_dep_cache/$RS_KAFKA_DOWNLOAD $dep_kafka_cached_file
-		else
-			echo "Downloading kafka from $dep_kafka_url"
-			if ! wget -q $dep_kafka_url -O $dep_kafka_cached_file; then
-				echo error during wget, retry:
-				if ! wget $dep_kafka_url -O $dep_kafka_cached_file; then
-					rm $dep_kafka_cached_file # a 0-size file may be left over
-					echo "Skipping test - unable to download kafka"
-					error_exit 77
-				fi
+	if [ -f "$dep_kafka_cached_file" ]; then
+		: # kafka archive already cached
+	elif [ -f /local_dep_cache/$RS_KAFKA_DOWNLOAD ]; then
+		printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
+		cp /local_dep_cache/$RS_KAFKA_DOWNLOAD $dep_kafka_cached_file
+	else
+		echo "Downloading kafka from $dep_kafka_url"
+		if ! wget -q $dep_kafka_url -O $dep_kafka_cached_file; then
+			echo error during wget, retry:
+			if ! wget $dep_kafka_url -O $dep_kafka_cached_file; then
+				rm -f -- "$dep_kafka_cached_file" # wget may leave an empty or partial archive
+				echo "Skipping test - unable to download kafka"
+				error_exit 77
 			fi
 		fi
 	fi
@@ -4047,7 +4066,7 @@ stop_kafka() {
 		done
 
 		if [[ "$2" == 'true' ]]; then
-			# Process shutdown, do cleanup now
+			# process has terminated, remove its work dir
 			cleanup_kafka $1
 		fi
 	fi
@@ -4112,7 +4131,7 @@ stop_zookeeper() {
 		fi
 
 		if [[ "$2" == 'true' ]]; then
-			# Process shutdown, do cleanup now
+			# process has terminated, remove its work dir
 			cleanup_zookeeper $1
 		fi
 		rm "$ZOOPIDFILE"
@@ -4131,10 +4150,10 @@ cleanup_zookeeper() {
 start_zookeeper() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -f "$ZOOPIDFILE" ]; then
 		if kill -0 "$(cat "$ZOOPIDFILE")"; then
-			printf 'zookeeper already running, no need to start\n'
+			printf 'zookeeper is already up, not starting it again\n'
 			return
 		else
-			printf 'INFO: zookeeper pidfile %s exists, but zookeeper not running\n' "$ZOOPIDFILE"
+			printf 'INFO: stale zookeeper pid file %s (process is gone)\n' "$ZOOPIDFILE"
 			printf 'deleting pid file\n'
 			rm -f "$ZOOPIDFILE"
 		fi
@@ -4148,14 +4167,8 @@ start_zookeeper() {
       dep_work_tk_config="zoo$1.cfg"
   fi
 
-	if [ ! -f $dep_zk_cached_file ]; then
-			echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
-			error_exit 77
-	fi
-	if [ ! -d $dep_work_dir ]; then
-			echo "Creating dependency working directory"
-			mkdir -p $dep_work_dir
-	fi
+	require_cached_dep "$dep_zk_cached_file" zookeeper 77
+	ensure_dep_work_dir
 	if [ -d $dep_work_dir/zk ]; then
 			(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
 			$TESTTOOL_DIR/msleep 2000
@@ -4194,18 +4207,12 @@ start_kafka() {
         # shellcheck disable=SC2009 # We do not grep on the process name.
         kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
         if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -n "$kafkapid" ]; then
-                printf 'kafka already running, no need to start\n'
+                printf 'kafka is already up, not starting it again\n'
                 return
         fi
 
-	if [ ! -f $dep_kafka_cached_file ]; then
-			echo "Dependency-cache does not have kafka package, did you download dependencies?"
-			error_exit 77
-	fi
-	if [ ! -d $dep_work_dir ]; then
-			echo "Creating dependency working directory"
-			mkdir -p $dep_work_dir
-	fi
+	require_cached_dep "$dep_kafka_cached_file" kafka 77
+	ensure_dep_work_dir
 	rm -rf $dep_work_dir/kafka
 	( cd $dep_work_dir &&
 	  tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
@@ -4278,14 +4285,7 @@ create_kafka_topic() {
 	else
 		dep_work_port=$3
 	fi
-	if [ ! -d $dep_work_dir/kafka ]; then
-			echo "Kafka work-dir $dep_work_dir/kafka does not exist, did you start kafka?"
-			exit 1
-	fi
-	if [ -z "$1" ]; then
-			echo "Topic-name not provided."
-			exit 1
-	fi
+	_kafka_require_topic_ctx "$1"
 
 	# we need to make sure replication has is working. So let's loop until no more
 	# errors (or timeout) - see also: https://github.com/rsyslog/rsyslog/issues/3045
@@ -4354,14 +4354,7 @@ dump_kafka_topic() {
 	fi
 
 	echo "dumping kafka-topic $1"
-	if [ ! -d $dep_work_dir/kafka ]; then
-			echo "Kafka work-dir does not exist, did you start kafka?"
-			exit 1
-	fi
-	if [ -z "$1" ]; then
-			echo "Topic-name not provided."
-			exit 1
-	fi
+	_kafka_require_topic_ctx "$1"
 
 	(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $1 > $dep_kafka_log_dump)
 }
@@ -4413,10 +4406,8 @@ download_elasticsearch() {
 	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
 		return 0
 	fi
-	if [ ! -d $dep_cache_dir ]; then
-		echo "Creating dependency cache dir $dep_cache_dir"
-		mkdir -p $dep_cache_dir
-	fi
+	[ -d "$dep_cache_dir" ] ||
+		{ echo "Creating dependency cache dir $dep_cache_dir"; mkdir -p "$dep_cache_dir"; }
 	if [ -f "$dep_es_cached_file" ] && ! es_archive_valid "$dep_es_cached_file"; then
 		printf 'ElasticSearch: cached archive %s is invalid, removing it\n' "$dep_es_cached_file"
 		rm -f "$dep_es_cached_file"
@@ -4458,7 +4449,7 @@ download_elasticsearch() {
 }
 
 
-# prepare elasticsearch execution environment
+# set up the work directory and config for a local elasticsearch
 # this also stops any previous elasticsearch instance, if found
 prepare_elasticsearch() {
 	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
@@ -4472,15 +4463,8 @@ prepare_elasticsearch() {
 	dep_work_es_config="es.yml"
 	dep_work_es_pidfile="es.pid"
 
-	if [ ! -f $dep_es_cached_file ]; then
-		echo "Dependency-cache does not have elasticsearch package, did "
-		echo "you download dependencies?"
-		error_exit 100
-	fi
-	if [ ! -d $dep_work_dir ]; then
-		echo "Creating dependency working directory"
-		mkdir -p $dep_work_dir
-	fi
+	require_cached_dep "$dep_es_cached_file" elasticsearch 100
+	ensure_dep_work_dir
 	if [ -d $dep_work_dir/es ]; then
 		if [ -e $dep_work_es_pidfile ]; then
 			es_pid=$(cat $dep_work_es_pidfile)
@@ -4495,19 +4479,21 @@ prepare_elasticsearch() {
 		rm -f "$dep_es_cached_file"
 		error_exit 1
 	fi
-	if [ -n "${ES_PORT:-}" ] ; then
-		rm -f $dep_work_dir/es/config/elasticsearch.yml
-		sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
+	local es_yml="$dep_work_dir/es/config/elasticsearch.yml"
+	rm -f "$es_yml"
+	cp "$srcdir/testsuites/$dep_work_es_config" "$es_yml"
+	if [ -n "${ES_PORT:-}" ]; then
+		# the testbench picked the HTTP port, override the template's value
+		sed -i -e "s/^http\.port:.*/http.port: ${ES_PORT}/" "$es_yml"
 		if [ "$ES_DOWNLOAD" != "elasticsearch-6.0.0.tar.gz" ]; then
-			printf 'xpack.security.enabled: false\n' >> $dep_work_dir/es/config/elasticsearch.yml
+			printf 'xpack.security.enabled: false\n' >> "$es_yml"
 		fi
-	else
-		cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
 	fi
-
-	# Avoid deprecated parameter, new option introduced with 6.7
-	echo "Setting transport tcp option to ${ES_PORT_OPTION:-transport.tcp.port}"
-	sed -i "s/transport.tcp.port/${ES_PORT_OPTION:-transport.tcp.port}/g" "$dep_work_dir/es/config/elasticsearch.yml"
+	# ES 6.7 renamed transport.tcp.port; ES_PORT_OPTION may name the new key
+	if [ -n "${ES_PORT_OPTION:-}" ]; then
+		printf 'INFO: ES transport port key: %s\n' "$ES_PORT_OPTION"
+		sed -i -e "s/transport\.tcp\.port/${ES_PORT_OPTION}/g" "$es_yml"
+	fi
 
 	if [ ! -d $dep_work_dir/es/data ]; then
 			echo "Creating elastic search directories"
@@ -4617,14 +4603,14 @@ start_elasticsearch() {
 
 
 # read data from ES to a local file so that we can process
-# $1 - number of records (ES does not return all records unless you tell it explicitly).
+# $1 - number of records to fetch; ES caps result sizes, so the caller must state it
 # $2 - ES port
 es_getdata() {
 	printf '%s getting data from ElasticSearch\n' "$(date +%H:%M:%S)"
 	local base
 	base=$(es_base_url)
 	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "${base}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
-	# refresh to ensure we get the latest data
+	# make all indexed documents visible to the search below
 	curl --silent "${base}/rsyslog_testbench/_refresh"
 	curl --silent "${base}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES}" > $RSYSLOG_DYNNAME.work
 	printf '\n'
@@ -4693,147 +4679,125 @@ init_elasticsearch() {
 	curl --silent -XDELETE "${base}/rsyslog_testbench"
 }
 
+# omhttp_start_server [PORT] [HELPER_ARGS...]
+# Start tests/omhttp_server.py in the background. PORT defaults to 8080; the
+# port the helper really listens on ends up in $omhttp_server_lstnport.
+# HELPER_ARGS are handed to the helper unchanged. All state is kept below
+# $RSYSLOG_DYNNAME/omhttp so that tests can run in parallel.
 omhttp_start_server() {
-    # Args: 1=port 2=server args
-    # Args 2 and up are passed along as is to omhttp_server.py
-    omhttp_server_py=$srcdir/omhttp_server.py
-    if [ ! -f $omhttp_server_py ]; then
-        echo "Cannot find ${omhttp_server_py} for omhttp test"
-        error_exit 1
-    fi
+	local helper="$srcdir/omhttp_server.py"
+	if [ ! -f "$helper" ]; then
+		printf 'FAIL: omhttp test server helper %s not found\n' "$helper"
+		error_exit 1
+	fi
+	omhttp_server_port=${1:-8080}
+	omhttp_work_dir="$RSYSLOG_DYNNAME/omhttp"
+	omhttp_server_pidfile="$omhttp_work_dir/omhttp_server.pid"
+	omhttp_server_logfile="$omhttp_work_dir/omhttp_server.log"
+	omhttp_server_portfile="$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
+	mkdir -p "$omhttp_work_dir"
+	server_args="-p $omhttp_server_port ${*:2} --port-file $omhttp_server_portfile"
 
-    if [ -z "$1" ]; then
-        omhttp_server_port="8080"
-    else
-        omhttp_server_port="$1"
-    fi
+	# setsid is not available everywhere (e.g. Solaris); it is only a convenience
+	if command -v setsid >/dev/null 2>&1; then
+		setsid timeout 30m $PYTHON "$helper" ${server_args} >> "$omhttp_server_logfile" 2>&1 &
+	else
+		timeout 30m $PYTHON "$helper" ${server_args} >> "$omhttp_server_logfile" 2>&1 &
+	fi
+	omhttp_server_pid=$!
 
-    # Create work directory for parallel tests
-    omhttp_work_dir=$RSYSLOG_DYNNAME/omhttp
-
-    omhttp_server_pidfile="${omhttp_work_dir}/omhttp_server.pid"
-    omhttp_server_logfile="${omhttp_work_dir}/omhttp_server.log"
-    mkdir -p ${omhttp_work_dir}
-
-    omhttp_server_portfile="$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
-    server_args="-p $omhttp_server_port ${*:2} --port-file $omhttp_server_portfile"
-
-    # setsid is not available everywhere (e.g. Solaris); it is only a convenience
-    if command -v setsid >/dev/null 2>&1; then
-        setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
-    else
-        timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
-    fi
-    # shellcheck disable=SC2181 # Preserve the existing background-start check.
-    if [ $? -ne 0 ]; then
-        echo "Failed to start omhttp test server."
-        rm -rf $omhttp_work_dir
-        error_exit 1
-    fi
-    omhttp_server_pid=$!
-
-    # The Python omhttp helper writes the port file only after HTTPServer has
-    # bound the socket.  Under very high full-suite parallelism the helper can
-    # be runnable but starved for longer than the generic 40s start/stop wait,
-    # so keep the port-file readiness oracle but tie it to the helper process:
-    # fail immediately if it exits, otherwise allow a helper-specific startup
-    # window before treating it as a testbench failure.
-    wait_file_exists_for_process "$omhttp_server_portfile" "$omhttp_server_pid" \
-        "${OMHTTP_SERVER_STARTUP_TIMEOUT:-1200}" "omhttp test server" "$omhttp_server_logfile"
-    omhttp_server_lstnport="$(cat "$omhttp_server_portfile")"
-    echo ${omhttp_server_pid} > ${omhttp_server_pidfile}
-    echo "Started omhttp test server with args ${server_args} with process group ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
+	# The Python omhttp helper writes the port file only after HTTPServer has
+	# bound the socket.  Under very high full-suite parallelism the helper can
+	# be runnable but starved for longer than the generic 40s start/stop wait,
+	# so keep the port-file readiness oracle but tie it to the helper process:
+	# fail immediately if it exits, otherwise allow a helper-specific startup
+	# window before treating it as a testbench failure.
+	wait_file_exists_for_process "$omhttp_server_portfile" "$omhttp_server_pid" \
+		"${OMHTTP_SERVER_STARTUP_TIMEOUT:-1200}" "omhttp test server" "$omhttp_server_logfile"
+	omhttp_server_lstnport="$(cat "$omhttp_server_portfile")"
+	printf '%s\n' "$omhttp_server_pid" > "$omhttp_server_pidfile"
+	echo "Started omhttp test server with args ${server_args} with process group ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
 }
 
+# omhttp_stop_server: stop the helper started by omhttp_start_server
+# (whole process group) and remove its work directory
 omhttp_stop_server() {
-    # Args: None
-    omhttp_work_dir=$RSYSLOG_DYNNAME/omhttp
-    if [ ! -d $omhttp_work_dir ]; then
-        echo "omhttp server $omhttp_work_dir does not exist, no action needed"
-    else
-        omhttp_server_pid=$(cat "${omhttp_work_dir}/omhttp_server.pid" 2>/dev/null)
-        case "$omhttp_server_pid" in
-            "" | *[!0-9]* | 0)
-                echo "omhttp server PID could not be read from ${omhttp_work_dir}/omhttp_server.pid, cannot stop server."
-                return 1
-                ;;
-        esac
-        echo "Stopping omhttp server process group ${omhttp_server_pid}"
-        kill -TERM -- -${omhttp_server_pid} > /dev/null 2>&1
-        wait ${omhttp_server_pid} 2>/dev/null || :
-        i=0
-        while kill -0 -- -${omhttp_server_pid} > /dev/null 2>&1; do
-            $TESTTOOL_DIR/msleep 100
-            (( i++ ))
-            if test $i -gt $TB_TIMEOUT_STARTSTOP; then
-                echo "omhttp server process group ${omhttp_server_pid} still running - Performing hard shutdown (-9)"
-                kill -9 -- -${omhttp_server_pid} > /dev/null 2>&1
-                wait ${omhttp_server_pid} 2>/dev/null || :
-                break
-            fi
-        done
-        rm -rf $omhttp_work_dir
-    fi
+	omhttp_work_dir="$RSYSLOG_DYNNAME/omhttp"
+	if [ ! -d "$omhttp_work_dir" ]; then
+		printf 'omhttp test server not running (no %s), nothing to stop\n' "$omhttp_work_dir"
+		return 0
+	fi
+	omhttp_server_pid=$(cat "${omhttp_work_dir}/omhttp_server.pid" 2>/dev/null)
+	case "$omhttp_server_pid" in
+		"" | *[!0-9]* | 0)
+			echo "omhttp server PID could not be read from ${omhttp_work_dir}/omhttp_server.pid, cannot stop server."
+			return 1
+			;;
+	esac
+	echo "Stopping omhttp server process group ${omhttp_server_pid}"
+	kill -TERM -- -${omhttp_server_pid} > /dev/null 2>&1
+	wait ${omhttp_server_pid} 2>/dev/null || :
+	i=0
+	while kill -0 -- -${omhttp_server_pid} > /dev/null 2>&1; do
+		$TESTTOOL_DIR/msleep 100
+		(( i++ ))
+		if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+			echo "omhttp server process group ${omhttp_server_pid} still running - Performing hard shutdown (-9)"
+			kill -9 -- -${omhttp_server_pid} > /dev/null 2>&1
+			wait ${omhttp_server_pid} 2>/dev/null || :
+			break
+		fi
+	done
+	rm -rf "$omhttp_work_dir"
 }
 
+# omhttp_get_data [PORT] [PATH] [BATCHFORMAT]
+# Ask the omhttp test server what it received on PATH and write the msgnum
+# values, numerically sorted, to $RSYSLOG_OUT_LOG. The server replies with a
+# JSON list holding one string per received request body. BATCHFORMAT says
+# how such a body is laid out:
+#   (empty)    a single JSON object
+#   jsonarray  a JSON array of objects
+#   kafkarest  {"records": [{"value": {...}}, ...]}
+#   lokirest   {"streams": [{...}, ...]}
+#   newline (and any other value) - one JSON object per line
 omhttp_get_data() {
-    # Args: 1=port 2=endpoint 3=batchformat(optional)
-    if [ -z "$1" ]; then
-        omhttp_server_port=8080
-    else
-        omhttp_server_port=$1
-    fi
+	local port="${1:-8080}" path="${2:-}" format="${3:-}"
+	curl -s "localhost:${port}/${path}" | $PYTHON -c '
+import json
+import sys
 
-    if [ -z "$2" ]; then
-        omhttp_path=""
-    else
-        omhttp_path=$2
-    fi
+fmt = sys.argv[1]
 
-    # The test server returns a json encoded array of strings containing whatever omhttp sent to it in each request
-    python_init="import json, sys; dat = json.load(sys.stdin)"
-    python_print="print('\n'.join(out))"
-    if [ -z "$3" ]; then
-        # dat = ['{"msgnum":"1"}, '{"msgnum":"2"}', '{"msgnum":"3"}', '{"msgnum":"4"}']
-        python_parse="$python_init; out = [json.loads(l)['msgnum'] for l in dat]; $python_print"
-    else
-       if [ "$3" == "jsonarray" ]; then
-            # dat = ['[{"msgnum":"1"},{"msgnum":"2"}]', '[{"msgnum":"3"},{"msgnum":"4"}]']
-            python_parse="$python_init; out = [l['msgnum'] for a in dat for l in json.loads(a)]; $python_print"
-        elif [ "$3" == "newline" ]; then
-            # dat = ['{"msgnum":"1"}\n{"msgnum":"2"}', '{"msgnum":"3"}\n{"msgnum":"4"}']
-            python_parse="$python_init; out = [json.loads(l)['msgnum'] for a in dat for l in a.split('\n')]; $python_print"
-        elif [ "$3" == "kafkarest" ]; then
-            # dat = ['{"records":[{"value":{"msgnum":"1"}},{"value":{"msgnum":"2"}}]}',
-            #        '{"records":[{"value":{"msgnum":"3"}},{"value":{"msgnum":"4"}}]}']
-            python_parse="$python_init; out = [l['value']['msgnum'] for a in dat for l in json.loads(a)['records']]; $python_print"
-        elif [ "$3" == "lokirest" ]; then
-            # dat = ['{"streams":[{"msgnum":"1"},{"msgnum":"2"}]}',
-            #        '{"streams":[{"msgnum":"3"},{"msgnum":"4"}]}']
-            python_parse="$python_init; out = [l['msgnum'] for a in dat for l in json.loads(a)['streams']]; $python_print"
-        else
-            # use newline parsing as default
-            python_parse="$python_init; out = [json.loads(l)['msgnum'] for a in dat for l in a.split('\n')]; $python_print"
-        fi
+def records(body):
+	if fmt == "":
+		return [json.loads(body)]
+	if fmt == "jsonarray":
+		return json.loads(body)
+	if fmt == "kafkarest":
+		return [entry["value"] for entry in json.loads(body)["records"]]
+	if fmt == "lokirest":
+		return json.loads(body)["streams"]
+	return [json.loads(line) for line in body.split("\n")]
 
-    fi
-
-    omhttp_url="localhost:${omhttp_server_port}/${omhttp_path}"
-    curl -s ${omhttp_url} \
-        | $PYTHON -c "${python_parse}" | sort -n \
-        > ${RSYSLOG_OUT_LOG}
+for body in json.load(sys.stdin):
+	for rec in records(body):
+		print(rec["msgnum"])
+' "$format" | sort -n > "$RSYSLOG_OUT_LOG"
 }
 
+# check the error and response metadata files written by omhttp with
+# tests/omhttp-validate-response.py
 omhttp_validate_metadata_response() {
-	echo "starting to validate omhttp response metadata."
-    omhttp_response_validate_py=$srcdir/omhttp-validate-response.py
-    if [ ! -f $omhttp_response_validate_py ]; then
-        echo "Cannot find ${omhttp_response_validate_py} for omhttp test"
-        error_exit 1
-    fi
-
-	if ! $PYTHON ${omhttp_response_validate_py} --error ${RSYSLOG_DYNNAME}/omhttp.error.log --response ${RSYSLOG_DYNNAME}/omhttp.response.log 2>&1; then
-		printf 'omhttp_validate_metadata_response failed \n'
+	local validator="$srcdir/omhttp-validate-response.py"
+	printf 'validating omhttp response metadata\n'
+	if [ ! -f "$validator" ]; then
+		printf 'FAIL: validator %s not found\n' "$validator"
+		error_exit 1
+	fi
+	if ! $PYTHON "$validator" --error "$RSYSLOG_DYNNAME/omhttp.error.log" \
+			--response "$RSYSLOG_DYNNAME/omhttp.response.log" 2>&1; then
+		printf 'FAIL: omhttp response metadata is not as expected\n'
 		error_exit 1
 	fi
 }
@@ -5360,7 +5324,7 @@ mysql_prep_for_test() {
 
 # get data from mysql DB so that we can do seq_check on it.
 mysql_get_data() {
-	# note "-s" is required to suppress the select "field header"
+	# -s (silent) keeps mysql from printing the column header line
 	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "select substring(Message,9,8) from SystemEvents;" \
 		> $RSYSLOG_OUT_LOG 2> "$RSYSLOG_DYNNAME.mysqlerr"
@@ -5376,123 +5340,119 @@ mysql_cleanup_test() {
 }
 
 
+# Redis helpers for the imhiredis/omhiredis tests.
+#
+# start_redis runs a private redis-server for the current test. Its config is
+# generated from testsuites/redis.conf, data, pid and log file live in
+# $REDIS_DYN_DIR and it listens on $REDIS_RANDOM_PORT. The port is chosen
+# once and then kept, so a test can stop and start the server again.
 start_redis() {
 	ensure_hiredis_test_needs_testing
 	check_command_available redis-server
+	REDIS_DYN_CONF="${RSYSLOG_DYNNAME}.redis.conf"
+	REDIS_DYN_DIR="$(pwd)/${RSYSLOG_DYNNAME}-redis"
+	: "${REDIS_RANDOM_PORT:=$(get_free_port)}"
+	export REDIS_DYN_CONF REDIS_DYN_DIR REDIS_RANDOM_PORT
+	mkdir -p "$REDIS_DYN_DIR"
+	sed -e "s+<tmpdir>+${REDIS_DYN_DIR}+g" -e "s+<rndport>+${REDIS_RANDOM_PORT}+g" \
+		"$srcdir/testsuites/redis.conf" > "$REDIS_DYN_CONF"
 
-	export REDIS_DYN_CONF="${RSYSLOG_DYNNAME}.redis.conf"
-	export REDIS_DYN_DIR="$(pwd)/${RSYSLOG_DYNNAME}-redis"
-
-	# Only set a random port if not set (useful when Redis must be restarted during a test)
-	if [ -z "$REDIS_RANDOM_PORT" ]; then
-		export REDIS_RANDOM_PORT="$(get_free_port)"
-	fi
-
-	cp $srcdir/testsuites/redis.conf $REDIS_DYN_CONF
-	mkdir -p $REDIS_DYN_DIR
-
-	sed -itemp "s+<tmpdir>+${REDIS_DYN_DIR}+g" $REDIS_DYN_CONF
-	sed -itemp "s+<rndport>+${REDIS_RANDOM_PORT}+g" $REDIS_DYN_CONF
-
-	# Start the server
-	echo "Starting redis with conf file $REDIS_DYN_CONF"
-	redis-server $REDIS_DYN_CONF &
+	printf 'starting redis-server with config %s\n' "$REDIS_DYN_CONF"
+	redis-server "$REDIS_DYN_CONF" &
 	$TESTTOOL_DIR/msleep 2000
 
-	# Wait for Redis to be fully up
-	timeoutend=10
-	until nc -w1 -z 127.0.0.1 $REDIS_RANDOM_PORT; do
-		echo "Waiting for Redis to start..."
-		$TESTTOOL_DIR/msleep 1000
-		(( timeseconds=timeseconds + 2 ))
-
-		if [ "$timeseconds" -gt "$timeoutend" ]; then
-			echo "--- TIMEOUT ( $timeseconds ) reached!!!"
-			if [ ! -d ${REDIS_DYN_DIR}/redis.log ]; then
-				echo "no Redis logs"
+	# readiness oracle: redis accepts TCP connections on its port. Each probe
+	# takes up to ~2s (nc timeout + 1s pause); give up after 6 probes.
+	local probes=0
+	until nc -w1 -z 127.0.0.1 "$REDIS_RANDOM_PORT"; do
+		probes=$((probes + 1))
+		if [ "$probes" -ge 6 ]; then
+			printf 'FAIL: redis-server did not open port %s in time\n' "$REDIS_RANDOM_PORT"
+			if [ -f "$REDIS_DYN_DIR/redis.log" ]; then
+				printf '%s\n' '--- redis.log ---'
+				cat "$REDIS_DYN_DIR/redis.log"
+				printf '%s\n' '--- end of redis.log ---'
 			else
-				echo "Dumping ${REDIS_DYN_DIR}/redis.log"
-				echo "========================================="
-				cat ${REDIS_DYN_DIR}/redis.log
-				echo "========================================="
+				printf 'no redis.log written\n'
 			fi
 			error_exit 1
+		fi
+		printf 'redis-server not yet reachable on port %s, waiting\n' "$REDIS_RANDOM_PORT"
+		$TESTTOOL_DIR/msleep 1000
+	done
+}
+
+# _redis_enable_tls CERTNAME: turn on TLS in the running redis-server, using
+# testsuites/x.509/CERTNAME-cert.pem and -key.pem as server certificate. The
+# TLS port is chosen once ($REDIS_RANDOM_TLS_PORT) and kept across restarts.
+_redis_enable_tls() {
+	local x509
+	x509="$(pwd)/testsuites/x.509"
+	: "${REDIS_RANDOM_TLS_PORT:=$(get_free_port)}"
+	export REDIS_RANDOM_TLS_PORT
+	redis_command "CONFIG SET tls-ca-cert-file $x509/ca.pem"
+	redis_command "CONFIG SET tls-cert-file $x509/$1-cert.pem"
+	redis_command "CONFIG SET tls-key-file $x509/$1-key.pem"
+	redis_command "CONFIG SET tls-port $REDIS_RANDOM_TLS_PORT"
+	redis_command "CONFIG REWRITE"
+}
+
+# enable TLS with a valid certificate
+set_redis_tls() {
+	_redis_enable_tls client
+}
+
+# enable TLS with an expired certificate
+set_redis_tls_expired() {
+	_redis_enable_tls client-expired
+}
+
+# remove the redis work dir and the generated config
+cleanup_redis() {
+	if [ -n "${REDIS_DYN_DIR:-}" ]; then
+		rm -rf "$REDIS_DYN_DIR"
+	fi
+	if [ -n "${REDIS_DYN_CONF:-}" ]; then
+		rm -f "$REDIS_DYN_CONF"
+	fi
+	return 0
+}
+
+# stop_redis: terminate the redis-server started by start_redis, if any.
+# Sends SIGTERM and polls (100ms steps) until redis has removed its pid file;
+# after $TB_TIMEOUT_STARTSTOP polls it sends SIGKILL.
+stop_redis() {
+	local pidfile pid polls=0
+	[ -n "${REDIS_DYN_DIR:-}" ] || return 0
+	pidfile="$REDIS_DYN_DIR/redis.pid"
+	[ -f "$pidfile" ] || return 0
+	pid=$(cat "$pidfile")
+	printf 'stopping redis-server (pid %s)\n' "$pid"
+	kill "$pid"
+	while [ -s "$pidfile" ]; do
+		$TESTTOOL_DIR/msleep 100
+		polls=$((polls + 1))
+		if [ "$polls" -gt "$TB_TIMEOUT_STARTSTOP" ]; then
+			printf 'redis-server (pid %s) did not terminate - sending SIGKILL\n' "$pid"
+			kill -9 "$pid"
+			break
 		fi
 	done
 }
 
-set_redis_tls() {
-	# Only set a random TLS port if not set (useful when Redis must be restarted during a test)
-	if [ -z "$REDIS_RANDOM_TLS_PORT" ]; then
-		export REDIS_RANDOM_TLS_PORT="$(get_free_port)"
-	fi
-	redis_command "CONFIG SET tls-ca-cert-file $(pwd)/testsuites/x.509/ca.pem"
-	redis_command "CONFIG SET tls-cert-file $(pwd)/testsuites/x.509/client-cert.pem"
-	redis_command "CONFIG SET tls-key-file $(pwd)/testsuites/x.509/client-key.pem"
-	redis_command "CONFIG SET tls-port ${REDIS_RANDOM_TLS_PORT}"
-	redis_command "CONFIG REWRITE"
-}
-
-set_redis_tls_expired() {
-	# Only set a random TLS port if not set (useful when Redis must be restarted during a test)
-	if [ -z "$REDIS_RANDOM_TLS_PORT" ]; then
-		export REDIS_RANDOM_TLS_PORT="$(get_free_port)"
-	fi
-	redis_command "CONFIG SET tls-ca-cert-file $(pwd)/testsuites/x.509/ca.pem"
-	redis_command "CONFIG SET tls-cert-file $(pwd)/testsuites/x.509/client-expired-cert.pem"
-	redis_command "CONFIG SET tls-key-file $(pwd)/testsuites/x.509/client-expired-key.pem"
-	redis_command "CONFIG SET tls-port ${REDIS_RANDOM_TLS_PORT}"
-	redis_command "CONFIG REWRITE"
-}
-
-cleanup_redis() {
-	if [ -d ${REDIS_DYN_DIR} ]; then
-		rm -rf ${REDIS_DYN_DIR}
-	fi
-	if [ -f ${REDIS_DYN_CONF} ]; then
-		rm -f ${REDIS_DYN_CONF}
-	fi
-}
-
-stop_redis() {
-	if [ -f "$REDIS_DYN_DIR/redis.pid" ]; then
-		redispid=$(cat $REDIS_DYN_DIR/redis.pid)
-		echo "Stopping Redis instance"
-		kill $redispid
-
-		i=0
-
-		# Check if redis instance went down!
-		while [ -f $REDIS_DYN_DIR/redis.pid ]; do
-			redispid=$(cat $REDIS_DYN_DIR/redis.pid)
-			if [[ "" !=  "$redispid" ]]; then
-				$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-				if test $i -gt $TB_TIMEOUT_STARTSTOP; then
-					echo "redis server (PID $redispid) still running - Performing hard shutdown (-9)"
-					kill -9 $redispid
-					break
-				fi
-				(( i++ ))
-			else
-				# Break the loop
-				break
-			fi
-		done
-	fi
-}
-
+# redis_command CMD: send CMD to the test redis-server via redis-cli.
+# Backslash escapes in CMD are expanded, so "\n" separates several commands.
+# Uses $REDIS_PASSWORD for authentication if it is set.
 redis_command() {
 	check_command_available redis-cli
-
-	if [ -z "$1" ]; then
-		echo "redis_command: no command provided!"
+	if [ -z "${1:-}" ]; then
+		printf 'FAIL: redis_command called without a command\n'
 		error_exit 1
 	fi
-
-	if [ -n "$REDIS_PASSWORD" ]; then
-		printf "$1\n" | redis-cli --pass "$REDIS_PASSWORD" -p "$REDIS_RANDOM_PORT"
+	if [ -n "${REDIS_PASSWORD:-}" ]; then
+		printf '%b\n' "$1" | redis-cli --pass "$REDIS_PASSWORD" -p "$REDIS_RANDOM_PORT"
 	else
-		printf "$1\n" | redis-cli -p "$REDIS_RANDOM_PORT"
+		printf '%b\n' "$1" | redis-cli -p "$REDIS_RANDOM_PORT"
 	fi
 }
 
@@ -5572,7 +5532,7 @@ snmp_start_trapreceiver() {
         netstat -tuln 2>/dev/null | grep ":${snmp_server_port} " || true
     fi
 
-    # Create work directory for parallel tests
+    # per-test work directory, so tests can run in parallel
     snmp_work_dir=${RSYSLOG_DYNNAME}/snmptrapreceiver
 
     snmp_server_pidfile="${snmp_work_dir}/snmp_server.pid"
@@ -5688,7 +5648,7 @@ snmp_stop_trapreceiver() {
 }
 
 wait_for_stats_flush() {
-	echo "will wait for stats push"
+	printf 'waiting for the next stats push\n'
 	emitmsg=0
 	while [[ ! -f $1 ]]; do
 		if [ $((++emitmsg % 10)) == 0 ]; then
@@ -5719,40 +5679,43 @@ wait_for_stats_flush() {
 	echo "stats push registered"
 }
 
-# Check file exists and is of a particular size
-# $1 - file to check
-# $2 - size to check
+# file_size_check FILE BYTES: fail the test unless FILE exists and is
+# exactly BYTES bytes long
 file_size_check() {
-    local size=$(ls -l $1 | awk {'print $5'})
-    if [ "${size}" != "${2}" ]; then
-	printf 'File:[%s] has unexpected size. Expected:[%d], Size:[%d]\n', $1 $2 $size
-        error_exit 1
-    fi
-    return 0
+	local actual
+	if [ ! -f "$1" ]; then
+		printf 'FAIL: file %s does not exist\n' "$1"
+		error_exit 1
+	fi
+	actual=$(wc -c < "$1")
+	actual=${actual//[[:space:]]/}
+	if [ "$actual" != "$2" ]; then
+		printf 'FAIL: file %s has %s bytes, expected %s\n' "$1" "$actual" "$2"
+		error_exit 1
+	fi
 }
 
-## Start the helper SNI server for omfwd tests.
-## Args: 1=library (openssl|gnutls), 2=port file
+# omfwd_sni_server LIB PORTFILE: start the SNI test helper LIB_sni_server
+# (LIB is openssl or gnutls) for the omfwd tests.
 ## The helper binds port 0 and writes the selected listener port before rsyslog
 ## is configured. This avoids the get_free_port preselection race where another
 ## process can take the chosen port before the helper binds it.
 omfwd_sni_server() {
-	rm -f "$2"
-	"./$1_sni_server" 0 "$srcdir/tls-certs/cert.pem" "$srcdir/tls-certs/key.pem" "$2" \
-		1>"$RSYSLOG_DYNNAME.sni-server.stdout" &
-	echo "$!" >"$RSYSLOG_DYNNAME.sni-server.pid"
-	wait_file_exists "$2" 10
+	local portfile="$2"
+	rm -f "$portfile"
+	"./$1_sni_server" 0 "$srcdir/tls-certs/cert.pem" "$srcdir/tls-certs/key.pem" "$portfile" \
+		> "$RSYSLOG_DYNNAME.sni-server.stdout" &
+	printf '%s\n' "$!" > "$RSYSLOG_DYNNAME.sni-server.pid"
+	wait_file_exists "$portfile" 10
 }
 
-## Validate that the SNI server observed the expected name.
-## Args: 1=sni
+# omfwd_sni_check NAME: fail the test unless the SNI helper reported that
+# the client sent server name NAME
 omfwd_sni_check() {
-	sni=${1}
-
-	wait_file_lines "$RSYSLOG_DYNNAME.sni-server.stdout" 1
-
-	if ! grep -q "^SNI: $sni\$" $RSYSLOG_DYNNAME.sni-server.stdout; then
-	    printf "Expected 'SNI: %s', but got '%s'\n" "$sni" "$(cat "$RSYSLOG_DYNNAME.sni-server.stdout")"
+	local expected="$1" seen_file="$RSYSLOG_DYNNAME.sni-server.stdout"
+	wait_file_lines "$seen_file" 1
+	if ! grep -qx "SNI: $expected" "$seen_file"; then
+		printf "Expected 'SNI: %s', but got '%s'\n" "$expected" "$(cat "$seen_file")"
 		error_exit 1
 	fi
 }
@@ -5800,7 +5763,7 @@ case $1 in
 		fi
 		if [ "$RSYSLOG_DYNNAME" != "" ]; then
 			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
-			echo "hint: was init accidentally called twice?"
+			echo "hint: init may have been called twice"
 			exit 2
 		fi
 		# Generate a short ASCII-only random suffix in a POSIX/portable way.
@@ -5880,9 +5843,8 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		# is used to setup some parameters BEFORE calling init. This
 		# happens in chained test scripts. Delete on exit is fine,
 		# though.
-		# note: TCPFLOOD_EXTRA_OPTS MUST NOT be unset in init, because
-		# some tests need to set it BEFORE calling init to accommodate
-		# their generic test drivers.
+		# note: init must keep TCPFLOOD_EXTRA_OPTS: generic test drivers
+		# set it before they call init.
 		if [ "$TCPFLOOD_EXTRA_OPTS" != '' ] ; then
 		        echo TCPFLOOD_EXTRA_OPTS set: $TCPFLOOD_EXTRA_OPTS
                 fi
@@ -5890,7 +5852,9 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 			rm -f IN_AUTO_DEBUG
                 fi
                 if [ -e IN_AUTO_DEBUG ]; then
-                        export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --log-fd=1"
+                        valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+                        valgrind+=" --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-}"
+                        export valgrind
                 fi
                 ;;
 
@@ -5926,12 +5890,12 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
 		# note: we do not wait for the actual termination!
 		;;
-   'ensure-no-process-exists')
-    if ps -ef | grep -v grep | grep -qF "$2"; then
-      echo "assertion failed: process with name-fragment matching '$2' found"
-		  error_exit 1
-    fi
-    ;;
+   'ensure-no-process-exists') # $2: fail if a process command line contains it
+		if ps -ef | grep -v grep | grep -qF -- "$2"; then
+			printf "FAIL: found a process whose command line contains '%s'\n" "$2"
+			error_exit 1
+		fi
+		;;
    'grep-check') # grep for "$EXPECTED" present in rsyslog.log - env var must be set
 		 # before this method is called
 		grep "$EXPECTED" ${RSYSLOG_OUT_LOG} > /dev/null
@@ -5943,47 +5907,35 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		error_exit 1
 		fi;
 		;;
-	 'block-stats-flush')
-		echo blocking stats flush
+   'block-stats-flush') # suspend impstats reporting
+		printf 'suspending stats reporting\n'
 		echo "blockStatsReporting" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		;;
-	 'await-stats-flush-after-block')
-		echo unblocking stats flush and waiting for it
+   'await-stats-flush-after-block') # resume stats reporting, wait for one report
+		printf 'resuming stats reporting and waiting for the next report\n'
 		echo "awaitStatsReport" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		;;
-	 'allow-single-stats-flush-after-block-and-wait-for-it')
-		echo blocking stats flush
+   'allow-single-stats-flush-after-block-and-wait-for-it') # let one report through, then suspend again
+		printf 'letting exactly one stats report through\n'
 		echo "awaitStatsReport block_again" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		;;
-	 'wait-for-dyn-stats-reset')
-		echo "will wait for dyn-stats-reset"
-		while [[ ! -f $2 ]]; do
-				echo waiting for stats file "'$2'" to be created
-				$TESTTOOL_DIR/msleep 100
-		done
-		prev_purged=$(grep -F 'origin=dynstats' < $2 | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
-		new_purged=$prev_purged
-		while [[ "$prev_purged" == "$new_purged" ]]; do
-				new_purged=$(grep -F 'origin=dynstats' < "$2" | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
-				$TESTTOOL_DIR/msleep 10
-		done
-		echo "dyn-stats reset for bucket ${3} registered"
-		;;
-   'assert-first-column-sum-greater-than')
-		sum=$(grep $3 <$4| sed -e $2 | awk '{s+=$1} END {print s}')
-		if [ ! $sum -gt $5 ]; then
-		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
-		    echo "file contents:"
-		    cat "$4"
-		    error_exit 1
+   'assert-first-column-sum-greater-than') # $2 sed expr, $3 grep regex, $4 file, $5 lower bound (exclusive)
+		# sum of the first column of all lines of $4 that match $3, after rewriting them with $2
+		sum=$(grep -e "$3" "$4" | sed -e "$2" | awk '{ total += $1 } END { print total + 0 }')
+		if [ "$sum" -le "$5" ]; then
+			printf "FAIL: column sum %s (file '%s', lines matching '%s', sed '%s') is not above %s\n" \
+				"$sum" "$4" "$3" "$2" "$5"
+			printf 'file contents:\n'
+			cat "$4"
+			error_exit 1
 		fi
 		;;
-   'content-pattern-check')
-		if ! grep -q "$2" < ${RSYSLOG_OUT_LOG}; then
-		    echo content-check failed, not every line matched pattern "'$2'"
-		    echo "file contents:"
-		    cat -n "$4"
-		    error_exit 1
+   'content-pattern-check') # $2: fail unless some line of $RSYSLOG_OUT_LOG matches this regex
+		if ! grep -q -e "$2" "$RSYSLOG_OUT_LOG"; then
+			printf "FAIL: no line of %s matches '%s'\n" "$RSYSLOG_OUT_LOG" "$2"
+			printf 'file contents:\n'
+			cat -n "$RSYSLOG_OUT_LOG"
+			error_exit 1
 		fi
 		;;
    'require-journalctl')   # check if journalctl exists on the system
