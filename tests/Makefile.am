@@ -125,6 +125,11 @@ EXTRA_DIST += $(TESTS_PR_COVERAGE) pr-coverage-artifact.py pr-coverage-source.cj
 TESTS_MERMAID_OFFLINE = mermaid-offline.sh
 EXTRA_DIST += $(TESTS_MERMAID_OFFLINE) mermaid-offline.py
 
+# Release SBOM generator (devtools/sbom); pure helper test, no daemon.
+TESTS_SBOM_GENERATOR = sbom-generator.sh
+EXTRA_DIST += $(TESTS_SBOM_GENERATOR) sbom-generator.py \
+	../devtools/sbom/generate-sbom.py ../devtools/sbom/sbom-components.toml
+
 TESTS_GATHER_CHECK_LOGS = gather-check-logs.sh
 EXTRA_DIST += $(TESTS_GATHER_CHECK_LOGS)
 
@@ -3255,6 +3260,7 @@ runtime_unit_perctile_ringbuf_SOURCES = unit/perctile_ringbuf_test.c ../runtime/
 runtime_unit_perctile_ringbuf_CPPFLAGS = -I$(top_srcdir)/runtime
 
 TESTS += $(TESTS_PR_COVERAGE)
+TESTS += $(TESTS_SBOM_GENERATOR)
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)

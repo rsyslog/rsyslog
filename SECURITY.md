@@ -244,3 +244,17 @@ and reviewed. We keep the reporter informed throughout this process.
 
 Reporters are credited in the published security advisory unless they request
 otherwise.
+
+## Software Bill of Materials
+
+Source releases built by the release workflow come with a CycloneDX SBOM
+(`rsyslog-<version>.tar.gz.cdx.json`) next to the tarball on the GitHub
+release page. Tagged releases also carry signed GitHub artifact attestations
+for the tarball and the SBOM:
+
+    gh attestation verify rsyslog-<version>.tar.gz -R rsyslog/rsyslog
+    gh attestation verify rsyslog-<version>.tar.gz -R rsyslog/rsyslog \
+        --predicate-type https://cyclonedx.org/bom
+
+The SBOM lists rsyslog, the third-party code included in the source tree and
+the external libraries the build can link. See `devtools/sbom/README.md`.
