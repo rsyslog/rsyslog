@@ -2343,6 +2343,7 @@ TESTS_GNUTLS = \
 	omfwd-tls-gtls-no-sni.sh \
 	omfwd-tls-gtls-auto-sni.sh \
 	omfwd-tls-gtls-configured-sni.sh \
+	omfwd-tls-gtls-close-notify.sh \
 	sndrcv_tls_gtls_native_pq_group.sh \
 	imtcp-drvr-in-input-basic.sh \
 	imtcp-multi-drvr-basic.sh \
@@ -2423,7 +2424,8 @@ TESTS_OSSL = \
 	imtcp-tls-ossl-x509fingerprint.sh \
 	imtcp-tls-ossl-error-ca.sh \
 	imtcp-tls-ossl-error-cert.sh \
-	imtcp-tls-ossl-error-key.sh
+	imtcp-tls-ossl-error-key.sh \
+	omfwd-tls-ossl-close-notify.sh
 
 TESTS_OSSL_OPENSSL = \
 	imtcp-tls-ossl-crl.sh \
@@ -5167,6 +5169,8 @@ EXTRA_DIST += \
 	testsuites/omprog-output-capture-mt-bin.py \
 	testsuites/improg-child-kill-bin.sh \
 	holdtcpopen.py \
+	omfwd-tls-close-notify-server.py \
+	omfwd-tls-close-notify-common.sh \
 	testsuites/omprog-feedback-bin.sh \
 	testsuites/omprog-feedback-mt-bin.sh \
 	testsuites/omprog-feedback-timeout-bin.sh \
