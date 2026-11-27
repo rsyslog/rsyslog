@@ -5,6 +5,7 @@
 /var/log/user.log
 /var/log/cron.log
 {
+	su root syslog
 	rotate 4
 	weekly
 	missingok
