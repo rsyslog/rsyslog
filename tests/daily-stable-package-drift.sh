@@ -262,3 +262,49 @@ if python3 "$guard" "$fixture" 2>"$work_dir/guard.err"; then
 fi
 grep -F 'fedora44-daily-stable-policy.yml: add omfixture to disabled_optional_modules' "$work_dir/guard.err" >/dev/null
 grep -F 'debian-daily-stable-13-policy.yml: add usr/lib/*/rsyslog/omfixture.so' "$work_dir/guard.err" >/dev/null
+
+# Alpine 3.24 switched to a bare release URL and dropped the autoconf
+# dependency. Exercise the same prepare-sources command the APK build uses.
+alpine_helper="$repo_dir/devtools/release/alpine-daily-stable.sh"
+alpine_policy="$repo_dir/.github/alpine324-daily-stable-policy.yml"
+if [ -f "$alpine_helper" ] && [ -f "$alpine_policy" ] &&
+	python3 -c 'import sys; sys.exit(sys.version_info < (3, 9))'; then
+	alpine_fixture="$work_dir/alpine"
+	mkdir -p "$alpine_fixture/baseline" "$alpine_fixture/source/rsyslog-fixture"
+	printf '%s\n' "test source" >"$alpine_fixture/source/rsyslog-fixture/README"
+	tar -C "$alpine_fixture/source" -czf "$alpine_fixture/dist.tar.gz" rsyslog-fixture
+	cat >"$alpine_fixture/baseline/APKBUILD" <<'APKBUILD'
+pkgname=rsyslog
+pkgver=8.2610.0
+pkgrel=1
+makedepends="
+	curl-dev
+	yaml-dev
+	"
+subpackages="$pkgname-doc"
+source="https://github.com/rsyslog/rsyslog/releases/download/v$pkgver/rsyslog-$pkgver.tar.gz
+	rsyslog.conf
+	"
+_plugins="
+	omotel
+	"
+build() {
+	./configure \
+		--enable-omotel \
+		--enable-gnutls
+}
+sha512sums="
+fixture  rsyslog-8.2610.0.tar.gz
+"
+APKBUILD
+	bash "$alpine_helper" prepare-sources "$alpine_fixture/baseline" \
+		"$alpine_fixture/dist.tar.gz" "$alpine_fixture/prepared" "$alpine_policy" \
+		"$repo_dir/.github/daily-stable-package-features.yml" 8.2612.0_p20261127001
+	prepared="$alpine_fixture/prepared/APKBUILD"
+	grep -Fx 'pkgver=8.2612.0_p20261127001' "$prepared" >/dev/null
+	grep -Fx 'pkgrel=0' "$prepared" >/dev/null
+	grep -Fx 'source="$pkgname-$pkgver.tar.gz' "$prepared" >/dev/null
+	test "$(grep -c '^[[:blank:]]*autoconf-archive[[:blank:]]*$' "$prepared")" -eq 1
+	tar -xOf "$alpine_fixture/prepared/rsyslog-8.2612.0_p20261127001.tar.gz" \
+		rsyslog-8.2612.0_p20261127001/README | grep -Fx 'test source' >/dev/null
+fi
