@@ -40,7 +40,7 @@ publication="$repo_dir/devtools/release/archive-publication.sh"
 helper="$repo_dir/devtools/release/rpm-daily-stable.sh"
 work_dir="$(pwd)/daily-stable-rpm-metadata-fetch-work.$$"
 
-for tool in sha256sum ssh-keygen gpg gpgconf gpgv curl python3 awk; do
+for tool in sha256sum gpg gpgconf gpgv curl python3 awk; do
 	command -v "$tool" >/dev/null 2>&1 || exit 77
 done
 
@@ -113,50 +113,56 @@ fi
 "$publication" add metadata "$bundle" "$work_dir/repomd-b.xml.asc" \
 	SRPMS/repodata/repomd.xml.asc || fail "add second repomd.xml.asc failed"
 
-ssh-keygen -q -t ed25519 -N '' -C test -f "$work_dir/sshkey" ||
-	fail "ssh-keygen could not create a test key"
-printf 'rsyslog-archive-publication namespaces="rsyslog-archive-publication" %s\n' \
-	"$(cut -d' ' -f1,2 "$work_dir/sshkey.pub")" >"$work_dir/allowed"
-"$publication" sign "$bundle" "$work_dir/sshkey" || fail "sign failed"
-"$publication" verify "$bundle" "$work_dir/allowed" ||
-	fail "verify rejected a good RPM bundle"
+# OpenSSH versions without -Y can still run the remaining GPG tests.
+ssh_keygen_usage=$(LC_ALL=C ssh-keygen -? 2>&1 || true)
+if printf '%s\n' "$ssh_keygen_usage" | grep -Fq 'ssh-keygen -Y verify'; then
+	ssh-keygen -q -t ed25519 -N '' -C test -f "$work_dir/sshkey" ||
+		fail "ssh-keygen could not create a test key"
+	printf 'rsyslog-archive-publication namespaces="rsyslog-archive-publication" %s\n' \
+		"$(cut -d' ' -f1,2 "$work_dir/sshkey.pub")" >"$work_dir/allowed"
+	"$publication" sign "$bundle" "$work_dir/sshkey" || fail "sign failed"
+	"$publication" verify "$bundle" "$work_dir/allowed" ||
+		fail "verify rejected a good RPM bundle"
 
-resign() {
-	"$publication" sign "$work_dir/t" "$work_dir/sshkey"
-	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-		fail "verify accepted $1"
-	fi
-}
-tamper_copy() {
-	rm -rf "$work_dir/t"
-	cp -a "$bundle" "$work_dir/t"
-}
-tamper_copy
-sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
-rm "$work_dir/t/files/$prefix/SRPMS/repodata/repomd.xml.asc"
-resign "a bundle ending in a lone repomd.xml"
-tamper_copy
-sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
-sed '$d' "$work_dir/t/manifest" >"$work_dir/t/m2"
-mv "$work_dir/t/m2" "$work_dir/t/manifest"
-rm "$work_dir/t/files/$prefix/SRPMS/repodata/repomd.xml.asc" \
-	"$work_dir/t/files/$prefix/SRPMS/repodata/repomd.xml"
-printf 'metadata %s 4 %s/z-extra\n' "$(sha "$work_dir/key.asc")" "$prefix" \
-	>>"$work_dir/t/manifest"
-printf 'key\n' >"$work_dir/t/files/$prefix/z-extra"
-resign "a bundle ending in other metadata"
-tamper_copy
-# swap the final two entries: repomd.xml.asc before its repomd.xml
-{
-	sed '$d' "$bundle/manifest" | sed '$d'
-	tail -n 1 "$bundle/manifest"
-	tail -n 2 "$bundle/manifest" | head -n 1
-} >"$work_dir/t/manifest"
-resign "a repomd.xml.asc before its repomd.xml"
-tamper_copy
-sed 's/^metadata \(.*\/SRPMS\/repodata\/repomd.xml.asc\)$/immutable \1/' \
-	"$bundle/manifest" >"$work_dir/t/manifest"
-resign "repomd.xml.asc as an immutable entry"
+	resign() {
+		"$publication" sign "$work_dir/t" "$work_dir/sshkey"
+		if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+			fail "verify accepted $1"
+		fi
+	}
+	tamper_copy() {
+		rm -rf "$work_dir/t"
+		cp -a "$bundle" "$work_dir/t"
+	}
+	tamper_copy
+	sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
+	rm "$work_dir/t/files/$prefix/SRPMS/repodata/repomd.xml.asc"
+	resign "a bundle ending in a lone repomd.xml"
+	tamper_copy
+	sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
+	sed '$d' "$work_dir/t/manifest" >"$work_dir/t/m2"
+	mv "$work_dir/t/m2" "$work_dir/t/manifest"
+	rm "$work_dir/t/files/$prefix/SRPMS/repodata/repomd.xml.asc" \
+		"$work_dir/t/files/$prefix/SRPMS/repodata/repomd.xml"
+	printf 'metadata %s 4 %s/z-extra\n' "$(sha "$work_dir/key.asc")" "$prefix" \
+		>>"$work_dir/t/manifest"
+	printf 'key\n' >"$work_dir/t/files/$prefix/z-extra"
+	resign "a bundle ending in other metadata"
+	tamper_copy
+	# swap the final two entries: repomd.xml.asc before its repomd.xml
+	{
+		sed '$d' "$bundle/manifest" | sed '$d'
+		tail -n 1 "$bundle/manifest"
+		tail -n 2 "$bundle/manifest" | head -n 1
+	} >"$work_dir/t/manifest"
+	resign "a repomd.xml.asc before its repomd.xml"
+	tamper_copy
+	sed 's/^metadata \(.*\/SRPMS\/repodata\/repomd.xml.asc\)$/immutable \1/' \
+		"$bundle/manifest" >"$work_dir/t/manifest"
+	resign "repomd.xml.asc as an immutable entry"
+else
+	echo "Skipping SSH signature checks: ssh-keygen lacks -Y verify support"
+fi
 
 # ---- fetch-verified-metadata --------------------------------------------
 

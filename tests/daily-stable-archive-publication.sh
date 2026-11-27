@@ -41,7 +41,7 @@ publication="$repo_dir/devtools/release/archive-publication.sh"
 helper="$repo_dir/devtools/release/debian-daily-stable.sh"
 work_dir="$(pwd)/daily-stable-archive-publication-work.$$"
 
-for tool in sha256sum ssh-keygen gpg gpgconf gpgv curl python3 awk; do
+for tool in sha256sum gpg gpgconf gpgv curl python3 awk; do
 	command -v "$tool" >/dev/null 2>&1 || exit 77
 done
 
@@ -146,87 +146,93 @@ cmp -s "$work_dir/pool.deb" "$bundle/files/$prefix/pool/main/r/rsyslog/x.deb" ||
 
 # ---- sign and verify -----------------------------------------------------
 
-ssh-keygen -q -t ed25519 -N '' -C test -f "$work_dir/key" ||
-	fail "ssh-keygen could not create a test key"
-ssh-keygen -q -t ed25519 -N '' -C other -f "$work_dir/other-key"
-printf 'rsyslog-archive-publication namespaces="rsyslog-archive-publication" %s\n' \
-	"$(cut -d' ' -f1,2 "$work_dir/key.pub")" >"$work_dir/allowed"
-printf 'rsyslog-archive-publication namespaces="rsyslog-archive-publication" %s\n' \
-	"$(cut -d' ' -f1,2 "$work_dir/other-key.pub")" >"$work_dir/allowed-other"
+# OpenSSH versions without -Y can still run the remaining GPG tests.
+ssh_keygen_usage=$(LC_ALL=C ssh-keygen -? 2>&1 || true)
+if printf '%s\n' "$ssh_keygen_usage" | grep -Fq 'ssh-keygen -Y verify'; then
+	ssh-keygen -q -t ed25519 -N '' -C test -f "$work_dir/key" ||
+		fail "ssh-keygen could not create a test key"
+	ssh-keygen -q -t ed25519 -N '' -C other -f "$work_dir/other-key"
+	printf 'rsyslog-archive-publication namespaces="rsyslog-archive-publication" %s\n' \
+		"$(cut -d' ' -f1,2 "$work_dir/key.pub")" >"$work_dir/allowed"
+	printf 'rsyslog-archive-publication namespaces="rsyslog-archive-publication" %s\n' \
+		"$(cut -d' ' -f1,2 "$work_dir/other-key.pub")" >"$work_dir/allowed-other"
 
-"$publication" sign "$bundle" "$work_dir/key" || fail "sign failed"
-"$publication" verify "$bundle" "$work_dir/allowed" ||
-	fail "verify rejected a good bundle"
-if "$publication" verify "$bundle" "$work_dir/allowed-other" 2>/dev/null; then
-	fail "verify accepted a signature by another key"
-fi
-if "$publication" add metadata "$bundle" "$work_dir/Release" x 2>/dev/null; then
-	fail "add modified a signed bundle"
-fi
+	"$publication" sign "$bundle" "$work_dir/key" || fail "sign failed"
+	"$publication" verify "$bundle" "$work_dir/allowed" ||
+		fail "verify rejected a good bundle"
+	if "$publication" verify "$bundle" "$work_dir/allowed-other" 2>/dev/null; then
+		fail "verify accepted a signature by another key"
+	fi
+	if "$publication" add metadata "$bundle" "$work_dir/Release" x 2>/dev/null; then
+		fail "add modified a signed bundle"
+	fi
 
-tamper_copy() {
-	rm -rf "$work_dir/t"
-	cp -a "$bundle" "$work_dir/t"
-}
-tamper_copy
-printf 'evil\n' >"$work_dir/t/files/$prefix/pool/main/r/rsyslog/x.deb"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted a tampered file"
-fi
-tamper_copy
-sed 's/^run 123456 2$/run 123456 3/' "$bundle/manifest" >"$work_dir/t/manifest"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted a tampered manifest"
-fi
-tamper_copy
-printf 'extra\n' >"$work_dir/t/files/$prefix/extra"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted a file not listed in the manifest"
-fi
-tamper_copy
-rm "$work_dir/t/manifest.sig"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted an unsigned bundle"
-fi
-# verify enforces prefix and order on its own, even for a validly signed
-# manifest that "add" would never have written.
-pool_sha="$(sha "$work_dir/pool.deb")"
-tamper_copy
-mkdir -p "$work_dir/t/files/other"
-cp "$work_dir/pool.deb" "$work_dir/t/files/other/x.deb"
-awk -v entry="immutable $pool_sha 5 other/x.deb" \
-	'{ print } NR == 4 { print entry }' "$bundle/manifest" >"$work_dir/t/manifest"
-"$publication" sign "$work_dir/t" "$work_dir/key"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted a path outside the prefix"
-fi
-tamper_copy
-cp "$work_dir/pool.deb" "$work_dir/t/files/$prefix/pool/main/r/rsyslog/late.deb"
-awk -v entry="immutable $pool_sha 5 $prefix/pool/main/r/rsyslog/late.deb" \
-	'$4 ~ /\/InRelease$/ { print entry } { print }' "$bundle/manifest" >"$work_dir/t/manifest"
-"$publication" sign "$work_dir/t" "$work_dir/key"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted an immutable entry after metadata"
-fi
+	tamper_copy() {
+		rm -rf "$work_dir/t"
+		cp -a "$bundle" "$work_dir/t"
+	}
+	tamper_copy
+	printf 'evil\n' >"$work_dir/t/files/$prefix/pool/main/r/rsyslog/x.deb"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted a tampered file"
+	fi
+	tamper_copy
+	sed 's/^run 123456 2$/run 123456 3/' "$bundle/manifest" >"$work_dir/t/manifest"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted a tampered manifest"
+	fi
+	tamper_copy
+	printf 'extra\n' >"$work_dir/t/files/$prefix/extra"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted a file not listed in the manifest"
+	fi
+	tamper_copy
+	rm "$work_dir/t/manifest.sig"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted an unsigned bundle"
+	fi
+	# verify enforces prefix and order on its own, even for a validly signed
+	# manifest that "add" would never have written.
+	pool_sha="$(sha "$work_dir/pool.deb")"
+	tamper_copy
+	mkdir -p "$work_dir/t/files/other"
+	cp "$work_dir/pool.deb" "$work_dir/t/files/other/x.deb"
+	awk -v entry="immutable $pool_sha 5 other/x.deb" \
+		'{ print } NR == 4 { print entry }' "$bundle/manifest" >"$work_dir/t/manifest"
+	"$publication" sign "$work_dir/t" "$work_dir/key"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted a path outside the prefix"
+	fi
+	tamper_copy
+	cp "$work_dir/pool.deb" "$work_dir/t/files/$prefix/pool/main/r/rsyslog/late.deb"
+	awk -v entry="immutable $pool_sha 5 $prefix/pool/main/r/rsyslog/late.deb" \
+		'$4 ~ /\/InRelease$/ { print entry } { print }' "$bundle/manifest" >"$work_dir/t/manifest"
+	"$publication" sign "$work_dir/t" "$work_dir/key"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted an immutable entry after metadata"
+	fi
 
-tamper_copy
-awk '{ print } NR == 5 { print }' "$bundle/manifest" >"$work_dir/t/manifest"
-"$publication" sign "$work_dir/t" "$work_dir/key"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted a duplicate path"
-fi
-tamper_copy
-sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
-rm "$work_dir/t/files/$prefix/dists/trixie/InRelease"
-"$publication" sign "$work_dir/t" "$work_dir/key"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted a bundle missing its terminal InRelease"
-fi
-tamper_copy
-sed 's/^metadata \(.*\/InRelease\)$/immutable \1/' "$bundle/manifest" >"$work_dir/t/manifest"
-"$publication" sign "$work_dir/t" "$work_dir/key"
-if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
-	fail "verify accepted InRelease as an immutable entry"
+	tamper_copy
+	awk '{ print } NR == 5 { print }' "$bundle/manifest" >"$work_dir/t/manifest"
+	"$publication" sign "$work_dir/t" "$work_dir/key"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted a duplicate path"
+	fi
+	tamper_copy
+	sed '$d' "$bundle/manifest" >"$work_dir/t/manifest"
+	rm "$work_dir/t/files/$prefix/dists/trixie/InRelease"
+	"$publication" sign "$work_dir/t" "$work_dir/key"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted a bundle missing its terminal InRelease"
+	fi
+	tamper_copy
+	sed 's/^metadata \(.*\/InRelease\)$/immutable \1/' "$bundle/manifest" >"$work_dir/t/manifest"
+	"$publication" sign "$work_dir/t" "$work_dir/key"
+	if "$publication" verify "$work_dir/t" "$work_dir/allowed" 2>/dev/null; then
+		fail "verify accepted InRelease as an immutable entry"
+	fi
+else
+	echo "Skipping SSH signature checks: ssh-keygen lacks -Y verify support"
 fi
 
 # ---- fetch-verified-indexes ---------------------------------------------
