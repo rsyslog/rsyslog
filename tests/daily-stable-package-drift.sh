@@ -21,6 +21,9 @@
 #   auto-enabled configure option that no target policy covers, so a new
 #   module fails its own pull request instead of the nightly package builds.
 #   The policies are not distributed, so a distribution tarball skips this.
+# - Alpine prepare-sources handles an APKBUILD with no autoconf dependency
+#   and a bare release URL. Check the resulting dependency, local source URL,
+#   version fields, and repacked source tarball.
 set -eu
 
 test_dir=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
@@ -265,6 +268,7 @@ grep -F 'debian-daily-stable-13-policy.yml: add usr/lib/*/rsyslog/omfixture.so' 
 
 # Alpine 3.24 switched to a bare release URL and dropped the autoconf
 # dependency. Exercise the same prepare-sources command the APK build uses.
+# The feature overlay uses str.removeprefix(), introduced in Python 3.9.
 alpine_helper="$repo_dir/devtools/release/alpine-daily-stable.sh"
 alpine_policy="$repo_dir/.github/alpine324-daily-stable-policy.yml"
 if [ -f "$alpine_helper" ] && [ -f "$alpine_policy" ] &&
@@ -307,4 +311,6 @@ APKBUILD
 	test "$(grep -c '^[[:blank:]]*autoconf-archive[[:blank:]]*$' "$prepared")" -eq 1
 	tar -xOf "$alpine_fixture/prepared/rsyslog-8.2612.0_p20261127001.tar.gz" \
 		rsyslog-8.2612.0_p20261127001/README | grep -Fx 'test source' >/dev/null
+else
+	echo "Skipping Alpine source preparation checks: need the helper, policy and Python 3.9+"
 fi
