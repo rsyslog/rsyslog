@@ -79,6 +79,10 @@ collection, and process orchestration).
   positive offsets on 1 January) and the 23:59:59 end-of-day boundary is
   covered by `tests/timereported-dateordinal-utcoffset.sh`.
 
+- Local and UTC ordinal formatting in string and list templates is covered by
+  `tests/timestamp-dateordinal-offset.sh` and its YAML companion
+  `tests/yaml-timestamp-dateordinal-offset.sh`, including leap-year end.
+
 - The shared input rate limiter has imtcp coverage in
   `tests/omfile-legacy-dynafile-programname.sh` for default-disabled limits,
   APP-NAME on the first drop, and the fallback label on parse failure.
