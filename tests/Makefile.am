@@ -563,6 +563,7 @@ TESTS_DEFAULT = \
 	omusrmsg_ratelimit_name.sh \
 	omfile-module-params.sh \
 	omfile-dynafile-template-type-invalid.sh \
+	omfile-dynafile-relative-root.sh \
 	omfile-dynafile-template-type-list-default.sh \
 	omfile-dynafile-template-type-override.sh \
 	omfile-dynafilecachesize-invalid.sh \
@@ -1106,6 +1107,7 @@ TESTS_LIBYAML = \
 	yaml-omfile-dynafilecachesize-invalid.sh \
 	yaml-filecreatemode-invalid-digits.sh \
 	yaml-omfile-dynafile-template-type-invalid.sh \
+	yaml-omfile-dynafile-relative-root.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
 	yaml-error.sh \

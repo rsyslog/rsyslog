@@ -51,8 +51,10 @@ options, and similar external controls remain as protection.
 
 This also restores the historical behavior for opaque legacy dynafile
 templates that render absolute paths or relative paths containing leading
-``..`` components. Without this explicit opt-in, those paths are rejected by
-the default fallback guard.
+``..`` components, and for templates without a fixed leading directory that
+render relative paths while the working directory is the filesystem root.
+Without this explicit opt-in, those paths are rejected by the default
+fallback guard.
 
 Before enabling this option, reconsider the use case. Prefer changing the
 dynafile template so that untrusted fields cannot select parent

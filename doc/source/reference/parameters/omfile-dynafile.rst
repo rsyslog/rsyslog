@@ -58,10 +58,24 @@ recommended pattern.
 Backward-compatibility change
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Opaque legacy templates (subtree and plugin/string-generator templates) do
-not provide a fixed prefix that omfile can inspect. They remain supported, but
-their fallback guard rejects output paths that are absolute or lexically escape
-through ``..``. This deliberately changes the historical behavior of affected
+Templates without a fixed leading directory do not provide a base that omfile
+can check against. This applies to opaque legacy templates (subtree and
+plugin/string-generator templates) and to string and list templates whose
+first entry is a property or whose constant prefix contains no ``/``, for
+example ``%msg%`` or ``log-%HOSTNAME%``. They remain supported, but a fallback
+guard rejects output paths that are absolute or lexically escape through
+``..``. Relative paths resolve against the rsyslogd working directory, which is
+the filesystem root unless rsyslogd was started with ``-C`` (or the legacy
+``-u 2``). While it is the filesystem root, the fallback guard also rejects
+relative paths, because they could select any location; the first rejection per action is
+logged. rsyslogd warns at startup about such templates. Start them with a
+fixed directory instead.
+
+A template that starts with ``/`` followed directly by a property, such as
+``/%msg%``, has the filesystem root as its fixed base. It accepts any absolute
+path by design; use it only when the property is trusted or escaped.
+
+The fallback guard deliberately changes the historical behavior of affected
 legacy configurations. To preserve such a configuration temporarily, set
 :ref:`param-omfile-dynafile-dangerouspermitpathescape` to ``on`` on the
 affected action (or module). That opt-in disables the guard for that action;
