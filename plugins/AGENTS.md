@@ -220,3 +220,11 @@ The `yaml-imklog-logpath-*.sh` companions run the same checks with YAML.
 `tests/imklog-internalmsgfacility.sh` and its YAML companion
 `tests/yaml-imklog-internalmsgfacility.sh` check that an imklog diagnostic
 uses the configured facility and retains its error severity.
+
+## immark interval validation
+
+`tests/immark-interval-validation.sh` uses configuration-validation mode only
+(`-N1`) to check positive/default periods, zero rejection, and negative-period
+rejection through modern and legacy syntax. The YAML companion
+`tests/yaml-immark-interval-validation.sh` checks the module parameter through
+that frontend. Neither regression starts a negative-period input thread.
