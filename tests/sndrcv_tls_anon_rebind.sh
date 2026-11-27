@@ -1,7 +1,13 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # testing sending and receiving via TLS with anon auth and rebind
 # rgerhards, 2011-04-04
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Rebind the anonymous GnuTLS sender every 50 messages. Drain and stop the
+# sender before stopping the receiver, then require the complete delivery
+# sequence from 1 through 25000.
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "Test fails with environment-induced errors, which we cannot solve"
 

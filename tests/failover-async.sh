@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With a linked-list action queue and an unavailable TCP target, verify
+# that the file action writes the entire sequence 0 through 4999 after
+# shutdown.
 echo ===============================================================================
 echo \[failover-async.sh\]: async test for failover functionality
 

@@ -1,5 +1,10 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With repeat reduction enabled, a successful primary /dev/null action
+# must leave the conditional fallback file empty after shutdown.
 echo ===============================================================================
 echo \[failover-no-rptd.sh\]: rptd test for failover functionality - no failover
 . ${srcdir:=.}/diag.sh init

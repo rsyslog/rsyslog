@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This runs sends and receives messages via UDP to the standard
 # ports. Note that with UDP we can always have message loss. While this is
 # less likely in a local environment, we strongly limit the amount of data
@@ -10,7 +11,11 @@
 # does not probe container capabilities: raw-socket and bind permission must
 # also be available, and a prerequisite skip is not successful coverage.
 # added 2009-11-11 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Allow five seconds for the UDP receiver to consume buffered data before
+# stopping the sender and receiver.
 echo ===============================================================================
 echo \[sndrcv_omudpspoof.sh\]: testing sending and receiving via omudp
 echo This test must be run as root [raw socket access required]

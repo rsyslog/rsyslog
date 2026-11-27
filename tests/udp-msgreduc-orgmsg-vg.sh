@@ -1,7 +1,13 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # check if valgrind violations occur. Correct output is not checked.
 # added 2011-03-01 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Send repeated UDP messages with original-message retention in the
+# reduction summary. Valgrind exit status 10 after shutdown indicates
+# failure.
 
 uname
 if [ $(uname) = "FreeBSD" ] ; then

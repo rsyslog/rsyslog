@@ -1,10 +1,15 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test for disk-only queue mode (with fsync for queue files)
 # This test checks if queue files can be correctly written
 # and read back, but it does not test the transition from
 # memory to disk mode for DA queues.
 # added 2009-06-09 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Wait for the output line count before shutdown to let the fsync-heavy
+# queue drain. Then require the complete injected sequence.
 # uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000 # 1000 messages should be enough - the disk fsync test is very slow!

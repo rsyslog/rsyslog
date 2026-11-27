@@ -1,11 +1,17 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock on shutdown. I have added it to the test suite to automatically
 # detect such things in the future.
 # a case known to have caused a deadlock in the past
 #
 # added 2010-03-17 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Wait until the single message reaches the file before shutting down the
+# idle writer. The daemon must exit and the recorded message sequence must
+# be complete.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 generate_conf

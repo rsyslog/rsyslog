@@ -1,5 +1,11 @@
 #!/bin/bash
-# This is part of the rsyslog testbench, licensed under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Grow one watched file across four daemon runs, from an inode-only state
+# ID to a hashed ID. Each state check requires one state file. After the
+# last shutdown, the output must contain sequence 0 through 1999.
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify-only
 generate_conf

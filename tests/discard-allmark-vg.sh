@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released  under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Under Valgrind, discard message 1 with ActionWriteAllMarkMessages
+# enabled. Give the instrumented receiver 1.5 seconds before shutdown.
+# Require a clean Valgrind result and output messages 2 through 10.
 
 uname
 if [ $(uname) = "FreeBSD" ] ; then

@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With repeat reduction disabled and a successful primary /dev/null
+# action, the conditional fallback must leave its file empty after
+# shutdown.
 echo ===============================================================================
 echo \[failover-no-basic.sh\]: basic test for failover functionality - no failover
 . ${srcdir:=.}/diag.sh init

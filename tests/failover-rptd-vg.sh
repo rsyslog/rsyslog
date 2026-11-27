@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Under Valgrind with repeat reduction enabled, suspend the TCP action by
+# using an unavailable target. After shutdown, require a clean Valgrind
+# result and all 5000 sequence numbers in the fallback file.
 
 uname
 if [ $(uname) = "FreeBSD" ] ; then

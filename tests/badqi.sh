@@ -1,10 +1,12 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test startup fallback with a bad classic .qi file. The daemon must survive,
 # quarantine the corrupt control file, create a fresh classic DA child, process
 # messages, and shut down cleanly. A per-test copy keeps the source fixture
 # immutable while exercising the real safe-mode recovery path.
 # added 2009-10-21 by RGerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
 # uncomment for debugging support:
 echo ===============================================================================
 echo \[badqi.sh\]: test startup with invalid .qi file
