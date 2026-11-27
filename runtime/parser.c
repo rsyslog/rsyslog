@@ -256,11 +256,25 @@ finalize_it:
     RETiRet;
 }
 
+static void warnLegacyCompressionUse(void) {
+    LogMsg(0, NO_ERRCODE, LOG_WARNING,
+           "parser: received legacy single-message z compression; this historic compatibility mode is not "
+           "recommended for new configurations. Use matching stream compression or uncompressed transport.");
+}
+
+static void warnLegacyCompressionFraming(void) {
+    LogMsg(0, NO_ERRCODE, LOG_WARNING,
+           "parser: legacy z compression received without octet-counted TCP framing; binary compressed data "
+           "can contain LF bytes and split records. Use octet-counted framing for legacy z records.");
+}
+
 /* uncompress a received message if it is compressed.
  * pMsg->pszRawMsg buffer is updated.
  * rgerhards, 2008-10-09
  */
 static rsRetVal uncompressMessage(smsg_t *pMsg) {
+    static pthread_once_t legacy_compression_warning = PTHREAD_ONCE_INIT;
+    static pthread_once_t legacy_framing_warning = PTHREAD_ONCE_INIT;
     static unsigned int empty_msg_err_rate_limiter = 0;
     static pthread_mutex_t mut_empty_msg_err_rate_limiter = PTHREAD_MUTEX_INITIALIZER;
     DEFiRet;
@@ -278,6 +292,10 @@ static rsRetVal uncompressMessage(smsg_t *pMsg) {
      */
     if (lenMsg > 0 && *pszMsg == 'z' && runConf->globals.bSupportCompressionExtension &&
         !(pMsg->msgFlags & NO_LEGACY_Z_DECOMPRESS)) { /* compressed data present? */
+        pthread_once(&legacy_compression_warning, warnLegacyCompressionUse);
+        if (pMsg->msgFlags & TCP_NON_OCTET_COUNTED) {
+            pthread_once(&legacy_framing_warning, warnLegacyCompressionFraming);
+        }
         /* we have compressed data, so let's deflate it. We support a maximum
          * message size of iMaxLine. If it is larger, an error message is logged
          * and the message is dropped. We do NOT try to decompress larger messages

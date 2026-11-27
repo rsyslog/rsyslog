@@ -57,6 +57,13 @@ TESTS_IMKLOG_LOGPATH_YAML = \
 	yaml-imklog-logpath-read-error.sh
 EXTRA_DIST += $(TESTS_IMKLOG_LOGPATH) $(TESTS_IMKLOG_LOGPATH_YAML)
 
+TESTS_LEGACY_COMPRESSION_CONFIG = omfwd-legacy-compression-warning.sh
+TESTS_LEGACY_COMPRESSION_YAML = yaml-omfwd-legacy-compression-warning.sh
+TESTS_LEGACY_COMPRESSION_TCP = legacy-zlib-warnings.sh
+TESTS_LEGACY_COMPRESSION_PTCP = imptcp-legacy-zlib-warnings.sh
+EXTRA_DIST += $(TESTS_LEGACY_COMPRESSION_CONFIG) $(TESTS_LEGACY_COMPRESSION_YAML) \
+	$(TESTS_LEGACY_COMPRESSION_TCP) $(TESTS_LEGACY_COMPRESSION_PTCP) testsuites/legacy-zlib-warnings.py
+
 TESTS_DISK_QUEUE_SERIALIZER = \
 	diskqueue-serializer-abi.sh \
 	diskqueue-qi-reload-abi.sh
@@ -3517,6 +3524,16 @@ endif
 
 if ENABLE_TESTBENCH
 if ENABLE_IMDIAG
+TESTS += $(TESTS_LEGACY_COMPRESSION_CONFIG)
+if HAVE_LIBYAML
+TESTS += $(TESTS_LEGACY_COMPRESSION_YAML)
+endif
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_LEGACY_COMPRESSION_TCP)
+endif
+if ENABLE_IMPTCP
+TESTS += $(TESTS_LEGACY_COMPRESSION_PTCP)
+endif
 # Keep callback ABI coverage in reduced macOS builds without default tests.
 TESTS += $(TESTS_DISK_QUEUE_SERIALIZER)
 endif
