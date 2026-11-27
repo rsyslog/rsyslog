@@ -1,0 +1,1 @@
+<165>1 2024-01-02T03:04:05.678Z deep-host appname 4242 MSGID42 [time@123 tz="UTC" offset="+13:45"][meta@example id="42" trace="abcd" flag="on"][exampleSDID@32473 iut="3" eventSource="Application" eventID="1011" unicode="false"] complex payload with multiple structured data elements

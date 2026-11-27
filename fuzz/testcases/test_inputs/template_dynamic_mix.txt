@@ -1,0 +1,1 @@
+"tmpl-start %hostname% %app-name% %msg% %json% %syslogseverity% %timereported:::date-rfc3339% end-tmpl"

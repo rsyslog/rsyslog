@@ -1,0 +1,2 @@
+# IPv6 address in hostname
+<164>Jan  1 00:00:00 2001:db8::1 test: message from IPv6 host

@@ -1,0 +1,2 @@
+# RFC 3164 formatted message - traditional syslog format
+<164>Oct 12 18:22:18 mymachine very important message

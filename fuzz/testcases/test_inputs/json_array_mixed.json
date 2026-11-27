@@ -1,0 +1,6 @@
+{
+  "msg": ["alpha", 2, {"deep": ["x", {"y": true}, 4.5]}, null],
+  "hostname": "json-box",
+  "structured-data": "[exampleSDID@32473 iut=\"3\" eventID=\"77\" key=\"value\"]",
+  "app": "fuzz-json"
+}

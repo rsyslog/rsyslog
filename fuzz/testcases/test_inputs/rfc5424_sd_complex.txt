@@ -1,0 +1,1 @@
+<165>1 2024-06-01T12:34:56.789Z srv01 app/4 9012 ID47 [meta@12345 key1="val" key2="двойной"] [x@999 a="1" b="2"] Long RFC5424 with SD and UTF8-ish bytes

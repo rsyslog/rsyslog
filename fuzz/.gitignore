@@ -1,0 +1,5 @@
+/fuzz_driver_regression
+/fuzz_rsyslog_parsers
+/fuzz_rsyslog_parsers_libfuzzer
+/fuzz_state_regression
+/coverage/
