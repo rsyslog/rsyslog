@@ -749,10 +749,16 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
     uint64_t value;
     const char *objName = (const char *)o->name;
     const char *origin = o->origin ? (const char *)o->origin : "";
+    const size_t maxNameLength = runConf->globals.prometheusMaxNameLength;
 
     /* Iterate each counter in o->ctrRoot.  Lock while walking the linked list. */
     pthread_mutex_lock(&o->mutCtr);
     for (pCtr = o->ctrRoot; pCtr != NULL; pCtr = pCtr->next) {
+        /* Do not consume resettable counters that cannot be rendered. */
+        if (strlen(objName) > maxNameLength || strlen((const char *)pCtr->name) > maxNameLength ||
+            strlen(origin) > maxNameLength) {
+            continue;
+        }
         /* 1) Read the current accumulated value.  Might be IntCtr or Int. */
         switch (pCtr->ctrType) {
             case ctrType_IntCtr:

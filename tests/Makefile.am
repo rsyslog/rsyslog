@@ -1782,6 +1782,7 @@ TESTS_IMHTTP = \
 	imhttp-getrequest-file.sh \
 	imhttp-healthcheck.sh \
 	imhttp-metrics.sh \
+	imhttp-metrics-limit.sh \
 	imhttp-healthcheck-api-key-auth.sh \
 	imhttp-metrics-api-key-auth.sh \
 	imhttp_ratelimit_name.sh

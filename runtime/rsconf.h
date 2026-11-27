@@ -184,6 +184,8 @@ struct globals_s {
     uchar *stdlog_chanspec;
 #endif
     int iMaxLine; /* maximum length of a syslog message */
+    size_t prometheusMaxNameLength;
+    size_t prometheusMaxResponseSize;
 
     // TODO are the following ones defaults?
     int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

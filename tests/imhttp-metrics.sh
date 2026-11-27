@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # Verify the imhttp metrics endpoint while the HTTP listener uses an
-# OS-assigned port. The HTTP status and metrics response are the oracle.
+# OS-assigned port and a configured 1 MiB response limit. The emitted metrics
+# are the oracle that a response below the configured cap succeeds.
 
 . ${srcdir:=.}/diag.sh init
 generate_conf
 IMHTTP_PORT_FILE="$RSYSLOG_DYNNAME.imhttp.port"
 add_conf '
+global(prometheus.maxResponseSize="1m")
 template(name="outfmt" type="string" string="%msg%\n")
 module(load="../contrib/imhttp/.libs/imhttp"
        ports="0"

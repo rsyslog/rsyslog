@@ -44,6 +44,7 @@
 #include "rsyslog.h"
 #include "errmsg.h"
 #include "statsobj.h"
+#include "rsconf.h"
 #include "ratelimit.h"
 #include "dirty.h"
 
@@ -1450,9 +1451,14 @@ struct stats_buf {
     size_t cap;
 };
 
+/* Stop before the configured scrape allocation would be exceeded. */
 static rsRetVal prom_stats_collect(void *usrptr, const char *line) {
     struct stats_buf *sb = (struct stats_buf *)usrptr;
     const size_t line_len = strlen(line);
+    const size_t maxResponseSize = runModConf->pConf->globals.prometheusMaxResponseSize;
+    if (sb->len >= maxResponseSize || line_len >= maxResponseSize - sb->len) {
+        return RS_RET_FILE_TOO_LARGE;
+    }
     if (line_len > ((size_t)-1) - sb->len - 1) {
         return RS_RET_OUT_OF_MEMORY;
     }
@@ -1465,6 +1471,7 @@ static rsRetVal prom_stats_collect(void *usrptr, const char *line) {
             }
             newcap *= 2;
         }
+        if (newcap > maxResponseSize) newcap = maxResponseSize;
         char *tmp = realloc(sb->buf, newcap);
         if (tmp == NULL) {
             return RS_RET_OUT_OF_MEMORY;
@@ -1489,7 +1496,7 @@ static int prometheus_metrics_handler(struct mg_connection *conn, ATTR_UNUSED vo
 
     ret = prom_stats_collect(&sb, imhttp_up_metric);
     if (ret != RS_RET_OK) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "imhttp: failed to allocate initial buffer for statistics");
+        LogError(0, ret, "imhttp: failed to initialize statistics response");
         http_status = 500;
         goto finalize;
     }

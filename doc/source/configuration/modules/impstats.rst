@@ -27,6 +27,12 @@ just like regular log messages. As such,
 counters increase when processing these messages. This must be taken into
 consideration when testing and troubleshooting.
 
+For Prometheus text output, the global ``prometheus.maxNameLength`` setting
+limits each raw object, origin, and counter name component. Its default is
+1024 bytes; components longer than the configured limit cause the counter to
+be omitted without resetting it. See :ref:`imhttp-prometheus-metrics` for the
+range and configuration examples.
+
 Note that loading this module has some impact on rsyslog performance.
 Depending on settings, this impact may be noticeable for high-load
 environments, but in general the overhead is pretty light.

@@ -36,6 +36,10 @@ directly to a RainerScript parameter of the same name, so all per-module
 documentation remains applicable unchanged. You can also mix formats: a YAML
 main config may include RainerScript ``.conf`` fragments and vice versa.
 
+Prometheus text export limits can be set in ``global:`` using
+``prometheus.maxNameLength`` and ``prometheus.maxResponseSize``. See
+:ref:`imhttp-prometheus-metrics` for their ranges and effects.
+
 Continuity with RainerScript
 ----------------------------
 
