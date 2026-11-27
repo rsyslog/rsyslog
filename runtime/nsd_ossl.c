@@ -554,9 +554,14 @@ static rsRetVal osslEndSess(nsd_ossl_t *pThis) {
 }
 
 static void osslAbortSess(nsd_ossl_t *pThis) {
-    if (pThis->pNetOssl->ssl != NULL) {
-        SSL_free(pThis->pNetOssl->ssl);
+    int state;
+    SSL *ssl;
+
+    if ((ssl = pThis->pNetOssl->ssl) != NULL) {
+        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &state);
         pThis->pNetOssl->ssl = NULL;
+        SSL_free(ssl);
+        pthread_setcancelstate(state, NULL);
     }
     pThis->bHaveSess = 0;
     pThis->bAbortConn = 1;
@@ -580,25 +585,34 @@ ENDobjConstruct(nsd_ossl)
 /* destructor for the nsd_ossl object */
 BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(nsd_ossl);
+    int state;
+    SSL *ssl;
+
     DBGPRINTF("nsd_ossl_destruct: [%p] Mode %d\n", pThis, pThis->iMode);
+
+    /*
+     * Avoid double free, and ensure a clean free of cancellation.
+     */
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &state);
+
     if (pThis->iMode == 1) {
         osslEndSess(pThis);
     }
     /* TODO MOVE Free SSL obj also if we do not have a session - or are NOT in TLS mode! */
-    if (pThis->pNetOssl->ssl != NULL) {
+    if ((ssl = pThis->pNetOssl->ssl) != NULL) {
         DBGPRINTF("nsd_ossl_destruct: [%p] FREE pThis->pNetOssl->ssl \n", pThis);
         /* If pTcp is NULL, we configure the BIO to close it on SSL_free
            This is a purely defensive measure and is this case is not actually expected
            */
         assert(pThis->pTcp != NULL);
         if (pThis->pTcp == NULL) {
-            BIO *bio = SSL_get_rbio(pThis->pNetOssl->ssl);
+            BIO *bio = SSL_get_rbio(ssl);
             if (bio != NULL) {
                 BIO_set_close(bio, BIO_CLOSE);
             }
         }
-        SSL_free(pThis->pNetOssl->ssl);
         pThis->pNetOssl->ssl = NULL;
+        SSL_free(ssl);
     }
     /**/
     if (pThis->pTcp != NULL) {
@@ -611,6 +625,8 @@ BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and
     free(pThis->pszConnectHost);
     free(pThis->pszRcvBuf);
     free(pThis->remoteSNI);
+
+    pthread_setcancelstate(state, NULL);
 ENDobjDestruct(nsd_ossl)
 
 
@@ -1449,10 +1465,15 @@ finalize_it:
     /* Connect appears to be done here */
     dbgprintf("Connect: END iRet = %d, pThis=[%p], pNsd->rtryCall=%d\n", iRet, pThis, pThis->rtryCall);
     if (iRet != RS_RET_OK) {
-        if (pThis->bHaveSess) {
+        int state;
+        SSL *ssl;
+
+        if (pThis->bHaveSess && (ssl = pThis->pNetOssl->ssl) != NULL) {
             pThis->bHaveSess = 0;
-            SSL_free(pThis->pNetOssl->ssl);
             pThis->pNetOssl->ssl = NULL;
+            pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &state);
+            SSL_free(ssl);
+            pthread_setcancelstate(state, NULL);
         }
     }
     RETiRet;

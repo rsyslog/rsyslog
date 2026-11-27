@@ -2728,22 +2728,34 @@ ENDobjConstruct(net_ossl)
 /* destructor for the net_ossl object */
 BEGINobjDestruct(net_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(net_ossl);
+    int state;
+    SSL *ssl;
+    SSL_CTX *ctx;
+
     DBGPRINTF("net_ossl_destruct: [%p]\n", pThis);
+
+    /*
+     * Avoid double free, and ensure a clean free of cancellation.
+     */
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &state);
+
     /* Free SSL obj also if we do not have a session - or are NOT in TLS mode! */
-    if (pThis->ssl != NULL) {
+    if ((ssl = pThis->ssl) != NULL) {
         DBGPRINTF("net_ossl_destruct: [%p] FREE pThis->ssl \n", pThis);
-        SSL_free(pThis->ssl);
         pThis->ssl = NULL;
+        SSL_free(ssl);
     }
-    if (pThis->ctx != NULL && !pThis->ctx_is_copy) {
-        SSL_CTX_free(pThis->ctx);
+    if ((ctx = pThis->ctx) != NULL && !pThis->ctx_is_copy) {
         pThis->ctx = NULL;
+        SSL_CTX_free(ctx);
     }
     free((void *)pThis->pszCAFile);
     free((void *)pThis->pszCRLFile);
     free((void *)pThis->pszKeyFile);
     free((void *)pThis->pszCertFile);
     free((void *)pThis->pszExtraCAFiles);
+
+    pthread_setcancelstate(state, NULL);
 ENDobjDestruct(net_ossl)
 
 /* queryInterface function */
