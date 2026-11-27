@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Exercise failover from an unavailable TCP target under Valgrind. Require
+# a clean run and the complete fallback-file sequence 0 through 4999 after
+# shutdown.
 
 uname
 if [ $(uname) = "FreeBSD" ] ; then

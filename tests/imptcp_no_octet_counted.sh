@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released  under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With octet-counted framing disabled, send the no_octet_counted fixture
+# through imptcp. The output must contain sequence 0 through 19 after
+# shutdown.
 echo ====================================================================================
 echo TEST: \[imptcp_no_octet_counted.sh\]: test imptcp with octet counted framing disabled
 . ${srcdir:=.}/diag.sh init

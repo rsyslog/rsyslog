@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Basic test for omruleset. What we do is have the main queue forward 
 # all messages to a secondary ruleset via omruleset, which then does
 # the actual file write. We check if all messages arrive at the file, 
@@ -9,7 +10,11 @@
 # would result in longer execution time. In any case, 5000 messages
 # are well enough to test what we want to test.
 # added 2009-11-02 by rgerhards
-# This file is part of the rsyslog project, released under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Wait for the output line count before shutdown and verify the complete
+# sequence.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=5000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines

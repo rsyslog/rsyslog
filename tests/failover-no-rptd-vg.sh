@@ -1,6 +1,12 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # rptd test for failover functionality - no failover
-# This file is part of the rsyslog project, released under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With repeat reduction enabled, send messages to a successful /dev/null
+# action under Valgrind. Require a clean Valgrind result and an absent or
+# empty fallback file after shutdown.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

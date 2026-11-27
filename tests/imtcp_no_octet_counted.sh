@@ -1,5 +1,10 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released  under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With octet-counted framing disabled on imtcp, feed the framing fixture
+# and verify sequence 0 through 19 in the file after shutdown.
 echo ====================================================================================
 echo TEST: \[imtcp_no_octet_counted.sh\]: test imtcp with octet counted framing disabled
 . ${srcdir:=.}/diag.sh init

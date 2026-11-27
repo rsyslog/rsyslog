@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 */
 /* This program expands the input file several times. This
  * is done in order to obtain large (and maybe huge) files for
  * testing. Note that the input file is stored in memory. It's
@@ -17,22 +17,8 @@
  *
  * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of rsyslog.
- *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Rsyslog is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * Developed by Adiscon GmbH for the rsyslog testbench.
+ * Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
  */
 #include <stdio.h>
 #include <stdlib.h>

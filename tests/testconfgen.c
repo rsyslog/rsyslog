@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: Apache-2.0 */
 /* a testcase generator
  * THis program reads stdin, which must consist of (name,stmt) tupels
  * where name is a part of the config name  (small!) and stmt is an actual
@@ -6,7 +7,9 @@
  * on stdin. After all tupels are read, the power set of all possible
  * configurations is generated.
  * Copyright (C) 2011 by Rainer Gerhards and Adiscon GmbH
- * Released under the GPLv3 as part of the rsyslog project.
+ *
+ * Developed by Adiscon GmbH for the rsyslog testbench.
+ * Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
  */
 #include <stdio.h>
 #include <stdlib.h>

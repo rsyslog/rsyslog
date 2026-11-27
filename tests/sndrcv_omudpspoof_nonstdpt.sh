@@ -1,11 +1,12 @@
 #!/bin/bash
-# This runs sends and receives messages via UDP to the standard
-# ports. Note that with UDP we can always have message loss. While this is
-# less likely in a local environment, we strongly limit the amount of data
-# we send in the hope to not lose any messages. However, failure of this
-# test does not necessarily mean that the code is wrong (but it is very likely!)
+# SPDX-License-Identifier: Apache-2.0
+# Verify omudpspoof delivery to UDP destination port 2514 with source port
+# 514. Send only 50 messages to limit UDP loss, and allow five seconds for
+# receive buffers to drain. After both daemons exit, the receiver file
+# must contain sequence 1 through 50.
 # added 2009-11-11 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
 echo ===============================================================================
 echo \[sndrcv_omudpspoof_nonstdpt.sh\]: testing sending and receiving via omudp
 echo This test must be run as root [raw socket access required]

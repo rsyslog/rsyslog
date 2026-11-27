@@ -1,5 +1,11 @@
 #!/bin/bash
-# This is part of the rsyslog testbench, licensed under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Rename the watched file while imfile is stopped and append a second
+# batch. Wait for the cumulative output count in each run before shutdown,
+# then require the full sequence across both runs.
 export TESTMESSAGES=10000
 export RETRIES=10
 export TESTMESSAGESFULL=19999

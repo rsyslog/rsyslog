@@ -1,11 +1,15 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This tests async writing with a very small output buffer (1 byte!),
 # so it stresses output buffer handling. This also means operations will
 # be somewhat slow, so we send only a small amounts of data.
 #
 # added 2010-03-09 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# After a clean shutdown, require the output sequence 0 through 999.
 echo ===============================================================================
 echo TEST: \[asynwr_tinybuf.sh\]: test async file writing with 1-byte buffer
 . ${srcdir:=.}/diag.sh init

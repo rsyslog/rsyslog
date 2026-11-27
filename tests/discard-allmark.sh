@@ -1,5 +1,11 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released  under GPLv3
+# SPDX-License-Identifier: Apache-2.0
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# With ActionWriteAllMarkMessages enabled, discard message 1 before the
+# dynamic file action. After shutdown, only messages 2 through 10 may
+# appear in the file.
 echo ===============================================================================
 echo \[discard-allmark.sh\]: testing discard-allmark functionality
 . ${srcdir:=.}/diag.sh init

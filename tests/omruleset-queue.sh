@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # test for omruleset. What we do is have the main queue forward 
 # all messages to a secondary ruleset via omruleset, which then does
 # the actual file write. We check if all messages arrive at the file, 
@@ -6,7 +7,11 @@
 # are used, but the ruleset uses its own queue. So we can also inject
 # more messages without running into troubles.
 # added 2009-11-02 by rgerhards
-# This file is part of the rsyslog project, released under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Wait for the output line count before shutdown and check the full
+# sequence written by the secondary ruleset.
 echo ===============================================================================
 echo \[omruleset-queue.sh\]: test for omruleset functionality with a ruleset queue
 

@@ -1,10 +1,12 @@
 #!/bin/bash
-# This test writes to the output buffers, let's the output
-# write timeout (and write data) and then continue. The conf file
-# has a 2 second timeout, so we wait 4 seconds to be on the save side.
+# SPDX-License-Identifier: Apache-2.0
+# Exercise the asynchronous flush timer with a partial final output
+# buffer. Wait four seconds for the two-second flush interval before
+# shutdown. After shutdown, require the complete sequence 0 through 35554.
 #
 # added 2010-03-09 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
 echo ===============================================================================
 echo TEST: \[asynwr_timeout.sh\]: test async file writing timeout writes
 . ${srcdir:=.}/diag.sh init

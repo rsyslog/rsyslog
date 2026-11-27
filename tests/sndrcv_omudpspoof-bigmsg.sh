@@ -1,7 +1,13 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This runs sends and receives big messages via OMUDPSPOOF 
 # added 2020-04-07 alorbach
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Send one message with a 65,000-byte payload through omudpspoof. Allow
+# five seconds for UDP delivery before stopping the two instances. Require
+# one occurrence of the payload marker in the receiver output.
 echo This test must be run as root [raw socket access required]
 if [ "$EUID" -ne 0 ]; then
     exit 77 # Not root, skip this test

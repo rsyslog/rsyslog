@@ -1,8 +1,14 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test imtcp with many dropping connections
 # added 2010-08-10 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# Send 50,000 messages across twenty connections with induced drops. Use
+# the output line count to wait for delivery before shutdown, then verify
+# the full sequence.
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test currently does not work on FreeBSD"
 export NUMMESSAGES=50000

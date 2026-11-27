@@ -1,10 +1,16 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock on shutdown. I have added it to the test suite to automatically
 # detect such things in the future.
 #
 # added 2010-03-17 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# Developed by Adiscon GmbH for the rsyslog testbench.
+# Licensed under the Apache License, Version 2.0. See COPYING.ASL20.
+#
+# After sending one message, wait a second for the writer to go idle and
+# exercise the shutdown deadlock. The daemon must exit and write message
+# 0.
 echo ================================================================================
 echo TEST: \[asynwr_deadlock.sh\]: a case known to have caused a deadlock in the past
 . ${srcdir:=.}/diag.sh init
