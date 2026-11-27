@@ -133,6 +133,8 @@ EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
 TESTS_JSONF_AUTO = jsonf-auto-leading-zero.sh
 TESTS_JSONF_AUTO_YAML = yaml-jsonf-auto-leading-zero.sh
+TESTS_TEMPLATE_CEE_SHORT_YAML = yaml-template-cee-short-name.sh
+EXTRA_DIST += $(TESTS_TEMPLATE_CEE_SHORT_YAML)
 EXTRA_DIST += $(TESTS_JSONF_AUTO) $(TESTS_JSONF_AUTO_YAML)
 
 TESTS_TEMPLATE_REGEX_BOUNDS = template-regex-index-bounds.sh
@@ -602,6 +604,7 @@ TESTS_DEFAULT = \
 	template-json.sh \
 	$(TESTS_RSCRIPT_OBJECT_STRINGS) \
 	template-property-transformations.sh \
+	template-cee-short-name.sh \
 	$(TESTS_TEMPLATE_PARAMETER_ERRORS) \
         template-pure-json.sh \
 	template-jsonf-nested.sh \
@@ -3661,6 +3664,7 @@ if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS += $(TESTS_LOCAL_OMFILE_YAML)
 TESTS += $(TESTS_JSONF_AUTO_YAML)
+TESTS += $(TESTS_TEMPLATE_CEE_SHORT_YAML)
 endif
 if ENABLE_IMDIAG
 if HAVE_LIBYAML
