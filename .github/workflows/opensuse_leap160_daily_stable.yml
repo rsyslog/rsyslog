@@ -162,8 +162,11 @@ jobs:
                   /rsyslog
               ;;
             aarch64)
-              sudo apt-get update
-              sudo apt-get install -y --no-install-recommends \
+              # The hosted ARM runner can temporarily lose DNS to Ubuntu Ports.
+              # Fail a partial index update and retry mirror requests before building.
+              apt_network=(-o Acquire::Retries=3 -o Acquire::http::Timeout=20)
+              sudo apt-get "${apt_network[@]}" -o APT::Update::Error-Mode=any update
+              sudo apt-get "${apt_network[@]}" install -y --no-install-recommends \
                 autoconf autoconf-archive automake bison build-essential \
                 flex gawk git libestr-dev libfastjson-dev libsystemd-dev \
                 libtool libyaml-dev pkg-config python3-docutils zlib1g-dev
